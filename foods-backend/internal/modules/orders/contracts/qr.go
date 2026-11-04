@@ -59,3 +59,16 @@ type ConciergeOrderState struct {
 
 // Origin publica el origen del pedido ("counter" para la venta por mostrador).
 func Origin(channel string) string { return domain.Origin(channel) }
+
+// StaleTableAccountCode es el conflicto de una mesa cuya cuenta anterior sigue
+// abierta sin rondas nuevas: un QR nuevo no le suma pedidos hasta que el personal
+// la atienda.
+const StaleTableAccountCode = "table_account_stale"
+
+// StaleTableAccount describe la comanda abierta de una mesa y si se considera
+// una cuenta anterior sin cerrar.
+type StaleTableAccount struct {
+	OrderID      string
+	LastActivity string
+	Stale        bool
+}

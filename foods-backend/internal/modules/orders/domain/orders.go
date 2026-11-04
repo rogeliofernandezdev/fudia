@@ -177,8 +177,16 @@ var Transitions = map[string][]string{
 	"cancelado":  {},
 }
 
+// CanManageOrderService: una mesa (salón o QR de WhatsApp) con responsable solo la
+// atiende ese mozo; sin responsable, o fuera de salón, cualquiera con permiso.
 func CanManageOrderService(userID, channel, waiterID string) bool {
-	return channel != "salon" || waiterID == "" || (userID != "" && userID == waiterID)
+	return (channel != "salon" && channel != "whatsapp") || waiterID == "" || (userID != "" && userID == waiterID)
+}
+
+// SendRecipient es un WhatsApp que pidió lo que se envía a Cocina; Key distingue
+// cada ronda (o el pedido sin mesa) para avisar una sola vez.
+type SendRecipient struct {
+	ConversationID, Phone, Key string
 }
 func ValidOrderChannel(ch string) bool {
 	return ch == "salon" || ch == "mostrador" || ch == "recojo" || ch == "delivery" || ch == "whatsapp"
@@ -262,3 +270,10 @@ type FloorTable struct {
 	Order         *Order `json:"order"`
 	PaidText      string `json:"-"`
 }
+
+// TableAccountIdleLimit marca una cuenta de mesa como «anterior sin cerrar»: si la
+// comanda abierta no recibe rondas nuevas en este tiempo, un QR nuevo no le suma
+// pedidos (el cliente pudo irse dejándola abierta) hasta que el personal la cobre,
+// la cancele o agregue productos. Dentro de este tiempo, un grupo que escanea el
+// mismo QR sigue pidiendo a la misma cuenta.
+const TableAccountIdleLimitSeconds = 3 * 60 * 60

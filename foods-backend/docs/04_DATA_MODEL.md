@@ -16,6 +16,21 @@ la misma mesa pertenece a un pedido nuevo con su propio mozo. La migración 72
 vincula las comandas históricas manuales de Salón a su creador de la misma empresa;
 no inventa responsables de WhatsApp ni de registros sin autor.
 
+## Comandas del bot: guardadas hasta «Enviar comanda» (migración 000107)
+
+Los pedidos de Fudia Concierge no van directo a Cocina. Se comportan como «Guardar
+comanda»: mesa por QR, QR de mostrador (panaderías y pastelerías sin mesa), recojo y
+delivery se crean con `orders.status='nuevo'` y sus `order_service_items` en
+`nuevo` («Sin enviar»), que el KDS no lista. Una ronda del bot sobre una cuenta ya
+enviada guarda sus ítems en `nuevo` (`HoldRoundItems`) aunque el pedido siga
+confirmado. `POST /v1/admin/orders/{id}/send` (`SendUnsent`) los pasa a
+confirmado/listo con `created_at=now()` (el ticket de Cocina cuenta desde el envío),
+recalcula el estado, asigna `orders.waiter_id` a quien envía si no había responsable
+y avisa `order_sent` al cliente. En mesa (canal `salon` o `whatsapp`) con responsable
+solo ese mozo puede enviar. `concierge_order_requests` guarda ahora `customer_phone`
+y `round_id` para avisar a cada WhatsApp por su ronda; `customer_notices` admite
+`order_sent` y deduplica por `(order_id,kind,dedupe_key)` (la ronda).
+
 ## Prerregistro de clientes de WhatsApp
 
 Los pedidos de Fudia Concierge (mesa por QR, recojo y delivery) prerregistran al
@@ -98,6 +113,7 @@ leer para cada mozo o cajero hasta que lo abra.
 | Cuenta pedida (solo si se registró la solicitud) | Concierge | `all` |
 | Llamado al personal (handoff) | Concierge | `service` |
 | Comanda de Cocina/Barra lista | Orders | `service` con mesa; `all` sin mesa |
+| Cuenta anterior sin cerrar (`stale_account`, migración 000106): un QR nuevo llega a una mesa cuya comanda abierta lleva más de 3 h sin rondas | Concierge | `all` |
 
 Las audiencias se resuelven al leer con la autorización de Identity en el local:
 `tables.read` ve `service`, `cash.manage` ve `cashier`, y cualquiera de las dos ve

@@ -73,6 +73,11 @@ func (h *Handler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.SetStatus(r.Context(), scopeFor(r), r.PathValue("id"), in)
 	respond(w, 200, out, err)
 }
+// SendOrder es «Enviar comanda»: pasa a Cocina lo guardado sin enviar.
+func (h *Handler) SendOrder(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.SendUnsent(r.Context(), scopeFor(r), r.PathValue("id"))
+	respond(w, 200, out, err)
+}
 func (h *Handler) AppendOrderItems(w http.ResponseWriter, r *http.Request) {
 	var in application.AppendInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {

@@ -32,6 +32,7 @@ const visible = `n.organization_id=$1 AND n.location_id=$2 AND n.audience=ANY($3
 //     lista esa comanda (hay un aviso «listo» posterior del mismo pedido) o el pedido
 //     se completó. No se usa el estado: los pedidos por QR llegan ya confirmados y
 //     cada ronda nueva avisa sobre el mismo pedido;
+//   - cuenta anterior sin cerrar: se cobró (completada) o el personal agregó productos;
 //   - cualquier pedido cancelado.
 //
 // Los llamados al mozo y los avisos sin pedido siguen visibles sus 24 horas. Marcar
@@ -42,6 +43,9 @@ const pending = visible + ` AND NOT EXISTS (
 	  AND (o.status='cancelado' OR CASE
 	    WHEN n.kind='order_ready' THEN o.status IN ('en_camino','entregado')
 	    WHEN n.kind='bill_requested' THEN o.completed_at IS NOT NULL
+	    WHEN n.kind='stale_account' THEN o.completed_at IS NOT NULL OR EXISTS (
+	      SELECT 1 FROM order_kitchen_rounds k
+	      WHERE k.order_id=n.order_id AND k.organization_id=n.organization_id AND k.created_at>=n.created_at)
 	    WHEN n.kind IN ('table_order','counter_order','delivery_order','pickup_order') THEN o.completed_at IS NOT NULL OR EXISTS (
 	      SELECT 1 FROM staff_notices ready
 	      WHERE ready.organization_id=n.organization_id AND ready.order_id=n.order_id

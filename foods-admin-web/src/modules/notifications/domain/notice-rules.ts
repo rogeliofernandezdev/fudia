@@ -6,8 +6,11 @@ export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[
  switch(notice.kind){
   case "table_order":case "assistance_requested":return [pageRoutes.diningRoom,pageRoutes.orders];
   case "bill_requested":return [pageRoutes.pos,pageRoutes.diningRoom];
+  // Cuenta anterior sin cerrar: el mozo la revisa en Salón; caja la cobra en POS.
+  case "stale_account":return [pageRoutes.diningRoom,pageRoutes.pos];
   case "order_ready":return notice.tableId?[pageRoutes.diningRoom,pageRoutes.orders]:[pageRoutes.orders,pageRoutes.pos];
-  default:return [pageRoutes.pos,pageRoutes.orders];
+  // Mostrador, recojo y delivery del bot esperan «Enviar comanda» de caja: el detalle está en Pedidos.
+  default:return [pageRoutes.orders,pageRoutes.pos];
  }
 }
 
@@ -17,15 +20,15 @@ export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[
  * cuenta pedida abre el cobro del pedido; los demás avisos llegan a la pantalla.
  */
 export function noticeHref(target:string,notice:Pick<StaffNotice,"kind"|"orderId">){
- const opensDetail=target===pageRoutes.diningRoom||target===pageRoutes.orders||(target===pageRoutes.pos&&notice.kind==="bill_requested");
+ const opensDetail=target===pageRoutes.diningRoom||target===pageRoutes.orders||(target===pageRoutes.pos&&(notice.kind==="bill_requested"||notice.kind==="stale_account"));
  return notice.orderId&&opensDetail?`${target}?orderId=${encodeURIComponent(notice.orderId)}`:target;
 }
 
 /** Tono del icono de cada aviso sin leer, alineado con la matriz de estados: listo = verde (Por entregar),
- *  cuenta pedida = naranja tenue (Por cobrar), llamado = celeste; pedidos nuevos usan el índigo de la marca. */
+ *  cuenta pedida y cuenta anterior sin cerrar = naranja tenue (Por cobrar), llamado = celeste; pedidos nuevos usan el índigo de la marca. */
 export type NoticeTone="primary"|"brand"|"peach"|"sky";
 export function noticeTone(kind:StaffNotice["kind"]):NoticeTone{
- return kind==="order_ready"?"brand":kind==="bill_requested"?"peach":kind==="assistance_requested"?"sky":"primary";
+ return kind==="order_ready"?"brand":kind==="bill_requested"||kind==="stale_account"?"peach":kind==="assistance_requested"?"sky":"primary";
 }
 
 /** Avisos que llegaron después de la última lectura del feed y siguen sin leer, del más reciente al más antiguo. */

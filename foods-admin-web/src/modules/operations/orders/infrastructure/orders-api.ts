@@ -34,6 +34,11 @@ export function getOrder(id:string){
   return apiFetch<Order>(`orders/${id}`);
 }
 
+/** «Enviar comanda»: pasa a Cocina lo guardado sin enviar y deja a quien lo envía como responsable. */
+export function sendOrder(id:string){
+  return apiFetch<Order>(`orders/${id}/send`,{method:"POST"});
+}
+
 export function updateOrderStatus(id:string,status:string){
   return apiFetch<Order>(`orders/${id}/status`,{
     method:"PATCH",

@@ -69,11 +69,18 @@ type OrderRepository interface {
 	ShareCounterQR(ctx context.Context, s scope, tableID string, token string) error
 	QRRequestOrder(ctx context.Context, s scope, tableID string, in QROrderInput) (string, error)
 	LockQRTableOrder(ctx context.Context, s scope, tableID string) (string, string, string, float64, float64, *string, bool, bool, error)
+	StaleTableAccount(ctx context.Context, s scope, tableID string, idleSeconds int) (orderID, lastActivity string, stale bool, err error)
 	QROrderTotal(ctx context.Context, s scope, openOrderID string) (float64, error)
 	UpdateQRSubtotal(ctx context.Context, s scope, openOrderID string, nextSubtotal float64, nextTotal float64) (int64, error)
-	SaveQRAppendRequest(ctx context.Context, s scope, tableID string, in QROrderInput, openOrderID string) (int64, error)
+	SaveQRAppendRequest(ctx context.Context, s scope, tableID string, in QROrderInput, openOrderID, roundID string) (int64, error)
+	// Comandas del bot: guardadas sin enviar hasta que el personal pulse «Enviar comanda».
+	HoldRoundItems(ctx context.Context, s scope, orderID, roundID string) (int64, error)
+	HasUnsentItems(ctx context.Context, s scope, orderID string) (bool, error)
+	UnsentRecipients(ctx context.Context, s scope, orderID string) ([]domain.SendRecipient, error)
+	SendUnsentItems(ctx context.Context, s scope, orderID string) (int64, error)
+	AssignAttendant(ctx context.Context, s scope, orderID, userID string) error
 	AuditQRAppend(ctx context.Context, s scope, tableID string, in QROrderInput, openOrderID string, openChannel string) (int64, error)
-	SaveQRCreateRequest(ctx context.Context, s scope, tableID string, in QROrderInput, out domain.Order) (int64, error)
+	SaveQRCreateRequest(ctx context.Context, s scope, tableID string, in QROrderInput, out domain.Order, roundID string) (int64, error)
 	AuditQRCreated(ctx context.Context, s scope, tableID string, in QROrderInput, out domain.Order) (int64, error)
 	OpenTableOrder(context.Context, scope, string) (domain.Order, error)
 	LockConciergeDeliveryRequest(ctx context.Context, s scope, requestID string) error

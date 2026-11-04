@@ -91,9 +91,9 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 5. Revisar el carrito temporal de la ronda.
 6. prepare_confirmation fija una clave idempotente para esa ronda.
 7. El cliente confirma explícitamente.
-8. confirm_order envía la ronda a foods-backend.
+8. confirm_order envía la ronda a foods-backend, que la guarda como comanda sin enviar (`awaitingStaff`: `waiter` en mesa, `cashier` en mostrador, recojo y delivery). El bot dice «Recibimos tu pedido. El mozo lo revisa y lo envía a cocina…» y nunca que ya está en cocina.
 9. El carrito se vacía, pero la conversación y la comanda siguen abiertas.
-10. Cada ronda aparece de forma independiente en KDS.
+10. Cada ronda aparece en el detalle de la mesa como «Sin enviar»; Cocina (KDS) la ve recién cuando el mozo pulsa «Enviar comanda». Quien la envía queda como responsable de la mesa y cada WhatsApp que pidió esa ronda recibe «⏳ Tu pedido ya está en preparación.».
 
 ## Cuenta
 
@@ -109,8 +109,20 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 El token QR es fijo por mesa: cuando el cliente se va, el siguiente comensal usa el mismo QR. Por eso, antes de cada turno en modo mesa:
 
 1. Si la conversación tiene un pedido (`last_order_id`), se consulta `GET .../orders/{orderId}`; `active=false` (pagado y entregado, o cancelado) termina la atención.
-2. Si no tiene pedido y pasó `TABLE_IDLE_SECONDS` (3 h) desde el último mensaje, también termina.
+2. Si pasó `TABLE_IDLE_SECONDS` (3 h) desde el último mensaje, también termina, tenga o no pedido: el cliente pudo irse dejando la cuenta abierta, y ese chat ya no suma rondas a la mesa.
 3. Si la sesión expiró, la memoria del cliente (último local por QR, 90 días) abre directamente el modo sin mesa.
+
+### Cuenta anterior sin cerrar
+
+Varios comensales de una misma mesa pueden escanear el QR y pedir a la misma
+cuenta. Pero si la comanda abierta lleva más de 3 horas sin rondas nuevas, se
+trata como una cuenta anterior sin cerrar: al escanear, `POST .../conversations`
+(`kind=table`) responde `409 table_account_stale`, foods-backend avisa al personal
+(«Mesa 3 · cuenta anterior sin cerrar») y el bot responde en texto plano
+«Esta mesa tiene una cuenta anterior pendiente. Ya avisamos al personal; en un
+momento te atienden y podrás pedir por aquí.» sin abrir la mesa ni tocar la
+sesión. `POST .../orders` aplica la misma regla a una atención abierta antes. El
+personal lo resuelve cobrando o cancelando esa cuenta, o agregando productos.
 
 Al terminar se abre un contexto nuevo (`conversationId` nuevo, carrito, confirmación, handoff e historial vacíos, `mode=delivery`). La respuesta de ese turno empieza con un aviso: la atención en mesa terminó y puede pedir para recojo o delivery. Un nuevo QR vuelve siempre al modo mesa.
 
@@ -158,6 +170,22 @@ No hay cuenta (`request_bill` → `counter_has_no_bill`), delivery
 (`set_fulfillment` → `counter_pickup_only`) ni fin de atención por pedido: la
 sesión sigue en mostrador hasta otro QR o hasta que expire. El bloque «[Estado
 de la atención]» indica «Modo: venta por mostrador» y si falta el nombre.
+
+## Aviso «en preparación»
+
+Los pedidos del bot esperan «Enviar comanda» del personal (mozo en mesa; caja en
+mostrador, recojo y delivery). Al enviarlo, foods-backend deja un aviso `order_sent`
+por ronda y WhatsApp, y el cliente recibe, en texto plano y sin el modelo:
+
+```
+⏳ Tu pedido ya está en preparación.
+En breve te lo llevamos a la mesa.
+```
+
+Sin mesa lleva el código («⏳ Tu pedido PED-0142 ya está en preparación.») y cierra
+con «Te lo enviaremos apenas esté listo.» (delivery), «Te avisaremos cuando esté
+listo para recoger.» (recojo) o «…listo en el mostrador.» (mostrador). Usa la misma
+bandeja, ventana de 24 h y reintentos que «pedido listo».
 
 ## Aviso de pedido listo
 
@@ -208,7 +236,7 @@ mostrador o sin mesa).
 4. El bot pide dirección escrita, referencia y nombre (`set_delivery_details`).
 5. `prepare_confirmation` exige lo que falte (`delivery_details_required` + `missing`) y muestra productos, subtotal, envío, total y tipo de entrega.
 6. Tras la confirmación explícita, `confirm_order` envía `POST .../delivery-orders` con `quotedFee` y un `requestId` persistido antes de llamar.
-7. El pedido entra a Cocina como canal `delivery` o `recojo` y se paga al recibir o recoger.
+7. El pedido queda guardado como canal `delivery` o `recojo`; caja lo revisa y pulsa «Enviar comanda» para que entre a Cocina (el cliente recibe «en preparación»). Se paga al recibir o recoger.
 
 Cambiar el tipo de entrega, la dirección, el nombre o la ubicación invalida una confirmación preparada. `check_order_status` consulta el estado real del último pedido en ambos modos.
 

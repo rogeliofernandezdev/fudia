@@ -179,7 +179,8 @@ func TestStaffNoticesEndToEnd(t *testing.T) {
 		t.Fatalf("bill/handoff audiences: waiter=%v cashier=%v", waiterKinds, cashierKinds)
 	}
 
-	// Cocina marca lista la comanda de mostrador: avisa a mozos y caja.
+	// Caja envía la venta por mostrador guardada por el bot; luego Cocina la marca lista y avisa a mozos y caja.
+	sendBotOrder(t, api, cashier, counterOrder.ID)
 	w := call(cook, "GET", "/v1/admin/kitchen/tickets?destination=kitchen", "", api.listKitchenTickets)
 	var kitchen struct {
 		Items []struct {

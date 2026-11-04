@@ -42,12 +42,13 @@ from src.services.consent import (
     consent_question,
     consent_reply,
 )
-from src.services.customer_notices import CUSTOMER_WINDOW_SECONDS, order_ready_text
+from src.services.customer_notices import CUSTOMER_WINDOW_SECONDS, notice_text
 from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
 from src.services.menu_tools import unavailable_carta_reply
 from src.services.ports import (
     CONVERSATION_LIMIT_CODE,
+    STALE_TABLE_ACCOUNT_CODE,
     AllowAllRateLimiter,
     ConversationLease,
     ConversationLock,
@@ -107,6 +108,10 @@ RATE_LIMITED_REPLY = (
 )
 # foods-backend did not open a new conversation this month. The diner is
 # invited to order in person; caps and plans are never mentioned.
+STALE_TABLE_ACCOUNT_REPLY = (
+    "Esta mesa tiene una cuenta anterior pendiente. Ya avisamos al personal; "
+    "en un momento te atienden y podrás pedir por aquí."
+)
 CONVERSATION_LIMIT_TABLE_REPLY = (
     "En este momento no podemos tomar tu pedido por WhatsApp. "
     "Por favor, pide directamente al personal del restaurante en tu mesa."
@@ -519,7 +524,7 @@ class ConciergeService:
             or self.clock() - session.last_activity_at > self.customer_window_seconds
         ):
             # Fuera de la ventana de 24 h de WhatsApp no se envía texto libre;
-            # el personal ya ve el pedido listo en el panel.
+            # el personal ya ve el pedido en el panel.
             record.stage = "superseded"
             await self.store.commit(lease, None, record)
             CUSTOMER_NOTICES.labels(result="outside_window").inc()
@@ -530,7 +535,7 @@ class ConciergeService:
                 reason="outside_window",
             )
             return record
-        reply = order_ready_text(notice)
+        reply = notice_text(notice)
         # El aviso queda en el historial para que el siguiente turno lo conozca.
         session.messages.append(ChatMessage(role="assistant", content=reply))
         session.messages = session.messages[-20:]
@@ -572,9 +577,11 @@ class ConciergeService:
         token: str,
         conversation_id: str,
         kind: Literal["table", "delivery"],
-    ) -> bool:
-        """Count a new attention. False only when foods-backend refuses new
-        conversations this month; any other failure keeps serving the diner
+    ) -> Literal["open", "limit", "stale_account"]:
+        """Count a new attention. foods-backend refuses it when the company
+        reached its monthly cap ("limit") or, for a table, when the table has
+        a previous account left open without new rounds ("stale_account"; the
+        staff is already notified). Any other failure keeps serving the diner
         (the conversation is still counted by its first usage report)."""
         try:
             await self.fudia.open_conversation(token, conversation_id, kind)
@@ -586,7 +593,14 @@ class ConciergeService:
                     conversation=conversation_id,
                     kind=kind,
                 )
-                return False
+                return "limit"
+            if exc.code == STALE_TABLE_ACCOUNT_CODE:
+                log_event(
+                    logger,
+                    "concierge.table.stale_account",
+                    conversation=conversation_id,
+                )
+                return "stale_account"
             log_event(
                 logger,
                 "concierge.conversation.open_failed",
@@ -594,7 +608,7 @@ class ConciergeService:
                 kind=kind,
                 code=exc.code,
             )
-        return True
+        return "open"
 
     async def _prepare_unlocked(
         self,
@@ -799,12 +813,15 @@ class ConciergeService:
                     "none",
                 )
             conversation_id = conversation_id_for(message.message_id)
-            if not await self._open_conversation(
+            opened = await self._open_conversation(
                 token, conversation_id, "table"
-            ):
-                # The current session, if any, stays as it was: a
-                # conversation in progress is never cut.
+            )
+            # The current session, if any, stays as it was: a conversation in
+            # progress is never cut, and nobody is seated at a stale account.
+            if opened == "limit":
                 return CONVERSATION_LIMIT_TABLE_REPLY, "none"
+            if opened == "stale_account":
+                return STALE_TABLE_ACCOUNT_REPLY, "none"
             # A new QR opens a new context: the previous table's cart,
             # pending confirmation and handoff no longer apply.
             session.qr_token = token
@@ -884,11 +901,11 @@ class ConciergeService:
             )
             if memory is None:
                 return SCAN_QR_REPLY, "none"
-            if not await self._open_conversation(
+            if await self._open_conversation(
                 memory.qr_token,
                 conversation_id_for(message.message_id),
                 "delivery",
-            ):
+            ) != "open":
                 return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
             session.qr_token = memory.qr_token
             self._open_delivery(
@@ -903,11 +920,11 @@ class ConciergeService:
             if session.table is None:
                 return SCAN_QR_REPLY, "none"
             if await self._table_service_ended(session):
-                if not await self._open_conversation(
+                if await self._open_conversation(
                     session.qr_token or "",
                     conversation_id_for(message.message_id),
                     "delivery",
-                ):
+                ) != "open":
                     return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
                 venue = session.venue or VenueContext(
                     organizationName=session.table.organizationName,
@@ -1109,7 +1126,11 @@ class ConciergeService:
                 )
             except FudiaError as exc:
                 return exc.code == "order_not_found"
-            return not status.active
+            if not status.active:
+                return True
+        # With or without an order: hours without a message mean the diner
+        # may have left, even leaving the account open. The account itself is
+        # protected by foods-backend (a new QR does not join a stale account).
         return bool(
             session.last_activity_at
             and self.clock() - session.last_activity_at

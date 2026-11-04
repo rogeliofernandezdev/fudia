@@ -15,6 +15,7 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Orders.UpdateOrder(w, r)
 }
+func (a *API) sendOrder(w http.ResponseWriter, r *http.Request) { a.handlers.Orders.SendOrder(w, r) }
 func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Orders.UpdateOrderStatus(w, r)
 }

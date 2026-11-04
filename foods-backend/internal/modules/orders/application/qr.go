@@ -101,7 +101,12 @@ func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token
 		if openChannel == "salon" && openBillClosed {
 			return result, orderFailure(apperror.Conflict, "order_bill_closed", "La cuenta está por cobrar. No se pueden agregar productos después de cerrarla.")
 		}
-		if openStatus != "confirmado" && openStatus != "preparando" && openStatus != "listo" && openStatus != "entregado" {
+		if _, _, stale, staleErr := a.repo.StaleTableAccount(tx.Context(), s, tableID, domain.TableAccountIdleLimitSeconds); staleErr != nil {
+			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar la cuenta de la mesa.")
+		} else if stale {
+			return result, orderFailure(apperror.Conflict, StaleTableAccountCode, StaleTableAccountMessage)
+		}
+		if openStatus != "nuevo" && openStatus != "confirmado" && openStatus != "preparando" && openStatus != "listo" && openStatus != "entregado" {
 			return result, orderFailure(apperror.Conflict, "concierge_order_not_editable", "La comanda ya no admite nuevas rondas desde Concierge.")
 		}
 		paid, paidErr := a.repo.NetPaid(tx.Context(), s, openOrderID)
@@ -134,6 +139,10 @@ func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token
 		if err = a.repo.InsertItems(tx.Context(), s, openOrderID, roundID, prepared); err != nil {
 			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos agregar los productos a la comanda.")
 		}
+		// La ronda del bot queda guardada: Cocina la ve cuando el mozo pulsa «Enviar comanda».
+		if _, err = a.repo.HoldRoundItems(tx.Context(), s, openOrderID, roundID); err != nil {
+			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos guardar la comanda.")
+		}
 		if quantityErr := a.stock.ApplyOrderQuantityDelta(tx.Context(), s, openOrderID, domain.PreparedQuantityUsage(prepared), "sale"); quantityErr != nil {
 			return result, quantityErr
 		}
@@ -156,7 +165,7 @@ func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token
 		if _, err = a.repo.RegisterConciergeCustomer(tx.Context(), s, in.CustomerPhone, in.CustomerName); err != nil {
 			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar al cliente del pedido.")
 		}
-		if _, err = a.repo.SaveQRAppendRequest(tx.Context(), s, tableID, in, openOrderID); err != nil {
+		if _, err = a.repo.SaveQRAppendRequest(tx.Context(), s, tableID, in, openOrderID, roundID); err != nil {
 			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar la idempotencia del pedido.")
 		}
 		if _, err = a.repo.AuditQRAppend(tx.Context(), s, tableID, in, openOrderID, openChannel); err != nil {
@@ -219,7 +228,7 @@ func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token
 	if quantityErr := a.stock.ApplyRecipeUsageDelta(tx.Context(), s, out.ID, recipeUsage); quantityErr != nil {
 		return result, quantityErr
 	}
-	if _, err = a.repo.SaveQRCreateRequest(tx.Context(), s, tableID, in, out); err != nil {
+	if _, err = a.repo.SaveQRCreateRequest(tx.Context(), s, tableID, in, out, roundID); err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar la idempotencia del pedido.")
 	}
 	if _, err = a.repo.AuditQRCreated(tx.Context(), s, tableID, in, out); err != nil {

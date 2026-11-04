@@ -29,7 +29,7 @@ func (r *Orders) CreateConciergeDeliveryOrder(ctx context.Context, s scope, in a
 		  table_id,notes,subtotal,delivery_fee,total,status,created_by,
 		  delivery_latitude,delivery_longitude,delivery_distance_km
 		)
-		VALUES($1,$2,$3,NULLIF($15,'')::uuid,$4,$5,$6,$7,NULL,$8,$9,$10,$11,'confirmado',NULL,$12,$13,$14)
+		VALUES($1,$2,$3,NULLIF($15,'')::uuid,$4,$5,$6,$7,NULL,$8,$9,$10,$11,'nuevo',NULL,$12,$13,$14)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.Channel, in.CustomerName, in.CustomerPhone, in.Address, in.Reference,
 		in.Notes, subtotal, in.DeliveryFee, total, in.Latitude, in.Longitude, in.DistanceKm, customerID,

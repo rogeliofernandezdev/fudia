@@ -21,6 +21,10 @@ Cuerpo `{conversationId, kind: table|delivery}`. Registra y cuenta una atención
 por empresa y mes; es idempotente por `conversationId` (201 nueva, 200 ya
 registrada). En modo `enforce` con el tope mensual alcanzado responde
 `409 concierge_conversation_limit_reached` solo para conversaciones nuevas.
+Con `kind=table`, si la comanda abierta de la mesa lleva más de 3 horas sin
+rondas nuevas responde `409 table_account_stale` (cuenta anterior sin cerrar;
+foods-backend ya avisó al personal). `POST .../orders` responde lo mismo para
+una ronda sobre esa cuenta.
 
 POST /v1/integrations/concierge/{token}/conversations/{conversationId}/usage
 
@@ -81,15 +85,17 @@ Con un QR de mostrador, `POST .../orders` crea un pedido independiente por cada
 `customerName`; `POST .../bill` responde `409 counter_has_no_bill`. El backend
 decide el flujo por el QR, nunca por un campo del cuerpo.
 
-## Avisos al cliente («pedido listo»)
+## Avisos al cliente («en preparación» y «pedido listo»)
 
-Cuando Cocina/Barra deja listo todo un pedido de mostrador o recojo creado por
-Concierge, foods-backend registra un aviso en su bandeja de salida. Estas rutas
+Cuando el personal pulsa «Enviar comanda» sobre lo que el cliente pidió por el bot
+(`kind:"order_sent"`, uno por ronda y WhatsApp) y cuando Cocina/Barra deja listo todo
+un pedido de mostrador o recojo creado por Concierge (`kind:"order_ready"`),
+foods-backend registra un aviso en su bandeja de salida. Estas rutas
 son globales (sin `{token}`) y usan la misma clave `X-Fudia-Concierge-Key`:
 
 - `GET /v1/integrations/concierge/notices/pending?limit=20` reserva hasta 50
-  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready", orderId,
-  orderCode, fulfillment:"counter"|"pickup", customerPhone, conversationId,
+  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready"|"order_sent", orderId,
+  orderCode, fulfillment:"counter"|"pickup"|"table"|"delivery", customerPhone, conversationId,
   organizationName, locationName, createdAt}]}`. Un reclamo no confirmado vence
   y el aviso vuelve (máximo 5 intentos, avisos de las últimas 2 horas, pedidos no
   cancelados).

@@ -1,7 +1,8 @@
-"""Avisos de foods-backend para el cliente («pedido listo»).
+"""Avisos de foods-backend para el cliente («en preparación» y «pedido listo»).
 
-foods-backend deja el aviso en su bandeja de salida cuando Cocina/Barra termina
-un pedido de mostrador o recojo creado por Concierge. `NoticeRelay` lo reclama y
+foods-backend deja el aviso en su bandeja de salida cuando el personal envía a
+cocina lo que el cliente pidió por WhatsApp (los pedidos del bot esperan
+«Enviar comanda») y cuando Cocina/Barra termina un pedido de mostrador o recojo. `NoticeRelay` lo reclama y
 lo encola en la conversación del cliente como un mensaje más (`InboundMessage`
 con `notice`): hereda el orden, el lock, los reintentos y la dead-letter de la
 cola. `ConciergeService` lo redacta y el `ReplyDispatcher` lo envía.
@@ -51,6 +52,25 @@ def order_ready_text(notice: CustomerNotice) -> str:
         first = f"✅ {order} está listo."
         second = f"Recógelo en el mostrador de {venue}." if venue else "Recógelo en el mostrador."
     return f"{first}\n{second}"
+
+
+def order_sent_text(notice: CustomerNotice) -> str:
+    """El personal envió el pedido a cocina; en mesa lo lleva el mozo."""
+    if notice.fulfillment == "table":
+        return "⏳ Tu pedido ya está en preparación.\nEn breve te lo llevamos a la mesa."
+    order = f"Tu pedido {notice.orderCode}" if notice.orderCode.strip() else "Tu pedido"
+    first = f"⏳ {order} ya está en preparación."
+    if notice.fulfillment == "delivery":
+        return f"{first}\nTe lo enviaremos apenas esté listo."
+    if notice.fulfillment == "pickup":
+        return f"{first}\nTe avisaremos cuando esté listo para recoger."
+    return f"{first}\nTe avisaremos cuando esté listo en el mostrador."
+
+
+def notice_text(notice: CustomerNotice) -> str:
+    if notice.kind == "order_sent":
+        return order_sent_text(notice)
+    return order_ready_text(notice)
 
 
 class NoticeRelay:

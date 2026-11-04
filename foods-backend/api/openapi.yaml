@@ -376,7 +376,7 @@ paths:
     post:
       operationId: createConciergeOrder
       summary: Crea un pedido WhatsApp desde el QR; Fudia deriva tenencia, mesa y tipo de atención del QR y recalcula precios y disponibilidad
-      description: "El tipo de atención del QR decide el flujo en un solo lugar. Mesa (serviceType=table): la primera ronda abre la cuenta y ocupa la mesa; las nuevas rondas requieren cuenta Abierta y después de Cerrar cuenta devuelve 409 order_bill_closed. Mostrador (serviceType=counter): cada requestId crea un pedido independiente con channel=recojo y origin=counter, sin mesa ni cuenta abierta, confirmado y enviado a preparación; customerName es obligatorio y el QR nunca se bloquea por pedidos abiertos. En ambos casos los reintentos con el mismo requestId son idempotentes."
+      description: "El tipo de atención del QR decide el flujo en un solo lugar. Mesa (serviceType=table): la primera ronda abre la cuenta y ocupa la mesa; el pedido y cada ronda quedan guardados (status nuevo, «Sin enviar») hasta que el mozo pulse Enviar comanda (POST /v1/admin/orders/{id}/send); las nuevas rondas requieren cuenta Abierta y después de Cerrar cuenta devuelve 409 order_bill_closed; si la comanda abierta lleva más de 3 horas sin rondas nuevas devuelve 409 table_account_stale (cuenta anterior sin cerrar) y se avisa al personal. Mostrador (serviceType=counter): cada requestId crea un pedido independiente con channel=recojo y origin=counter, sin mesa ni cuenta abierta, guardado (status nuevo) hasta que caja pulse Enviar comanda; customerName es obligatorio y el QR nunca se bloquea por pedidos abiertos. En ambos casos los reintentos con el mismo requestId son idempotentes."
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
@@ -391,7 +391,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
-        "409": { description: Mesa ocupada o producto/stock ya no disponible }
+        "409": { description: "Mesa ocupada, cuenta por cobrar (order_bill_closed), cuenta anterior sin cerrar (table_account_stale) o producto/stock ya no disponible" }
   /v1/integrations/concierge/{token}/customer:
     post:
       operationId: getConciergeCustomer
@@ -487,7 +487,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: "QR inexistente, inactivo o deshabilitado" }
-        "409": { description: "concierge_conversation_limit_reached: no se abren conversaciones nuevas este mes", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "409": { description: "concierge_conversation_limit_reached: no se abren conversaciones nuevas este mes. table_account_stale (solo kind=table): la mesa tiene una comanda abierta sin rondas nuevas hace más de 3 horas; un QR nuevo no se suma y se avisa al personal (stale_account)", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /v1/integrations/concierge/{token}/conversations/{conversationId}/usage:
     post:
       operationId: reportConciergeConversationUsage
@@ -556,7 +556,7 @@ paths:
     post:
       operationId: createConciergeDeliveryOrder
       summary: Crea un pedido de delivery o recojo sin mesa, confirmado y enviado a cocina
-      description: "foods-backend recalcula precios, distancia y tarifa. quotedFee es la tarifa que aceptó el cliente: si cambió devuelve 409 delivery_fee_changed. requestId es idempotente: un reintento devuelve el mismo pedido aunque las tarifas hayan cambiado."
+      description: "foods-backend recalcula precios, distancia y tarifa. quotedFee es la tarifa que aceptó el cliente: si cambió devuelve 409 delivery_fee_changed. requestId es idempotente: un reintento devuelve el mismo pedido aunque las tarifas hayan cambiado. El pedido queda guardado (status nuevo) hasta que caja pulse Enviar comanda."
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
@@ -2173,6 +2173,14 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
       responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/orders/{id}/send:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: sendOrder
+      summary: Enviar comanda
+      description: "Pasa a Cocina/Barra lo guardado sin enviar: un pedido Nuevo o las rondas que el cliente pidió por Fudia Concierge (ítems con status nuevo, «Sin enviar»; Cocina no los ve). La hora del ticket empieza al enviarlo. Quien envía queda como responsable (waiterId) si el pedido aún no tiene uno; en una mesa asignada solo su mozo puede enviar (403 order_assigned_to_another_waiter). Cada WhatsApp que pidió lo enviado recibe el aviso order_sent («en preparación»). Exige orders.manage. Sin nada por enviar responde 409 nothing_to_send."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Comanda enviada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: "nothing_to_send u order_closed" }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/kitchen/tickets:
     get:
       operationId: listKitchenTickets
@@ -2248,10 +2256,10 @@ components:
       required: [id, kind, orderId, orderCode, fulfillment, customerPhone, conversationId, organizationName, locationName, createdAt]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [order_ready] }
+        kind: { type: string, enum: [order_ready, order_sent], description: "order_sent: el personal envió a cocina lo que pidió (una vez por ronda y WhatsApp); order_ready: pedido de mostrador o recojo listo" }
         orderId: { type: string, format: uuid }
         orderCode: { type: string, description: Código PED- del pedido }
-        fulfillment: { type: string, enum: [counter, pickup], description: "counter: mostrador; pickup: recojo en el local" }
+        fulfillment: { type: string, enum: [counter, pickup, table, delivery], description: "counter: mostrador; pickup: recojo en el local; table y delivery solo en order_sent" }
         customerPhone: { type: string, description: Número de WhatsApp con el que se creó el pedido }
         conversationId: { type: string }
         organizationName: { type: string }
@@ -2262,7 +2270,7 @@ components:
       required: [id, kind, title, detail, createdAt, read]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested] }
+        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account] }
         title: { type: string, maxLength: 120, description: Texto final redactado por el backend }
         detail: { type: string, maxLength: 240 }
         orderId: { type: string, format: uuid }

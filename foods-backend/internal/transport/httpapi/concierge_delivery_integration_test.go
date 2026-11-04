@@ -116,7 +116,7 @@ func TestConciergeDeliveryAndPickupOrders(t *testing.T) {
 	if rec.Code != 201 || json.Unmarshal(rec.Body.Bytes(), &created) != nil {
 		t.Fatalf("create delivery order: %d %s", rec.Code, rec.Body.String())
 	}
-	if created.Channel != "delivery" || created.Status != "confirmado" || created.TableID != "" ||
+	if created.Channel != "delivery" || created.Status != "nuevo" || created.TableID != "" ||
 		created.DeliveryFee != "9.00" || created.Total != "69.00" || created.Address != "Av. Larco 123" {
 		t.Fatalf("unexpected delivery order: %#v", created)
 	}

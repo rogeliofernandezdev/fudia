@@ -13,9 +13,18 @@ export function canManageOrderService(order:{channel:string;waiterId?:string},us
   return order.channel!=="salon"||!order.waiterId||Boolean(userId&&order.waiterId===userId);
 }
 
+/**
+ * Comanda guardada sin enviar: un pedido «nuevo» o una ronda que el cliente pidió
+ * por WhatsApp (ítems «Sin enviar»). Cocina no la ve hasta «Enviar comanda».
+ */
+export function hasUnsentItems(order:Pick<OperationalOrder,"status"|"serviceItems">):boolean{
+  return order.status==="nuevo"||Boolean(order.serviceItems?.some(item=>item.status==="nuevo"));
+}
+
 export function nextOrderAction(order:OperationalOrder):OrderAction|null{
   if(order.completedAt)return null;
-  if(order.status==="nuevo")return{status:"confirmado",label:"Enviar comanda",icon:"receipt"};
+  // «confirmado» es enviar: la acción usa POST /orders/{id}/send (sendOrder).
+  if(hasUnsentItems(order))return{status:"confirmado",label:"Enviar comanda",icon:"receipt"};
   if(order.channel==="salon"&&order.serviceItems?.some(item=>item.status!=="listo"&&item.status!=="entregado"))return null;
   if(order.status==="listo"){
     if(order.channel==="delivery")return{status:"en_camino",label:"En camino",icon:"truck"};

@@ -15,7 +15,9 @@ from src.services.customer_notices import (
     CUSTOMER_WINDOW_SECONDS,
     NOTICE_MESSAGE_PREFIX,
     NoticeRelay,
+    notice_text,
     order_ready_text,
+    order_sent_text,
 )
 from src.services.queue_worker import QueueWorker
 from tests.test_concierge_service import FakeFudia
@@ -37,6 +39,22 @@ def notice(**changes: object) -> CustomerNotice:
         locationName="Miraflores",
     )
     return base.model_copy(update=changes)
+
+
+def test_order_sent_text_tells_the_diner_it_is_cooking() -> None:
+    assert order_sent_text(notice(kind="order_sent", fulfillment="table", orderCode="")) == (
+        "⏳ Tu pedido ya está en preparación.\nEn breve te lo llevamos a la mesa."
+    )
+    assert order_sent_text(notice(kind="order_sent", fulfillment="delivery")) == (
+        "⏳ Tu pedido PED-0142 ya está en preparación.\nTe lo enviaremos apenas esté listo."
+    )
+    assert order_sent_text(notice(kind="order_sent", fulfillment="pickup")).endswith("listo para recoger.")
+    assert order_sent_text(notice(kind="order_sent")).endswith("listo en el mostrador.")
+    assert notice_text(notice(kind="order_sent")) == order_sent_text(notice(kind="order_sent"))
+    assert notice_text(notice()) == order_ready_text(notice())
+    for fulfillment in ("table", "delivery", "pickup", "counter"):
+        text = order_sent_text(notice(kind="order_sent", fulfillment=fulfillment))
+        assert "*" not in text
 
 
 class Source:

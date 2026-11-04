@@ -100,6 +100,9 @@ class FudiaBackend(Protocol):
 
 # foods-backend rejects opening a conversation (never one in progress).
 CONVERSATION_LIMIT_CODE = "concierge_conversation_limit_reached"
+# La mesa tiene una cuenta anterior abierta sin rondas nuevas (el cliente
+# anterior pudo irse): un QR nuevo no se suma hasta que el personal la atienda.
+STALE_TABLE_ACCOUNT_CODE = "table_account_stale"
 
 
 class LockLostError(RuntimeError):

@@ -15,6 +15,8 @@ function linesPayload(draft:Draft){
 }
 export function getSalonFloor(){return apiFetch<{items:FloorTable[]}>("orders/floor")}
 export function getSalonOrder(id:string){return apiFetch<Order>(`orders/${id}`)}
+/** «Enviar comanda» de la mesa: pasa a Cocina lo guardado sin enviar (también las rondas del bot). */
+export function sendSalonOrder(id:string){return apiFetch<Order>(`orders/${id}/send`,{method:"POST"})}
 export function updateSalonOrderStatus(id:string,status:string){
  return apiFetch<Order>(`orders/${id}/status`,{method:"PATCH",body:JSON.stringify({status})});
 }

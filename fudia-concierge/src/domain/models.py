@@ -298,11 +298,12 @@ class CustomerNotice(BaseModel):
     """
 
     id: str
-    kind: Literal["order_ready"] = "order_ready"
+    # order_sent: el personal envió a cocina lo que pidió; order_ready: está listo.
+    kind: Literal["order_ready", "order_sent"] = "order_ready"
     orderId: str = ""
     orderCode: str = ""
-    # counter: venta por mostrador; pickup: recojo en el local.
-    fulfillment: Literal["counter", "pickup"] = "counter"
+    # counter: venta por mostrador; pickup: recojo; table: mesa; delivery: envío.
+    fulfillment: Literal["counter", "pickup", "table", "delivery"] = "counter"
     customerPhone: str = ""
     conversationId: str = ""
     organizationName: str = ""

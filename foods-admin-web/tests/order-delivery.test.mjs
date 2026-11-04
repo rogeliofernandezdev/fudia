@@ -17,6 +17,13 @@ test("entrega no depende del pago ni requiere una segunda transición",()=>{
 test("cocina prepara y delivery despacha",()=>{
  for(const status of ["confirmado","preparando","cancelado"])assert.equal(nextOrderAction({...ready,status}),null);
  assert.equal(nextOrderAction({...ready,channel:"delivery"}).status,"en_camino");
+ // Comanda guardada (pedido nuevo o ronda del bot «Sin enviar»): Enviar comanda, aunque la mesa ya esté en cocina.
+ assert.equal(nextOrderAction({...ready,status:"nuevo"}).label,"Enviar comanda");
+ assert.equal(nextOrderAction({...ready,status:"confirmado",serviceItems:[{status:"confirmado"},{status:"nuevo"}]}).label,"Enviar comanda");
+ assert.equal(nextOrderAction({...ready,status:"confirmado",serviceItems:[{status:"confirmado"}]}),null);
+ assert.match(read("modules/operations/orders/presentation/orders-manager.tsx"),/v\.status==="confirmado"\?sendOrder\(v\.id\)/,"Pedidos envía con POST /send");
+ assert.match(read("modules/operations/salon/presentation/salon-manager.tsx"),/v\.status==="confirmado"\?sendSalonOrder\(v\.id\)/,"Salón envía con POST /send");
+ assert.match(read("modules/operations/orders/infrastructure/orders-api.ts"),/orders\/\$\{id\}\/send`,\{method:"POST"\}/);
  assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino"}).status,"entregado");
 });
 test("cobro requiere entrega y cierre efectivo",()=>{

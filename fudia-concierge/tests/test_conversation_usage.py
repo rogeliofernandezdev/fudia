@@ -14,6 +14,7 @@ from src.infrastructure.state_store import MemoryConversationStore
 from src.services.concierge_service import (
     CONVERSATION_LIMIT_DELIVERY_REPLY,
     CONVERSATION_LIMIT_TABLE_REPLY,
+    STALE_TABLE_ACCOUNT_REPLY,
     ConciergeService,
     conversation_id_for,
 )
@@ -70,6 +71,25 @@ async def test_limit_reached_answers_soberly_and_opens_nothing() -> None:
     for word in ("plan", "tope", "límite", "limite", "conversaciones"):
         assert word not in lowered
     assert "*" not in reply and "\n" not in reply
+
+
+async def test_stale_table_account_seats_nobody_and_keeps_the_session() -> None:
+    store, fudia = MemoryConversationStore(), FakeFudia()
+    fudia.stale_table_account = True
+    service = ConciergeService(store, fudia, QuietEngine())
+
+    reply = await service.handle_message(PHONE, QR)
+
+    # The previous diner left the account open: nobody joins it and the
+    # staff (already notified by foods-backend) attends the new diner.
+    assert reply == STALE_TABLE_ACCOUNT_REPLY
+    assert await store.get(PHONE) is None
+    assert "*" not in reply and "\n" not in reply
+
+    fudia.stale_table_account = False
+    reply = await service.handle_message(PHONE, QR)
+    session = await store.get(PHONE)
+    assert session is not None and session.mode == "table"
 
 
 async def test_conversation_in_progress_is_never_cut() -> None:

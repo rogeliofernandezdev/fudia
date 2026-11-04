@@ -28,8 +28,11 @@ var (
 	RemoteOrder         = domain.RemoteOrder
 	BillRequested       = domain.BillRequested
 	AssistanceRequested = domain.AssistanceRequested
+	StaleAccount        = domain.StaleAccount
 	OrderReady          = domain.OrderReady
 	Money               = domain.Money
 	// OrderReadyForCustomer devuelve false si el pedido no avisa al cliente.
 	OrderReadyForCustomer = domain.OrderReadyForCustomer
+	// OrderSentForCustomer devuelve false si falta el WhatsApp de la ronda.
+	OrderSentForCustomer = domain.OrderSentForCustomer
 )

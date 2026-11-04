@@ -148,7 +148,7 @@ func TestCustomerNoticesOutbox(t *testing.T) {
 	pending := func(orderID string) int {
 		t.Helper()
 		var count int
-		if err := pool.QueryRow(ctx, `SELECT count(*) FROM customer_notices WHERE order_id=$1`, orderID).Scan(&count); err != nil {
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM customer_notices WHERE order_id=$1 AND kind='order_ready'`, orderID).Scan(&count); err != nil {
 			t.Fatal(err)
 		}
 		return count
@@ -162,6 +162,23 @@ func TestCustomerNoticesOutbox(t *testing.T) {
 	// Sin preparación terminada no hay aviso.
 	if got := claim(counterOrder); len(got) != 0 || pending(counterOrder) != 0 {
 		t.Fatalf("notice before ready: %+v", got)
+	}
+	// Guardados por el bot: caja y mozo los envían y cada WhatsApp recibe «en preparación».
+	sendBotOrder(t, api, s, counterOrder)
+	sendBotOrder(t, api, s, tableOrder)
+	for _, sent := range []struct{ order, fulfillment, conversation string }{{counterOrder, "counter", "cus-counter"}, {tableOrder, "table", "cus-table"}} {
+		// Concierge reclama en lote: se libera el reclamo para revisar cada pedido por separado.
+		if _, err := pool.Exec(ctx, `UPDATE customer_notices SET claimed_until=NULL WHERE order_id=$1 AND status='pending'`, sent.order); err != nil {
+			t.Fatal(err)
+		}
+		got := claim(sent.order)
+		if len(got) != 1 || got[0].Kind != "order_sent" || got[0].Fulfillment != sent.fulfillment ||
+			got[0].ConversationID != sent.conversation || got[0].CustomerPhone != "51911111111" {
+			t.Fatalf("sent notice for %s: %+v", sent.fulfillment, got)
+		}
+		if rec := integration("POST", "/v1/integrations/concierge/notices/"+got[0].ID+"/dispatched", "concierge-test-key"); rec.Code != 204 {
+			t.Fatalf("dispatched sent notice: %d %s", rec.Code, rec.Body.String())
+		}
 	}
 	ready(counterOrder)
 	ready(tableOrder)

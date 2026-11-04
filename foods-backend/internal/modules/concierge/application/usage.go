@@ -55,10 +55,18 @@ type Usage struct {
 	resolver QRResolver
 	work     unitofwork.Manager
 	audit    audit.Repository
+	tables   TableGuard
 }
 
 func NewUsage(repo UsageRepository, resolver QRResolver, work unitofwork.Manager, audit audit.Repository) *Usage {
-	return &Usage{repo, resolver, work, audit}
+	return &Usage{repo: repo, resolver: resolver, work: work, audit: audit}
+}
+
+// WithTableGuard valida, al abrir una atención de mesa, que el QR no se sume a
+// una cuenta anterior sin cerrar.
+func (u *Usage) WithTableGuard(guard TableGuard) *Usage {
+	u.tables = guard
+	return u
 }
 
 const historyMonths = 6
@@ -96,6 +104,11 @@ func (u *Usage) OpenConversation(ctx context.Context, token string, in domain.Co
 	qr, err := u.resolve(ctx, token)
 	if err != nil {
 		return domain.ConversationView{}, false, err
+	}
+	if in.Kind == domain.ConversationKindTable && u.tables != nil {
+		if err := u.tables.GuardTable(ctx, token); err != nil {
+			return domain.ConversationView{}, false, err
+		}
 	}
 	org := qr.Scope.OrganizationID
 	failed := func(err error) error {

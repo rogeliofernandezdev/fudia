@@ -168,7 +168,7 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	if err := json.Unmarshal(orderRec.Body.Bytes(), &created); err != nil {
 		t.Fatal(err)
 	}
-	if created.Channel != "whatsapp" || created.Status != "confirmado" || created.TableID != tableID {
+	if created.Channel != "whatsapp" || created.Status != "nuevo" || created.TableID != tableID {
 		t.Fatalf("unexpected concierge order: %#v", created)
 	}
 	if created.Total != "78.00" {
@@ -299,6 +299,8 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		t.Fatalf("expected one concierge audit event, got %d", auditCount)
 	}
 
+	// Guardado por el bot: Cocina lo ve cuando el mozo pulsa «Enviar comanda».
+	sendBotOrder(t, api, s, created.ID)
 	kitchenReq := httptest.NewRequest("GET", "/v1/admin/kitchen/tickets?channel=whatsapp", nil)
 	kitchenReq = kitchenReq.WithContext(context.WithValue(kitchenReq.Context(), scopeKey{}, s))
 	kitchenRec := httptest.NewRecorder()

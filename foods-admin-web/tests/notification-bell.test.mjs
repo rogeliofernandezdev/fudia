@@ -19,9 +19,10 @@ const rules=compile("src/modules/notifications/domain/notice-rules.ts");
 test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de preferencia",()=>{
  assert.deepEqual([...rules.noticeTargets({kind:"table_order"})],[routes.diningRoom,routes.orders]);
  assert.deepEqual([...rules.noticeTargets({kind:"assistance_requested"})],[routes.diningRoom,routes.orders]);
- assert.deepEqual([...rules.noticeTargets({kind:"counter_order"})],[routes.pos,routes.orders]);
- assert.deepEqual([...rules.noticeTargets({kind:"delivery_order"})],[routes.pos,routes.orders]);
+ assert.deepEqual([...rules.noticeTargets({kind:"counter_order"})],[routes.orders,routes.pos]);
+ assert.deepEqual([...rules.noticeTargets({kind:"delivery_order"})],[routes.orders,routes.pos]);
  assert.deepEqual([...rules.noticeTargets({kind:"bill_requested"})],[routes.pos,routes.diningRoom]);
+ assert.deepEqual([...rules.noticeTargets({kind:"stale_account"})],[routes.diningRoom,routes.pos]);
  // Listo en mesa: el mozo entrega en Salón; sin mesa (mostrador, recojo, delivery) se ve en Pedidos.
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready",tableId:"t1"})],[routes.diningRoom,routes.orders]);
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready"})],[routes.orders,routes.pos]);
@@ -45,6 +46,8 @@ test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
  assert.equal(rules.noticeTone("order_ready"),"brand");
  assert.equal(rules.noticeTone("bill_requested"),"peach");
  assert.equal(rules.noticeTone("assistance_requested"),"sky");
+ assert.equal(rules.noticeTone("stale_account"),"peach");
+ assert.equal(rules.noticeHref(routes.pos,{kind:"stale_account",orderId:"o-9"}),"/pos?orderId=o-9","caja cobra la cuenta anterior directamente");
  assert.equal(rules.noticeTone("table_order"),"primary");
  const items=[{id:"n3",read:false},{id:"n2",read:true},{id:"n1",read:false}];
  assert.deepEqual([...rules.freshNotices(items,new Set(["n1"]))].map(item=>item.id),["n3"],"solo los nuevos sin leer emergen");

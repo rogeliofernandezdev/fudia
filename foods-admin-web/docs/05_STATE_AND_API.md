@@ -489,10 +489,16 @@ lista entregada, cuenta pagada, pedido nuevo cuya comanda ya está lista, o pedi
 cancelado) el aviso desaparece de la lista y del contador en la siguiente
 consulta. Abrir un aviso no lo quita: si no se atendió, sigue visible como leído.
 
+«Cuenta anterior sin cerrar» (`stale_account`, icono `clock`, tono `peach`) llega
+cuando alguien escanea el QR de una mesa cuya cuenta lleva más de 3 h sin pedidos;
+abre la mesa en Salón (o el cobro en POS) y sale de la lista al cobrarla,
+cancelarla o agregar productos.
+
 Abrir un aviso lo marca como leído al instante (actualización optimista con
 reversión si falla) y navega a la primera pantalla permitida para su tipo:
 pedidos y llamados de mesa → Salón; ventas por mostrador, delivery y recojo →
-Punto de venta; cuenta pedida → Punto de venta o Salón; comanda lista → Salón si
+Pedidos (su detalle tiene «Enviar comanda», porque el pedido del bot espera a caja)
+o Punto de venta; cuenta pedida → Punto de venta o Salón; comanda lista → Salón si
 tiene mesa y Pedidos si no. Si el aviso trae `orderId`, Salón y Pedidos abren
 directamente el detalle de ese pedido (`?orderId=`), listo para actuar (por
 ejemplo, el mozo pulsa «Confirmar entrega»); en Punto de venta solo la cuenta

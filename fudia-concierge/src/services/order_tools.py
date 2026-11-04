@@ -530,10 +530,13 @@ class OrderTools:
             "total": str(result.total),
         }
         await self.context.journal.after_effect({"order": order})
+        # The order is saved, not cooking yet: the waiter (table) or the cashier
+        # (counter) reviews it and presses «Enviar comanda»; the diner then gets
+        # an «en preparación» notice.
         if counter:
             # Independent order: the next one in this chat is a new order.
-            return {"ok": True, "order": order, "payment": COUNTER_PAYMENT}
-        return {"ok": True, "order": order}
+            return {"ok": True, "order": order, "payment": COUNTER_PAYMENT, "awaitingStaff": "cashier"}
+        return {"ok": True, "order": order, "awaitingStaff": "waiter"}
 
     async def _confirm_delivery_order(
         self,
@@ -589,6 +592,7 @@ class OrderTools:
             "ok": True,
             "order": confirmed,
             "payment": summary["payment"],
+            "awaitingStaff": "cashier",
         }
 
     async def _requote(self) -> None:

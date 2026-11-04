@@ -12,7 +12,8 @@ from src.services.tooling import ToolContext
 T = TypeVar("T")
 
 ORDER_STATUS_LABELS = {
-    "nuevo": "recibido",
+    # Pedido del bot guardado hasta que el mozo o caja pulse «Enviar comanda».
+    "nuevo": "recibido, por enviar a cocina",
     "confirmado": "confirmado",
     "preparando": "en preparación",
     "listo": "listo",

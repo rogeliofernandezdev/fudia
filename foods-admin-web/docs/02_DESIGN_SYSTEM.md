@@ -1996,7 +1996,12 @@ manteniendo la misma geometría de control. Cancelar muestra el texto breve «Ca
 texto completo. Usa fondo `danger-50`, borde `danger-200` y texto e icono `danger`; en
 hover el borde pasa a `danger-600` y el fondo a `danger-100`, sin cambiar el color del
 texto. Todos los iconos de acción son outline de 18 px: tarjeta para Cobrar,
-plato/check para registrar la entrega, gorro de chef para Enviar comanda. La mesa se libera automáticamente cuando
+plato/check para registrar la entrega, gorro de chef para Enviar comanda.
+«Enviar comanda» aparece también con la cuenta ya en cocina cuando hay ítems «Sin
+enviar»: los pedidos y rondas que el cliente pide por WhatsApp quedan guardados
+(como «Guardar comanda») hasta que el mozo, o caja en mostrador, recojo y delivery,
+los envía (`hasUnsentItems`, `POST /orders/{id}/send`). Quien envía queda como
+responsable de la mesa. La mesa se libera automáticamente cuando
 la cuenta está cerrada, la entrega y el pago están completos, sin botón ni confirmación adicional. En
 móvil (≤600 px) se conserva el orden de lectura y de teclado, con secundarias que
 reparten el ancho de su fila y llenan toda la fila cuando queda una sola;

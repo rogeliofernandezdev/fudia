@@ -44,6 +44,7 @@ class FakeFudia:
         self.usage_reports: list[dict[str, Any]] = []
         # foods-backend in enforce mode at 100 %: only new conversations fail.
         self.conversation_limit_reached = False
+        self.stale_table_account = False
         self.consent_status: ConsentStatus = "granted"
         self.consent_calls: list[dict[str, Any]] = []
 
@@ -88,6 +89,12 @@ class FakeFudia:
                 409,
                 "concierge_conversation_limit_reached",
                 "Fudia Concierge no puede iniciar conversaciones nuevas.",
+            )
+        if self.stale_table_account and kind == "table":
+            raise FudiaError(
+                409,
+                "table_account_stale",
+                "La mesa tiene una cuenta anterior sin cerrar.",
             )
         if not known:
             self.opened.append(
@@ -599,6 +606,8 @@ async def test_cart_requires_explicit_confirmation_before_order() -> None:
     confirmed = await confirmed_tools.execute("confirm_order", {})
     assert confirmed["ok"] is True
     assert confirmed["order"]["code"] == "PED-001"
+    # Saved, not cooking yet: the waiter sends it to the kitchen.
+    assert confirmed["awaitingStaff"] == "waiter"
     assert len(fudia.order_calls) == 1
     assert fudia.order_calls[0]["conversation_id"] == session.conversation_id
     assert fudia.order_calls[0]["request_id"]

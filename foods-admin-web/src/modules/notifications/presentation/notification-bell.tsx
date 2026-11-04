@@ -9,7 +9,7 @@ import {freshNotices,noticeAge,noticeHref,noticeTargets,noticeTone,unreadLabel} 
 import type {NoticeKind,StaffNotice} from "../domain/types";
 
 /** Icono de cada aviso: el mismo dominio que la pantalla donde se atiende. */
-const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell"};
+const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock"};
 /** El aviso emergente se retira solo; se pausa mientras el usuario lo señala o enfoca. */
 const toastDuration=8000;
 

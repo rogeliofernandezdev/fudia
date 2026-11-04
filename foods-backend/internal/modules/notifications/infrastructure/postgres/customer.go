@@ -10,10 +10,10 @@ import (
 
 func (r *Notices) InsertCustomer(ctx context.Context, s scope, in domain.CustomerInput) error {
 	_, err := r.db(ctx).Exec(ctx, `
-		INSERT INTO customer_notices(organization_id,location_id,order_id,kind,customer_phone,conversation_id)
-		VALUES ($1,$2,$3,$4,$5,$6)
-		ON CONFLICT (order_id,kind) DO NOTHING`,
-		s.OrganizationID, s.LocationID, in.OrderID, in.Kind, in.CustomerPhone, in.ConversationID)
+		INSERT INTO customer_notices(organization_id,location_id,order_id,kind,customer_phone,conversation_id,dedupe_key)
+		VALUES ($1,$2,$3,$4,$5,$6,$7)
+		ON CONFLICT (order_id,kind,dedupe_key) DO NOTHING`,
+		s.OrganizationID, s.LocationID, in.OrderID, in.Kind, in.CustomerPhone, in.ConversationID, in.DedupeKey)
 	return err
 }
 
@@ -56,6 +56,9 @@ func (r *Notices) ClaimCustomer(ctx context.Context, limit int) ([]domain.Custom
 			return nil, err
 		}
 		item.Fulfillment = domain.FulfillmentFor(channel)
+		if item.Kind == domain.CustomerOrderSent {
+			item.Fulfillment = domain.ChannelFulfillment(channel)
+		}
 		item.CreatedAt = created.UTC().Format(time.RFC3339)
 		out = append(out, item)
 	}

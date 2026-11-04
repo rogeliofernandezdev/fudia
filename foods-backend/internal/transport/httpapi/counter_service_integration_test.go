@@ -167,12 +167,12 @@ func TestCounterServiceEndToEnd(t *testing.T) {
 		t.Fatalf("table bill: %d %s", rec.Code, rec.Body.String())
 	}
 
-	// 7. QR de mostrador: pedido independiente, sin mesa, confirmado y a preparación.
+	// 7. QR de mostrador: pedido independiente, sin mesa, guardado hasta que caja lo envía.
 	soldBefore := sold()
 	rec = concierge(counter.QrToken, "/orders", orderBody("Ana", "+51 922 222 222", "cnt-ana", "cnt-ana-1", kitchenItems))
 	first := decode(rec)
 	if rec.Code != 201 || first.Channel != "recojo" || first.Origin != "counter" || first.TableID != "" ||
-		first.Status != "confirmado" || first.CustomerName != "Ana" || first.CustomerID == "" || first.Total != "55.00" || first.Notes != "Sin ají" || !strings.HasPrefix(first.Code, "PED-") {
+		first.Status != "nuevo" || first.CustomerName != "Ana" || first.CustomerID == "" || first.Total != "55.00" || first.Notes != "Sin ají" || !strings.HasPrefix(first.Code, "PED-") {
 		t.Fatalf("counter QR order: %d %+v", rec.Code, first)
 	}
 	var stored string
@@ -344,7 +344,13 @@ func TestCounterServiceEndToEnd(t *testing.T) {
 		t.Fatalf("manual channel options: %d %s", w.Code, w.Body.String()[:min(400, len(w.Body.String()))])
 	}
 
-	// 11 y 12. Cocina recibe la comanda de mostrador; Sin preparación no entra al KDS.
+	// 11 y 12. Guardada por el bot, Cocina no la ve hasta que caja pulsa «Enviar comanda»;
+	// Sin preparación nunca entra al KDS.
+	w = admin(s, "GET", "/v1/admin/kitchen/tickets?destination=kitchen", "", api.listKitchenTickets)
+	if strings.Contains(w.Body.String(), first.ID) {
+		t.Fatalf("an unsent counter order must not reach the kitchen: %s", w.Body.String())
+	}
+	sendBotOrder(t, api, s, first.ID)
 	w = admin(s, "GET", "/v1/admin/kitchen/tickets?destination=kitchen", "", api.listKitchenTickets)
 	var kitchen struct {
 		Items []struct {

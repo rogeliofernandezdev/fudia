@@ -9,7 +9,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,SearchField,Skeleton,Status} from "@/design-system";
 import {ComandaView} from "../../orders/presentation/comanda-view";
 import type {Draft,Order} from "../domain/types";
-import {createSalonOrder,getSalonFloor,getSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
+import {createSalonOrder,getSalonFloor,getSalonOrder,sendSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {useMoney} from "@/providers";
@@ -93,7 +93,7 @@ export function SalonManager({initialOrderId}:{initialOrderId?:string}={}){
   const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","products","sales"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);
 
   const advance=useMutation({
-    mutationFn:(v:{id:string;status:string})=>updateSalonOrderStatus(v.id,v.status),
+    mutationFn:(v:{id:string;status:string})=>v.status==="confirmado"?sendSalonOrder(v.id):updateSalonOrderStatus(v.id,v.status),
     onSuccess:(order)=>{const refresh=invalidate();if(order.status!=="entregado")notify({tone:"success",title:"Pedido actualizado",message:"El estado fue actualizado correctamente."});return refresh},
     onError:e=>notify({tone:"danger",title:"No se pudo actualizar el pedido",message:e.message}),
   });

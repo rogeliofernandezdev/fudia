@@ -231,6 +231,36 @@ async def test_idle_table_without_orders_ends_after_the_idle_window() -> None:
     assert "atención en mesa ya terminó" in reply
 
 
+async def test_open_account_left_idle_ends_the_table_for_that_chat() -> None:
+    store = MemoryConversationStore()
+    clock = Clock()
+    fudia = DeliveryFudia()
+    service = ConciergeService(
+        store, fudia, RecordingEngine(), clock=clock,
+        table_idle_seconds=3_600,
+    )
+    await service.handle_message(PHONE, QR)
+    session = await store.get(PHONE)
+    assert session is not None
+    session.last_order_id = "o1"
+    await store.save(session)
+
+    # Account still open and the diner keeps writing: still the table.
+    clock.now += 1_800
+    await service.handle_message(PHONE, "otra gaseosa")
+    session = await store.get(PHONE)
+    assert session is not None and session.mode == "table"
+
+    # Hours without a message although the account is open: the diner may
+    # have left, so this chat no longer adds rounds to that table.
+    clock.now += 3_601
+    reply = await service.handle_message(PHONE, "hola")
+    session = await store.get(PHONE)
+    assert session is not None and session.mode == "delivery"
+    assert session.last_order_id is None
+    assert "atención en mesa ya terminó" in reply
+
+
 async def test_remembered_venue_takes_orders_after_the_session_expired() -> None:
     store = MemoryConversationStore()
     service = ConciergeService(store, DeliveryFudia(), RecordingEngine())

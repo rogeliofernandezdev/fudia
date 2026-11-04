@@ -145,6 +145,7 @@ type PurchasingHandler interface {
 }
 type OrdersHandler interface {
 	CompletePaidOrder(http.ResponseWriter, *http.Request)
+	SendOrder(http.ResponseWriter, *http.Request)
 	ListKitchenTickets(http.ResponseWriter, *http.Request)
 	UpdateKitchenTicketStatus(http.ResponseWriter, *http.Request)
 	ListOrders(http.ResponseWriter, *http.Request)

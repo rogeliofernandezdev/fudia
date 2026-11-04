@@ -12,7 +12,7 @@ func (r *Orders) CreateQROrder(ctx context.Context, s scope, tableID string, in 
 		  organization_id,location_id,channel,customer_id,customer_name,customer_phone,
 		  reference,table_id,notes,subtotal,delivery_fee,total,status,created_by
 		)
-		VALUES($1,$2,'whatsapp',NULLIF($8,'')::uuid,$3,$4,'',$5,$6,$7,0,$7,'confirmado',NULL)
+		VALUES($1,$2,'whatsapp',NULLIF($8,'')::uuid,$3,$4,'',$5,$6,$7,0,$7,'nuevo',NULL)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.CustomerName, in.CustomerPhone,
 		tableID, in.Notes, subtotal, customerID,
@@ -69,6 +69,26 @@ func (r *Orders) LockQRTableOrder(ctx context.Context, s scope, tableID string) 
 	)
 	return openOrderID, openStatus, openChannel, openSubtotal, openDeliveryFee, openCreatedBy, openBillClosed, conciergeOwned, orderError(err)
 }
+// StaleTableAccount devuelve la comanda abierta de la mesa, su última actividad
+// (última ronda o creación) y si lleva más de idleSeconds sin rondas nuevas.
+func (r *Orders) StaleTableAccount(ctx context.Context, s scope, tableID string, idleSeconds int) (string, string, bool, error) {
+	var orderID, lastActivity string
+	var stale bool
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT a.id,to_char(a.last_activity AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),a.last_activity < now()-make_interval(secs=>$4)
+		FROM (SELECT o.id::text AS id,o.created_at AS created_at,
+		       GREATEST(o.created_at,COALESCE((
+		         SELECT max(k.created_at) FROM order_kitchen_rounds k
+		         WHERE k.order_id=o.id AND k.organization_id=o.organization_id
+		       ),o.created_at)) AS last_activity
+		FROM orders o
+		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.table_id=$3
+		  AND o.status<>'cancelado' AND (o.status<>'entregado' OR (o.channel='salon' AND o.completed_at IS NULL))
+		ORDER BY o.created_at DESC,o.id
+		LIMIT 1) a
+	`, s.OrganizationID, s.LocationID, tableID, idleSeconds).Scan(&orderID, &lastActivity, &stale)
+	return orderID, lastActivity, stale, orderError(err)
+}
 func (r *Orders) QROrderTotal(ctx context.Context, s scope, openOrderID string) (float64, error) {
 	var total float64
 	err := r.db(ctx).QueryRow(ctx, `SELECT total::float8 FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, openOrderID, s.OrganizationID, s.LocationID).Scan(&total)
@@ -82,13 +102,13 @@ func (r *Orders) UpdateQRSubtotal(ctx context.Context, s scope, openOrderID stri
 		`, openOrderID, s.OrganizationID, s.LocationID, nextSubtotal, nextTotal)
 	return tag.RowsAffected(), orderError(err)
 }
-func (r *Orders) SaveQRAppendRequest(ctx context.Context, s scope, tableID string, in application.QROrderInput, openOrderID string) (int64, error) {
+func (r *Orders) SaveQRAppendRequest(ctx context.Context, s scope, tableID string, in application.QROrderInput, openOrderID, roundID string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 			INSERT INTO concierge_order_requests(
-			  organization_id,location_id,table_id,conversation_id,request_id,order_id
+			  organization_id,location_id,table_id,conversation_id,request_id,order_id,customer_phone,round_id
 			)
-			VALUES($1,$2,$3,$4,$5,$6)
-		`, s.OrganizationID, s.LocationID, tableID, in.ConversationID, in.RequestID, openOrderID)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8::uuid)
+		`, s.OrganizationID, s.LocationID, tableID, in.ConversationID, in.RequestID, openOrderID, in.CustomerPhone, roundID)
 	return tag.RowsAffected(), orderError(err)
 }
 func (r *Orders) AuditQRAppend(ctx context.Context, s scope, tableID string, in application.QROrderInput, openOrderID string, openChannel string) (int64, error) {
@@ -107,13 +127,13 @@ func (r *Orders) AuditQRAppend(ctx context.Context, s scope, tableID string, in 
 		`, s.OrganizationID, s.LocationID, openOrderID, in.ConversationID, in.RequestID, tableID, openChannel)
 	return tag.RowsAffected(), orderError(err)
 }
-func (r *Orders) SaveQRCreateRequest(ctx context.Context, s scope, tableID string, in application.QROrderInput, out domain.Order) (int64, error) {
+func (r *Orders) SaveQRCreateRequest(ctx context.Context, s scope, tableID string, in application.QROrderInput, out domain.Order, roundID string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO concierge_order_requests(
-		  organization_id,location_id,table_id,conversation_id,request_id,order_id
+		  organization_id,location_id,table_id,conversation_id,request_id,order_id,customer_phone,round_id
 		)
-		VALUES($1,$2,$3,$4,$5,$6)
-	`, s.OrganizationID, s.LocationID, tableID, in.ConversationID, in.RequestID, out.ID)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8::uuid)
+	`, s.OrganizationID, s.LocationID, tableID, in.ConversationID, in.RequestID, out.ID, in.CustomerPhone, roundID)
 	return tag.RowsAffected(), orderError(err)
 }
 func (r *Orders) AuditQRCreated(ctx context.Context, s scope, tableID string, in application.QROrderInput, out domain.Order) (int64, error) {

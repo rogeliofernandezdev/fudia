@@ -44,6 +44,7 @@ type Orders interface {
 	ConciergeDeliveryReplay(ctx context.Context, s scope, requestID string) (ordercontracts.Order, bool, error)
 	SubmitConciergeDelivery(ctx context.Context, s scope, in ordercontracts.ConciergeDeliveryInput) (ordercontracts.TableSubmission, error)
 	ConciergeOrder(ctx context.Context, s scope, conversationID, orderID string) (ordercontracts.ConciergeOrderState, error)
+	StaleTableAccount(ctx context.Context, s scope, tableID string) (ordercontracts.StaleTableAccount, error)
 }
 type Concierge struct {
 	repo     Repository
@@ -180,6 +181,10 @@ func (a *Concierge) Submit(ctx context.Context, token string, in ordercontracts.
 		return out, err
 	}
 	out, err := a.orders.SubmitTable(ctx, qr.Scope, qr.TableID, token, in)
+	var failure *apperror.Error
+	if errors.As(err, &failure) && failure.Code == ordercontracts.StaleTableAccountCode {
+		a.warnStaleAccount(ctx, qr)
+	}
 	if err == nil {
 		// Mismo criterio de idempotencia que Orders: sin requestId cuenta la conversación.
 		requestID := strings.TrimSpace(in.RequestID)

@@ -69,6 +69,19 @@ func AssistanceRequested(tableID, tableName, reason, handoffID string) Input {
 	}
 }
 
+// StaleAccount avisa a mozos y caja de que alguien escaneó el QR de una mesa cuya
+// cuenta anterior sigue abierta sin pedidos nuevos: el cliente anterior pudo irse
+// sin pagar. Un aviso por episodio (staleSince); se resuelve al cobrar, cancelar o
+// agregar productos.
+func StaleAccount(tableID, tableName, orderID, staleSince string) Input {
+	return Input{
+		Kind: KindStaleAccount, Audience: AudienceAll,
+		Title:   Join(tableName, "cuenta anterior sin cerrar"),
+		Detail:  "Un cliente escaneó el QR. Cobra o cancela la cuenta anterior para atenderlo.",
+		OrderID: orderID, TableID: tableID, DedupeKey: dedupe("stale", orderID, staleSince),
+	}
+}
+
 // OrderReady avisa que una comanda está lista para entregar. En mesa la
 // entrega el mozo; mostrador, recojo y delivery se avisan también a caja.
 func OrderReady(ticketID, station, orderID, tableID, tableName, code, customer string) Input {

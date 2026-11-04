@@ -14,6 +14,7 @@ const (
 	KindOrderReady   = "order_ready"
 	KindBill         = "bill_requested"
 	KindAssistance   = "assistance_requested"
+	KindStaleAccount = "stale_account"
 )
 
 // Audiencias: el servicio de salón (mozos), la caja (cajeros) o ambos.
@@ -66,7 +67,7 @@ func Audiences(service, cashier bool) []string {
 // Normalize recorta los textos a sus límites y rechaza tipos o audiencias desconocidos.
 func Normalize(in Input) (Input, bool) {
 	switch in.Kind {
-	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance:
+	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount:
 	default:
 		return in, false
 	}
