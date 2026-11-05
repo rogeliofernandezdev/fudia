@@ -145,11 +145,10 @@
 .cmd-combo-option{width:100%;min-height:var(--size-52);display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2-5) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface);color:var(--ink-950);text-align:left;cursor:pointer;user-select:none;transition:background var(--duration-fast) var(--easing-out),border-color var(--duration-fast) var(--easing-out)}
 .cmd-combo-option[aria-pressed=true]{border-color:var(--primary-600);background:var(--primary-25);box-shadow:var(--ring-selected-soft)}
 .cmd-combo-option:disabled{border-style:dashed;background:var(--cloud-25);color:var(--ink-500);cursor:not-allowed}
-/* Check circular como el medio de pago del POS; «elige 1» usa círculo con punto. */
+/* Check circular como el medio de pago del POS y el editor de roles: elegido = círculo azul con check blanco (también en «Elige 1»). */
 .cmd-combo-check{flex:none;display:grid;place-items:center;width:var(--size-20);height:var(--size-20);border:var(--stroke-1-5) solid var(--line-strong);border-radius:50%;background:var(--surface);color:var(--surface);transition:var(--transition-surface)}
-.cmd-combo-option[aria-pressed=true] .cmd-combo-check{border-color:var(--primary-600);background:var(--primary-600)}
+.cmd-combo-option:is([aria-pressed=true],[aria-checked=true]) .cmd-combo-check{border-color:var(--primary-600);background:var(--primary-600)}
 .cmd-combo-option[aria-checked=true]{border-color:var(--primary-600);background:var(--primary-25);box-shadow:var(--ring-selected-soft)}
-.cmd-combo-option[aria-checked=true] .cmd-combo-check.radio{border-color:var(--primary-600);box-shadow:inset 0 0 0 var(--space-1) var(--primary-600)}
 /* Grupo obligatorio sin elegir al tocar «Agregar»: título y aviso en rojo, sin bloquear el botón. */
 .cmd-combo-group.invalid h3{color:var(--danger-700)}
 .cmd-combo-group.invalid .cmd-combo-option{border-color:var(--danger-200)}

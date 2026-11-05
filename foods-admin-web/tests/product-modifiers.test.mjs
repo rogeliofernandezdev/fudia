@@ -53,3 +53,12 @@ test("la comanda pide las opciones antes de agregar y separa cada combinación e
   assert.ok(source(path).includes("modifiers:(line.modifiers??[]).map(modifier=>({groupId:modifier.groupId,optionId:modifier.optionId}))"),`${path} envía las opciones elegidas`);
  assert.ok(source("modules/operations/salon/presentation/salon-manager.tsx").includes("modifiers:(it.modifiers??[]).map(modifier=>({"),"editar un pedido conserva sus opciones");
 });
+
+test("la descripción del plato se muestra sin etiquetas del editor enriquecido",()=>{
+ const {plainText}=compile("shared/format/plain-text.ts");
+ assert.equal(plainText("<p>Jugosos trozos de lomo &amp; papas</p><p>con arroz&nbsp;blanco.</p>"),"Jugosos trozos de lomo & papas con arroz blanco.");
+ assert.equal(plainText("<ul><li>Ají</li><li>Cebolla</li></ul>"),"Ají Cebolla");
+ assert.equal(plainText(null),"");
+ assert.ok(source("modules/operations/salon/presentation/comanda-catalog.tsx").includes("subtitle={plainText(product.description)||undefined}"),"la hoja muestra la descripción como texto");
+ assert.ok(source("modules/operations/styles/salon-comanda.css").includes(".cmd-combo-option:is([aria-pressed=true],[aria-checked=true]) .cmd-combo-check{border-color:var(--primary-600);background:var(--primary-600)}"),"«Elige 1» y varias usan el mismo check relleno");
+});

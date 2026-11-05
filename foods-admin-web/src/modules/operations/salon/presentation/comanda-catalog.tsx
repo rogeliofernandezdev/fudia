@@ -6,6 +6,7 @@ import {useInfiniteQuery,useQuery} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,SearchField,Skeleton} from "@/design-system";
 import {Tooltip} from "@/design-system/tooltip";
 import {useMoney} from "@/providers";
+import {plainText} from "@/shared/format/plain-text";
 import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo,ConfiguredProduct,ModifierSelection,ProductModifierGroup} from "../domain/catalog-types";
 import {getOrderCombo,getProductModifiers,listOrderCategories,listOrderCombos,listSalonProducts,listSelectedProductAvailability} from "../infrastructure/catalog-api";
 
@@ -251,7 +252,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
   const finalPrice=Number(data?.price??0)+selections.reduce((sum,sel)=>sum+sel.surcharge,0);
 
   return(
-    <Modal title={data?.name??"Elige las opciones"} subtitle={data?.description||undefined} icon="combo" size="md" onClose={onClose} closeLabel="Cerrar selección de opciones" className="cmd-combo">
+    <Modal title={data?.name??"Elige las opciones"} subtitle={plainText(data?.description)||undefined} icon="combo" size="md" onClose={onClose} closeLabel="Cerrar selección de opciones" className="cmd-combo">
       <ModalBody className="cmd-combo-body">
         {combo.isLoading?(
           <ComboConfiguratorSkeleton/>
@@ -345,7 +346,7 @@ export function ProductOptionsConfigurator({product,initialModifiers=[],editing=
     onConfirm({productId:product.id,name:product.name,unitPrice,modifiers,imageUrl:product.imageUrl});
   };
   return(
-    <Modal title={product.name} subtitle={product.description||undefined} icon="dish" size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
+    <Modal title={product.name} subtitle={plainText(product.description)||undefined} icon="dish" size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
       <ModalBody className="cmd-combo-body">
         {config.isLoading?(
           <ComboConfiguratorSkeleton/>
@@ -376,7 +377,7 @@ export function ProductOptionsConfigurator({product,initialModifiers=[],editing=
                   const surcharge=Number(option.surcharge)||0;
                   return(
                     <button type="button" key={option.id} className="cmd-combo-option" role={single?"radio":undefined} aria-checked={single?on:undefined} aria-pressed={single?undefined:on} data-picked={on} disabled={full&&!on} onClick={()=>toggle(group,option.id)}>
-                      <span className={"cmd-combo-check"+(single?" radio":"")} aria-hidden="true">{on&&!single&&<Icon name="check" size={14}/>}</span>
+                      <span className="cmd-combo-check" aria-hidden="true">{on&&<Icon name="check" size={14}/>}</span>
                       <span className="cmd-combo-option-copy"><b>{option.name}</b></span>
                       <span className="cmd-combo-option-price">{surcharge>0?`+ ${money(surcharge)}`:"Incluido"}</span>
                     </button>
@@ -420,7 +421,7 @@ function MenuItem({p,qty,reserved=0,money,onPick,disabled=false}:{p:CatalogProdu
   const stockMax=typeof p.remaining==="number"&&Number.isFinite(p.remaining)?Math.max(0,Math.floor(p.remaining+reserved)):undefined;
   const atLimit=stockMax!==undefined&&qty>=stockMax;
   const label=unavailable?`${p.name}, no disponible`:p.hasModifiers?`Elegir opciones de ${p.name}${qty>0?`, llevas ${qty}`:""}`:qty>0?`Agregar otro ${p.name}, llevas ${qty}`:`Agregar ${p.name}`;
-  const description=p.description?.trim()??"";
+  const description=plainText(p.description);
   const allergens=p.allergens??[];
   const visual=<><Icon name="dish" size={24}/>{p.imageUrl&&<img className="cmd-item-thumb" src={p.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</>;
   return(

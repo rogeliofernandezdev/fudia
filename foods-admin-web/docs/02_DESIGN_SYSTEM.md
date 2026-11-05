@@ -868,8 +868,10 @@ Platos con opciones (2026-11-05): si el producto tiene «Opciones al pedir»
 (`hasModifiers`), la carta lo marca con «Con opciones» y tocarlo abre la misma hoja
 que los menús (`ProductOptionsConfigurator`, clases `cmd-combo-*`): grupos con
 «Elige 1», «Elige 1 a 3» u «Opcional, hasta N», chip de progreso («Listo» en verde)
-y precio «+ S/ 3.00» o «Incluido». «Elige 1» usa círculo con punto; varias usan el
-check circular. El pie suma los recargos en vivo («Total del plato») y el botón
+y precio «+ S/ 3.00» o «Incluido». Toda opción elegida, en «Elige 1» o en varias,
+muestra el mismo check del medio de pago y del editor de roles: círculo `primary-600`
+con check blanco (sin elegir, aro `line-strong`). La descripción del plato se
+muestra como texto plano (`plainText`), nunca con etiquetas del editor. El pie suma los recargos en vivo («Total del plato») y el botón
 «Agregar» no se bloquea: si falta un grupo obligatorio, baja hasta él y lo marca
 en rojo («Elige una opción de Acompañamiento para continuar»). Cada combinación
 distinta es su propia línea en el resumen, con las opciones debajo y «Cambiar» para

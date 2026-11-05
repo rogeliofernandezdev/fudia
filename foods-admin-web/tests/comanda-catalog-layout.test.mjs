@@ -13,6 +13,7 @@ const exports={};
 vm.runInNewContext(ts.transpileModule(source+"\nexport {CategoryFilters,MenuItem,ComboItem,categoryTone};",{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>{
  if(name==="@/design-system")return Object.fromEntries(["Button","EmptyState","ErrorState","Icon","Modal","ModalBody","ModalFooter","NumberStepper","SearchField","Skeleton"].map(name=>[name,name]));
  if(name==="@/design-system/tooltip")return {Tooltip:"Tooltip"};
+ if(name==="@/shared/format/plain-text")return {plainText:value=>String(value??"").replace(/<[^>]*>/g,"").trim()};
  if(name.startsWith(".")||name.startsWith("@/"))return {};
  return require(name);
 }});
