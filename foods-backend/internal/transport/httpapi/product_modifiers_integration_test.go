@@ -124,8 +124,22 @@ func TestProductModifierConfigurationLifecycle(t *testing.T) {
 	if invalidRec.Code != 400 {
 		t.Fatalf("required modifier with min 0 must be rejected: %d %s", invalidRec.Code, invalidRec.Body.String())
 	}
-}
 
+	// La carta de la comanda sabe qué platos piden opciones antes de agregarlos.
+	availabilityReq := httptest.NewRequest("GET", "/v1/admin/product-availability?pageSize=100&productIds="+productID, nil)
+	availabilityReq = availabilityReq.WithContext(context.WithValue(availabilityReq.Context(), scopeKey{}, s))
+	availabilityRec := httptest.NewRecorder()
+	api.listProductAvailability(availabilityRec, availabilityReq)
+	var availability struct {
+		Items []struct {
+			ProductID    string `json:"productId"`
+			HasModifiers bool   `json:"hasModifiers"`
+		} `json:"items"`
+	}
+	if availabilityRec.Code != 200 || json.Unmarshal(availabilityRec.Body.Bytes(), &availability) != nil || len(availability.Items) != 1 || !availability.Items[0].HasModifiers {
+		t.Fatalf("availability must flag products with modifiers: %d %s", availabilityRec.Code, availabilityRec.Body.String())
+	}
+}
 
 func TestOrderModifiersAreValidatedPricedAndSnapshotted(t *testing.T) {
 	pool := integrationPool(t)
@@ -176,7 +190,7 @@ func TestOrderModifiersAreValidatedPricedAndSnapshotted(t *testing.T) {
 	}
 
 	orderReq := httptest.NewRequest("POST", "/v1/admin/orders", bytes.NewReader([]byte(`{
-	  "channel":"mostrador",
+	  "channel":"mostrador","sendToKitchen":true,
 	  "items":[{
 	    "productId":"`+productID+`","qty":2,"unitPrice":0.01,"selections":[],
 	    "modifiers":[{"groupId":"`+groupID+`","optionId":"`+optionID+`"}]
@@ -213,5 +227,44 @@ func TestOrderModifiersAreValidatedPricedAndSnapshotted(t *testing.T) {
 		loaded.Items[0].Modifiers[0].Name != "Grande" ||
 		loaded.Items[0].Modifiers[0].Surcharge != "5.00" {
 		t.Fatalf("modifier snapshot was not preserved: %#v", loaded.Items)
+	}
+
+	// Cocina lee las opciones como lista propia; la nota del plato queda solo con lo que escribió el mozo.
+	kitchenReq := httptest.NewRequest("GET", "/v1/admin/kitchen/tickets", nil)
+	kitchenReq = kitchenReq.WithContext(context.WithValue(kitchenReq.Context(), scopeKey{}, s))
+	kitchenRec := httptest.NewRecorder()
+	api.listKitchenTickets(kitchenRec, kitchenReq)
+	if kitchenRec.Code != 200 {
+		t.Fatalf("kitchen tickets: %d %s", kitchenRec.Code, kitchenRec.Body.String())
+	}
+	var kitchen struct {
+		Items []struct {
+			Items []struct {
+				ProductID string `json:"productId"`
+				Note      string `json:"note"`
+				Modifiers []struct {
+					GroupName string `json:"groupName"`
+					Name      string `json:"name"`
+				} `json:"modifiers"`
+			} `json:"items"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(kitchenRec.Body.Bytes(), &kitchen); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, ticket := range kitchen.Items {
+		for _, item := range ticket.Items {
+			if item.ProductID != productID {
+				continue
+			}
+			found = true
+			if item.Note != "" || len(item.Modifiers) != 1 || item.Modifiers[0].Name != "Grande" {
+				t.Fatalf("kitchen must list modifiers apart from the note: %#v", item)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("modified product missing from kitchen tickets: %s", kitchenRec.Body.String())
 	}
 }

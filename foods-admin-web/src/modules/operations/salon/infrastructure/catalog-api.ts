@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {ComboDetail,ComboList} from "../domain/catalog-types";
+import type {ComboDetail,ComboList,ProductModifierConfig} from "../domain/catalog-types";
 
 export function listOrderCategories(){
  return apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100");
@@ -9,7 +9,7 @@ export async function listSalonProducts(input:{categoryId:string;q:string;page:n
  if(input.categoryId)params.set("categoryId",input.categoryId);
  if(input.q.trim())params.set("q",input.q.trim());
  if(input.productIds?.length)params.set("productIds",input.productIds.join(","));
- const data=await apiFetch<{items:Array<{productId:string;name:string;description:string;allergens:string[];price:string;categoryId:string|null;imageUrl:string|null;status:"available"|"low"|"sold_out"|"unavailable";remaining:number|null}>;total:number}>(`product-availability?${params.toString()}`);
+ const data=await apiFetch<{items:Array<{productId:string;name:string;description:string;allergens:string[];price:string;categoryId:string|null;imageUrl:string|null;status:"available"|"low"|"sold_out"|"unavailable";remaining:number|null;hasModifiers?:boolean}>;total:number}>(`product-availability?${params.toString()}`);
  return{
   total:data.total,
   items:data.items.map(item=>({
@@ -22,8 +22,13 @@ export async function listSalonProducts(input:{categoryId:string;q:string;page:n
    imageUrl:item.imageUrl,
    availabilityStatus:item.status,
    remaining:item.remaining,
+   hasModifiers:Boolean(item.hasModifiers),
   })),
  };
+}
+/** Opciones del plato para elegirlas al tomar el pedido (término, acompañamiento, adicionales). */
+export function getProductModifiers(productId:string){
+ return apiFetch<ProductModifierConfig>(`products/${productId}/modifiers`);
 }
 /** Consulta acotada de los productos elegidos, independiente de filtros y páginas de la carta. */
 export async function listSelectedProductAvailability(productIds:string[]){

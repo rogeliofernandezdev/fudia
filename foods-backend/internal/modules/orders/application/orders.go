@@ -105,6 +105,7 @@ type OrderRepository interface {
 	LockStationOrder(ctx context.Context, s scope, id string, destination string) (string, error)
 	StationStatus(ctx context.Context, s scope, orderID string, id string, destination string) (string, error)
 	UpdateStationItems(ctx context.Context, s scope, orderID string, id string, destination string, status string, current string) (int64, error)
+	UpdateStationItem(ctx context.Context, s scope, orderID string, id string, destination string, itemID string, status string) (int64, error)
 	UpdateStationRound(ctx context.Context, s scope, id string) (int64, error)
 	LockHistoricalRound(ctx context.Context, s scope, id string) (string, string, error)
 	UpdateHistoricalRound(ctx context.Context, s scope, id string, in OrderStatusInput) (int64, error)

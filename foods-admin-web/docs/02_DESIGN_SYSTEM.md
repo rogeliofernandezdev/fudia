@@ -863,6 +863,20 @@ Quitar conserva el acento destructivo y los controles bloqueados usan tonos neut
 Un producto agotado impide agregar pero permite reducir lo ya seleccionado.
 Los combos conservan su configuración de opciones, sin restar elecciones
 distintas como si fueran un producto simple. Los estados de disponibilidad no cambian.
+
+Platos con opciones (2026-11-05): si el producto tiene «Opciones al pedir»
+(`hasModifiers`), la carta lo marca con «Con opciones» y tocarlo abre la misma hoja
+que los menús (`ProductOptionsConfigurator`, clases `cmd-combo-*`): grupos con
+«Elige 1», «Elige 1 a 3» u «Opcional, hasta N», chip de progreso («Listo» en verde)
+y precio «+ S/ 3.00» o «Incluido». «Elige 1» usa círculo con punto; varias usan el
+check circular. El pie suma los recargos en vivo («Total del plato») y el botón
+«Agregar» no se bloquea: si falta un grupo obligatorio, baja hasta él y lo marca
+en rojo («Elige una opción de Acompañamiento para continuar»). Cada combinación
+distinta es su propia línea en el resumen, con las opciones debajo y «Cambiar» para
+reabrir la hoja; la misma combinación suma cantidad. La nota y la cantidad siguen
+en la línea del resumen. Editar un pedido conserva sus opciones (se reenvían con
+cada guardado porque el API vuelve a valorizar cada plato). El check de los menús
+y combos pasa también a circular.
 La composición conserva blanco (`surface`) para lectura, cápsulas gris frío
 (`cloud-100`) para cantidades e azul tenue (`primary-50`) en el pie y la barra
 de subtotal. El importe y el + usan azul; los iconos alternativos usan
@@ -1198,6 +1212,18 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   en dos:** los tres carriles de Cocina (`kitchen-mobile-tabs`) se ven siempre
   juntos en columnas iguales, sin pares deslizables ni hueco de relleno, porque
   el cocinero necesita ver los tres estados a la vez.
+- Marcado por plato (2026-11-05): en «En preparación» cada línea de la comanda es una
+  fila táctil de 44 px con el check circular del sistema (anillo 20 px `line-strong`;
+  marcado `primary-600` con check blanco). Tocarla marca el plato listo y tocarla otra
+  vez lo devuelve a preparación mientras la comanda no esté completa. El plato listo se
+  tacha en `ink-500`, sin colores de estado nuevos. La comanda muestra «N de M listos»
+  (por línea, no por unidad) y una barra fina `primary-600` sobre `cloud-100`. Al marcar
+  el último plato pasa a «Por entregar» con el mismo efecto que «Marcar listo», que
+  sigue como vía rápida junto a «Iniciar». Es optimista: si el API rechaza, solo ese
+  plato vuelve atrás con aviso de error. Sin `kitchen.manage`/`bar.manage` los checks
+  son de lectura; las comandas históricas sin estado por plato no los muestran. Las
+  opciones elegidas del plato (término, acompañamiento…) se listan como líneas
+  «Grupo: opción» igual que las elecciones de un menú, separadas de la nota del mozo.
 - Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
   y «Por entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
@@ -2785,6 +2811,22 @@ cartera o el error con Reintentar. La ficha de detalle agrega una sección de so
 lectura; el formulario de la empresa ofrece uso, origen del tope, tokens Lite/Flash,
 historial de 6 meses (vacío «Aún no hay historial») y la excepción Usar el del
 plan / Tope propio / Ilimitado.
+
+### Opciones al pedir (Carta y productos)
+
+El formulario del producto incluye la sección desplegable «Opciones al pedir»
+(resumen «Opcional» o «N grupos»), debajo de «Información adicional». Cada grupo
+tiene nombre («Ej. Acompañamiento»), «Se elige» («Una opción» o «Hasta N», nunca
+más que sus opciones), interruptor «Obligatorio» y filas de opción con nombre,
+recargo `+S/` (vacío = incluido) y quitar. Los grupos se separan con una línea fina
+`cloud-100`, sin tarjetas anidadas; en móvil «Se elige» baja a su propia fila.
+Las reglas son las del API (nombres únicos de hasta 80 caracteres, recargo ≥ 0,
+obligatorio exige al menos una opción) y los errores se muestran junto al campo.
+Al guardar, el producto se guarda primero y las opciones después (necesitan su
+id), solo si cambiaron; si las opciones fallan, el producto queda guardado y un
+aviso pide revisarlas. Reemplazar las opciones no altera pedidos anteriores: cada
+pedido guarda una copia de lo elegido. Un plato sin grupos se agrega directo a la
+comanda.
 
 ## Mi restaurante: identidad y carta virtual
 

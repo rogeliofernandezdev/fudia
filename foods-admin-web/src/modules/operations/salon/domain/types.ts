@@ -1,8 +1,9 @@
 import type {ServiceItem} from "../../orders/domain/service-flow";
-import type {ComboSelection} from "./catalog-types";
+import type {ComboSelection,ModifierSelection} from "./catalog-types";
 
 export type OrderItemSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:string};
-export type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType:"product"|"combo";selections?:OrderItemSelection[]};
+export type OrderItemModifier={groupId:string;groupName:string;optionId:string;name:string;surcharge:string};
+export type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType:"product"|"combo";selections?:OrderItemSelection[];modifiers?:OrderItemModifier[]};
 export type Order={
  id:string;code:string;channel:string;status:string;completedAt?:string;billClosedAt?:string;accountState?:"open"|"awaiting_payment"|"paid";serviceItems?:ServiceItem[];customerId:string;customerName:string;customerPhone:string;
  address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;total:string;
@@ -13,6 +14,8 @@ export type FloorTable={id:string;name:string;zone:string;seats:number;occupiedS
 export type LineDraft={
  lineKey:string;sourceItemId?:string;repriceCombo?:boolean;itemType:"product"|"combo";productId:string;name:string;
  qty:number;unitPrice:number;note:string;selections:ComboSelection[];
+ /** Opciones elegidas de un plato simple (vacío en combos). */
+ modifiers?:ModifierSelection[];
  /** Imagen de presentación del catálogo; no forma parte del payload del pedido. */
  imageUrl?:string|null;
 };

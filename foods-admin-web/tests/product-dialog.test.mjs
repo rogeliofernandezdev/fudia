@@ -16,12 +16,17 @@ function compile(path,resolve){
 }
 const resolver=compile("shared/forms/zod-resolver.ts",require);
 const schema=compile("modules/menu/products/domain/product-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
+const modifiers=compile("modules/menu/products/domain/modifiers.ts",require);
 const validDraft={name:"Lomo saltado",price:"25",costPrice:"",prepMinutes:"",categoryId:"cat-general",description:"",quantityControl:"none",allergens:[],featured:false,active:true,productType:"prepared",imageUrl:null};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function mount({save=async()=>{},draft={...validDraft},busy=false,categories=[],errors={}}={}){
  let formControl,formOptions;
  const {ProductDialog}=compile("modules/menu/products/presentation/product-dialog.tsx",name=>{
-  if(name==="react")return {useRef:value=>({current:value}),useState:value=>[value,()=>{}]};
+  if(name==="react")return {useRef:value=>({current:value}),useState:value=>[value,()=>{}],useEffect:()=>{}};
+  if(name==="@tanstack/react-query")return {useQuery:()=>({isLoading:false,isError:false,isSuccess:false,isFetching:false,data:undefined,refetch:async()=>{}})};
+  if(name==="../domain/modifiers")return modifiers;
+  if(name==="../infrastructure/products-api")return {getProductModifiers:async()=>({productId:"",groups:[]})};
+  if(name==="./product-options-field")return {ProductOptionsField:"ProductOptionsField"};
   if(name==="react-hook-form")return {Controller:"Controller",useForm:options=>{
    formOptions=options;
    formControl=createFormControl(options);
@@ -30,7 +35,7 @@ function mount({save=async()=>{},draft={...validDraft},busy=false,categories=[],
   if(name==="../domain/product-schema")return schema;
   if(name==="./product-image-field")return {ProductImageField:"ProductImageField"};
   if(name.endsWith(".css"))return {};
-  if(name==="@/design-system")return {FormField:"FormField",InlineNotice:"InlineNotice",Input:"input",Select:"select",ModalHeader:"ModalHeader",ModalForm:"form",ModalBody:"ModalBody",ModalFooter:"ModalFooter"};
+  if(name==="@/design-system")return {Button:"Button",FormDisclosure:"FormDisclosure",FormField:"FormField",InlineNotice:"InlineNotice",Input:"input",Select:"select",ModalHeader:"ModalHeader",ModalForm:"form",ModalBody:"ModalBody",ModalFooter:"ModalFooter",Skeleton:"Skeleton"};
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
   if(name==="@/design-system/rich-text-editor")return {RichTextEditor:"RichTextEditor"};
@@ -156,6 +161,7 @@ test("el API guarda las porciones en un único POST, nunca con un PATCH adiciona
   if(name==="@/shared/api/client")return {apiFetch:async(path,init)=>{calls.push({path,init});return {id:"created"}}};
   if(name==="@/shared/api/product-image")return {};
   if(name==="@/shared/api/image-upload")return {};
+  if(name==="../domain/modifiers")return modifiers;
   return require(name);
  });
  await saveProduct({...validDraft,quantityControl:"portions",initialPortionQuantity:"15"},null);

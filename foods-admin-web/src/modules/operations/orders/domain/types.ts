@@ -18,6 +18,7 @@ export type OrderItem={
   note:string;
   itemType?:"product"|"combo";
   selections?:OrderItemSelection[];
+  modifiers?:{groupId:string;groupName:string;optionId:string;name:string;surcharge:string}[];
 };
 
 export type Order={

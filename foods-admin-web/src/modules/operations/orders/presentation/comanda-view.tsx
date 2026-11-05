@@ -9,12 +9,14 @@ import {lineAvailability,productUsage} from "../domain/draft-availability";
 import type {ComboDetail} from "../../salon/domain/catalog-types";
 import {listOrderComboDetails,listSelectedProductAvailability} from "../../salon/infrastructure/catalog-api";
 import {useFeedback} from "@/providers/feedback-provider";
-import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "../../salon/presentation/comanda-catalog";
+import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ConfiguredProduct,ComandaCatalog,ModifierSelection,ProductOptionsConfigurator} from "../../salon/presentation/comanda-catalog";
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
 import type {IconName} from "@/design-system/icons";
 
 const tableTitle=(name:string)=>/^mesa\b/i.test(name.trim())?name.trim():`Mesa ${name.trim()}`;
 const uniqueKey=()=>typeof crypto!=="undefined"&&typeof crypto.randomUUID==="function"?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+/** Clave de las opciones elegidas: el mismo plato con las mismas opciones suma cantidad en una sola línea. */
+const modifiersKey=(modifiers:readonly ModifierSelection[]=[])=>modifiers.map(modifier=>`${modifier.groupId}:${modifier.optionId}`).sort().join("|");
 const sameDraft=(a:Draft,b:Draft)=>JSON.stringify([a.lines,a.notes,a.customerName,a.tableId])===JSON.stringify([b.lines,b.notes,b.customerName,b.tableId]);
 
 /**
@@ -32,6 +34,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
   const[sheetOpen,setSheetOpen]=useState(false);
   const[validationError,setValidationError]=useState("");
   const[comboEditor,setComboEditor]=useState<{comboId:string;lineKey?:string;initialSelections:ComboSelection[]}|null>(null);
+  const[productEditor,setProductEditor]=useState<{product:Pick<CatalogProduct,"id"|"name"|"description"|"price"|"imageUrl">;lineKey?:string;initialModifiers:ModifierSelection[]}|null>(null);
   const[confirmDiscard,setConfirmDiscard]=useState(false);
   const[openNotes,setOpenNotes]=useState<string[]>([]);
   const[announcement,setAnnouncement]=useState("");
@@ -97,6 +100,8 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
     if(["sold_out","unavailable"].includes(current.availabilityStatus??""))return;
     const limit=limitFor(p.id,current.remaining);
     if(limit!==undefined&&(qtyByProduct[p.id]??0)>=limit){warnStock(p.name,limit);return}
+    // Platos con opciones: primero se eligen; cada combinación distinta es su propia línea.
+    if(p.hasModifiers||current.hasModifiers){setProductEditor({product:p,initialModifiers:[]});return}
     const existing=v.lines.find(l=>l.itemType==="product"&&l.productId===p.id);
     setV(prev=>{
       // Revalidar sobre el borrador más reciente impide exceder el tope con clics batched.
@@ -120,6 +125,34 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
   };
   const removeLine=(i:number)=>{if(locked())return;const removed=v.lines[i];setV(prev=>({...prev,lines:prev.lines.filter((_,n)=>n!==i)}));if(removed)setAnnouncement(`${removed.name} quitado de la comanda.`)};
   const toggleNote=(key:string)=>setOpenNotes(prev=>prev.includes(key)?prev.filter(item=>item!==key):[...prev,key]);
+  const editProduct=(line:LineDraft)=>{
+    if(locked())return;
+    const modifiers=line.modifiers??[];
+    const base=line.unitPrice-modifiers.reduce((sum,modifier)=>sum+modifier.surcharge,0);
+    const known=availabilityRef.current[line.productId];
+    setProductEditor({product:{id:line.productId,name:line.name,description:known?.description??"",price:known?.price??String(base),imageUrl:line.imageUrl??known?.imageUrl??null},lineKey:line.lineKey,initialModifiers:modifiers});
+  };
+  const applyProduct=(configured:ConfiguredProduct)=>{
+    if(locked())return;
+    const editingLineKey=productEditor?.lineKey;
+    const key=modifiersKey(configured.modifiers);
+    if(editingLineKey){
+      setV(prev=>({...prev,lines:prev.lines.map(line=>line.lineKey===editingLineKey?{...line,unitPrice:configured.unitPrice,modifiers:configured.modifiers}:line)}));
+    }else{
+      const current=availabilityRef.current[configured.productId];
+      const limit=limitFor(configured.productId,current?.remaining);
+      if(limit!==undefined&&(qtyByProduct[configured.productId]??0)>=limit){warnStock(configured.name,limit);return}
+      setV(prev=>{
+        const selected=productUsage(prev.lines)[configured.productId]??0;
+        if(limit!==undefined&&selected+1>limit)return prev;
+        const i=prev.lines.findIndex(line=>line.itemType==="product"&&line.productId===configured.productId&&!line.note&&modifiersKey(line.modifiers)===key);
+        if(i>=0)return{...prev,lines:prev.lines.map((line,n)=>n===i?{...line,qty:line.qty+1}:line)};
+        return{...prev,lines:[...prev.lines,{lineKey:`${configured.productId}-${uniqueKey()}`,itemType:"product",productId:configured.productId,name:configured.name,qty:1,unitPrice:configured.unitPrice,note:"",selections:[],modifiers:configured.modifiers,imageUrl:configured.imageUrl}]};
+      });
+    }
+    setProductEditor(null);setValidationError("");
+    setAnnouncement(`${configured.name} ${editingLineKey?"actualizado":"agregado"}.`);
+  };
   const configureCombo=(comboId:string)=>{if(!locked())setComboEditor({comboId,initialSelections:[]})};
   const editCombo=(line:LineDraft)=>{if(!locked())setComboEditor({comboId:line.productId,lineKey:line.lineKey,initialSelections:line.selections})};
   const applyCombo=(combo:ConfiguredCombo)=>{
@@ -210,12 +243,13 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
               <div className="cmd-empty">
                 <span aria-hidden="true"><Icon name="dish" size={24}/></span>
                 <strong>Aún no hay productos</strong>
-                <p>Toca un plato de la carta para agregarlo. Los menús y combos piden sus opciones.</p>
+                <p>Toca un plato de la carta para agregarlo. Los platos con opciones y los menús las piden al agregarlos.</p>
               </div>
             ):(
               <ul className="cmd-lines">
                 {v.lines.map((l,i)=>{
                   const noteOpen=Boolean(l.note)||openNotes.includes(l.lineKey);
+                  const configurable=l.itemType==="product"&&Boolean(l.modifiers?.length);
                   const stock=lineAvailability(l,v.lines,initial.lines,availability,comboAvailability);
                   const limit=stock.max;
                   const blocked=stock.pending||stock.blocked||selectedAvailability.isError||(l.itemType==="combo"&&selectedCombos.isError);
@@ -233,8 +267,12 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
                       {l.itemType==="combo"&&<ul className="cmd-line-selections" aria-label="Elecciones del menú">
                         {l.selections.map(sel=><li key={sel.groupId+sel.productId}><b>{sel.groupName}</b> {sel.name}{sel.surcharge>0?` (+ ${money(sel.surcharge)})`:""}</li>)}
                       </ul>}
-                      {(l.itemType==="combo"||!noteOpen)&&<div className="cmd-line-controls">
+                      {configurable&&<ul className="cmd-line-selections" aria-label="Opciones del plato">
+                        {(l.modifiers??[]).map(modifier=><li key={modifier.groupId+modifier.optionId}><b>{modifier.groupName}</b> {modifier.name}{modifier.surcharge>0?` (+ ${money(modifier.surcharge)})`:""}</li>)}
+                      </ul>}
+                      {(l.itemType==="combo"||configurable||!noteOpen)&&<div className="cmd-line-controls">
                         {l.itemType==="combo"&&<button type="button" className="cmd-text-button" disabled={busy} onClick={()=>editCombo(l)}><Icon name="edit" size={16}/>Cambiar</button>}
+                        {configurable&&<button type="button" className="cmd-text-button" disabled={busy} onClick={()=>editProduct(l)} aria-label={`Cambiar opciones de ${l.name}`}><Icon name="edit" size={16}/>Cambiar</button>}
                         {!noteOpen&&<button type="button" className="cmd-text-button" disabled={busy} onClick={()=>toggleNote(l.lineKey)} aria-label={`Agregar nota a ${l.name}`}><Icon name="note" size={16}/>Nota</button>}
                       </div>}
                       {noteOpen&&<Input disabled={busy} maxLength={240} className="cmd-line-note" value={l.note} autoFocus={!l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Ej. sin ají, término medio" aria-label={"Nota para "+l.name}/>}
@@ -271,6 +309,16 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
 
       <p className="sr-only" aria-live="polite">{announcement}</p>
 
+      {productEditor&&(
+        <ProductOptionsConfigurator
+          key={productEditor.lineKey??productEditor.product.id}
+          product={productEditor.product}
+          initialModifiers={productEditor.initialModifiers}
+          editing={Boolean(productEditor.lineKey)}
+          onClose={()=>setProductEditor(null)}
+          onConfirm={applyProduct}
+        />
+      )}
       {comboEditor&&(
         <ComboConfigurator
           key={comboEditor.lineKey??comboEditor.comboId}

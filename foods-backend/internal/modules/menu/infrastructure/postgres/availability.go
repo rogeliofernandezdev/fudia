@@ -29,7 +29,8 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 		       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 		       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time),
 		       EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id),
-		       COALESCE(sb.quantity,0)::float8,ii.unit,COALESCE(ii.minimum_stock,0)::float8
+		       COALESCE(sb.quantity,0)::float8,ii.unit,COALESCE(ii.minimum_stock,0)::float8,
+		       EXISTS (SELECT 1 FROM product_modifier_groups pmg WHERE pmg.product_id=p.id AND pmg.organization_id=p.organization_id)
 		FROM products p
 		JOIN locations l ON l.id=$2 AND l.organization_id=p.organization_id AND l.active
 		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
@@ -54,7 +55,7 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 	for rows.Next() {
 		var raw domain.AvailabilitySnapshot
 		item := &raw.Item
-		if err = rows.Scan(&item.ProductID, &item.Name, &item.Description, &item.Allergens, &item.Price, &item.CategoryID, &item.CategoryName, &item.ImageURL, &item.QuantityControl, &item.PortionQuantity, &item.SoldQuantity, &raw.ManualStatus, &item.Note, &raw.ScheduleAvailable, &raw.IsCombo, &raw.InventoryQuantity, &item.InventoryUnit, &raw.MinimumStock); err != nil {
+		if err = rows.Scan(&item.ProductID, &item.Name, &item.Description, &item.Allergens, &item.Price, &item.CategoryID, &item.CategoryName, &item.ImageURL, &item.QuantityControl, &item.PortionQuantity, &item.SoldQuantity, &raw.ManualStatus, &item.Note, &raw.ScheduleAvailable, &raw.IsCombo, &raw.InventoryQuantity, &item.InventoryUnit, &raw.MinimumStock, &item.HasModifiers); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, raw)

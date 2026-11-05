@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personalización de producto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --surface:#fff;--cloud-25:#fafcff;--cloud-50:#f4f7fd;--cloud-100:#f0f2f8;--line:#e1e7f2;--line-strong:#ccd5e6;
+  --ink-400:#6e768e;--ink-500:#59617c;--ink-600:#444c68;--ink-700:#313854;--ink-800:#222842;--ink-950:#11152b;
+  --primary-25:#fbfcff;--primary-50:#f4f7ff;--primary-100:#eaf0ff;--primary-200:#cedcff;--primary-300:#a4bfff;--primary-600:#0052fc;--primary-700:#0043cf;--primary-800:#0035a6;
+  --brand-50:#f0fcf3;--brand-100:#e3f8e9;--brand-600:#03c056;--brand-700:#007b35;--brand-800:#055e2b;
+  --danger-50:#fff2ef;--danger-600:#bf2817;--nav-900:#052352;
+  --r-chip:4px;--r-control:6px;--r-tile:10px;--r-card:14px;--r-sheet:20px;--pill:999px;
+  --font:"Plus Jakarta Sans",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--cloud-50);color:var(--ink-950);-webkit-font-smoothing:antialiased}
+button,textarea{font:inherit}
+.page{max-width:1120px;margin:0 auto;padding:24px 16px 48px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.top h1{margin:0;font-size:20px;font-weight:800}
+.top p{margin:4px 0 0;color:var(--ink-500);font-size:14px}
+.seg{display:inline-flex;padding:4px;border-radius:var(--pill);background:var(--cloud-100)}
+.seg button{border:0;background:transparent;min-height:36px;padding:0 16px;border-radius:var(--pill);font-size:14px;font-weight:700;color:var(--ink-600);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--primary-700);box-shadow:0 1px 2px rgba(17,21,43,.08)}
+.stage{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:24px;align-items:start}
+.device{width:390px;max-width:100%;margin:0 auto;border-radius:28px;background:var(--surface);border:1px solid var(--line);overflow:hidden;transition:width .25s cubic-bezier(.2,.8,.2,1)}
+.stage.desktop .device{width:560px;border-radius:var(--r-card)}
+.sheet-head{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--nav-900);color:#fff}
+.sheet-head .tile{width:40px;height:40px;border-radius:var(--r-tile);display:grid;place-items:center;background:rgba(255,255,255,.12);font-size:20px}
+.sheet-head h2{flex:1;margin:0;font-size:18px;font-weight:800}
+.x{width:44px;height:44px;border-radius:var(--r-control);border:1.5px solid rgba(255,255,255,.7);background:transparent;color:#fff;font-size:20px;display:grid;place-items:center;cursor:pointer}
+.body{padding:16px;display:grid;gap:18px;max-height:560px;overflow:auto}
+.product{display:flex;gap:12px;align-items:flex-start}
+.photo{width:64px;height:64px;flex:none;border-radius:var(--r-tile);background:var(--brand-100);color:var(--brand-700);display:grid;place-items:center;font-size:30px}
+.product p{margin:0;color:var(--ink-600);font-size:14px;line-height:1.45}
+.product b{display:block;margin-top:6px;font-size:16px;color:var(--ink-950)}
+.group{display:grid;gap:10px;scroll-margin-top:12px}
+.group-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.group-head h3{margin:0;font-size:15px;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:var(--r-chip);font-size:12px;font-weight:700;white-space:nowrap}
+.chip.need{background:var(--primary-100);color:var(--primary-800)}
+.chip.ok{background:var(--brand-100);color:var(--brand-800)}
+.chip.optional{background:var(--cloud-100);color:var(--ink-600)}
+.error{margin:0;color:var(--danger-600);font-size:13px;font-weight:600;display:none}
+.group.invalid .error{display:block}
+.group.invalid .group-head h3{color:var(--danger-600)}
+.pills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pill{min-height:44px;border-radius:var(--r-control);border:1px solid var(--line);background:var(--surface);font-size:14px;font-weight:600;color:var(--ink-700);cursor:pointer;transition:border-color .15s,background .15s}
+.pill[aria-pressed=true]{border-color:var(--primary-600);background:var(--primary-50);color:var(--primary-700);box-shadow:0 0 0 1px var(--primary-600) inset}
+.options{display:grid;border:1px solid var(--line);border-radius:var(--r-tile);overflow:hidden}
+.opt{display:flex;align-items:center;gap:12px;min-height:48px;padding:8px 12px;cursor:pointer;font-size:14px;color:var(--ink-700);transition:background .15s}
+.opt+.opt{border-top:1px solid var(--cloud-100)}
+.opt input{position:absolute;opacity:0;pointer-events:none}
+.mark{width:20px;height:20px;flex:none;border-radius:50%;border:1.5px solid var(--line-strong);display:grid;place-items:center;color:transparent;font-size:13px;transition:all .15s}
+.opt.checked{background:var(--primary-50);color:var(--ink-950);font-weight:600}
+.opt.checked .mark{border-color:var(--primary-600);background:var(--primary-600);color:#fff}
+.opt.radio.checked .mark{background:var(--surface);color:transparent;box-shadow:inset 0 0 0 4px var(--primary-600)}
+.opt.full:not(.checked){color:var(--ink-400);cursor:not-allowed}
+.opt .name{flex:1}
+.opt .price{color:var(--ink-500);font-weight:600;font-variant-numeric:tabular-nums}
+.opt.checked .price{color:var(--primary-700)}
+label.note{display:grid;gap:6px;font-size:12px;font-weight:600;color:var(--ink-700)}
+textarea{min-height:64px;resize:none;border:1px solid var(--line);border-radius:var(--r-control);padding:10px 12px;font-size:16px;color:var(--ink-950)}
+textarea:focus{outline:2px solid var(--primary-600);outline-offset:-1px}
+.foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);background:var(--surface)}
+.stepper{display:flex;align-items:center;gap:6px;padding:4px;border-radius:var(--pill);background:var(--cloud-50)}
+.stepper button{width:40px;height:40px;border-radius:50%;border:0;display:grid;place-items:center;font-size:18px;cursor:pointer}
+.stepper .minus{background:var(--surface);color:var(--ink-700);box-shadow:0 0 0 1px var(--line) inset}
+.stepper .plus{background:var(--primary-600);color:#fff}
+.stepper b{min-width:22px;text-align:center;font-variant-numeric:tabular-nums}
+.add{flex:1;min-height:48px;border:0;border-radius:var(--r-control);background:var(--primary-600);color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.add:active{transform:scale(.98)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
+.panel header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.panel header h2{margin:0;font-size:16px;font-weight:700}
+.panel header span{font-size:13px;color:var(--ink-500)}
+.lines{display:grid}
+.line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:12px 16px;border-bottom:1px solid var(--cloud-100);animation:in .25s cubic-bezier(.2,.8,.2,1)}
+@keyframes in{from{opacity:0;transform:translateY(-4px)}}
+.qty{width:28px;height:28px;border-radius:50%;background:var(--primary-100);color:var(--primary-800);display:grid;place-items:center;font-size:13px;font-weight:800}
+.line b{font-size:14px}
+.line small{display:block;margin-top:2px;color:var(--ink-500);font-size:12px;line-height:1.45}
+.line small.n{color:var(--ink-700)}
+.line .amt{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.empty{padding:28px 16px;text-align:center;color:var(--ink-500);font-size:14px}
+.total{display:flex;justify-content:space-between;padding:14px 16px;font-weight:800}
+.ticket{margin-top:16px}
+.ticket .line{grid-template-columns:auto minmax(0,1fr)}
+.legend{margin:16px 0 0;color:var(--ink-500);font-size:13px;line-height:1.5}
+@media(max-width:900px){.stage{grid-template-columns:1fr}.stage.desktop .device{width:100%}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div>
+      <h1>Personalización al tomar el pedido</h1>
+      <p>Ejemplo con datos ficticios. Opciones obligatorias, opcionales con recargo y nota para cocina.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Vista">
+      <button type="button" aria-pressed="true" data-view="mobile">Móvil 390</button>
+      <button type="button" aria-pressed="false" data-view="desktop">Escritorio</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="device" role="dialog" aria-labelledby="t">
+      <div class="sheet-head"><span class="tile"><i class="ti ti-tools-kitchen-2"></i></span><h2 id="t">Lomo saltado</h2><button class="x" type="button" aria-label="Cerrar"><i class="ti ti-x"></i></button></div>
+      <div class="body" id="body">
+        <div class="product"><span class="photo"><i class="ti ti-bowl-chopsticks"></i></span><div><p>Lomo de res salteado al wok con cebolla, tomate y papas fritas.</p><b>S/ 32.00</b></div></div>
+
+        <section class="group" data-group="term" data-required="1" data-max="1">
+          <div class="group-head"><h3>Término de la carne</h3><span class="chip need">Obligatorio</span></div>
+          <div class="pills">
+            <button class="pill" type="button" aria-pressed="false" data-price="0">Jugoso</button>
+            <button class="pill" type="button" aria-pressed="false" data-price="0">A punto</button>
+            <button class="pill" type="button" aria-pressed="false" data-price="0">Bien cocido</button>
+          </div>
+          <p class="error">Elige el término de la carne</p>
+        </section>
+
+        <section class="group" data-group="side" data-required="1" data-max="1">
+          <div class="group-head"><h3>Acompañamiento</h3><span class="chip need">Obligatorio · elige 1</span></div>
+          <div class="options">
+            <label class="opt radio"><input type="radio" name="side" data-price="0"><span class="mark"></span><span class="name">Arroz blanco</span><span class="price">Incluido</span></label>
+            <label class="opt radio"><input type="radio" name="side" data-price="3"><span class="mark"></span><span class="name">Arroz chaufa</span><span class="price">+S/ 3.00</span></label>
+            <label class="opt radio"><input type="radio" name="side" data-price="5"><span class="mark"></span><span class="name">Tacu tacu</span><span class="price">+S/ 5.00</span></label>
+          </div>
+          <p class="error">Elige un acompañamiento</p>
+        </section>
+
+        <section class="group" data-group="extras" data-required="0" data-max="3">
+          <div class="group-head"><h3>Adicionales</h3><span class="chip optional" id="extrasChip">Opcional · hasta 3</span></div>
+          <div class="options">
+            <label class="opt"><input type="checkbox" data-price="2.5"><span class="mark"><i class="ti ti-check"></i></span><span class="name">Huevo frito</span><span class="price">+S/ 2.50</span></label>
+            <label class="opt"><input type="checkbox" data-price="3"><span class="mark"><i class="ti ti-check"></i></span><span class="name">Plátano frito</span><span class="price">+S/ 3.00</span></label>
+            <label class="opt"><input type="checkbox" data-price="4"><span class="mark"><i class="ti ti-check"></i></span><span class="name">Porción extra de papas</span><span class="price">+S/ 4.00</span></label>
+            <label class="opt"><input type="checkbox" data-price="0"><span class="mark"><i class="ti ti-check"></i></span><span class="name">Sin cebolla</span><span class="price">Sin costo</span></label>
+          </div>
+        </section>
+
+        <label class="note">Nota para cocina<textarea id="note" maxlength="140" placeholder="Poco ají, cortar la carne en tiras finas"></textarea></label>
+      </div>
+      <div class="foot">
+        <div class="stepper"><button class="minus" type="button" aria-label="Quitar uno" id="minus"><i class="ti ti-minus"></i></button><b id="qty">1</b><button class="plus" type="button" aria-label="Agregar uno" id="plus"><i class="ti ti-plus"></i></button></div>
+        <button class="add" type="button" id="add"><i class="ti ti-plus"></i><span id="addLabel">Agregar · S/ 32.00</span></button>
+      </div>
+    </div>
+
+    <div>
+      <section class="panel" aria-label="Comanda">
+        <header><h2>Comanda · Mesa 4</h2><span id="count">0 platos</span></header>
+        <div class="lines" id="lines"><div class="empty">Elige las opciones y toca «Agregar» para ver cómo queda la línea.</div></div>
+        <div class="total"><span>Total</span><span id="total">S/ 0.00</span></div>
+      </section>
+      <section class="panel ticket" aria-label="Ticket de cocina">
+        <header><h2>Ticket de cocina</h2><span>Así lo lee el cocinero</span></header>
+        <div class="lines" id="ticket"><div class="empty">Sin platos enviados.</div></div>
+      </section>
+      <p class="legend">El precio del botón suma los recargos en vivo. Si falta una opción obligatoria, el botón no se bloquea: al tocarlo baja hasta el grupo pendiente y lo marca. En cocina solo aparecen las opciones elegidas, sin precios.</p>
+    </div>
+  </div>
+</div>
+<script>
+const money=n=>"S/ "+n.toFixed(2);
+const BASE=32;let qty=1;const order=[];
+const stage=document.getElementById("stage");
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-view]").forEach(x=>x.setAttribute("aria-pressed",x===b));stage.classList.toggle("desktop",b.dataset.view==="desktop")}));
+const groups=[...document.querySelectorAll(".group")];
+function choices(g){
+  const pills=[...g.querySelectorAll(".pill[aria-pressed=true]")].map(p=>({name:p.textContent,price:+p.dataset.price}));
+  const inputs=[...g.querySelectorAll("input:checked")].map(i=>({name:i.closest(".opt").querySelector(".name").textContent,price:+i.dataset.price}));
+  return pills.concat(inputs);
+}
+function unit(){return BASE+groups.flatMap(choices).reduce((s,c)=>s+c.price,0)}
+function refresh(){
+  groups.forEach(g=>{
+    const picked=choices(g).length,req=g.dataset.required==="1",max=+g.dataset.max;
+    if(req){const chip=g.querySelector(".chip");chip.className="chip "+(picked?"ok":"need");chip.innerHTML=picked?'<i class="ti ti-check"></i>Listo':(max===1&&g.querySelector(".options")?"Obligatorio · elige 1":"Obligatorio");if(picked)g.classList.remove("invalid")}
+    g.querySelectorAll(".opt").forEach(o=>{const i=o.querySelector("input");o.classList.toggle("checked",i.checked);o.classList.toggle("full",!i.checked&&i.type==="checkbox"&&picked>=max)});
+    if(g.dataset.group==="extras")document.getElementById("extrasChip").textContent=picked?`${picked} de ${max}`:`Opcional · hasta ${max}`;
+  });
+  document.getElementById("qty").textContent=qty;
+  document.getElementById("addLabel").textContent="Agregar · "+money(unit()*qty);
+}
+document.querySelectorAll(".pills").forEach(row=>row.addEventListener("click",e=>{const p=e.target.closest(".pill");if(!p)return;row.querySelectorAll(".pill").forEach(x=>x.setAttribute("aria-pressed",x===p));refresh()}));
+document.querySelectorAll(".opt input").forEach(i=>i.addEventListener("change",()=>{const g=i.closest(".group");if(i.type==="checkbox"&&i.checked&&choices(g).length>+g.dataset.max){i.checked=false}refresh()}));
+document.getElementById("minus").onclick=()=>{qty=Math.max(1,qty-1);refresh()};
+document.getElementById("plus").onclick=()=>{qty=Math.min(20,qty+1);refresh()};
+document.getElementById("add").onclick=()=>{
+  const missing=groups.filter(g=>g.dataset.required==="1"&&!choices(g).length);
+  missing.forEach(g=>g.classList.add("invalid"));
+  if(missing.length){missing[0].scrollIntoView({behavior:"smooth",block:"start"});return}
+  const picked=groups.flatMap(choices),note=document.getElementById("note").value.trim();
+  order.push({qty,unit:unit(),picked,note});render();reset();
+};
+function reset(){qty=1;document.querySelectorAll(".pill").forEach(p=>p.setAttribute("aria-pressed","false"));document.querySelectorAll(".opt input").forEach(i=>i.checked=false);document.getElementById("note").value="";document.getElementById("body").scrollTop=0;refresh()}
+function render(){
+  const lines=document.getElementById("lines"),ticket=document.getElementById("ticket");
+  lines.innerHTML=order.map(o=>`<div class="line"><span class="qty">${o.qty}</span><div><b>Lomo saltado</b><small>${o.picked.map(p=>p.name+(p.price?` (+${money(p.price)})`:"")).join(" · ")}</small>${o.note?`<small class="n">Nota: ${o.note.replace(/</g,"&lt;")}</small>`:""}</div><span class="amt">${money(o.unit*o.qty)}</span></div>`).join("");
+  ticket.innerHTML=order.map(o=>`<div class="line"><span class="qty">${o.qty}</span><div><b>Lomo saltado</b><small>${o.picked.map(p=>p.name).join(" · ")}</small>${o.note?`<small class="n">Nota: ${o.note.replace(/</g,"&lt;")}</small>`:""}</div></div>`).join("");
+  const n=order.reduce((s,o)=>s+o.qty,0);
+  document.getElementById("count").textContent=n+(n===1?" plato":" platos");
+  document.getElementById("total").textContent=money(order.reduce((s,o)=>s+o.unit*o.qty,0));
+}
+refresh();
+</script>
+</body>
+</html>

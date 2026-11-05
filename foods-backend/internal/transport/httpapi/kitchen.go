@@ -10,3 +10,6 @@ func (a *API) listKitchenTickets(w http.ResponseWriter, r *http.Request) {
 func (a *API) updateKitchenTicketStatus(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Orders.UpdateKitchenTicketStatus(w, r)
 }
+func (a *API) updateKitchenItemStatus(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Orders.UpdateKitchenItemStatus(w, r)
+}

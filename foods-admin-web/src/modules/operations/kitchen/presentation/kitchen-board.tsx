@@ -6,8 +6,9 @@ import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/re
 import {Button,ErrorState,Icon,IconName,PageHeader,Skeleton,Tabs} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
-import type {KitchenStatus,KitchenTicket} from "../domain/types";
-import {listKitchenTickets,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
+import type {KitchenResponse,KitchenStatus,KitchenTicket} from "../domain/types";
+import {applyPlateStatus,isTrackedPlate,plateProgress,type PlateStatus} from "../domain/plates";
+import {listKitchenTickets,updateKitchenItemStatus,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
 
 const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName}>= [
   {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock"},
@@ -105,6 +106,34 @@ export function KitchenBoard(){
     onError:error=>notify({tone:"danger",title:"No se pudo actualizar la comanda",message:error.message}),
   });
 
+  // Marcado por plato: optimista en la cola visible; si el API lo rechaza, solo ese
+  // plato vuelve a su estado anterior y se muestra el error.
+  const[pendingPlates,setPendingPlates]=useState<ReadonlySet<string>>(()=>new Set());
+  const togglePending=(key:string,on:boolean)=>setPendingPlates(current=>{const next=new Set(current);if(on)next.add(key);else next.delete(key);return next;});
+  const patchPlate=(ticketId:string,itemId:string,status:KitchenStatus)=>qc.setQueriesData<KitchenResponse>({queryKey:["kitchen-tickets"]},data=>data&&applyPlateStatus(data,ticketId,itemId,status));
+  const markPlate=useMutation({
+    mutationKey:["kitchen-plate"],
+    mutationFn:({ticket,itemId,status}:{ticket:KitchenTicket;itemId:string;previous:KitchenStatus;status:PlateStatus})=>updateKitchenItemStatus(ticket.id,itemId,status),
+    onMutate:async({ticket,itemId,status})=>{
+      togglePending(ticket.id+"/"+itemId,true);
+      await qc.cancelQueries({queryKey:["kitchen-tickets"]});
+      patchPlate(ticket.id,itemId,status);
+    },
+    onSuccess:(_,variables)=>{
+      for(const key of ["orders","salon-floor","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]});
+      void qc.invalidateQueries({queryKey:["order",variables.ticket.orderId]});
+    },
+    onError:(error,{ticket,itemId,previous})=>{
+      patchPlate(ticket.id,itemId,previous);
+      notify({tone:"danger",title:"No se pudo actualizar el plato",message:error.message});
+    },
+    onSettled:(_,__,{ticket,itemId})=>{
+      togglePending(ticket.id+"/"+itemId,false);
+      // Con varios platos en vuelo, solo el último refresca: así un refresco temprano no pisa los otros optimistas.
+      if(qc.isMutating({mutationKey:["kitchen-plate"]})===1)void qc.invalidateQueries({queryKey:["kitchen-tickets"]});
+    },
+  });
+
   const serverBase=tickets.data?parseIsoDate(tickets.data.serverTime)?.getTime():null;
   const now=serverBase&&tickets.dataUpdatedAt?serverBase+Math.max(0,clock-tickets.dataUpdatedAt):clock;
   const items=tickets.data?.items??[];
@@ -157,6 +186,8 @@ export function KitchenBoard(){
               const urgencyMeta=urgencyCopy(tone);
               const subject=ticket.tableName?.toUpperCase()||ticket.customerName||channelLabel(ticket.channel)||"Pedido";
               const next=ticket.status==="confirmado"?"preparando":ticket.status==="preparando"?"listo":null;
+              // El marcado por plato vive en «En preparación»; «Iniciar» sigue siendo el primer paso.
+              const progress=ticket.status==="preparando"?plateProgress(ticket):null;
               return <article className="kitchen-ticket" key={ticket.id}>
                 <div className="kitchen-ticket-head">
                   <div className="kitchen-ticket-identity">
@@ -166,15 +197,28 @@ export function KitchenBoard(){
                   <span className={`kitchen-ticket-time ${tone}`}><Icon name={urgencyMeta.icon} size={14}/><strong>{elapsedText}</strong>{urgencyMeta.label&&<span>· {urgencyMeta.label}</span>}</span>
                 </div>
 
+                {progress&&<div className="kitchen-progress">
+                  <span>{progress.ready} de {progress.total} listos</span>
+                  <div className="kitchen-progress-track" role="progressbar" aria-label="Platos listos" aria-valuemin={0} aria-valuemax={progress.total} aria-valuenow={progress.ready} aria-valuetext={`${progress.ready} de ${progress.total} listos`}><i style={{width:`${progress.ready/progress.total*100}%`}}/></div>
+                </div>}
+
                 <div className="kitchen-ticket-items">
-                  {ticket.items.map(item=><div className="kitchen-ticket-item" key={item.id}>
-                    <b>{formatRegionalNumber(Number(item.qty),location?.country,{maximumFractionDigits:2})}×</b>
-                    <div>
-                      <span>{item.name}</span>
-                      {(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}>{selection.groupName}: {selection.name}</small>)}
-                      {item.note&&<em><Icon name="edit" size={14}/>{item.note}</em>}
-                    </div>
-                  </div>)}
+                  {ticket.items.map(item=>{
+                    const ready=item.status==="listo";
+                    const content=<>
+                      <b>{formatRegionalNumber(Number(item.qty),location?.country,{maximumFractionDigits:2})}×</b>
+                      <div>
+                        <span>{item.name}</span>
+                        {(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}>{selection.groupName}: {selection.name}</small>)}
+                        {(item.modifiers??[]).map(modifier=><small key={modifier.groupId+modifier.optionId}>{modifier.groupName}: {modifier.name}</small>)}
+                        {item.note&&<em><Icon name="edit" size={14}/>{item.note}</em>}
+                      </div>
+                    </>;
+                    if(!progress||!isTrackedPlate(item))return <div className="kitchen-ticket-item" key={item.id}>{content}</div>;
+                    if(!canManage)return <div className="kitchen-ticket-item kitchen-plate" data-ready={ready} key={item.id}>{content}<i className="kitchen-plate-check" role="img" aria-label={ready?"Listo":"En preparación"}><Icon name="check" size={14}/></i></div>;
+                    const pending=pendingPlates.has(ticket.id+"/"+item.id);
+                    return <button type="button" className="kitchen-ticket-item kitchen-plate" data-ready={ready} aria-pressed={ready} aria-busy={pending||undefined} disabled={pending||busyId===ticket.id} title={ready?"Devolver a preparación":"Marcar plato listo"} onClick={()=>markPlate.mutate({ticket,itemId:item.id,previous:item.status??"preparando",status:ready?"preparando":"listo"})} key={item.id}>{content}<i className="kitchen-plate-check" aria-hidden="true"><Icon name="check" size={14}/></i></button>;
+                  })}
                 </div>
 
                 {ticket.notes&&<p className="kitchen-ticket-note"><Icon name="edit" size={14}/><span><b>Nota del pedido:</b> {ticket.notes}</span></p>}

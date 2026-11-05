@@ -4,5 +4,5 @@ import type {Order} from "../domain/types";
 
 export function closeOrderAccount(id:string){return apiFetch<Order>(`orders/${id}/bill/close`,{method:"POST"})}
 export function addOrderConsumption(id:string,draft:Draft,requestKey:string){
- return apiFetch<Order>(`orders/${id}/items`,{method:"POST",body:JSON.stringify({requestKey,items:draft.lines.map(line=>({productId:line.productId,qty:line.qty,note:line.note,selections:line.selections.map(selection=>({groupId:selection.groupId,productId:selection.productId}))}))})});
+ return apiFetch<Order>(`orders/${id}/items`,{method:"POST",body:JSON.stringify({requestKey,items:draft.lines.map(line=>({productId:line.productId,qty:line.qty,note:line.note,selections:line.selections.map(selection=>({groupId:selection.groupId,productId:selection.productId})),modifiers:(line.modifiers??[]).map(modifier=>({groupId:modifier.groupId,optionId:modifier.optionId}))}))})});
 }

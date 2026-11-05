@@ -40,5 +40,5 @@ export function manualOrderPayload(draft:ManualOrderDraft){
  const parsed=manualOrderSchema.parse(draft);
  if(!draft.lines.length)throw new Error("Agrega al menos un producto.");
  const {deliveryLatitude,deliveryLongitude,...fields}=parsed;
- return {...fields,...deliveryPointPayload({channel:parsed.channel,deliveryLatitude,deliveryLongitude}),address:parsed.channel==="delivery"?parsed.address:"",reference:parsed.channel==="delivery"?parsed.reference:"",deliveryFee:parsed.channel==="delivery"?Number(parsed.deliveryFee):0,sendToKitchen:true,items:draft.lines.map(line=>({productId:line.productId,qty:line.qty,note:line.note,selections:line.selections.map(selection=>({groupId:selection.groupId,productId:selection.productId}))}))};
+ return {...fields,...deliveryPointPayload({channel:parsed.channel,deliveryLatitude,deliveryLongitude}),address:parsed.channel==="delivery"?parsed.address:"",reference:parsed.channel==="delivery"?parsed.reference:"",deliveryFee:parsed.channel==="delivery"?Number(parsed.deliveryFee):0,sendToKitchen:true,items:draft.lines.map(line=>({productId:line.productId,qty:line.qty,note:line.note,selections:line.selections.map(selection=>({groupId:selection.groupId,productId:selection.productId})),modifiers:(line.modifiers??[]).map(modifier=>({groupId:modifier.groupId,optionId:modifier.optionId}))}))};
 }

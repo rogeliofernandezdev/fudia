@@ -6,10 +6,10 @@ import {useInfiniteQuery,useQuery} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,SearchField,Skeleton} from "@/design-system";
 import {Tooltip} from "@/design-system/tooltip";
 import {useMoney} from "@/providers";
-import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo} from "../domain/catalog-types";
-import {getOrderCombo,listOrderCategories,listOrderCombos,listSalonProducts,listSelectedProductAvailability} from "../infrastructure/catalog-api";
+import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo,ConfiguredProduct,ModifierSelection,ProductModifierGroup} from "../domain/catalog-types";
+import {getOrderCombo,getProductModifiers,listOrderCategories,listOrderCombos,listSalonProducts,listSelectedProductAvailability} from "../infrastructure/catalog-api";
 
-export type {CatalogProduct,ComboSelection,ConfiguredCombo} from "../domain/catalog-types";
+export type {CatalogProduct,ComboSelection,ConfiguredCombo,ConfiguredProduct,ModifierSelection} from "../domain/catalog-types";
 
 type Money=(value:string|number)=>string;
 const COMBOS="__combos";
@@ -300,6 +300,102 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
   );
 }
 
+/** Mínimo efectivo de un grupo: uno obligatorio exige al menos una opción. */
+const modifierMinimum=(group:ProductModifierGroup)=>group.required?Math.max(1,group.minSelections):group.minSelections;
+
+/**
+ * Opciones de un plato simple (término, acompañamiento, adicionales) con el mismo patrón
+ * que los menús. El botón no se bloquea: si falta un grupo obligatorio, lo marca y lo muestra.
+ */
+export function ProductOptionsConfigurator({product,initialModifiers=[],editing=false,onClose,onConfirm}:{
+  product:Pick<CatalogProduct,"id"|"name"|"description"|"price"|"imageUrl">;
+  initialModifiers?:ModifierSelection[];
+  editing?:boolean;
+  onClose:()=>void;
+  onConfirm:(product:ConfiguredProduct)=>void;
+}){
+  const money=useMoney();
+  const config=useQuery({queryKey:["order-product-modifiers",product.id],queryFn:()=>getProductModifiers(product.id),staleTime:30000});
+  const groups=config.data?.groups??[];
+  const[selected,setSelected]=useState<Record<string,string[]>>(()=>{
+    const result:Record<string,string[]>={};
+    for(const modifier of initialModifiers)result[modifier.groupId]=[...(result[modifier.groupId]??[]),modifier.optionId];
+    return result;
+  });
+  const[invalid,setInvalid]=useState<string[]>([]);
+  const groupRefs=useRef<Record<string,HTMLElement|null>>({});
+  const toggle=(group:ProductModifierGroup,optionId:string)=>{
+    setSelected(prev=>{
+      const current=prev[group.id]??[];
+      if(current.includes(optionId))return{...prev,[group.id]:current.filter(id=>id!==optionId)};
+      if(group.maxSelections===1)return{...prev,[group.id]:[optionId]};
+      if(current.length>=group.maxSelections)return prev;
+      return{...prev,[group.id]:[...current,optionId]};
+    });
+    setInvalid(prev=>prev.filter(id=>id!==group.id));
+  };
+  const modifiers:ModifierSelection[]=groups.flatMap(group=>(selected[group.id]??[]).flatMap(optionId=>{
+    const option=group.options.find(item=>item.id===optionId);
+    return option?[{groupId:group.id,groupName:group.name,optionId:option.id,name:option.name,surcharge:Number(option.surcharge)||0}]:[];
+  }));
+  const unitPrice=(Number(product.price)||0)+modifiers.reduce((sum,modifier)=>sum+modifier.surcharge,0);
+  const confirm=()=>{
+    const pending=groups.filter(group=>(selected[group.id]?.length??0)<modifierMinimum(group)).map(group=>group.id);
+    if(pending.length){setInvalid(pending);groupRefs.current[pending[0]]?.scrollIntoView({behavior:"smooth",block:"start"});return}
+    onConfirm({productId:product.id,name:product.name,unitPrice,modifiers,imageUrl:product.imageUrl});
+  };
+  return(
+    <Modal title={product.name} subtitle={product.description||undefined} icon="dish" size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
+      <ModalBody className="cmd-combo-body">
+        {config.isLoading?(
+          <ComboConfiguratorSkeleton/>
+        ):config.isError?(
+          <ErrorState title="No pudimos cargar las opciones" text={config.error.message} onRetry={()=>config.refetch()} retrying={config.isFetching}/>
+        ):!groups.length?(
+          <EmptyState icon="dish" title="Este plato ya no tiene opciones" text="Agrégalo tal cual: sus opciones se quitaron en Carta y productos."/>
+        ):groups.map(group=>{
+          const picked=selected[group.id]??[];
+          const minimum=modifierMinimum(group);
+          const ready=picked.length>=minimum;
+          const optional=minimum===0;
+          const single=group.maxSelections===1;
+          const full=!single&&picked.length>=group.maxSelections;
+          const hasError=invalid.includes(group.id);
+          return(
+            <section className={"cmd-combo-group"+(hasError?" invalid":"")} key={group.id} ref={node=>{groupRefs.current[group.id]=node}} aria-labelledby={`cmd-modifier-${group.id}`}>
+              <header>
+                <div>
+                  <h3 id={`cmd-modifier-${group.id}`}>{group.name}</h3>
+                  <small>{optional?`Opcional, hasta ${group.maxSelections}`:group.maxSelections>minimum?`Elige ${minimum} a ${group.maxSelections}`:`Elige ${minimum}`}</small>
+                </div>
+                <span className={`cmd-combo-progress${optional?" optional":ready?" ready":""}`}>{optional?(picked.length?`${picked.length} de ${group.maxSelections}`:"Opcional"):ready?<><Icon name="check" size={14}/>Listo</>:<>{picked.length} de {minimum}</>}</span>
+              </header>
+              <div className="cmd-combo-options" role={single?"radiogroup":"group"} aria-labelledby={`cmd-modifier-${group.id}`}>
+                {group.options.map(option=>{
+                  const on=picked.includes(option.id);
+                  const surcharge=Number(option.surcharge)||0;
+                  return(
+                    <button type="button" key={option.id} className="cmd-combo-option" role={single?"radio":undefined} aria-checked={single?on:undefined} aria-pressed={single?undefined:on} data-picked={on} disabled={full&&!on} onClick={()=>toggle(group,option.id)}>
+                      <span className={"cmd-combo-check"+(single?" radio":"")} aria-hidden="true">{on&&!single&&<Icon name="check" size={14}/>}</span>
+                      <span className="cmd-combo-option-copy"><b>{option.name}</b></span>
+                      <span className="cmd-combo-option-price">{surcharge>0?`+ ${money(surcharge)}`:"Incluido"}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {hasError&&<p className="cmd-combo-error" role="alert">Elige una opción de {group.name} para continuar</p>}
+            </section>
+          );
+        })}
+      </ModalBody>
+      <ModalFooter className="cmd-combo-foot">
+        <p className="cmd-combo-total"><small>Total del plato</small><strong>{config.isLoading?<Skeleton width="var(--size-72)" height="var(--size-18)"/>:money(unitPrice)}</strong></p>
+        <Button icon={editing?"check":"plus"} disabled={config.isLoading||config.isError} onClick={confirm}>{editing?"Guardar":"Agregar"}</Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
 function ComboItem({combo,qty,money,onConfigure,disabled=false}:{combo:ComboSummary;qty:number;money:Money;onConfigure:()=>void;disabled?:boolean}){
   return(
     <li>
@@ -323,7 +419,7 @@ function MenuItem({p,qty,reserved=0,money,onPick,disabled=false}:{p:CatalogProdu
   const unavailable=availability==="sold_out"||availability==="unavailable";
   const stockMax=typeof p.remaining==="number"&&Number.isFinite(p.remaining)?Math.max(0,Math.floor(p.remaining+reserved)):undefined;
   const atLimit=stockMax!==undefined&&qty>=stockMax;
-  const label=unavailable?`${p.name}, no disponible`:qty>0?`Agregar otro ${p.name}, llevas ${qty}`:`Agregar ${p.name}`;
+  const label=unavailable?`${p.name}, no disponible`:p.hasModifiers?`Elegir opciones de ${p.name}${qty>0?`, llevas ${qty}`:""}`:qty>0?`Agregar otro ${p.name}, llevas ${qty}`:`Agregar ${p.name}`;
   const description=p.description?.trim()??"";
   const allergens=p.allergens??[];
   const visual=<><Icon name="dish" size={24}/>{p.imageUrl&&<img className="cmd-item-thumb" src={p.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</>;
@@ -339,6 +435,7 @@ function MenuItem({p,qty,reserved=0,money,onPick,disabled=false}:{p:CatalogProdu
           <strong>{p.name}</strong>
           <div className="cmd-item-bottom">
           <span className="cmd-item-offer"><span className="cmd-item-price">{money(p.price)}</span>
+          {p.hasModifiers&&!unavailable&&availability!=="low"&&<small>Con opciones</small>}
           {availability==="low"&&<small className="low">{p.remaining!==null&&p.remaining!==undefined?`Quedan ${p.remaining}`:"Pocas unidades"}</small>}
           {availability==="sold_out"&&<small className="blocked">Agotado</small>}
           {availability==="unavailable"&&<small className="blocked">Fuera de horario</small>}

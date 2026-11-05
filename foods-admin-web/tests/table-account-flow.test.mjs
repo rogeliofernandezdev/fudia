@@ -64,6 +64,6 @@ test("transiciones operativas invalidan las vistas sin modal exitoso; errores ex
 });
 test("agregar envía únicamente productos nuevos y la clave de reintento",()=>{
  const calls=[];const api=compile("infrastructure/service-api.ts",name=>name==="@/shared/api/client"?{apiFetch:(url,options)=>calls.push({url,options})}:require(name));
- api.addOrderConsumption("order",{lines:[{productId:"product",qty:2,note:"Sin hielo",selections:[],unitPrice:999,lineKey:"local"}]},"request-key");
- assert.equal(calls[0].url,"orders/order/items");assert.equal(calls[0].options.method,"POST");assert.deepEqual(JSON.parse(calls[0].options.body),{requestKey:"request-key",items:[{productId:"product",qty:2,note:"Sin hielo",selections:[]}]});
+ api.addOrderConsumption("order",{lines:[{productId:"product",qty:2,note:"Sin hielo",selections:[],unitPrice:999,lineKey:"local"},{productId:"lomo",qty:1,note:"",selections:[],modifiers:[{groupId:"g",groupName:"Término",optionId:"o",name:"A punto",surcharge:0}],unitPrice:32,lineKey:"lomo-1"}]},"request-key");
+ assert.equal(calls[0].url,"orders/order/items");assert.equal(calls[0].options.method,"POST");assert.deepEqual(JSON.parse(calls[0].options.body),{requestKey:"request-key",items:[{productId:"product",qty:2,note:"Sin hielo",selections:[],modifiers:[]},{productId:"lomo",qty:1,note:"",selections:[],modifiers:[{groupId:"g",optionId:"o"}]}]});
 });

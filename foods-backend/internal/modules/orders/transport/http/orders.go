@@ -102,6 +102,17 @@ func (h *Handler) UpdateKitchenTicketStatus(w http.ResponseWriter, r *http.Reque
 	respond(w, 204, nil, err)
 }
 
+// UpdateKitchenItemStatus marca un plato de la comanda como listo o lo devuelve a preparación.
+func (h *Handler) UpdateKitchenItemStatus(w http.ResponseWriter, r *http.Request) {
+	var in application.OrderStatusInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_status", "El estado solicitado no es válido.")
+		return
+	}
+	err := h.service.UpdateKitchenItem(r.Context(), scopeFor(r), r.PathValue("id"), r.PathValue("itemId"), in)
+	respond(w, 204, nil, err)
+}
+
 func (h *Handler) CompletePaidOrder(w http.ResponseWriter, r *http.Request) {
 	err := h.service.CompletePaid(r.Context(), scopeFor(r), r.PathValue("id"))
 	respond(w, 204, nil, err)

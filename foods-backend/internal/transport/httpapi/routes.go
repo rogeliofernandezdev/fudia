@@ -244,6 +244,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/orders/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrder))))
 	m.Handle("GET /v1/admin/kitchen/tickets", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.listKitchenTickets))))
 	m.Handle("PATCH /v1/admin/kitchen/tickets/{id}/status", a.auth(a.requirePreparationPermission(http.HandlerFunc(a.updateKitchenTicketStatus))))
+	m.Handle("PATCH /v1/admin/kitchen/tickets/{id}/items/{itemId}/status", a.auth(a.requirePreparationPermission(http.HandlerFunc(a.updateKitchenItemStatus))))
 	m.Handle("PATCH /v1/admin/orders/{id}", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.updateOrder))))
 	m.Handle("PATCH /v1/admin/orders/{id}/status", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.updateOrderStatus))))
 	m.Handle("POST /v1/admin/orders/{id}/send", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.sendOrder))))

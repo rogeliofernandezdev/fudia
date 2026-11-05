@@ -19,6 +19,10 @@ export type KitchenItem={
   note:string;
   itemType?:"product"|"combo";
   selections?:KitchenSelection[];
+  /** Opciones elegidas del plato (término, acompañamiento, adicionales). */
+  modifiers?:{groupId:string;groupName:string;optionId:string;name:string;surcharge:string}[];
+  /** Estado del plato en su estación; ausente en comandas históricas (sin marcado por plato). */
+  status?:KitchenStatus;
 };
 
 export type KitchenTicket={

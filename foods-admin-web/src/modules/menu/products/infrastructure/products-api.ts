@@ -2,6 +2,7 @@ import {apiFetch} from "@/shared/api/client";
 import {uploadLegacyProductImage} from "@/shared/api/product-image";
 import {prepareProductImage} from "@/shared/api/image-upload";
 import type {Category,CategoryDraft,List,Product,ProductDraft,ProductListItem,ProductType} from "../domain/types";
+import type {ModifierConfig,ModifiersPayload} from "../domain/modifiers";
 
 export type ProductQuery={
   search:string;
@@ -63,6 +64,10 @@ export async function saveProduct(draft:ProductDraft,file:File|null,scopeKey="")
   return product;
 }
 export function getProduct(id:string){return apiFetch<Product>(`products/${id}`)}
+export function getProductModifiers(id:string){return apiFetch<ModifierConfig>(`products/${id}/modifiers`)}
+export function saveProductModifiers(id:string,payload:ModifiersPayload){
+  return apiFetch<ModifierConfig>(`products/${id}/modifiers`,{method:"PUT",body:JSON.stringify(payload)});
+}
 
 export function saveCategory(draft:CategoryDraft){
   return apiFetch<Category>(draft.id?`categories/${draft.id}`:"categories",{

@@ -68,6 +68,20 @@
 .kitchen-ticket-item small{color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-snug)}
 .kitchen-ticket-item em{display:inline-flex;align-items:center;gap:var(--space-1);width:fit-content;max-width:100%;margin-top:var(--space-0-5);padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-control);background:var(--kds-note);color:var(--kds-note-ink);font-size:var(--font-size-label);font-style:normal;font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
 .kitchen-ticket-item em svg{flex:0 0 auto}
+/* Marcado por plato en «En preparación»: fila táctil de 44 px con el check circular
+   del sistema (anillo line-strong; marcado primary-600 con check blanco). El plato
+   listo se tacha y suaviza; el color de estado sigue en la cabecera del carril. */
+.kitchen-ticket-item.kitchen-plate{grid-template-columns:var(--size-28) minmax(0,1fr) var(--size-20);min-height:var(--size-44);margin:0 calc(var(--space-2) * -1);padding:var(--space-2);border:0;border-radius:var(--radius-control);background:transparent;color:inherit;font:inherit;text-align:left;transition:var(--transition-surface)}
+button.kitchen-plate{cursor:pointer;touch-action:manipulation}
+button.kitchen-plate:disabled{cursor:progress}
+.kitchen-plate-check{display:grid;place-items:center;width:var(--size-20);height:var(--size-20);margin-top:var(--space-1);border:var(--stroke-1-5) solid var(--line-strong);border-radius:50%;background:var(--surface);color:transparent;transition:var(--transition-surface)}
+.kitchen-plate[data-ready=true] .kitchen-plate-check{border-color:var(--primary-600);background:var(--primary-600);color:var(--surface)}
+.kitchen-plate[data-ready=true]>div>span{color:var(--ink-500);text-decoration:line-through}
+/* Progreso de la comanda: texto explícito y barra fina primary sobre cloud-100. */
+.kitchen-progress{display:grid;gap:var(--space-1-5)}
+.kitchen-progress>span{color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
+.kitchen-progress-track{height:var(--size-4);overflow:hidden;border-radius:var(--radius-pill);background:var(--cloud-100)}
+.kitchen-progress-track i{display:block;height:100%;border-radius:var(--radius-pill);background:var(--primary-600);transition:width var(--duration-fast) var(--easing-out)}
 .kitchen-ticket-note{display:flex;align-items:flex-start;gap:var(--space-1-5);margin:0;padding:var(--space-2) var(--space-2);border-radius:var(--radius-control);background:var(--kds-note);color:var(--kds-note-ink);font-size:var(--font-size-label);font-weight:var(--weight-semibold);line-height:var(--line-height-snug)}
 .kitchen-ticket-note svg{flex:0 0 auto;margin-top:var(--space-px)}
 .kitchen-ticket-note b{font-weight:var(--weight-heavy)}
@@ -127,6 +141,11 @@
  .kitchen-ticket-head{flex-direction:column;gap:var(--space-1-5)}
  .kitchen-ticket-time{width:fit-content}
 }
+@media(hover:hover) and (pointer:fine){
+ button.kitchen-plate:hover:not(:disabled){background:var(--primary-25)}
+ button.kitchen-plate:hover:not(:disabled) .kitchen-plate-check{border-color:var(--primary-400)}
+}
 @media(prefers-reduced-motion:reduce){
  .kitchen-ticket-skeleton i,.kitchen-ticket-skeleton small{animation:none}
+ .kitchen-progress-track i{transition:none}
 }

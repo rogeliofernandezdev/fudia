@@ -11,6 +11,7 @@ function linesPayload(draft:Draft){
   note:line.note,
   reprice:Boolean(line.repriceCombo),
   selections:line.selections.map(selection=>({groupId:selection.groupId,productId:selection.productId})),
+  modifiers:(line.modifiers??[]).map(modifier=>({groupId:modifier.groupId,optionId:modifier.optionId})),
  }));
 }
 export function getSalonFloor(){return apiFetch<{items:FloorTable[]}>("orders/floor")}

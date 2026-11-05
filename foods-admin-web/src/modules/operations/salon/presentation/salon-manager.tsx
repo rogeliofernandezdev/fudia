@@ -48,6 +48,13 @@ const draftFromOrder=(o:Order):Draft=>({
       name:sel.name,
       surcharge:Number(sel.surcharge)||0,
     })),
+    modifiers:(it.modifiers??[]).map(modifier=>({
+      groupId:modifier.groupId,
+      groupName:modifier.groupName,
+      optionId:modifier.optionId,
+      name:modifier.name,
+      surcharge:Number(modifier.surcharge)||0,
+    })),
   })),
 });
 

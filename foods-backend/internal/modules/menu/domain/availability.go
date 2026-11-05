@@ -21,6 +21,8 @@ type AvailabilityItem struct {
 	InventoryUnit   *string  `json:"inventoryUnit"`
 	Note            string   `json:"note"`
 	BusinessDate    string   `json:"businessDate"`
+	// HasModifiers: el plato pide opciones al tomarlo (término, acompañamiento…).
+	HasModifiers bool `json:"hasModifiers"`
 }
 type AvailabilityInput struct {
 	Status          string `json:"status"`

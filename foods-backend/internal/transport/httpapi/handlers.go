@@ -148,6 +148,7 @@ type OrdersHandler interface {
 	SendOrder(http.ResponseWriter, *http.Request)
 	ListKitchenTickets(http.ResponseWriter, *http.Request)
 	UpdateKitchenTicketStatus(http.ResponseWriter, *http.Request)
+	UpdateKitchenItemStatus(http.ResponseWriter, *http.Request)
 	ListOrders(http.ResponseWriter, *http.Request)
 	GetOrdersFloor(http.ResponseWriter, *http.Request)
 	GetOrder(http.ResponseWriter, *http.Request)

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/jackc/pgx/v5"
@@ -81,7 +82,7 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
  si.destination,si.status,o.id::text,o.code,o.channel,o.customer_name,COALESCE(t.name,''),o.notes,
  to_char(si.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(si.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
  si.id::text,COALESCE(si.product_id::text,''),si.name,si.qty::text,
- i.note||COALESCE((SELECT ' · '||string_agg(m.option_name,' · ' ORDER BY m.created_at,m.id) FROM order_item_modifier_selections m WHERE m.order_item_id=i.id AND m.organization_id=i.organization_id),''),COALESCE(p.prep_minutes,0)
+ i.note,COALESCE((SELECT json_agg(json_build_object('groupId',m.group_id,'groupName',m.group_name,'optionId',m.option_id,'name',m.option_name,'surcharge',m.surcharge::text) ORDER BY m.created_at,m.id) FROM order_item_modifier_selections m WHERE m.order_item_id=i.id AND m.organization_id=i.organization_id),'[]'),COALESCE(p.prep_minutes,0)
  FROM order_service_items si
  JOIN orders o ON o.id=si.order_id AND o.organization_id=si.organization_id
  JOIN order_items i ON i.id=si.order_item_id AND i.organization_id=si.organization_id
@@ -103,7 +104,12 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
 		var item domain.OrderItem
 		var itemStatus string
 		var minutes int
-		if err = rows.Scan(&t.ID, &t.RoundNumber, &t.Destination, &itemStatus, &t.OrderID, &t.Code, &t.Channel, &t.CustomerName, &t.TableName, &t.Notes, &t.CreatedAt, &t.UpdatedAt, &item.ID, &item.ProductID, &item.Name, &item.Qty, &item.Note, &minutes); err != nil {
+		var rawModifiers []byte
+		if err = rows.Scan(&t.ID, &t.RoundNumber, &t.Destination, &itemStatus, &t.OrderID, &t.Code, &t.Channel, &t.CustomerName, &t.TableName, &t.Notes, &t.CreatedAt, &t.UpdatedAt, &item.ID, &item.ProductID, &item.Name, &item.Qty, &item.Note, &rawModifiers, &minutes); err != nil {
+			return nil, err
+		}
+		// Las opciones del plato (término, acompañamiento…) llegan como lista propia, no dentro de la nota.
+		if err = json.Unmarshal(rawModifiers, &item.Modifiers); err != nil {
 			return nil, err
 		}
 		if t.Destination == "bar" {
@@ -111,6 +117,7 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
 		}
 		item.UnitPrice = "0.00"
 		item.ItemType = "product"
+		item.Status = itemStatus
 		t.Status = itemStatus
 		index, ok := indices[t.ID]
 		if !ok {
@@ -134,6 +141,7 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
 	}
 	return tickets, rows.Err()
 }
+
 const targetMinutesSQL = `
 		SELECT COALESCE(MAX(prep_minutes),0)
 		FROM (
@@ -214,7 +222,17 @@ func (r *Orders) StationStatus(ctx context.Context, s scope, orderID string, id 
 }
 func (r *Orders) UpdateStationItems(ctx context.Context, s scope, orderID string, id string, destination string, status string, current string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `UPDATE order_service_items si SET status=$5,updated_at=now() FROM order_items i
- WHERE si.order_item_id=i.id AND si.organization_id=i.organization_id AND si.order_id=$1 AND si.organization_id=$2 AND COALESCE(i.kitchen_round_id,i.order_id)=$3::uuid AND si.destination=$4 AND si.status=$6`, orderID, s.OrganizationID, id, destination, status, current)
+ WHERE si.order_item_id=i.id AND si.organization_id=i.organization_id AND si.order_id=$1 AND si.organization_id=$2 AND COALESCE(i.kitchen_round_id,i.order_id)=$3::uuid AND si.destination=$4 AND (si.status=$6 OR ($5='listo' AND si.status IN ('confirmado','preparando')))`, orderID, s.OrganizationID, id, destination, status, current)
+	return tag.RowsAffected(), orderError(err)
+}
+
+// UpdateStationItem mueve un solo plato de la comanda: a listo desde confirmado o
+// preparando, o de vuelta a preparando desde listo. Devuelve 0 si el plato no es
+// de esa comanda y estación o ya no está en un estado que lo permita.
+func (r *Orders) UpdateStationItem(ctx context.Context, s scope, orderID string, id string, destination string, itemID string, status string) (int64, error) {
+	tag, err := r.db(ctx).Exec(ctx, `UPDATE order_service_items si SET status=$6,updated_at=now() FROM order_items i
+ WHERE si.order_item_id=i.id AND si.organization_id=i.organization_id AND si.order_id=$1 AND si.organization_id=$2 AND COALESCE(i.kitchen_round_id,i.order_id)=$3::uuid AND si.destination=$4
+ AND si.id::text=$5 AND ((($6)::text='listo' AND si.status IN ('confirmado','preparando')) OR (($6)::text='preparando' AND si.status='listo'))`, orderID, s.OrganizationID, id, destination, itemID, status)
 	return tag.RowsAffected(), orderError(err)
 }
 func (r *Orders) UpdateStationRound(ctx context.Context, s scope, id string) (int64, error) {

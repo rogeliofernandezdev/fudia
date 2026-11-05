@@ -11,6 +11,12 @@
         ],
         "createdAt": "2026-10-30T06:04:53.004Z",
         "reason": "Claude: FileImage asigna src por ref con una URL blob temporal (mismo patrón que la vista previa anterior); no es un placeholder"
+      },
+      {
+        "rule": "overused-font",
+        "value": "plus jakarta sans",
+        "createdAt": "2026-11-05T08:23:48.146Z",
+        "reason": "Fuente aprobada del sistema visual de foods-admin-web (docs/02_DESIGN_SYSTEM.md); el mockup la usa para reflejar la app real"
       }
     ]
   }

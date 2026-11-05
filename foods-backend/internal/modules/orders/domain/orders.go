@@ -15,6 +15,8 @@ type OrderItem struct {
 	UnitPrice  string               `json:"unitPrice"`
 	Note       string               `json:"note"`
 	ItemType   string               `json:"itemType"`
+	// Status es el estado del plato en su estación; solo lo llenan las comandas de Cocina y Barra.
+	Status     string               `json:"status,omitempty"`
 	Selections []OrderItemSelection `json:"selections,omitempty"`
 	Modifiers  []OrderItemModifier  `json:"modifiers,omitempty"`
 }
