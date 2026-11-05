@@ -1,44 +1,43 @@
 import {accessKey,navigationGroups} from "@/shell/navigation";
-import {pageRoutes as routes} from "@/shared/routing/page-routes";
 import type {IconName} from "@/design-system/icons";
-import type {PermissionGroup} from "../domain/types";
+import type {PermissionGroup,ScreenActions} from "../domain/types";
 
-export type PermissionModule={id:string;name:string;icon:IconName;items:PermissionGroup["items"]};
+export type PermissionItem={value:string;label:string;sharedWith?:string[]};
+export type PermissionModule={id:string;name:string;icon:IconName;items:PermissionItem[]};
 export type PermissionSection={name:string;modules:PermissionModule[]};
 
-// Presentation bindings only: the API remains the source of actions and labels.
-// Shared permissions are shown at their entry points and keep a single value.
-const actionRoutes:Record<string,readonly string[]>={
- dashboard:[routes.dashboard],reports:[routes.dashboard],audit:[routes.dashboard],
- orders:[routes.pos,routes.orders,routes.diningRoom],kitchen:[routes.kitchen],bar:[routes.kitchen],
- tables:[routes.tables],reservations:[routes.reservations],cash:[routes.cash],
- "cash.manage":[routes.pos,routes.cash],receipts:[routes.receipts],
- menu:[routes.products,routes.availability,routes.combos],recipes:[routes.recipes],
- inventory:[routes.inventory],"inventory.read":[routes.inventory,routes.stockLedger],
- purchases:[routes.purchases],delivery:[routes.delivery,routes.couriers],
- customers:[routes.customers],expenses:[routes.expenses],users:[routes.usersSettings],
- organizations:[routes.locations,routes.organizationSettings,routes.concierge],
- fiscal:[routes.taxSettings],subscription:[routes.billingSettings],
-};
-
-export function permissionSections(groups:PermissionGroup[],menuGroups?:PermissionGroup[]):PermissionSection[]{
+// Cada pantalla del menú lateral muestra las acciones que el API declara para ella
+// (screenActions), con la etiqueta de esa pantalla. Una acción compartida conserva
+// un solo valor y avisa en qué otras pantallas aplica.
+export function permissionSections(groups:PermissionGroup[],menuGroups?:PermissionGroup[],screenActions:ScreenActions={}):PermissionSection[]{
  const allowedMenus=menuGroups?new Set(menuGroups.flatMap(group=>group.items.map(item=>item.value))):undefined;
  const actions=[...new Map(groups.flatMap(group=>group.items).map(item=>[item.value,item])).values()];
- const placed=new Set<string>();
+ const available=new Set(actions.map(item=>item.value));
  const sections=navigationGroups.flatMap(section=>{
   const modules=section.items.flatMap(module=>{
-   if(allowedMenus&&!allowedMenus.has(accessKey(module)))return [];
-   const items=actions.filter(item=>item.value===module.permission||(actionRoutes[item.value]??actionRoutes[item.value.split(".")[0]]??[]).includes(module.href));
-   if(!items.length)return [];
-   items.forEach(item=>placed.add(item.value));
-   return [{id:module.href,name:module.name,icon:module.icon,items}];
+   const key=accessKey(module);
+   if(allowedMenus&&!allowedMenus.has(key))return [];
+   const items=(screenActions[key]??[]).filter(item=>available.has(item.value)).map((item):PermissionItem=>({value:item.value,label:item.label}));
+   return items.length?[{id:module.href,name:module.name,icon:module.icon,items} as PermissionModule]:[];
   });
   return modules.length?[{name:section.label.charAt(0)+section.label.slice(1).toLocaleLowerCase("es"),modules}]:[];
  });
- // Future server actions must stay editable even before a navigation binding exists.
+ const modules=sections.flatMap(section=>section.modules);
+ const placed=new Set(modules.flatMap(module=>module.items.map(item=>item.value)));
+ for(const screen of modules)for(const item of screen.items){
+  const others=modules.filter(other=>other!==screen&&other.items.some(entry=>entry.value===item.value)).map(other=>other.name);
+  if(others.length)item.sharedWith=others;
+ }
+ // Una acción nueva del API sin pantalla asignada sigue siendo editable.
  const remaining=actions.filter(item=>!placed.has(item.value));
  if(remaining.length)sections.push({name:"Otros permisos",modules:[{id:"other",name:"Acciones adicionales",icon:"lock",items:remaining}]});
  return sections;
+}
+
+/** «También en Pedidos, Salón y 3 más»: dónde más aplica una acción compartida. */
+export function sharedNote(names:readonly string[]){
+ const shown=names.slice(0,3),rest=names.length-shown.length;
+ return `También en ${rest>0?`${shown.join(", ")} y ${rest} más`:shown.length>1?`${shown.slice(0,-1).join(", ")} y ${shown.at(-1)}`:shown[0]}`;
 }
 
 const normalized=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es");

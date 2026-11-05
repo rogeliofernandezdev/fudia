@@ -1,18 +1,20 @@
 "use client";
 import {Icon} from "@/design-system/icons";
 import {IconTile,type IconTileTone} from "@/design-system/icon-tile";
-import {filterPermissionSections,type PermissionSection} from "./permission-navigation";
+import {filterPermissionSections,sharedNote,type PermissionSection} from "./permission-navigation";
+
+// Un mismo tono por sección del menú en ambas pestañas (Menú y Acciones) del editor de roles.
+export const permissionSectionTone=(name:string):IconTileTone=>name==="Abastecimiento"?"brand":name==="Carta y producción"||name==="Configuración"?"digital":name==="Negocio"?"teal":"primary";
 
 export function RoleActionTree({sections,selected,required,search="",show="all",openGroups={},onOpen,onToggle,onToggleModule,readOnly=false}:{
  sections:PermissionSection[];selected:readonly string[];required?:Map<string,string[]>;search?:string;show?:"all"|"assigned"|"unassigned";
  openGroups?:Record<string,boolean>;onOpen?:(key:string)=>void;onToggle?:(permission:string)=>void;onToggleModule?:(values:string[])=>void;readOnly?:boolean;
 }){
  const visible=filterPermissionSections(sections,search,show,selected);
- const sectionTone=(name:string):IconTileTone=>name==="Abastecimiento"?"brand":name==="Carta y producción"||name==="Configuración"?"digital":name==="Negocio"?"teal":"primary";
- return <>{visible.map(section=><section className="re-action-section" data-tone={sectionTone(section.name)} key={section.name} aria-label={section.name}>
+ return <>{visible.map(section=><section className="re-action-section" data-tone={permissionSectionTone(section.name)} key={section.name} aria-label={section.name}>
   <h3 className="re-section-title">{section.name}</h3>
   {section.modules.map(module=>{
-   const tone=module.icon==="chefHat"||module.icon==="cookingPot"?"brand":sectionTone(section.name);
+   const tone=module.icon==="chefHat"||module.icon==="cookingPot"?"brand":permissionSectionTone(section.name);
    const key=`actions-${module.id}`,isOpen=readOnly||openGroups[key]!==false;
    const count=module.items.filter(item=>selected.includes(item.value)).length;
    const optional=module.visibleItems.filter(item=>!required?.has(item.value));
@@ -30,7 +32,7 @@ export function RoleActionTree({sections,selected,required,search="",show="all",
       const checked=selected.includes(item.value),reasons=required?.get(item.value),reasonId=`req-${module.id.replaceAll("/","-")}-${item.value}`;
       return readOnly?<span className="re-action-read" key={item.value}><Icon name="check" size={16}/>{item.label}</span>:<label key={item.value} className={`re-acc-item${checked?" checked":""}${reasons?" required":""}`}>
        <input type="checkbox" checked={checked} disabled={Boolean(reasons)} aria-describedby={reasons?reasonId:undefined} onChange={()=>{if(!reasons)onToggle?.(item.value)}}/><i><Icon name="check" size={14}/></i>
-       <span className="re-acc-item-copy">{item.label}{reasons&&<small id={reasonId}>Necesario para {reasons.join(", ")}</small>}</span>
+       <span className="re-acc-item-copy">{item.label}{reasons&&<small id={reasonId}>Necesario para {reasons.join(", ")}</small>}{item.sharedWith&&<small>{sharedNote(item.sharedWith)}</small>}</span>
       </label>;
      })}
     </div>}

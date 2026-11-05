@@ -13,9 +13,12 @@
 /* ── Panel de permisos: barra fija arriba y grupos en lista, sin tarjetas anidadas ── */
 .role-editor-perms-panel{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);overflow:clip;background:var(--surface)}
 /* Chrome descuenta el padding del form al fijar: se compensa para pegar la barra al borde. */
-.re-perm-tabs{position:sticky;top:calc(var(--space-6) * -1);z-index:var(--z-raised);display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);padding:var(--space-2);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
-.re-perm-show{flex:0 0 auto;width:auto}
-.re-perm-search{display:flex;align-items:center;gap:var(--space-1-5);flex:1 1 var(--size-200);min-width:0;max-width:var(--size-320);margin-left:auto}
+/* Misma barra en Menú y Acciones: pestañas y filtro en la primera fila, búsqueda a todo el ancho debajo. */
+.re-perm-tabs{position:sticky;top:calc(var(--space-6) * -1);z-index:var(--z-raised);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-2);padding:var(--space-2);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
+.re-perm-tabs>.ds-tabs{width:max-content;max-width:100%;justify-self:start}
+.re-perm-show{grid-column:2;grid-row:1;justify-self:end;width:auto}
+.re-perm-search{grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:var(--space-1-5);min-width:0;width:100%}
+.re-perm-search input[type=search]::-webkit-search-cancel-button{appearance:none;-webkit-appearance:none}
 .re-perm-search .ds-search-field{flex:1;min-width:0}
 .re-perm-accordion{padding:0}
 .re-perm-accordion>.catalog-state{min-height:var(--size-200)}
@@ -28,22 +31,23 @@
 .re-acc-chevron{width:var(--size-20);height:var(--size-20);display:grid;place-items:center;color:var(--ink-400);flex-shrink:0;transition:transform var(--duration-base) var(--easing-out),color var(--duration-fast) var(--easing-out)}
 .re-acc-group.open .re-acc-chevron{transform:rotate(90deg);color:var(--primary-600)}
 .re-acc-name{flex:1;min-width:0;color:var(--ink-950);font-size:var(--font-size-sm);font-weight:var(--weight-bold)}
-.re-acc-count{flex:none;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-medium);font-variant-numeric:tabular-nums;white-space:nowrap}
+.re-acc-count{flex:none;padding:var(--space-1) var(--space-1-5);border-radius:var(--radius-chip);background:var(--cloud-50);color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-medium);font-variant-numeric:tabular-nums;white-space:nowrap}
 .re-acc-count b{color:var(--ink-700);font-weight:var(--weight-bold)}
+.re-acc-count.has-selection{background:var(--primary-100);color:var(--primary-700)}
 .re-acc-count.has-selection b{color:var(--primary-700)}
 .re-acc-toggle{flex:none;border:var(--stroke-1) solid var(--line);background:var(--surface);border-radius:var(--radius-control);height:var(--control-height);padding:0 var(--space-3);font-size:var(--font-size-label);font-weight:var(--weight-bold);color:var(--primary-700);cursor:pointer;transition:var(--transition-surface),var(--transition-press)}
 .re-acc-toggle:active{transform:scale(var(--press-scale))}
 .re-acc-toggle.remove{color:var(--ink-600)}
 
-/* ── Permisos: marcado en tinta fuerte con check índigo; sin marcar en tinta tenue ── */
+/* ── Permisos: check circular como el medio de pago del POS (círculo azul, check blanco); sin marcar, aro gris ── */
 /* Orden por columnas (no en zigzag): la izquierda se lee de arriba abajo y luego la derecha, balanceadas. */
 .re-acc-items{columns:2;column-gap:var(--space-4);padding:0 var(--space-3) var(--space-3) var(--space-8)}
 .re-acc-item{position:relative;break-inside:avoid;display:flex;align-items:center;min-height:var(--control-height);gap:var(--space-2-5);padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-control);font-size:var(--font-size-sm);line-height:var(--line-height-snug);color:var(--ink-500);cursor:pointer;transition:var(--transition-surface)}
-.re-acc-item.checked{color:var(--ink-950);font-weight:var(--weight-semibold)}
+.re-acc-item.checked{background:var(--primary-50);color:var(--ink-950);font-weight:var(--weight-semibold)}
 .re-acc-item:has(input:focus-visible){outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--space-0-5) * -1)}
 /* El checkbox nativo queda dentro de la etiqueta (position:relative): si su bloque contenedor fuera .crud-modal, el foco al marcarlo desplazaría el modal y lo dejaría en blanco. */
 .re-acc-item input{position:absolute;inset-block-start:50%;inset-inline-start:var(--space-2);width:var(--size-1);height:var(--size-1);margin:0;opacity:0;pointer-events:none}
-.re-acc-item i{width:var(--size-17);height:var(--size-17);display:grid;place-items:center;border:var(--stroke-1-5) solid var(--line-strong);border-radius:var(--radius-control);background:var(--surface);color:transparent;flex-shrink:0;transition:var(--transition-surface)}
+.re-acc-item i{width:var(--size-20);height:var(--size-20);display:grid;place-items:center;border:var(--stroke-1-5) solid var(--line-strong);border-radius:50%;background:var(--surface);color:transparent;flex-shrink:0;transition:var(--transition-surface)}
 .re-acc-item.checked i{border-color:var(--primary-600);background:var(--primary-600);color:var(--surface)}
 /* Acción requerida por una pantalla o acción marcada: marcada, sin poder quitarse, con su motivo. */
 .re-acc-item-copy{display:grid;gap:var(--space-0-5);min-width:0;overflow-wrap:anywhere}
@@ -67,9 +71,19 @@
 .re-action-section[data-tone=digital]>.re-section-title{background:var(--digital-50);color:var(--digital-700)}
 .re-action-section[data-tone=teal]>.re-section-title{background:var(--teal-100);color:var(--teal-700)}
 .re-action-module .re-acc-heading{padding:0}
-.re-action-module .re-acc-count{padding:var(--space-1) var(--space-1-5);border-radius:var(--radius-chip);background:var(--cloud-50)}
-.re-action-module .re-acc-count.has-selection{background:var(--primary-100);color:var(--primary-700)}
-.re-action-module .re-acc-item.checked{background:var(--primary-50)}
+/* Menú: cada grupo es una sección; su cabecera lleva la misma banda de tono que en Acciones. */
+.re-menu-group+.re-menu-group{border-top:var(--stroke-1) solid var(--line)}
+.re-menu-group{border-bottom:0}
+.re-menu-group>.re-acc-header{background:var(--primary-50)}
+.re-menu-group>.re-acc-header .re-acc-name{color:var(--primary-800);font-size:var(--font-size-base)}
+.re-menu-group[data-tone=brand]>.re-acc-header{background:var(--brand-50)}
+.re-menu-group[data-tone=brand]>.re-acc-header .re-acc-name{color:var(--brand-800)}
+.re-menu-group[data-tone=digital]>.re-acc-header{background:var(--digital-50)}
+.re-menu-group[data-tone=digital]>.re-acc-header .re-acc-name{color:var(--digital-700)}
+.re-menu-group[data-tone=teal]>.re-acc-header{background:var(--teal-100)}
+.re-menu-group[data-tone=teal]>.re-acc-header .re-acc-name{color:var(--teal-700)}
+.re-menu-group>.re-acc-header .re-acc-count:not(.has-selection){background:var(--surface)}
+.re-menu-group.open>.re-acc-items{padding-top:var(--space-2)}
 .re-action-module .re-acc-name{overflow-wrap:anywhere}
 .re-action-module .re-acc-toggle:disabled{color:var(--ink-500);cursor:default;opacity:var(--opacity-disabled)}
 .re-action-read{display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-2);break-inside:avoid;color:var(--ink-700);font-size:var(--font-size-sm);overflow-wrap:anywhere}
@@ -77,12 +91,6 @@
 .re-module-title{display:flex;align-items:center;gap:var(--space-2);margin:0;color:var(--ink-950);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
 
 .permission-preview-actions{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);overflow:clip}
-
-.role-editor-perms-panel.is-actions .re-perm-tabs{display:grid;grid-template-columns:minmax(0,1fr) auto}
-.role-editor-perms-panel.is-actions .re-perm-tabs>.ds-tabs{width:max-content;max-width:100%;justify-self:start}
-.role-editor-perms-panel.is-actions .re-perm-show{grid-column:2;grid-row:1;justify-self:end}
-.role-editor-perms-panel.is-actions .re-perm-search{grid-column:1/-1;grid-row:2;width:100%;max-width:none;margin-left:0}
-.role-editor-perms-panel.is-actions .re-perm-search input[type=search]::-webkit-search-cancel-button{appearance:none;-webkit-appearance:none}
 
 /* ── Footer ──────────────────────────────────────────── */
 .re-form-footer{flex-shrink:0}
@@ -94,7 +102,6 @@
   .re-acc-items{columns:1}
 }
 @media(max-width:600px){
-  .re-perm-search{max-width:none;flex:1 1 100%;margin-left:0}
   /* Móvil: tarea a pantalla completa como la Comanda; un solo desplazamiento (el del form)
      y pestañas + filtro + búsqueda fijas arriba para ver y marcar los permisos sin listas anidadas. */
   .role-editor-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
@@ -109,9 +116,9 @@
   .re-action-module .re-acc-name{flex-basis:var(--size-120)}
   .re-action-module .re-acc-count{margin-inline-start:auto}
   .re-section-title{padding-inline:var(--space-2)}
-  .role-editor-perms-panel.is-actions .re-perm-tabs{grid-template-columns:var(--size-112) minmax(0,1fr)}
-  .role-editor-perms-panel.is-actions .re-perm-tabs>.ds-tabs{grid-column:1/-1;width:100%}
-  .role-editor-perms-panel.is-actions .re-perm-show{grid-column:1;grid-row:2;width:100%}
-  .role-editor-perms-panel.is-actions .re-perm-search{grid-column:2;grid-row:2}
+  .re-perm-tabs{grid-template-columns:var(--size-112) minmax(0,1fr)}
+  .re-perm-tabs>.ds-tabs{grid-column:1/-1;width:100%}
+  .re-perm-show{grid-column:1;grid-row:2;width:100%}
+  .re-perm-search{grid-column:2;grid-row:2}
   .re-acc-items{padding:0 var(--space-2) var(--space-2) var(--space-6)}
 }

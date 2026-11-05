@@ -53,6 +53,20 @@ ejecutar dentro de ellas. El sidebar y la protección de rutas consumen
 validar cada petición. Conceder un permiso no concede automáticamente una opción
 del menú, ni conceder una opción autoriza sus acciones.
 
+`menuAccess` usa una clave por pantalla del menú lateral (`accessKey`: `access`
+o `module`). Dos opciones del sidebar nunca comparten clave: el editor de roles ›
+Menú muestra exactamente las opciones, nombres y secciones del menú lateral
+(Control: Dashboard `dashboard`, Ventas `ventas`, Comprobantes `comprobantes`;
+Salón `salon`; Mi restaurante `mi_restaurante`; Medios de pago `medios_pago`).
+Lo protege `tests/role-permission-navigation.test.mjs`. Al agregar una pantalla
+nueva se crea su clave también en `MenuAccessCatalog` del backend.
+
+El editor de roles › Acciones agrupa por pantalla con `screenActions` del API:
+solo las acciones que cada pantalla valida (rutas o controles `can()`), con la
+etiqueta de esa pantalla. Al proteger una pantalla o un botón con un permiso,
+agregarlo en `ScreenActions` del backend; un test falla si un permiso del
+catálogo no aparece en ninguna pantalla o si una pantalla no muestra lo que exige.
+
 La entrada `/` pertenece al layout autenticado y espera el contexto antes de
 redirigir a `firstAccessibleRoute`, igual que login y cambio de local. Si se abre
 `/dashboard` sin acceso efectivo (menú, permiso de lectura y módulo activo), el

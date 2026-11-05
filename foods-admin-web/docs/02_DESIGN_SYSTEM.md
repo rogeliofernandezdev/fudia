@@ -2870,4 +2870,26 @@ son tenues con texto oscuro de su rampa; los módulos usan `IconTile` soft y los
 conteos asignados conservan el azul de selección. No se recolorean los checks
 requeridos ni se usa rojo para quitar permisos. La barra de Acciones organiza
 pestañas y filtro arriba, buscador a todo el ancho debajo; en móvil usa dos
-filas: pestañas, luego filtro y búsqueda. Menú conserva su organización.
+filas: pestañas, luego filtro y búsqueda.
+
+Rol › Menú es un espejo del menú lateral: mismas secciones, mismos nombres y mismo
+orden, una casilla por pantalla (Control: Dashboard, Ventas, Comprobantes). No
+se usan nombres agrupados como «Reportes».
+
+En Acciones cada pantalla muestra solo lo que esa pantalla valida de verdad, con
+etiquetas en sus palabras (Comprobantes: «Ver y descargar comprobantes»,
+«Reenviar comprobantes a SUNAT»). Las acciones y etiquetas llegan del API
+(`permission-catalog` → `screenActions`); el frontend no las inventa. Una acción
+compartida (mismo valor en varias pantallas) lleva debajo una línea 12 px
+`ink-500` «También en Pedidos, Salón y 2 más» (`sharedNote`, máximo tres nombres);
+marcarla en una pantalla la marca en todas. Una acción nueva del API sin pantalla
+sigue editable en «Otros permisos».
+
+Menú y Acciones están homologados (2026-11-04): la misma barra (pestañas y filtro
+arriba, buscador a todo el ancho), el mismo tono por sección
+(`permissionSectionTone`) —en Menú cada grupo es una sección y su cabecera
+plegable lleva la banda tenue de su rampa—, el mismo conteo «x de y» en chip
+(`cloud-50`; `primary-100` con selección) y la misma fila marcada `primary-50`
+en tinta `ink-950` semibold. El check de cada opción es circular, como la marca
+del medio de pago del POS: aro `line-strong` de 20 px sin marcar y círculo
+`primary-600` con check blanco al marcar (requerido: `primary-300`).

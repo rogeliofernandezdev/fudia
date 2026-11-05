@@ -12,6 +12,8 @@ export type Role={
 };
 export type Location={id:string;name:string;active:boolean};
 export type PermissionGroup={group:string;items:{value:string;label:string}[]};
+/** Acciones por clave del Menú (una pantalla del menú lateral), con la etiqueta en palabras de esa pantalla. */
+export type ScreenActions=Record<string,{value:string;label:string}[]>;
 export type UserDraft={id?:string;fullName:string;email:string;password:string;assignments:Assignment[]};
 export type RoleDraft={id?:string;systemKey?:string|null;name:string;description:string;menuAccess?:string[];permissions:string[]};
 
