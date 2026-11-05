@@ -49,7 +49,7 @@ func (h *Administration) GetPermissionCatalog(w http.ResponseWriter, r *http.Req
 	}
 	menus, permissions := out.RequirementsFor()
 	shared.WriteJSON(w, 200, map[string]any{"groups": out.Permissions, "menuGroups": out.Menus,
-		"requirements": map[string]any{"menus": menus, "permissions": permissions}})
+		"requirements": map[string]any{"menus": menus, "permissions": permissions}, "screenActions": out.ScreenActionsFor()})
 }
 func (h *Administration) ListUsers(w http.ResponseWriter, r *http.Request) {
 	page, size := shared.PageParams(r)

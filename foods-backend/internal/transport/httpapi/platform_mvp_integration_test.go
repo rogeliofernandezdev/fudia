@@ -433,6 +433,7 @@ func TestDefaultRolesOnlyExposeUsableMVPMenus(t *testing.T) {
 		"disponibilidad": "menu.read", "combos": "menu.read", "recetas": "menu.read", "inventario": "inventory.read",
 		"kardex": "inventory.read", "compras": "purchases.read", "clientes": "customers.read", "locales": "organizations.read",
 		"fiscal": "organizations.read", "usuarios": "users.read", "costos": "expenses.read",
+		"ventas": "orders.read", "salon": "orders.read", "mi_restaurante": "organizations.read", "medios_pago": "organizations.read",
 	}
 	contains := func(values []string, want string) bool {
 		for _, value := range values {

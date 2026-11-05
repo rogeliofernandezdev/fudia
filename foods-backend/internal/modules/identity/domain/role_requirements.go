@@ -9,12 +9,15 @@ package domain
 // cargar sus datos.
 var MenuRequirements = map[string][]string{
 	"dashboard":      {"dashboard.read"},
+	"ventas":         {"orders.read"},
+	"comprobantes":   {"orders.read"},
 	"pos":            {"orders.read"},
 	"pedidos":        {"orders.read", "menu.read"},
+	"salon":          {"orders.read", "menu.read"},
 	"cocina":         {"orders.read"},
-	"mesas":          {"tables.read"},
+	"mesas":          {"tables.read", "menu.read"},
 	"caja":           {"cash.read"},
-	"reservas":       {"reservations.read"},
+	"reservas":       {"reservations.read", "tables.read"},
 	"productos":      {"menu.read"},
 	"disponibilidad": {"menu.read"},
 	"combos":         {"menu.read"},
@@ -25,7 +28,9 @@ var MenuRequirements = map[string][]string{
 	"clientes":       {"customers.read"},
 	"locales":        {"organizations.read"},
 	"costos":         {"expenses.read"},
+	"mi_restaurante": {"organizations.read"},
 	"fiscal":         {"organizations.read"},
+	"medios_pago":    {"organizations.read"},
 	"usuarios":       {"users.read", "organizations.read"},
 	"facturacion":    {"organizations.read"},
 	"whatsapp_bot":   {"organizations.read"},
@@ -47,7 +52,6 @@ var PermissionRequirements = map[string][]string{
 	"cash.manage":           {"cash.read", "orders.read"},
 	"cash.registers.manage": {"cash.read"},
 	"cash.expected.read":    {"cash.read"},
-	"receipts.manage":       {"receipts.read"},
 	"inventory.manage":      {"inventory.read"},
 	"inventory.transfer":    {"inventory.read"},
 	"purchases.manage":      {"purchases.read"},
@@ -55,7 +59,6 @@ var PermissionRequirements = map[string][]string{
 	"purchases.receive":     {"purchases.read"},
 	"expenses.manage":       {"expenses.read"},
 	"expenses.void":         {"expenses.read"},
-	"delivery.manage":       {"delivery.read"},
 }
 
 // CompleteRolePermissions agrega a las acciones del rol las que requieren sus

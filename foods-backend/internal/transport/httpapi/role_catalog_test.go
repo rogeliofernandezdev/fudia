@@ -20,7 +20,7 @@ func TestRoleCatalogFiltersContractedModulesAndDependencies(t *testing.T) {
 			t.Errorf("off-plan menu %s", key)
 		}
 	}
-	for _, key := range []string{"recipes.manage", "inventory.read", "purchases.read", "reservations.read", "receipts.read", "expenses.read", "delivery.read"} {
+	for _, key := range []string{"recipes.manage", "inventory.read", "purchases.read", "reservations.read", "expenses.read"} {
 		if slices.Contains(permissions, key) {
 			t.Errorf("off-plan permission %s", key)
 		}

@@ -91,7 +91,23 @@ siguen sujetos a la suscripción. El cambio no modifica cookies ni autenticació
 
 Los roles mantienen dos dimensiones independientes:
 
-- `menu_access`: opciones y rutas administrativas que el usuario puede abrir.
+- `menu_access`: opciones y rutas administrativas que el usuario puede abrir. Una clave por
+  opción del menú lateral, con su nombre, sección y orden en `MenuAccessCatalog`
+  (p. ej. Control: `dashboard`, `ventas`, `comprobantes`). La migración 000111
+  separó las claves que abrían varias pantallas (`dashboard` → Dashboard y Ventas,
+  `facturacion` → Comprobantes, `pedidos` → Salón, `locales` → Mi restaurante,
+  `fiscal` → Medios de pago) y cada rol conservó lo que ya veía.
+- `ScreenActions` (`identity/domain/screen_actions.go`) declara, por clave del
+  Menú, las acciones que esa pantalla valida y su etiqueta; `permission-catalog`
+  las devuelve filtradas por plan en `screenActions`. Todo permiso del catálogo
+  debe aparecer en alguna pantalla (`TestScreenActionsCoverTheCatalog`). Cada acción
+  se muestra en la pantalla de su módulo; sus efectos secundarios en otra pantalla
+  no se repiten (el saldo esperado solo aparece en Caja y turnos, aunque el
+  dashboard también lo oculte). La
+  migración 000112 retiró siete acciones que ninguna ruta validaba
+  (`reports.read`, `audit.read`, `receipts.read`, `receipts.manage`, `fiscal.read`,
+  `delivery.read`, `delivery.manage`) y completó dos requisitos que faltaban:
+  Mesas y zonas → `menu.read` (zonas) y Reservas → `tables.read`.
 - `permissions`: acciones de lectura o modificación autorizadas dentro de esas rutas.
 
 Las dos dimensiones son independientes, pero una pantalla o acción no sirve sin

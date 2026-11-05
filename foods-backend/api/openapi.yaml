@@ -2240,7 +2240,7 @@ paths:
   /v1/admin/permission-catalog:
     get:
       operationId: getPermissionCatalog
-      description: "Empresa: devuelve únicamente accesos y acciones de módulos contratados, activos y disponibles; los grupos vacíos se omiten. Plataforma mantiene el catálogo completo. No concede permisos ni habilita módulos. requirements.menus y requirements.permissions indican, solo para opciones del plan, las acciones que exige cada pantalla o acción (p. ej. recetas → menu.read, inventory.read); guardar un rol las agrega automáticamente."
+      description: "Empresa: devuelve únicamente accesos y acciones de módulos contratados, activos y disponibles; los grupos vacíos se omiten. Plataforma mantiene el catálogo completo. No concede permisos ni habilita módulos. requirements.menus y requirements.permissions indican, solo para opciones del plan, las acciones que exige cada pantalla o acción (p. ej. recetas → menu.read, inventory.read); guardar un rol las agrega automáticamente. screenActions agrupa, por clave del Menú (una por pantalla del menú lateral), solo las acciones que esa pantalla valida, con la etiqueta en palabras de la pantalla; una acción puede repetirse en varias pantallas con el mismo valor."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Catálogo efectivo de accesos y permisos }, "503": { description: No se pudo consultar el alcance del plan } }
   /v1/admin/users:
