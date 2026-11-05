@@ -2843,3 +2843,31 @@ La imagen del formulario de producto se estira en escritorio desde el inicio
 del campo Nombre hasta el borde inferior del selector Destino de atención.
 En móvil conserva el formato cuadrado y se apila sobre los campos.
 `ImageRemoveButton` usa el círculo rojo `danger-500` y la X blanca compartidos.
+
+
+### Acciones de roles por sección y módulo
+
+La pestaña Acciones y el detalle de rol muestran sección → módulo → acciones.
+Los títulos, iconos y orden provienen de `shell/navigation.ts`: por ejemplo,
+Operación → Punto de venta, Pedidos, Salón, Cocina, Mesas y zonas, Caja y turnos.
+Las etiquetas y acciones disponibles siguen proviniendo de `permission-catalog`;
+`permission-navigation.ts` solo relaciona claves técnicas con rutas existentes.
+Se omiten módulos y secciones sin acciones del catálogo efectivo. Un permiso
+compartido aparece en sus módulos con el mismo valor y se marca en todos a la vez;
+los contadores generales siguen contando claves únicas. No crea permisos nuevos.
+La sección usa una franja neutra y cada módulo un acordeón con icono, nombre,
+conteo completo y selección masiva limitada a acciones opcionales visibles.
+La búsqueda reconoce sección, módulo o acción y muestra los módulos coincidentes
+abiertos. Las acciones requeridas conservan su bloqueo y motivo. En móvil desde
+390 px filtro y búsqueda comparten fila bajo las pestañas, las acciones se apilan en una columna y los
+encabezados pueden envolver con controles táctiles de 44 px. Conserva un solo
+scroll y el pie de Guardar. No se cambia la autorización ni el contrato guardado.
+
+En Acciones, la jerarquía de color usa las rampas aprobadas: azul operativo en
+Control/Operación/Delivery/Inteligencia, verde en Abastecimiento y preparación,
+violeta en Carta y producción/Configuración y teal en Negocio. Los encabezados
+son tenues con texto oscuro de su rampa; los módulos usan `IconTile` soft y los
+conteos asignados conservan el azul de selección. No se recolorean los checks
+requeridos ni se usa rojo para quitar permisos. La barra de Acciones organiza
+pestañas y filtro arriba, buscador a todo el ancho debajo; en móvil usa dos
+filas: pestañas, luego filtro y búsqueda. Menú conserva su organización.

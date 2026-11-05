@@ -34,6 +34,8 @@ function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,
   if(name==="@/design-system/data-table")return {DataTable:"DataTable"};
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css"))return {};
+  if(name==="./role-action-tree")return{RoleActionTree:"RoleActionTree"};
+  if(name==="./permission-navigation")return{permissionSections:()=>[],filterPermissionSections:()=>[]};
   return require(name);
  });
  function render(){cursor=mutationCursor=0;const view=nodes(UsersRolesManager());return {view,header:view.find(node=>node.type==="PageHeader"),button:view.find(node=>node.type==="Button"&&["Nuevo usuario","Nuevo rol"].includes(node.props.children))};}

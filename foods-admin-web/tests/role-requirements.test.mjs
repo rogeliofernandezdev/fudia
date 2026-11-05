@@ -35,8 +35,9 @@ test("editor de roles: requeridas marcadas, bloqueadas, con motivo y guardadas",
  const editor=read("src/modules/identity/presentation/users-roles-manager.tsx");
  assert.match(editor,/requiredPermissions\(v\.menuAccess,v\.permissions,catalog\.data\?\.requirements,labels\)/);
  assert.match(editor,/const selected=permTab==="menu"\?v\.menuAccess:permissions;/,"las requeridas se ven marcadas");
- assert.match(editor,/disabled=\{Boolean\(reasons\)\}/,"no se pueden quitar");
- assert.match(editor,/Necesario para \{reasons\.join\(", "\)\}/,"explica el motivo");
+ const tree=read("src/modules/identity/presentation/role-action-tree.tsx");
+ assert.match(tree,/disabled=\{Boolean\(reasons\)\}/,"no se pueden quitar");
+ assert.match(tree,/Necesario para \{reasons\.join\(", "\)\}/,"explica el motivo");
  assert.match(editor,/save\(\{\.\.\.v,permissions,/,"se guardan junto a las marcadas");
  assert.match(read("src/modules/identity/infrastructure/identity-api.ts"),/requirements\?:RoleRequirements/);
 });
