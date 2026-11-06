@@ -66,7 +66,7 @@ function hooksMount(file,props,overrides={}){
   if(name==="../domain/draft-availability")return compile("orders/domain/draft-availability.ts");
   if(name.endsWith("comanda-catalog"))return{ComandaCatalog:"ComandaCatalog",ComboConfigurator:"ComboConfigurator"};
   if(name==="./comanda-view")return{ComandaView:"ComandaView"};
-  if(name==="./order-meta")return{channelIcons:{delivery:"truck",recojo:"box",mostrador:"store"}};
+  if(name==="./order-meta")return{channelIcons:{delivery:"truck",recojo:"box",mostrador:"store"},channelTone:()=>"primary"};
   return require(name);
  },{crypto:{randomUUID:()=>"temporary-key"},window:{addEventListener:()=>{},removeEventListener:()=>{}}});
  const Component=Object.values(compiled)[0];

@@ -45,7 +45,7 @@ test("el disparador es un botón accesible y no muestra la burbuja hasta interac
 test("estilos del tooltip: por encima de modales, sin hover fuera de puntero fino y con movimiento reducido",()=>{
  const css=read("src/design-system/styles/tooltip.css");
  assert.ok(Number(resolveTokens("var(--z-tooltip)"))>Number(resolveTokens("var(--z-sheet)")),"visible sobre la comanda en hoja o pantalla completa");
- assert.ok(Number(resolveTokens("var(--z-tooltip)"))<Number(resolveTokens("var(--z-feedback)")),"bajo los avisos de feedback");
+ assert.ok(Number(resolveTokens("var(--z-tooltip)"))>Number(resolveTokens("var(--z-feedback)")),"también por delante de los diálogos de feedback");
  assert.doesNotMatch(css,/:hover/);
  assert.match(css,/@media \(prefers-reduced-motion:reduce\)\{\.ds-tooltip\[data-ready\]\{animation:none\}\}/);
  assert.match(css,/:where\(\.ds-tooltip-trigger\)/,"el reset no pisa la clase visual del consumidor");
@@ -54,6 +54,15 @@ test("estilos del tooltip: por encima de modales, sin hover fuera de puntero fin
  assert.match(maxWidth,/calc\(100vw - var\(--space-8\)\)/,"deja 16 px por lado en móvil");
  assert.match(read("src/app/layout.tsx"),/@\/design-system\/styles\/tooltip\.css/);
  assert.match(read("src/design-system/index.ts"),/export \{Tooltip\} from "\.\/tooltip"/);
+});
+
+test("las etiquetas de acciones y ayudas usan una capa global fuera del contenedor que recorta",()=>{
+ const {TooltipLayer}=load("src/design-system/tooltip-layer.tsx",name=>name==="./tooltip"?{placeTooltip}:require(name));
+ assert.equal(renderToStaticMarkup(React.createElement(TooltipLayer)),"","cerrado no deja burbujas ni cambia el HTML del servidor");
+ const source=read("src/design-system/tooltip-layer.tsx");
+ for(const contract of ['createPortal','document.body','closest<HTMLElement>("[data-tooltip]")','"pointerover"','"focusin"','"Escape"','"aria-describedby"','MutationObserver','"resize"','"scroll"'])assert.ok(source.includes(contract),contract);
+ assert.match(read("src/providers/providers.tsx"),/<TooltipLayer\/>/,"todas las pantallas comparten una capa");
+ assert.doesNotMatch(read("src/design-system/styles/table-actions.css"),/\[data-tooltip\].*?:after/,"las acciones ya no generan burbujas recortadas por overflow");
 });
 
 test("la carta recibe descripción y alérgenos del API sin catálogos locales",async()=>{

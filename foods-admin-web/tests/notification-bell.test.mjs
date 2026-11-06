@@ -43,7 +43,7 @@ test("avisos: Salón y Pedidos abren el detalle del pedido; POS solo cobra la cu
 });
 
 test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
- assert.equal(rules.noticeTone("order_ready"),"brand");
+ assert.equal(rules.noticeTone("order_ready"),"purple","pedido por entregar usa el morado de su estado");
  assert.equal(rules.noticeTone("bill_requested"),"peach");
  assert.equal(rules.noticeTone("assistance_requested"),"sky");
  assert.equal(rules.noticeTone("stale_account"),"peach");

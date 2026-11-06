@@ -12,7 +12,7 @@ function compile(path,resolve=require){
  const exports={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve,URLSearchParams});return exports;
 }
 function nodes(tree){const out=[];function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){out.push(node);visit(node.props?.children)}}visit(tree);return out;}
-function words(tree){if(Array.isArray(tree))return tree.map(words).join("");if(tree&&typeof tree==="object")return words(tree.props?.children);return String(tree??"");}
+function words(tree){if(Array.isArray(tree))return tree.map(words).join("");if(tree&&typeof tree==="object")return words(tree.props?.children);return typeof tree==="boolean"?"":String(tree??"");}
 const ds=Object.fromEntries(["Button","Dialog","FormField","Icon","IconButton","Input","Textarea","PageHeader","Pagination","SearchField","Select","Status","Modal","ModalBody"].map(name=>[name,name]));
 const resolver=compile("shared/forms/zod-resolver.ts");
 const schema=compile("modules/menu/availability/domain/availability-reason-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
@@ -101,7 +101,8 @@ test("Guardar cupo pide motivo antes del API; Agotar conserva el cupo sin guarda
  assert.deepEqual(JSON.parse(JSON.stringify(ui.apiCalls[0])),["aji",{status:"available",portionQuantity:20,note:"Nota conservada",reasonCode:"extra_production",reason:""}]);
  assert.equal(ui.feedback.length,1);assert.equal(ui.mutation.retry,false);assert.ok(ui.invalidations.some(key=>key[0]==="availability-history"));
  all=ui.render();all.find(n=>n.type==="Input"&&n.props.type==="number").props.onChange({target:{value:"50"}});
- ui.render().find(n=>n.type==="Button"&&n.props.children==="Agotar hoy").props.onClick();
+ const exhaust=ui.render().find(n=>n.type==="Button"&&n.props.children==="Agotar hoy");
+ assert.equal(exhaust.props.kind,"danger-outline","agotar usa el rojo suave compartido");exhaust.props.onClick();
  const soldOut=ui.render().find(n=>n.type==="Reason");
  assert.equal(soldOut.props.change.portionQuantity,null);
  assert.equal(soldOut.props.options[0].value,"sold_out","agotar abre con «Se acabó» primero");
@@ -145,7 +146,8 @@ test("sin control no muestra cantidades ficticias; inventario conserva unidad y 
  const manual={...item,quantityControl:"none",source:"manual",portionQuantity:null,remaining:null};
  const all=managerUI(true,{items:[manual]}).render();
  assert.equal(all.some(n=>n.type==="Input"&&n.props.type==="number"),false);
- assert.ok(all.some(n=>n.props.className?.includes("availability-unlimited")&&words(n).includes("Sin límite de cantidad")));
+ const unlimited=all.find(n=>n.props.className?.includes("availability-unlimited"));
+ assert.equal(words(unlimited),"Sin límite","una sola línea, sin explicación redundante");
  const inventory={...item,quantityControl:"inventory",source:"inventory",portionQuantity:null,remaining:3.125,inventoryUnit:"kg"};
  const balance=managerUI(true,{items:[inventory]}).render().find(n=>n.props.className==="availability-cell availability-balance");
  assert.match(words(balance),/3[.,]125kg/);

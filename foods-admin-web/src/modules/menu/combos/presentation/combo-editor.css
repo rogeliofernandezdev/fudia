@@ -277,7 +277,6 @@
 }
 
 /* Opciones como tabla ligera: tope y costo extra siempre a la vista, con una sola fila de títulos por parte. */
-/* `clip` recorta el radio sin volver desplazable la tabla: el tooltip oculto ya no la corre al enfocar la ayuda. */
 .combo-option-table {
   min-width: 0;
   overflow: clip;
@@ -393,15 +392,6 @@
 
 .combo-option-table .field-label .field-hint {
   position: static;
-}
-
-.combo-option-table .field-label .field-hint[data-tooltip]::after {
-  top: calc(100% + var(--space-2));
-  right: 0;
-  bottom: auto;
-  left: auto;
-  width: var(--size-140);
-  max-width: none;
 }
 
 .combo-quota > span {
@@ -757,19 +747,12 @@
     grid-column: 2 / -1;
     margin-right: var(--space-2);
   }
-
-  /* Sin fila de títulos, la ayuda acompaña a cada «Costo extra»; un toque la muestra (los tooltips no tienen hover táctil). */
   .combo-option-cell > .field-label {
     display: flex;
   }
 
   .combo-option-cell .field-hint {
     display: grid;
-  }
-
-  .combo-option-cell .field-hint[data-tooltip]:focus::after {
-    opacity: 1;
-    transform: translateY(0);
   }
 
   .combo-cell-label {

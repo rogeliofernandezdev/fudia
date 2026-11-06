@@ -1,18 +1,18 @@
-.sales-filters{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(0,var(--size-180))) auto;align-items:start;gap:var(--space-3);padding:var(--space-3) var(--space-4) var(--space-4)}
+.sales-panel{min-width:0;overflow:hidden}
+.sales-filters{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(0,var(--size-180))) auto;align-items:start;gap:var(--space-3);padding:var(--space-4) var(--space-5) var(--space-5)}
 .sales-filters>.form-field{min-width:0;margin:0}
 .sales-filters .form-field-label{line-height:var(--line-height-snug)}
 .sales-filters>.button{margin-top:calc(var(--font-size-label) * var(--line-height-snug) + var(--space-1-5));white-space:nowrap}
 /* Periodos rápidos: un toque, misma selección que las pestañas; las fechas quedan para rangos personalizados. */
-.sales-periods{display:flex;flex-wrap:wrap;gap:var(--space-2);padding:var(--space-4) var(--space-4) 0}
+.sales-periods{display:flex;flex-wrap:wrap;gap:var(--space-2);padding:var(--space-4) var(--space-5) 0}
 /* Sin fechas (periodo rápido) el buscador ocupa toda la fila. */
 .sales-filters:not(.is-custom) .sales-search{grid-column:1/-1}
-.sales-period{min-height:var(--control-height);padding:0 var(--space-3-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-pill);background:var(--surface);color:var(--ink-700);font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;transition:var(--transition-surface),var(--transition-press)}
-.sales-period.active{border-color:var(--primary-300);background:var(--primary-50);color:var(--primary-700)}
-.sales-period:active{transform:scale(var(--press-scale))}
-/* Total del periodo: cobrado neto de todo el filtro; el importe es el único protagonista índigo. */
-.sales-period-summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);padding:var(--space-3-5) var(--space-4);border-top:var(--stroke-1) solid var(--cloud-100);border-bottom:var(--stroke-1) solid var(--cloud-100);background:var(--cloud-25)}
+.sales-period{min-height:var(--control-height);padding:0 var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-pill);background:var(--surface);color:var(--ink-600);font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;transition:var(--transition-surface)}
+.sales-period.active{border-color:var(--primary-300);background:var(--surface);color:var(--primary-700)}
+/* Franja compacta original: total de todo el filtro, después de la búsqueda. */
+.sales-period-summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);padding:var(--space-3-5) var(--space-5);border-top:var(--stroke-1) solid var(--line);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
 .sales-period-summary>span{color:var(--ink-700);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
-.sales-period-summary>strong{color:var(--primary-700);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-tight);line-height:var(--line-height-tight)}
+.sales-period-summary>strong{color:var(--primary-700);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-tight);line-height:var(--line-height-tight);overflow-wrap:anywhere}
 .sales-period-summary>small{color:var(--ink-500);font-size:var(--font-size-sm)}
 .sales-period-summary>small b{color:var(--ink-800);font-weight:var(--weight-semibold)}
 .sales-summary-skeleton{display:block;width:var(--size-150);height:var(--size-22);border-radius:var(--radius-chip);background:linear-gradient(90deg,var(--cloud-100) 20%,var(--primary-25) 42%,var(--cloud-100) 64%) 0 0/220% 100%;animation:shimmer var(--duration-ambient-long) ease-in-out infinite}
@@ -20,7 +20,7 @@
 .sales-skeleton i,.sales-skeleton b,.sales-skeleton span{display:block;background:linear-gradient(90deg,var(--cloud-100),var(--primary-25),var(--cloud-100));background-size:200% 100%;animation:sales-shimmer var(--duration-ambient) infinite}
 .sales-skeleton td>i{width:var(--size-72);height:var(--size-10);border-radius:var(--radius-control)}
 .sales-skeleton-name{align-items:center;gap:var(--space-2-5);display:flex}
-.sales-skeleton-name>span{flex:0 0 var(--size-34);width:var(--size-34);height:var(--size-34);border-radius:var(--radius-tile)}
+.sales-skeleton-name>span{flex:0 0 var(--size-16);width:var(--size-16);height:var(--size-16);border-radius:var(--radius-chip)}
 .sales-skeleton-name>div{gap:var(--space-1-5);display:grid}
 .sales-skeleton-name b{width:var(--size-88);height:var(--size-11);border-radius:var(--radius-control)}
 .sales-skeleton-name i{width:var(--size-62);height:var(--size-8);border-radius:var(--radius-control)}
@@ -30,6 +30,13 @@
 .sales-skeleton-status{width:var(--size-64);height:var(--size-24);border-radius:var(--radius-sheet)!important}
 .sales-skeleton-action{width:var(--control-height);height:var(--control-height);border-radius:var(--radius-control);margin:auto}
 .sales-table-wrap .sales-table{min-width:var(--size-900)}
+.sales-row{cursor:pointer}
+.sales-order-code{display:inline-flex;align-items:center;gap:var(--space-2);color:var(--ink-800)}
+.sales-order-code>svg{flex:none;color:var(--ink-500)}
+.sales-customer{display:block;max-width:var(--size-220);color:var(--ink-950);overflow-wrap:anywhere;white-space:normal}
+.sales-customer-name{max-width:var(--size-220);overflow-wrap:anywhere;white-space:normal}
+.sales-row-total{color:var(--ink-950)}
+.sales-table :is(th,td):nth-child(6){text-align:right}
 .sales-payment-methods{display:block;max-width:var(--size-220);white-space:normal;overflow-wrap:anywhere}
 
 /* Owner: Sales — detalle de consulta con el patrón de Detalle de pedido (`order-detail.css`):
@@ -72,11 +79,12 @@
     la lista (patrón de las zonas del Salón); búsqueda, fechas y total siguen el scroll. `clip` no crea
     contenedor de scroll, así el panel conserva su recorte sin anular el `sticky`. */
  .sales-panel{overflow:clip}
- .sales-periods{position:sticky;top:var(--size-64);z-index:var(--z-raised);flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--space-3) var(--space-3) var(--space-2);scroll-padding-inline:var(--space-3);background:var(--surface);box-shadow:0 var(--stroke-1) 0 var(--cloud-100)}
+ .sales-periods{position:sticky;top:var(--size-64);z-index:var(--z-raised);flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--space-3) var(--space-4) var(--space-2);scroll-padding-inline:var(--space-4);background:var(--surface);box-shadow:0 var(--stroke-1) 0 var(--cloud-100)}
  .sales-period{flex:none;min-height:var(--size-44)}
- .sales-table-wrap .sales-table :is(th,td):first-child{min-width:var(--size-200);max-width:var(--size-220)}
- .sales-table-wrap .sales-table td:first-child b{max-width:var(--size-160)}
- .sales-filters{grid-template-columns:minmax(0,1fr);padding:var(--space-3)}
+ .sales-period-summary{padding-inline:var(--space-4)}
+ .sales-table-wrap .sales-table :is(th,td):first-child{min-width:var(--size-160);max-width:var(--size-180)}
+ .sales-table-wrap .sales-table td:first-child b{max-width:var(--size-138)}
+ .sales-filters{grid-template-columns:minmax(0,1fr);padding:var(--space-3) var(--space-4) var(--space-4)}
  .modal-backdrop:has(.sales-detail-modal){padding:0}
  .crud-modal.sales-detail-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
  .sales-detail-body{padding:var(--space-4)}

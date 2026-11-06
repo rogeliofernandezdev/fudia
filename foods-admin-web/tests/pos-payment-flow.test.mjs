@@ -388,6 +388,17 @@ test("venta por mostrador: la bandeja muestra origen, número, productos y prepa
  assert.equal(serviceFlowExports.canChargeAccount({...counter,origin:undefined}),false,"recojo sigue esperando que esté listo");
 });
 
+test("la misma mesa distingue sus atenciones por número de pedido sin agregar fechas ni duplicar el número",()=>{
+ const listed=["PED-101","PED-102"].map((code,index)=>({...detail.order,id:`order-${index}`,code,tableName:"Mesa 3",paidAmount:"10",remainingAmount:"0",paymentStatus:"paid"}));
+ const view=mountPage({initialOrderId:"",listed});
+ const rows=nodes(view.tree).filter(node=>node.type==="tr"&&node.props.children?.some?.(cell=>cell?.type==="td"));
+ assert.equal(rows.length,2);
+ assert.deepEqual(rows.map(row=>nodes(row).find(node=>node.props.className==="pos-order-reference").props.children),["PED-101","PED-102"]);
+ for(const row of rows)assert.equal(nodes(row).some(node=>node.type==="time"),false,"solo el número, sin fecha ni hora");
+ const unnamed=mountPage({initialOrderId:"",listed:[{...listed[0],tableName:"",customerName:""}]});
+ assert.equal(nodes(unnamed.tree).filter(node=>node.props.className==="pos-order-reference").length,0,"si el número ya es el título no se repite");
+});
+
 test("montos rápidos de efectivo: exacto y redondeos 1-2-5 sin catálogo de billetes",()=>{
  const {cashSuggestions}=compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
  assert.deepEqual([...cashSuggestions(10)],[10,20,50,100]);

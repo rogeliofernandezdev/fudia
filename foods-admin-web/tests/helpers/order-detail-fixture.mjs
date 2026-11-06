@@ -1,5 +1,5 @@
 // Production presentation with illustrative data; no API calls or persisted writes.
-import {readFileSync,existsSync} from "node:fs";
+import {readFileSync,existsSync,statSync} from "node:fs";
 import {createRequire} from "node:module";
 import {dirname,resolve} from "node:path";
 import {fileURLToPath} from "node:url";
@@ -47,7 +47,8 @@ export function detailComponents({userId="preview-waiter",permissions=["orders.m
    if(name==="../infrastructure/service-api")return {closeOrderAccount:()=>{throw new Error("API writes are disabled in visual fixtures");}};
    if(name.startsWith(".")||name.startsWith("@/")){
     const base=name.startsWith("@/")?resolve(root,name.slice(2)):resolve(dirname(file),name);
-    const target=[base,base+".tsx",base+".ts"].find(path=>existsSync(path));
+    // Archivo exacto, con extensión o el index.ts de una carpeta pública (p. ej. "@/modules/operations/orders").
+    const target=[base+".tsx",base+".ts",resolve(base,"index.ts"),base].find(path=>existsSync(path)&&statSync(path).isFile());
     if(!target)throw new Error(`Missing fixture dependency: ${name}`);
     return load(target);
    }

@@ -56,11 +56,12 @@ test("cabecera breve, responsables en el cuerpo y estados junto a su informació
 });
 test("cada estado del pedido tiene un tono propio y las preparaciones lo reutilizan",()=>{
  const {orderStatus,serviceStatusTone,accountTone}=detailComponents();
- const states={nuevo:"gray",confirmado:"blue",preparando:"violet",listo:"green",en_camino:"orange",entregado:"teal",cancelado:"red"};
+ const states={nuevo:"gray",confirmado:"blue",preparando:"orange",listo:"purple",en_camino:"navy",entregado:"green",cancelado:"red"};
  for(const [state,tone] of Object.entries(states))assert.equal(orderStatus(state).tone,tone);
  assert.equal(new Set(Object.values(states)).size,Object.keys(states).length);
+ assert.equal(Object.values(states).includes("violet"),false,"el violeta identifica WhatsApp, no un estado");
  for(const state of ["preparando","listo","entregado","cancelado"])assert.equal(serviceStatusTone(state),states[state]);
- for(const state of ["pendiente","nuevo","confirmado"])assert.equal(serviceStatusTone(state),"orange");
+ for(const state of ["pendiente","nuevo","confirmado"])assert.equal(serviceStatusTone(state),"blue","lo que espera cocina coincide con el carril índigo");
  assert.equal(serviceStatusTone("desconocido"),"gray");
  assert.equal(accountTone({...exampleOrder,completedAt:"2026-10-10"}),"gray");
 });
@@ -74,11 +75,12 @@ test("productos, notas y cuenta tienen límites propios y cantidades circulares 
  assert.ok(html.indexOf('class="modal-detail-notes')>consumptionEnd);
  assert.match(html,/class="status sky emphasized"/);
  assert.doesNotMatch(html,/class="status gray outline"/);
- assert.match(html,/class="status orange"[^>]*><i[^>]*><\/i>Pendiente/);
- const quantityRule=css.match(/\.modal-item-quantity\{([^}]*)\}/)?.[1]??"";
- assert.match(quantityRule,/border-radius:var\(--radius-pill\)/);
- assert.match(quantityRule,/background:var\(--primary-100\)/);
- assert.match(quantityRule,/color:var\(--primary-700\)/);
+ assert.match(html,/class="icon-tile tone-indigo vivid size-sm modal-item-state"/,"la línea pendiente lleva su icono índigo sólido");
+ assert.match(html,/class="modal-item-row has-state order-detail-line"/,"usa la línea con estado compartida con venta y cobro");
+ assert.match(html,/class="order-service-state"[^>]*>Pendiente/);
+ const quantityRule=css.match(/(?:^|\n)\.modal-item-quantity\{([^}]*)\}/)?.[1]??"";
+ assert.doesNotMatch(quantityRule,/background|border-radius/,"la cantidad es texto, sin círculo de fondo");
+ assert.match(quantityRule,/color:var\(--indigo-600\)/);
  assert.doesNotMatch(quantityRule,/cursor|box-shadow|#[\da-f]+/i);
  assert.match(renderDetail({skeleton:true}),/--radius-pill/);
  assert.match(css,/\.modal-summary\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)[^}]*background:var\(--surface\)/);
@@ -125,11 +127,11 @@ test("resumen agrupado y estado de cuenta destacado sin recolorear los demás es
  assert.match(heading,/Resumen de cuenta[\s\S]*Cuenta abierta/);
  assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-1\) solid var\(--line\)/,'el resumen abre con la misma línea fina que las secciones');
  assert.match(css,/\.modal-summary-lines\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(global,/\.status.blue\{color:var\(--indigo-700\);background:var\(--indigo-100\)/);
- assert.match(global,/\.status.sky\{color:var\(--sky-800\);background:var\(--sky-100\)/);
+ assert.match(global,/\.status.blue\{color:var\(--indigo-700\);background:var\(--indigo-100\)\}/);
+ assert.match(global,/\.status.sky\{color:var\(--sky-800\);background:var\(--sky-100\)\}/);
  assert.doesNotMatch(global,/\.status\.(?:blue|sky|violet)\.emphasized\{/);
  assert.match(css,/\.modal-summary\{grid-template-columns:minmax\(0,2fr\) minmax\(0,1fr\)/);
- assert.match(html,/class="status blue"/);assert.match(html,/class="status orange"/);
+ assert.match(html,/class="status blue solid"[^>]*><i[^>]*><\/i>Confirmado/,"el estado del pedido en el detalle es sólido");assert.match(html,/class="order-service-state"[^>]*>Pendiente/);
  assert.doesNotMatch(heading,/<button|href=/);
 });
 test("el encabezado de productos no repite unidades y conserva cantidades por producto",()=>{
@@ -144,6 +146,7 @@ test("los cuatro estados de cuenta tienen tonos distintos sin recolorear la prep
  assert.deepEqual(states.map(accountTone),["sky","orange","green","gray"]);
  assert.notEqual(accountTone(exampleOrder),orderStatus("confirmado").tone);
  assert.equal(new Set(states.map(accountTone)).size,4);
- assert.equal(serviceStatusTone("preparando"),"violet");
- assert.equal(serviceStatusTone("entregado"),"teal");
+ assert.equal(serviceStatusTone("preparando"),"orange");
+ assert.equal(serviceStatusTone("entregado"),"green","entregado siempre verde");
+ assert.equal(serviceStatusTone("listo"),"purple","por entregar usa el morado de la referencia");
 });

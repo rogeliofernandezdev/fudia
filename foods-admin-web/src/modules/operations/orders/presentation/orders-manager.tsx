@@ -19,7 +19,7 @@ import type {Draft} from "../../salon/domain/types";
 import {addOrderConsumption} from "../infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "./order-detail-dialog";
 import {useOrderDeepLink} from "./use-order-deep-link";
-import {channelIcons,orderStatus,originLabel,registeredAt,serviceChannel} from "./order-meta";
+import {channelIcons,channelTone,orderStatus,originLabel,registeredAt,serviceChannel} from "./order-meta";
 
 const columns=["Pedido","Canal","Estado","Registrado","Total","Acciones"];
 
@@ -42,7 +42,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  const channelLabel=(v:string)=>channelOptions.find(o=>o.value===v)?.label??v;
  const showChannelCounts=status==="abiertos";
  const openTotal=Object.values(counts).reduce((a,b)=>a+b,0);
- const tabs=[{value:"",label:"Todos",icon:"receipt" as const,count:showChannelCounts?openTotal:undefined},...channelOptions.map(o=>({value:o.value,label:o.label,icon:channelIcons[o.value]??"receipt",count:showChannelCounts?counts[o.value]??0:undefined}))];
+ const tabs=[{value:"",label:"Todos",icon:"receipt" as const,tone:channelTone(""),count:showChannelCounts?openTotal:undefined},...channelOptions.map(o=>({value:o.value,label:o.label,icon:channelIcons[o.value]??"receipt",tone:channelTone(o.value),count:showChannelCounts?counts[o.value]??0:undefined}))];
  const pickChannel=(v:string)=>{setChannel(v);setPage(1)};
  const hasActiveFilters=Boolean(q||channel||status!=="abiertos");
  const clearFilters=()=>{setQ("");setChannel("");setStatus("abiertos");setPage(1)};
@@ -64,7 +64,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
   :!items.length?<EmptyState icon="receipt" title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos abiertos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
   :<DataTable label="Listado de pedidos" containerClassName="hover-scroll" className="orders-table">
      <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
-     <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const service=serviceChannel(o.channel);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={index%2?"alternate":""} key={o.id}>
+     <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const service=serviceChannel(o.channel);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={`orders-row${index%2?" alternate":""}`} key={o.id} onClick={event=>{if(!(event.target as HTMLElement).closest("button,a"))setDetailId(o.id)}}>
       <td>
        <span className={"row-icon order-row-icon oc-"+service}><Icon name={channelIcons[service]??"receipt"} size={18}/></span>
        <b>{subject}</b>
@@ -75,7 +75,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>
-      <td><Status tone={meta.tone}>{meta.label}</Status></td>
+      <td><Status tone={meta.tone} solid>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/></div></td>

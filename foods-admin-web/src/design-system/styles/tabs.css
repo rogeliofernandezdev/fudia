@@ -11,6 +11,28 @@
 .ds-tabs button:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--space-0-5) * -1)}
 .ds-tabs button svg{display:block;flex:none}
 .ds-tabs b{display:grid;flex:none;place-items:center;min-width:var(--size-20);height:var(--size-20);padding:0 var(--space-1);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);color:var(--surface);background:var(--primary-600)}
+/* Pestañas con tono (carril de Cocina, canal de Pedidos): misma pista y selección blanca;
+   icono y contador toman el color vivo de su familia y la pestaña activa un borde tenue
+   de ese color con etiqueta oscura en negrita. Nunca texto de color vivo. */
+.ds-tabs button.tone-primary>svg{color:var(--primary-600)}
+.ds-tabs button.tone-primary>b{background:var(--primary-600)}
+.ds-tabs button.tone-primary.active{border-color:color-mix(in srgb,var(--primary-600) 45%,var(--surface))}
+.ds-tabs button.tone-indigo>svg{color:var(--indigo-600)}
+.ds-tabs button.tone-indigo>b{background:var(--indigo-600)}
+.ds-tabs button.tone-indigo.active{border-color:color-mix(in srgb,var(--indigo-600) 45%,var(--surface))}
+.ds-tabs button.tone-orange>svg{color:var(--warning-500)}
+.ds-tabs button.tone-orange>b{background:var(--warning-500)}
+.ds-tabs button.tone-orange.active{border-color:color-mix(in srgb,var(--warning-500) 45%,var(--surface))}
+.ds-tabs button.tone-green>svg{color:var(--brand-600)}
+.ds-tabs button.tone-green>b{background:var(--brand-600)}
+.ds-tabs button.tone-green.active{border-color:color-mix(in srgb,var(--brand-600) 45%,var(--surface))}
+.ds-tabs button.tone-purple>svg{color:var(--purple-600)}
+.ds-tabs button.tone-purple>b{background:var(--purple-600)}
+.ds-tabs button.tone-purple.active{border-color:color-mix(in srgb,var(--purple-600) 45%,var(--surface))}
+.ds-tabs button.tone-violet>svg{color:var(--digital-500)}
+.ds-tabs button.tone-violet>b{background:var(--digital-500)}
+.ds-tabs button.tone-violet.active{border-color:color-mix(in srgb,var(--digital-500) 45%,var(--surface))}
+.ds-tabs button[class*=tone-].active{color:var(--ink-950);font-weight:var(--weight-bold)}
 @media(hover:hover) and (pointer:fine){.ds-tabs button:not(.active):hover{color:var(--primary-700);background:var(--primary-200)}}
 @media(width<=600px){
  .ds-tabs{display:flex;width:100%;scroll-snap-type:x mandatory}

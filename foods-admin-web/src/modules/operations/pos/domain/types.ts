@@ -1,6 +1,7 @@
 /** Código de un medio del catálogo de la empresa (Configuración › Medios de pago). */
 import type {TipPolicy,TipReceipt} from "../../tips";
 import type {FiscalDocumentRef,FiscalRequest} from "@/modules/einvoicing";
+import type {ServiceItem} from "../../orders";
 export type PaymentMethod=string;
 /** Medio activo y habilitado para ventas, en el orden del catálogo. */
 export type PaymentMethodOption={code:string;name:string;affectsCash:boolean};
@@ -58,6 +59,8 @@ export type POSOrder={
   total:string;
   createdAt:string;
   items?:POSOrderItem[];
+  /** Estado de preparación de cada línea, el mismo que muestra el detalle de pedido. */
+  serviceItems?:ServiceItem[];
 };
 
 export type Payment={

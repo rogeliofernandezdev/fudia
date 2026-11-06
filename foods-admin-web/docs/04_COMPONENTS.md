@@ -1,7 +1,8 @@
 # Componentes
 
 Los niveles de Inventario usan `unitCountable` del API: mínimo y óptimo
-con paso 1/teclado numérico si se cuentan piezas, o 0.001/decimal si se miden.
+con precisión 1/teclado numérico si se cuentan piezas, o 0.001/decimal si se miden.
+Las flechas siempre avanzan una unidad; la precisión permite escribir fracciones.
 Los ceros finales del formato de base se omiten (`100.000` → `100`), sin redondear
 fracciones históricas. El óptimo nunca queda por debajo del mínimo. Se retira
 Punto de reorden del formulario, listado, borrador y payload de guardado; el campo
@@ -98,7 +99,7 @@ dentro de un módulo.
 | `primary` | La única acción dominante de la superficie | Sólido `primary-600`, realce teñido |
 | `secondary` | Consultas como «Ver resumen de pago», alternativas, «Reintentar», «Limpiar filtros», «Editar» | Blanco, texto `primary-700`, borde `primary-200` |
 | `ghost` | Salir sin guardar («Cancelar»), «Anterior», acciones neutras | Blanco, texto `ink-700`, borde `line` |
-| `danger` | Solo el botón que confirma dentro de `ConfirmDialog` | Sólido `danger` |
+| `danger` | Solo el botón que confirma dentro de `ConfirmDialog` | Sólido rojo vivo `danger-500` con texto blanco; hover `danger-600` |
 | `danger-outline` | Disparadores destructivos: Cancelar pedido u orden, Anular, Cerrar turno, Quitar acceso | Fondo `danger-50`, texto `danger`, borde `danger-200`; hover `danger-100` / `danger` / `danger-600` |
 
 - No existe botón verde: el verde comunica un estado ya confirmado.
@@ -179,10 +180,10 @@ fuera de la cabecera; no duplicar información ya presente en el cuerpo.
 En detalles operativos, responsables y fecha se ubican en el cuerpo. Cabecera
 azul `primary-700`, título blanco, cuerpo blanco y pie fijo `cloud-50`,
 con los mismos márgenes horizontales de 24/16 px. Padding vertical de 8 px y altura
-mínima de 64 px, no altura fija: los textos largos conservan su información.
+mínima de 52 px, no altura fija: los textos largos conservan su información.
 Icono primario blanco de 20 px, centrado en un espacio de 44 px sin recuadro.
-La X blanca de 20 px se centra en un cuadro visible de 32 px con contorno blanco
-de 1 px, fondo transparente y sin sombra, dentro de un área de clic de 44 px;
+La X blanca de 20 px va sin recuadro ni contorno, fondo transparente y sin
+sombra, dentro de un área de clic de 44 px;
 no cambia de color con hover ni al guardar y mantiene foco blanco visible para teclado.
 Con `busy`, queda deshabilitada sin reducir su opacidad: icono y contorno siguen blancos.
 Todos los iconos de cabecera son blancos, también en altas, ediciones y errores
@@ -238,8 +239,8 @@ El resumen usa superficie blanca; el importe principal es una ficha `primary-100
 
 `.modal-body` es el único scroll del modal y su barra fina está siempre visible
 cuando hay desbordamiento; no combinarlo con `hover-scroll`. El cuerpo nunca desplaza en
-horizontal (`overflow-x: hidden`): los tooltips ocultos de `FieldLabel`
-(`field-hint`) se anclan al borde derecho del icono y crecen hacia la izquierda.
+horizontal (`overflow-x: hidden`). Los tooltips de `FieldLabel` (`field-hint`)
+viven en la capa global fuera de ese recorte, con límites del viewport.
 Los formularios usan `ModalForm` + `ModalBody` + `ModalFooter`; el `<form>`
 directo con pie de márgenes negativos es heredado y no se usa en modales nuevos.
 
@@ -365,6 +366,11 @@ Reglas:
 - `MoneyInput symbol={useCurrency().symbol}`: un solo borde, prefijo, teclado
   decimal y cifras tabulares. Nunca `toFixed` + símbolo: los importes se
   muestran con `useMoney()`.
+- `NumberInputBehavior`, montado una vez en `Providers`, hace que las flechas
+  nativas y de teclado de todos los campos numéricos sumen o resten 1, respetando
+  mínimo y máximo. Los campos decimales vacíos empiezan en `1.0`; escribir
+  fracciones conserva la precisión y la sincronización con React Hook Form.
+  `step` sigue definiendo la precisión admitida, sin imponer el salto de la flecha.
 - `NumberStepper`: botones de 44 px en táctil, valor tabular y, en el mínimo,
   «Quitar» con papelera cuando la línea puede eliminarse.
   `appearance="soft"` ofrece una cápsula `cloud-100` sin borde ni divisiones,
@@ -530,11 +536,9 @@ icono tiene un solo significado en toda la aplicación (ver
   Cancelar y quitar mantienen el rojo semántico. No se presentan como
   enlaces de texto. La columna
   de acciones centra el grupo completo y cada pictograma se centra ópticamente en
-  su caja. Como la columna de acciones es la última, sus tooltips
-  (`.standard-actions`/`.table-actions`) se anclan al borde derecho del botón y
-  crecen hacia la izquierda: centrados, el tooltip oculto del último botón desbordaba
-  la tabla y creaba scroll horizontal y un hueco a la derecha (visto en Menús y
-  combos con nombres largos). Los demás tooltips siguen centrados.
+  su caja. Los tooltips se renderizan fuera de la tabla mediante `TooltipLayer`:
+  se centran respecto al botón y se desplazan hacia dentro al llegar a un borde
+  del viewport, sin ensanchar ni desplazar la tabla.
 - El historial de disponibilidad reutiliza `Modal size="xl"` y `ModalBody`: título
   de la consulta en cabecera, producto en el contexto y tabla de cinco columnas
   (fecha/hora, cambio, cantidad, motivo, usuario). Fecha y hora en líneas estables;
@@ -551,6 +555,12 @@ icono tiene un solo significado en toda la aplicación (ver
   lápiz azul, activar/desactivar = interruptor binario, cancelar = equis circular roja
   y quitar fila = equis roja. Las
   pantallas no pueden elegir localmente otro icono o color para estas acciones.
+
+Los interruptores de configuración `switch-row` usan `primary-600` al seleccionar
+y `line-strong` al apagar, con perilla blanca. No representan un estado confirmado
+de un registro. «Recomendar en la carta digital» y «Obligatorio» de las opciones
+del producto reutilizan esa regla compartida. Las acciones Quitar grupo y Quitar
+opción conservan su papelera/X y usan `IconButton className="danger"`.
 - `Pagination`: rango/total, selector de filas, páginas numeradas con elipsis y
   controles anterior/siguiente.
 - Todas las tablas, incluidos productos, categorías, mesas, zonas y plantillas
@@ -617,16 +627,17 @@ flechas nativas. El error se vincula al campo mediante
 solo admite enteros. Guardar inválido o durante una mutación queda bloqueado.
 Los cambios válidos abren el formulario de motivo existente antes del API.
 
-Agotar hoy usa `Button kind="secondary"`, icono `circleMinus`, texto/borde
-`warning` y hover `warning-50`; Reactivar usa `secondary`, `refresh` y azul.
-El agotado manual es reversible y no usa el estilo destructivo del catálogo.
+Agotar hoy usa `Button kind="danger-outline"`, icono `circleMinus` y el rojo
+suave compartido (`danger-50`, `danger-200`, `danger-600`), sin CSS local de color.
+Reactivar usa `secondary`, `refresh` y azul. Sin control de cantidad se muestra
+solo «Sin límite». El motivo previo a agotar y su comportamiento se conservan.
 Historial usa `Button secondary` con `clock`, tooltip y nombre accesible
 descriptivo: icono en escritorio, icono y texto en contenedor ≤1020 px.
 En esa composición, dos acciones comparten el ancho y una sola lo llena.
 La altura contextual se define en `variables.css`: 44 px en escritorio/tablet,
 48 px en móvil. No crear una variante global de estado o botón por esta pantalla.
 
-Sin control muestra la explicación «Sin límite de cantidad» en el espacio de
+Sin control muestra «Sin límite» en el espacio de
 cupo y balance; los estados derivados identifican su cálculo automático.
 Inventario muestra el origen de actualización y el saldo con unidad; null usa
 «Sin dato». Los avisos contextuales son una píldora `warning-50` de 2–4 palabras en
@@ -764,7 +775,11 @@ pastilla de estado ni formateador de dinero.
   burbuja vive en un portal (`--z-tooltip`), fondo `ink-950`, texto `surface`,
   ancho máximo 280 px o el viewport menos 16 px por lado; abre arriba y baja si
   no cabe (`placeTooltip`). El consumidor no renderiza `Tooltip` si no hay
-  contenido. Las etiquetas de una línea siguen con `[data-tooltip]`.
+  contenido. Las etiquetas de una línea usan `[data-tooltip]` y `TooltipLayer`,
+  montado una vez en `Providers`: portal al body, `z-tooltip`, ancho máximo
+  220 px y la misma geometría `placeTooltip`. Mouse y foco de teclado abren;
+  Escape, clic, scroll o retirar el control cierran. No se usan pseudoelementos
+  ni se agregan reglas de tooltip por pantalla.
   Lo protege `tests/tooltip.test.mjs`.
 
 ## Refinamiento de pestañas y modales compartidos
@@ -809,7 +824,7 @@ escritorio no cambia nada. Pestañas que separan secciones no usan `sticky`.
 
 Los modales alinean cabecera, cuerpo y pie sobre un margen común de 24 px en
 escritorio y 16 px en móvil. La X y el icono primario comparten una caja de 44 px
-y glifos de 20 px; el icono primario no tiene fondo y la X tiene contorno blanco de 32 px,
+y glifos de 20 px; el icono primario no tiene fondo y la X tampoco lleva contorno,
 sin relleno, sombra ni cambio de color con hover. Las notas del pie tienen
 una fila propia, por encima de las acciones. Se preservan los tamaños,
 el cierre explícito y los contratos de foco/respuesta. No hay franja de marca

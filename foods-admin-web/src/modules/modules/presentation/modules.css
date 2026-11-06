@@ -21,8 +21,5 @@
 .module-item.unavailable .module-icon{color:var(--ink-400);background:var(--cloud-100)}
 .module-item>.status-toggle{flex-shrink:0}
 .module-item>.status-toggle:disabled{cursor:not-allowed;opacity:var(--opacity-disabled)}
-.module-item>.status-toggle[data-tooltip]:after{left:auto;right:0;transform:translateY(var(--size-4))}
-.module-item>.status-toggle[data-tooltip]:focus-visible:after{transform:translateY(0)}
-@media (hover:hover) and (pointer:fine){.module-item>.status-toggle[data-tooltip]:hover:after{transform:translateY(0)}}
 .module-skeleton-fixed{flex-shrink:0}
 .module-skeleton-info{display:grid;flex:1;gap:var(--space-1-5);min-width:0}

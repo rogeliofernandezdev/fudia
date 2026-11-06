@@ -1,8 +1,9 @@
 "use client";
 import {useState} from "react";
-import {Button,DetailContact,DetailTimeline,EmptyState,ErrorState,Icon,Skeleton,Status,Tabs,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents,type IconName} from "@/design-system";
+import {Button,DetailContact,DetailTimeline,EmptyState,ErrorState,Icon,IconTile,Skeleton,Status,Tabs,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents,type IconName} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {FiscalStatus} from "@/modules/einvoicing";
+import {lineServiceState} from "@/modules/operations/orders";
 import type {SaleDetail} from "../domain/types";
 import "./sales.css";
 
@@ -51,20 +52,21 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry,tick
         </section>
 
         <Tabs className="sales-detail-tabs" label="Información de la venta" value={tab} onChange={setTab} items={[
-          {value:"products",label:"Productos",icon:"dish",count:data.order.items?.length??0},
-          {value:"payments",label:"Pagos",icon:"payment",count:data.payments.length},
+          {value:"products",label:"Productos",icon:"dish",tone:"orange",count:data.order.items?.length??0},
+          {value:"payments",label:"Pagos",icon:"payment",tone:"primary",count:data.payments.length},
         ]}/>
 
         <section className="detail-panel sales-detail-panel" role="tabpanel" aria-labelledby="sales-detail-products" hidden={tab!=="products"}><h3 id="sales-detail-products" className="sr-only">Productos del pedido</h3>
-          {data.order.items?.length?<ModalItemList className="sales-detail-lines">{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}>
-            <b className="modal-item-quantity">{Number(item.qty)}×</b><div className="modal-item-info"><span className="modal-item-name">{item.name}</span>
+          {data.order.items?.length?<ModalItemList className="sales-detail-lines">{data.order.items.map(item=>{const line=lineServiceState(data.order.serviceItems??[],item.id,data.order.status);return <div className="modal-item-row has-state" role="listitem" key={item.id}>
+            {/* Estado real de preparación de la línea, igual que en el detalle de pedido. */}
+            <IconTile className="modal-item-state" name={line.look.icon} tone={line.look.tone} appearance="vivid" size="sm"/><div className="modal-item-info"><span className="modal-item-name"><b className="modal-item-quantity">{Number(item.qty)}×</b>{item.name}</span>
             {item.note&&<ModalItemNote>{item.note}</ModalItemNote>}
-            <span className="modal-item-meta"><span>{money(item.unitPrice)} c/u</span></span>
+            <span className="modal-item-meta"><span>{money(item.unitPrice)} c/u</span>{line.destination&&<span>{line.destination}</span>}{line.label&&<span className="modal-item-status">{line.label}</span>}</span>
             <ModalItemComponents label={`Detalle de ${item.name}`} items={[
               ...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{money(selection.surcharge??0)}</small>})),
               ...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name})),
             ]}/></div><strong className="modal-item-total">{money(Number(item.qty)*Number(item.unitPrice))}</strong>
-          </div>)}</ModalItemList>:<p className="sales-detail-empty">No hay productos registrados.</p>}
+          </div>})}</ModalItemList>:<p className="sales-detail-empty">No hay productos registrados.</p>}
           {data.order.notes&&<section className="modal-detail-notes sales-detail-notes" aria-labelledby="sales-detail-notes-title"><span><Icon name="edit" size={16}/></span><div><h3 id="sales-detail-notes-title">Notas generales</h3><p>{data.order.notes}</p></div></section>}
         </section>
 

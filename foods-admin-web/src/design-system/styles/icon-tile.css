@@ -11,7 +11,21 @@
 .icon-tile.tone-rose{color:var(--rose-700);background:var(--rose-100)}
 .icon-tile.tone-warning{color:var(--warning-800);background:var(--warning-100)}
 .icon-tile.tone-danger{color:var(--danger-700);background:var(--danger-50)}
+.icon-tile.tone-navy{color:var(--navigation-900);background:var(--cloud-150)}
+.icon-tile.tone-indigo{color:var(--indigo-700);background:var(--indigo-100)}
+.icon-tile.tone-purple{color:var(--purple-600);background:var(--purple-100)}
 .icon-tile.tone-neutral{color:var(--ink-700);background:var(--cloud-100)}
+/* Vivo: relleno sólido de la familia con icono siempre blanco (patrón blanco + color vivo). */
 .icon-tile.vivid.tone-primary{color:var(--surface);background:var(--primary-600)}
 .icon-tile.vivid.tone-brand{color:var(--surface);background:var(--brand-600)}
 .icon-tile.vivid.tone-danger{color:var(--surface);background:var(--danger-500)}
+.icon-tile.vivid.tone-digital{color:var(--surface);background:var(--digital-500)}
+.icon-tile.vivid.tone-teal{color:var(--surface);background:var(--teal-500)}
+.icon-tile.vivid.tone-sky{color:var(--surface);background:var(--sky-500)}
+.icon-tile.vivid.tone-warning{color:var(--surface);background:var(--warning-500)}
+.icon-tile.vivid.tone-navy{color:var(--surface);background:var(--navigation-900)}
+.icon-tile.vivid.tone-indigo{color:var(--surface);background:var(--indigo-600)}
+.icon-tile.vivid.tone-purple{color:var(--surface);background:var(--purple-600)}
+.icon-tile.vivid.tone-neutral{color:var(--surface);background:var(--ink-500)}
+.icon-tile.vivid.tone-peach{color:var(--surface);background:var(--peach-700)}
+.icon-tile.vivid.tone-rose{color:var(--surface);background:var(--rose-700)}

@@ -14,13 +14,24 @@ function compile(file,resolve,extra=""){
  return exports;
 }
 const regional=compile("src/shared/i18n/regional-format.ts",require);
-const resolve=name=>name==="../domain/sales-periods"?compile("src/modules/sales/domain/sales-periods.ts",require):name==="react"?{...require("react"),useState:value=>[value,()=>{}]}:name==="@/design-system"?{DetailHero:"DetailHero",DetailContact:"DetailContact",DetailFacts:"DetailFacts",DetailTimeline:"DetailTimeline",Tabs:"Tabs",Skeleton:"Skeleton",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",ModalWorkspace:"ModalWorkspace",ModalItemList:"ModalItemList",Icon:"Icon",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState",DataTable:"DataTable"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
+const orderMeta=compile("src/modules/operations/orders/presentation/order-meta.ts",name=>name==="@/shared/i18n/regional-format"?regional:require(name));
+const resolve=name=>name==="../domain/sales-periods"?compile("src/modules/sales/domain/sales-periods.ts",require):name==="@/modules/operations/orders"?{lineServiceState:orderMeta.lineServiceState}:name==="react"?{...require("react"),useState:value=>[value,()=>{}]}:name==="@/design-system"?{DetailHero:"DetailHero",DetailContact:"DetailContact",DetailFacts:"DetailFacts",DetailTimeline:"DetailTimeline",Tabs:"Tabs",Skeleton:"Skeleton",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",ModalWorkspace:"ModalWorkspace",ModalItemList:"ModalItemList",Icon:"Icon",IconTile:"IconTile",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState",DataTable:"DataTable"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
 const {SaleDetailDialog}=compile("src/modules/sales/presentation/sale-detail-dialog.tsx",resolve);
 const data={order:{id:"sale-1",code:"PED-TEST",channel:"salon",status:"entregado",customerName:"Familia Pérez",tableName:"Mesa 5",subtotal:"50",deliveryFee:"5",total:"55",createdAt:"2026-10-06T14:30:00+00",notes:"Sin sal",items:[{id:"item-1",name:"Menú criollo",qty:"2",unitPrice:"25",note:"Sin hielo",selections:[{groupName:"Segundo",name:"Lomo saltado"}],modifiers:[{groupName:"Extras",name:"Ensalada"}]}]},paidAmount:"55",remainingAmount:"0",paymentStatus:"paid",payments:[{id:"pay-1",method:"custom",methodName:"Convenio empresa",amount:"65",refundedAmount:"10",netAmount:"55",reference:"REF-1",cashRegisterName:"Caja principal",createdByName:"Ana",createdAt:"2026-10-06T15:00:00+00"}]};
 const money=value=>`MON ${Number(value).toFixed(2)}`;
 const date=value=>regional.formatRegionalDateTime(value,{country:"PE",timeZone:"America/Lima"});
 function nodes(root){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);if(typeof node.type==="function")visit(node.type(node.props));else{visit(node.props?.children);visit(node.props?.summary);visit(node.props?.status);visit(node.props?.steps?.map?.(step=>step.aside))}}visit(root);return result}
 function mount(overrides={}){return nodes(SaleDetailDialog({loading:false,data,money,date,close:()=>{},retry:()=>{},...overrides}))}
+test("venta muestra el estado real de cada plato: pendiente índigo y entregado siempre en verde",()=>{
+ const itemId=data.order.items[0].id;
+ const tile=services=>mount({data:{...data,order:{...data.order,serviceItems:services}}}).find(node=>node.type==="IconTile"&&node.props.className==="modal-item-state");
+ const pending=tile([{id:"s",orderItemId:itemId,status:"confirmado",statusLabel:"Pendiente",destinationLabel:"Cocina"}]);
+ assert.equal(pending.props.name,"clock");assert.equal(pending.props.tone,"indigo");
+ const delivered=tile([{id:"s",orderItemId:itemId,status:"entregado",statusLabel:"Entregado",destinationLabel:"Cocina"}]);
+ assert.equal(delivered.props.name,"check","entregado lleva un solo check");assert.equal(delivered.props.tone,"brand","entregado es verde, nunca petróleo");
+ const ready=tile([{id:"s",orderItemId:itemId,status:"listo",statusLabel:"Por entregar",destinationLabel:"Cocina"}]);
+ assert.equal(ready.props.name,"bell","por entregar lleva campanita");assert.equal(ready.props.tone,"purple");
+});
 
 test("fechas PostgreSQL con offset de horas conservan el instante y la zona del local",()=>{
  for(const value of ["2026-10-06T14:30:00+00","2026-10-06T09:30:00-05","2026-10-06T14:30:00Z","2026-10-06T14:30:00+00:00"]){
@@ -327,4 +338,33 @@ test("Ventas abre en Hoy con la fecha del local y muestra el total de todo el fi
  assert.ok(summary,"franja de total del periodo");
  const text=JSON.stringify(summary.props.children);
  assert.ok(text.includes("Ventas de hoy"));assert.ok(text.includes("MON 150.00"));assert.ok(text.includes("4 ventas"));assert.ok(text.includes("MON 37.50"),"ticket promedio = total / ventas");
+});
+
+test("el resumen no inventa un promedio sin ventas ni muestra cifras mientras carga o falla",()=>{
+ const {SalesPeriodSummary}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesPeriodSummary};\n");
+ const props={period:"today",range:{from:"2026-11-06",to:"2026-11-06"},loading:false,error:false,count:0,amount:"0",money,day:value=>value};
+ const empty=nodes(SalesPeriodSummary(props));
+ const figures=empty.filter(node=>node.type==="strong").map(node=>node.props.children);
+ assert.deepEqual(Array.from(figures),["MON 0.00"]);
+ assert.equal(empty.some(node=>node.type==="b"),false,"sin pedidos no se inventa un promedio");
+ const loading=nodes(SalesPeriodSummary({...props,loading:true}));
+ assert.equal(loading.filter(node=>node.props.className==="sales-summary-skeleton").length,1);
+ assert.equal(loading.some(node=>node.type==="strong"),false);
+ assert.equal(SalesPeriodSummary({...props,error:true}),null);
+ assert.equal(SalesPeriodSummary({...props,amount:undefined}),null);
+});
+
+test("los periodos se recorren con flechas, Home y End sin agregar cinco paradas de Tab",()=>{
+ const {SalesPeriods}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesPeriods};\n");
+ const changes=[],focus=[];
+ const buttons=nodes(SalesPeriods({period:"today",choose:value=>changes.push(value)})).filter(node=>node.type==="button");
+ assert.deepEqual(Array.from(buttons,node=>node.props.tabIndex),[0,-1,-1,-1,-1]);
+ const event=key=>({key,preventDefault(){},currentTarget:{parentElement:{querySelectorAll:()=>buttons.map((_,index)=>({focus:()=>focus.push(index)}))}}});
+ buttons[0].props.onKeyDown(event("ArrowLeft"));
+ buttons[4].props.onKeyDown(event("ArrowRight"));
+ buttons[2].props.onKeyDown(event("Home"));
+ buttons[0].props.onKeyDown(event("End"));
+ buttons[0].props.onKeyDown(event("Tab"));
+ assert.deepEqual(changes,["custom","today","today","custom"]);
+ assert.deepEqual(focus,[4,0,0,4]);
 });

@@ -84,8 +84,8 @@ test("confirmación positiva comparte el verde exacto; la destructiva mantiene s
  const get=selector=>values(confirm.nodes.find(node=>node.selector===selector));
  assert.equal(get(".confirm-icon.success").background,"var(--brand-600)");
  assert.equal(get(".confirm-icon.success").color,"var(--surface)");
- assert.equal(get(".confirm-icon.danger").background,"var(--danger-50)");
- assert.equal(get(".confirm-icon.danger").color,"var(--danger-600)");
+ assert.equal(get(".confirm-icon.danger").background,"var(--danger-500)","rojo vivo con icono blanco, igual que el botón destructivo");
+ assert.equal(get(".confirm-icon.danger").color,"var(--surface)");
  const source=read("src/design-system/confirm-dialog.tsx");
  assert.match(source,/kind=\{tone==="danger"\?"danger":"primary"\}/,"confirmar es acción pendiente; no botón verde");
  assert.match(source,/className=\{`confirm-icon \$\{tone\}`\} aria-hidden="true"/);

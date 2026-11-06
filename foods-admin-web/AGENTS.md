@@ -26,8 +26,10 @@ La autoridad visual exclusiva de este proyecto es
 - La presentación no construye URLs ni interpreta DTO crudos.
 - Inputs y tablas provienen del design system.
 - Los estados usan `Status` y la matriz obligatoria «Colores de operación:
-  pedido, preparación y cuenta» de `docs/02_DESIGN_SYSTEM.md`. Fondos tenues,
-  texto oscuro y contraste mínimo 4.5:1; sin colores locales ni variantes sólidas.
+  pedido, preparación y cuenta» de `docs/02_DESIGN_SYSTEM.md`, en tres niveles
+  (2026-11-05): `Status solid` solo para estados operativos del pedido, `Status`
+  suave por defecto para registros, cuenta y pago, y `Tag` neutro para atributos.
+  Sin colores locales por pantalla.
   Cuenta abierta (`sky`) no comparte tono con Confirmado (`blue`), ni Pagada
   (`green`) con Finalizada (`gray`). Reutilizar `orderStatus`, `serviceStatusTone`
   y `accountTone`; cualquier cambio semántico requiere aprobación y actualizar

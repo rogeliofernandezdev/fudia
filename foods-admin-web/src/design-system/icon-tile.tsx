@@ -1,10 +1,7 @@
 import {Icon,type IconName} from "./icons";
 
-export type IconTileTone="primary"|"brand"|"digital"|"teal"|"sky"|"peach"|"rose"|"warning"|"danger"|"neutral";
-type IconTileProps={name:IconName;size?:"sm"|"md"|"lg";className?:string}&(
- {tone?:IconTileTone;appearance?:"soft"}|
- {tone:"primary"|"brand"|"danger";appearance:"vivid"}
-);
+export type IconTileTone="primary"|"brand"|"digital"|"teal"|"sky"|"peach"|"rose"|"warning"|"danger"|"navy"|"indigo"|"purple"|"neutral";
+type IconTileProps={name:IconName;size?:"sm"|"md"|"lg";className?:string;tone?:IconTileTone;appearance?:"soft"|"vivid"};
 
 /**
  * Icono sobre un cuadrito tintado. Es la única forma de dar color de identidad

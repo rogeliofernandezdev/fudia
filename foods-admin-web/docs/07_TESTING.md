@@ -1,5 +1,10 @@
 # Pruebas
 
+`number-input-behavior.test.mjs` verifica avances de una unidad, fracciones,
+límites y redondeo. `node tests/helpers/number-input-preview.mjs` permite probar
+las flechas nativas y de teclado con campos controlados y React Hook Form,
+sin sesión ni escrituras de negocio.
+
 ## Visor PDF compartido
 
 `pdf-viewer.test.mjs` verifica versión alineada del visor oficial completo,
@@ -97,7 +102,7 @@ Comprueba escritorio, 390 px, altura reducida, nombres largos, Delivery y carga:
 sin recortes ni desbordes, header sin información adicional y resumen fijo visible.
 Ventas también comprueba pagos reales, devoluciones, pagos vacíos y múltiples
 pagos; listas sin tarjetas, resumen fuera del cuerpo y ticket visible al desplazarlo.
-El test de estructura exige `ModalWorkspace`, `ModalItemList`, cantidades circulares,
+El test de estructura exige `ModalWorkspace`, `ModalItemList`, cantidades como texto índigo,
 separador de pagos y estado único en el resumen, sin un pie de acciones vacío.
 Protege «Ver resumen de pago» como `secondary` con icono `eye`, sin mutaciones.
 `shared-ui-layout.test.mjs` protege el radio móvil compartido de los botones
@@ -375,7 +380,7 @@ acciones alineadas en `TabsBar`, iconos obligatorios de 16 px sin ocultar en mó
 navegación por teclado y foco itinerante,
 márgenes comunes de modal, área táctil de cierre y geometría móvil sin recorte.
 Protege la cabecera índigo `primary-700`, título/cierre blancos, padding vertical
-de 8 px y altura mínima de 64 px. Los helpers comprueban contraste AA y permiten
+de 4 px y altura mínima de 52 px. Los helpers comprueban contraste AA y permiten
 que los encabezados largos crezcan sin recortar texto.
 La cabecera llega al borde superior y ocupa todo el ancho del modal, sin franja
 degradada ni elementos decorativos anteriores.
@@ -403,7 +408,7 @@ sesión ilustrativo. Protege `ModalHeader` y `ModalWorkspace` compartidos, estad
 de preparación/cuenta separados, resumen fuera del cuerpo desplazable y acciones
 según mozo, entrega completa y permiso de cobro. Incluye carga, error recuperable,
 productos vacíos y cuenta pagada; no consulta el API ni permite escrituras reales.
-También protege `ModalItemList`: cantidades circulares con tokens azules existentes,
+También protege `ModalItemList`: cantidades como texto índigo sin círculo,
 producto/importe alineados sin encabezados de tabla ni borde exterior,
 notas fuera del listado sobre fondo suave y resumen inferior con separador fino. «Pendiente» usa
 ámbar tintado; «Cuenta abierta» usa celeste tenue con icono y texto oscuros, sin borde, sin distinguir
@@ -556,6 +561,18 @@ Para la regresión del pie de Ventas, verificar además anchos de 375, 412, 480 
 resumen y acciones. Comprobar el límite inferior del botón, no solo su presencia en el DOM.
 
 ### Paleta compartida
+
+Ventas (2026-11-06): `node tests/helpers/sales-page-preview.mjs`, después del
+build, sirve `localhost:5196` con `SalesPage`, TanStack Query y los componentes
+reales, CSS compartido compilado y CSS vigente de Ventas, con datos ilustrativos aislados. No accede al API ni registra
+operaciones. Admite `?mode=loading`, `error`, `empty` y `long`. Se comprobaron
+escritorio y 390×844, búsqueda con actualización del total de todo el filtro,
+apertura/cierre del detalle, pestaña Pagos, fechas personalizadas y los cuatro
+estados de prueba sin desbordamiento de página. El buscador conserva el área
+táctil de su contenedor compuesto de 44 px. La tabla mantiene scroll horizontal
+y pedido fijo; no se sustituye por tarjetas. No equivale a una prueba en hardware
+físico ni valida impresión. `sales-detail.test.mjs` cubre además flechas/Home/End
+en periodos y ausencia de cifras ficticias durante carga, error o cero ventas.
 
 En la revisión de foco, probar clic y Tab en 390 px y escritorio: campos con
 icono, buscador, selectores, importes con prefijo/sufijo, campos independientes,

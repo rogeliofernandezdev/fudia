@@ -39,12 +39,8 @@
 .availability-actions{display:flex;justify-content:flex-end;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4)}
 .availability-actions .button{min-width:0;height:var(--control-height);padding-inline:var(--space-2-5);font-size:var(--font-size-base);white-space:nowrap;box-shadow:none}
 .availability-read-only{display:flex;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-base);white-space:nowrap}
-.availability-actions .button.availability-soldout-action{color:var(--warning);background:var(--surface);border-color:var(--warning)}
-.availability-actions .button.availability-available-action{color:var(--primary-700);background:var(--surface);border-color:var(--primary-100)}
 .availability-actions .button.availability-history-action{width:var(--control-height);padding:0;position:relative;flex-shrink:0;background:var(--primary-100);color:var(--primary-700);border-color:var(--primary-200)}
 .availability-history-action>span{display:none}
-.availability-actions [data-tooltip]::after{left:auto;right:0;transform:translateY(var(--size-4))}
-.availability-actions [data-tooltip]:focus-visible::after{transform:translateY(0)}
 .availability-state{min-height:var(--size-300);text-align:center;color:var(--ink-600);place-content:center;justify-items:center;gap:var(--space-2);padding:var(--space-6);display:grid}
 .availability-state b{color:var(--ink-950);font-size:var(--font-size-sm)}
 .availability-state p{margin:0 0 var(--space-2);font-size:var(--font-size-control)}
@@ -124,9 +120,6 @@
 }
 @media(hover:hover) and (pointer:fine){
  .availability-card:hover{background:var(--primary-50)}
- .availability-actions .button.availability-soldout-action:hover:not(:disabled){color:var(--warning);background:var(--warning-50);border-color:var(--warning)}
- .availability-actions .button.availability-available-action:hover:not(:disabled){background:var(--primary-100);border-color:var(--primary-600)}
- .availability-actions [data-tooltip]:hover::after{transform:translateY(0)}
 }
 @media(prefers-reduced-motion:reduce){.availability-card,.availability-skeleton-head i,.availability-skeleton i,.availability-skeleton span{transition:none;animation:none}}
 

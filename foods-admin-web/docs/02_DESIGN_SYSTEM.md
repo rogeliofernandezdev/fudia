@@ -56,11 +56,12 @@ valores arbitrarios (`p-[13px]`).
 | Azul operativo | `primary-25` … `primary-800` | `primary-600` acción primaria, selección y foco; `primary-700` hover y texto de acción; `primary-100`/`primary-50` fondos de selección |
 | Índigo de estados | `indigo-100`, `indigo-600`, `indigo-700` | Conserva el tono aprobado de Confirmado y Por preparar; independiente del azul de las acciones |
 | Navegación | `navigation-900`, `navigation-950`, `navigation-text` | Sidebar, cabecera de pantallas completas, cabecera de tablas y backdrop |
-| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (verde vivo) solo en la franja de marca y el carril «Por entregar» |
-| Violeta digital | `digital-50` … `digital-700` | WhatsApp, integraciones, «En preparación» |
-| Entrega completada | `teal-100`, `teal-700` | Azul petróleo para Entregado; Finalizada usa gris neutro para distinguirla de Pagada |
+| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado y Entregado; `brand-600` (verde vivo) en la franja de marca y los estados de cierre |
+| Morado Por entregar | `purple-100`, `purple-200`, `purple-600` | «Por entregar» en `Status`, carril de Cocina, icono por plato, seguimiento, Dashboard y avisos |
+| Violeta digital | `digital-50` … `digital-700` | WhatsApp e integraciones, en exclusiva: no marca estados de preparación |
+| Petróleo | `teal-100`, `teal-500`, `teal-700` | Acento de identidad (categorías, bebidas); ya no representa Entregado. Finalizada usa gris neutro |
 | Cuenta abierta | `sky-100`, `sky-800` | Celeste tenue, distinto del índigo de Confirmado |
-| Advertencia | `warning-50` … `warning-800`, `note-100`, `note-ink` | Advertencias operativas; notas de cocina |
+| Naranja / advertencia | `warning-50` … `warning-800`, `note-100`, `note-ink` | «En preparación» (naranja vivo `warning-500` en Cocina y en `Status`); resoluciones pendientes; notas de cocina |
 | Error | `danger-50` … `danger-700` | Errores y acciones destructivas |
 
 La referencia cromática aprobada aporta un azul vivo, blancos fríos azulados y
@@ -93,14 +94,15 @@ al icono de incidencia; el punto rojo de la campana usa otra tonalidad.
 | Marino profundo | `navigation-950` | `#041A40` | Bordes de cabecera y backdrop |
 | Fondo frío | `cloud-50` | `#F4F7FD` | Fondo general azulado; paneles en blanco |
 | Línea | `line` | `#E1E7F2` | Bordes de 1 px de paneles y campos |
-| Verde vivo | `brand-600` | `#03C056` | Marca y carril Por entregar, con tinta oscura |
+| Verde vivo | `brand-600` | `#03C056` | Marca, Entregado y Pagada, con texto blanco |
+| Morado | `purple-600` | `#681A92` | «Por entregar» en todo el sistema, con texto blanco |
 | Verde legible | `brand-700` | `#007B35` | Texto, contornos e interruptores que requieren contraste |
 | Menta suave | `brand-100` | `#E3F8E9` | Fondo de estados positivos |
-| Rojo coral vivo | `danger-500` | `#FD3622` | Acento gráfico y superficies con tinta oscura |
-| Rojo coral legible | `danger-600` | `#BF2817` | Errores y confirmación destructiva con texto blanco |
+| Rojo coral vivo | `danger-500` | `#FD3622` | Botón destructivo de `ConfirmDialog` y su icono, aviso «Con demora» de Cocina; siempre con texto o icono blanco |
+| Rojo coral legible | `danger-600` | `#BF2817` | Texto de error y hover del botón destructivo |
 | Rosado suave | `danger-50` | `#FFF2EF` | Fondo de error o cancelación persistida |
 | Ámbar legible | `warning-600` | `#9D5700` | Iconos y mensajes de advertencia |
-| Ámbar vivo | `warning-500` | `#FD9F0A` | Superficies de énfasis con tinta oscura |
+| Naranja vivo | `warning-500` | `#FD9F0A` | Carril «En preparación» de Cocina, con texto e icono blancos |
 | Crema suave | `warning-100` | `#FFF0D8` | Fondo de estados pendientes o advertencias |
 
 Reglas:
@@ -108,13 +110,21 @@ Reglas:
 - Una sola acción sólida azul por superficie. Las secundarias van sobre blanco.
 - El verde nunca es una acción pendiente: se reserva para estados confirmados.
   No existe botón verde.
-- Rojo y ámbar solo comunican error o advertencia; nunca decoran.
-- Los pasos `danger-500` y `warning-500` son acentos vivos: no se usan como
-  texto ni como fondo de texto blanco. Los estados mantienen fondos suaves,
-  tinta oscura y etiqueta; las acciones destructivas sólidas usan `danger-600`.
+- Rojo y naranja comunican significado (error, demora, preparación o pendiente);
+  nunca decoran.
+- Patrón blanco + color vivo (aprobado 2026-11-05): las superficies siguen en
+  blanco y el color sólido se limita a piezas pequeñas o de identidad (cabecera
+  de carril, píldora de `Status`, contador, icono, hito del seguimiento, botón
+  destructivo). Sobre cualquier relleno sólido vivo (`kds-*`, `warning-500`,
+  `brand-600`, `danger-500`, `digital-500`, `sky-500`, `teal-500`) el texto y el
+  icono son siempre blancos, nunca tinta oscura; no se mezclan ambos. Los pasos
+  vivos no se usan como color de texto. La legibilidad se apoya en peso bold y
+  etiqueta explícita. La confirmación destructiva usa `danger-500`.
+- Las cabeceras de modal no participan de este patrón: siempre `navigation-900`
+  con icono, título y X blancos, sin círculos ni fondos de otro color.
 - Los estados combinan color, texto e icono; nunca dependen solo del color.
-  En `Status.green`, el punto o icono decorativo usa el verde vivo `brand-600`,
-  mientras el texto conserva `brand-800` sobre menta `brand-100` para legibilidad.
+  En `Status`, el punto o icono decorativo es blanco como el texto, sobre el relleno
+  vivo de su familia.
 - El verde oscuro no es una paleta anterior: `brand-700` y `brand-800` son
   derivados legibles del acento. Los textos, contornos de controles y chips
   conservan esos tonos; los símbolos de éxito y confirmación positiva usan
@@ -256,6 +266,16 @@ El movimiento comunica un cambio de estado, nunca adorna.
   ancho. Desplazamiento horizontal con ajuste al inicio de cada par, sin fragmentos
   de pestañas vecinas. Si el número es impar, la última queda sola en su grupo.
   Etiquetas largas pueden envolver; nunca truncarlas. No convertir la selección en un CTA sólido.
+  Pestañas con significado propio llevan `tone` (`TabTone`, solo la combinación viva
+  aprobada: `primary` `#0052FC`, `indigo` `#4654CD`, `orange` `#FD9F0A`, `green`
+  `#03C056`, `violet` `#7C3AED`; no se agregan otros): conservan pista y selección
+  blanca; el icono y el contador toman el color vivo de su familia (cifra blanca) y
+  la activa un borde tenue de ese color con etiqueta `ink-950` en negrita, nunca
+  texto de color vivo. Usos: carriles de Cocina (índigo, naranja, verde) y canales
+  de Pedidos y del pedido manual (`channelTone`: Todos azul, Salón índigo, Recojo
+  naranja, Delivery verde, WhatsApp violeta) y pestañas de los detalles de pedido,
+  venta y cobro (Productos naranja, Seguimiento índigo, Pagos azul). El diseño de
+  `Tabs` no cambia: solo el color de icono, contador y borde activo.
   `TabsBar` mantiene las acciones de la vista alineadas a la derecha en escritorio.
   En móvil, tabs a ancho completo y acciones en una fila debajo, nunca encima en
   `PageHeader`. Una acción llena su fila; dos se reparten en columnas iguales.
@@ -309,7 +329,7 @@ hover > reposo**. Un estado de mayor prioridad nunca se pierde por otro menor
 `--z-raised` 1, `--z-sticky` 10, `--z-header` 20, `--z-popover` 30,
 `--z-tour` 60, `--z-drawer` 90, `--z-task` 100 (pantalla completa como la
 comanda), `--z-modal` 110, `--z-sheet` 120, `--z-confirm` 130,
-`--z-tooltip` 135 (tooltip de contenido, visible sobre modales y hojas),
+`--z-tooltip` 150 (etiquetas y contenido, por delante de modales, hojas y feedback),
 `--z-feedback` 140, `--z-loader` 200. No se escriben números sueltos.
 
 ## Iconos
@@ -387,12 +407,11 @@ de página en `03_LAYOUTS.md`. Resumen:
   una secundaria. Sin eyebrow.
 - **Modales**: `Modal` con tamaños `sm` 480, `md` 640, `lg` 880 y `xl` 1040.
   Cabecera marino `navigation-900` (borde `navigation-950`), título
-  blanco de 18 px e icono blanco de 20 px dentro de un recuadro translúcido
-  (`surface-alpha-16`, `--radius-tile`, 40 px)
-  centrado en un espacio de 44 px, sin recuadro. Altura mínima 64 px y padding vertical de 8 px;
-  puede crecer si el título necesita varias líneas. La X blanca mide 20 px,
-  dentro de un cuadro visible de 32 px con solo contorno blanco de 1 px y fondo
-  transparente, sin sombra. El área de clic conserva 44 px también en escritorio.
+  blanco de 18 px e icono blanco de 20 px directo sobre el marino, sin caja ni
+  fondo, centrado en un espacio de 44 px. Altura mínima 52 px y padding vertical de 4 px;
+  puede crecer si el título necesita varias líneas. La X blanca mide 20 px, sin
+  recuadro ni contorno, fondo transparente y sin sombra. El área de clic conserva
+  44 px también en escritorio.
   No cambia de color con hover; conserva foco blanco visible para teclado.
   El título nombra la acción. La cabecera solo contiene icono, título y X:
   nunca subtítulos, fechas, responsables ni estados debajo del título.
@@ -487,6 +506,16 @@ de página en `03_LAYOUTS.md`. Resumen:
   distinta de la primera, normalmente «Todos») se tiñe en `primary-50` con
   borde `primary-200` y texto `primary-700`. Se usa en las barras de filtros
   de los listados; los selectores de formularios conservan su forma.
+- **Interruptores de configuración** (`switch-row`): encendidos en azul
+  operativo `primary-600`, apagados en `line-strong`, con perilla blanca.
+  Representan una selección del formulario («Recomendar en la carta digital»,
+  «Obligatorio»), no un éxito confirmado. No cambia el interruptor de estado
+  Activar/Desactivar de los registros, que conserva su semántica aprobada.
+- **Quitar grupos y opciones de un producto**: `IconButton` con variante
+  compartida `danger` (rojo `danger-600`, fondo `danger-50` y borde
+  `danger-200`), incluida la papelera del grupo y la X de cada opción.
+  Agregar conserva el azul operativo. Estas variantes solo cambian el color,
+  no la distribución del formulario ni el comportamiento de sus acciones.
 
 ### Formularios por secciones
 
@@ -591,10 +620,24 @@ Reglas de aplicación:
 
 - Reutilizar `Status` y los tokens de `src/styles/variables.css`; no crear badges
   propios, colores hexadecimales locales ni mapeos distintos por pantalla.
-- Siempre fondo tenue y texto/icono oscuro, con contraste mínimo 4.5:1.
-  No usar relleno sólido con texto blanco, sombras ni hover en estados de lectura.
-- `emphasis` refuerza icono y peso del texto, sin convertir el estado en botón
-  ni alterar su familia de color. La variante gris enfatizada se especifica abajo.
+- Tres niveles (aprobado 2026-11-05, equilibrio como la referencia): **sólido**
+  (`<Status solid>`: relleno vivo, texto e icono blancos) solo para estados operativos
+  del pedido en Pedidos, Salón, Cobro y el estado de la cabecera del detalle; **suave**
+  (por defecto: fondo tenue, texto oscuro y punto de su familia) para registros
+  —activo/inactivo, compras, inventario, caja y turnos, plataforma— y para cuenta y
+  pago; **neutro** (`Tag`: gris con icono, sin color semántico) para atributos o
+  configuración que no son estados, como el control de cantidad. El verde vivo queda
+  reservado a lo operativo; una fila de catálogo no lleva más de un color suave.
+- Equilibrio por pantalla (crítica 2026-11-05, referencia Zillo): en Salón el
+  escenario de la mesa es blanco y el único color de la mesa ocupada es el plato; en
+  Caja los flujos (fondo, ingresos, egresos) usan icono neutro y un solo fondo
+  `cloud-25`, con el color solo en el importe; en Cocina la cabecera y las cantidades
+  del ticket son blancas y grises, el color vive en la cabecera del carril, «Por
+  vencer» es contorno rojo y «Con demora» rojo sólido, y el aviso dice «N con demora
+  · M por vencer»; en Pedidos toda la fila abre el detalle (el ojo se conserva para
+  teclado).
+- `emphasis` refuerza icono, padding y peso del texto, sin convertir el estado en
+  botón ni alterar su familia de color. La variante gris enfatizada se especifica abajo.
 - Cuenta abierta es celeste y Confirmado índigo. Pagada es verde y Finalizada
   gris: estas parejas deben seguir siendo visualmente distintas.
 - Mostrar siempre la etiqueta y su contexto (pedido, preparación o cuenta):
@@ -603,20 +646,26 @@ Reglas de aplicación:
   matriz, tokens, mapeos y pruebas. No modificar estados ni flujos de negocio
   para adaptar el diseño.
 
-Paleta exacta de `Status` (fondo / texto e icono):
+Paleta exacta de `Status` (relleno sólido / texto e icono):
 
-| Tono | Fondo tenue | Texto e icono |
+| Tono | Relleno sólido | Texto e icono |
 | --- | --- | --- |
-| `gray` | `cloud-100` · `#F0F2F8` | `ink-500` · `#59617C` |
-| `blue` — índigo | `indigo-100` · `#EEF0FF` | `indigo-700` · `#3946B8` |
-| `sky` — celeste | `sky-100` · `#E0F2FE` | `sky-800` · `#075985` |
-| `violet` | `digital-100` · `#F2ECFF` | `digital-700` · `#5421A8` |
-| `green` | `brand-100` · `#E3F8E9` | `brand-800` · `#055E2B` |
-| `orange` — ámbar | `warning-100` · `#FFF0D8` | `warning-800` · `#744000` |
-| `teal` — azul petróleo | `teal-100` · `#E6F5F7` | `teal-700` · `#0B6B78` |
-| `red` | `danger-50` · `#FFF2EF` | `danger-700` · `#9F2115` |
-| `navy` — contorno | `surface` con borde interior de 1,5 px `navigation-900` | `navigation-900` · `#052352` |
-| `gray emphasis` | `cloud-150` · `#E9ECF4` | `ink-800` · `#222842` |
+| `gray` | `ink-500` · `#59617C` | `surface` · `#FFFFFF` |
+| `blue` — índigo | `indigo-600` · `#4654CD` | `surface` · `#FFFFFF` |
+| `sky` — celeste | `sky-500` · `#0EA5E9` | `surface` · `#FFFFFF` |
+| `violet` | `digital-500` · `#7C3AED` | `surface` · `#FFFFFF` |
+| `purple` — morado | `purple-600` · `#681A92` | `surface` · `#FFFFFF` |
+| `green` | `brand-600` · `#03C056` | `surface` · `#FFFFFF` |
+| `orange` — naranja | `warning-500` · `#FD9F0A` | `surface` · `#FFFFFF` |
+| `teal` — azul petróleo | `teal-500` · `#0E9AAB` | `surface` · `#FFFFFF` |
+| `red` | `danger-500` · `#FD3622` | `surface` · `#FFFFFF` |
+| `navy` — marino | `navigation-900` · `#052352` | `surface` · `#FFFFFF` |
+| `gray emphasis` | `ink-700` · `#313854` | `surface` · `#FFFFFF` |
+
+Los tonos vivos verde, naranja, celeste y rojo tienen contraste menor a 4.5:1
+con blanco; es una decisión visual aprobada que se compensa con peso bold,
+tamaño mínimo de 12 px y etiqueta explícita. Los `IconTile` de hitos alcanzados
+(seguimiento del pedido) usan la misma familia en `appearance="vivid"`.
 
 Matriz semántica completa:
 
@@ -624,13 +673,13 @@ Matriz semántica completa:
 | --- | --- | --- | --- |
 | Pedido | Nuevo | `gray` — gris | Registrado, aún sin confirmar |
 | Pedido | Confirmado | `blue` — índigo | Comanda enviada |
-| Pedido / preparación | Preparando | `violet` — violeta | En elaboración; coincide con el panel de Cocina |
-| Pedido / preparación | Por entregar | `green` — verde | Preparación terminada, falta servir |
-| Pedido | En camino | `orange` — ámbar | Delivery en traslado |
-| Pedido / preparación | Entregado | `teal` — azul petróleo | Servido; distinto de Por entregar y de Pagada |
+| Pedido / preparación | Preparando | `orange` — ámbar | En elaboración; coincide con el carril naranja de Cocina |
+| Pedido / preparación | Por entregar | `purple` — morado | Preparación terminada, falta servir; mismo morado que el carril de Cocina |
+| Pedido | En camino | `navy` — contorno marino | Delivery en traslado; distinto del ámbar de Preparando |
+| Pedido / preparación | Entregado | `green` — verde | Servido; siempre verde (decisión 2026-11-05), distinto del morado de Por entregar |
 | Pedido / preparación | Cancelado | `red` — rojo | Cancelación |
-| Preparación | Pendiente | `orange` — ámbar | Aún sin preparar; distinto del celeste de Cuenta abierta |
-| Sin preparación | Por entregar (`listo`) | `green` — verde | Disponible para servir; misma etiqueta que Cocina y Barra |
+| Preparación | Pendiente | `blue` — índigo | Aún sin preparar; coincide con el carril «Por preparar» y se distingue del ámbar de Preparando |
+| Sin preparación | Por entregar (`listo`) | `purple` — morado | Disponible para servir; misma etiqueta y color que Cocina y Barra |
 | Cuenta | Cuenta abierta | `sky` — celeste tenue | Sigue admitiendo consumo; distinto de Confirmado |
 | Mesa (Salón) | Libre | `green` — menta y acento verde vivo | Mesa sin pedido; etiqueta explícita Libre, aprobada en la paleta positiva global |
 | Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
@@ -646,10 +695,12 @@ Compras centraliza su mapeo en `purchaseStatusMeta`
 (`supply/purchases/domain/purchase-status.ts`); ninguna pantalla lo redefine.
 
 El color representa un significado compartido, no un identificador universal:
-verde es un hito cumplido, ámbar una resolución pendiente y azul petróleo una
-entrega completada. La cuenta finalizada usa gris neutro. El nombre y la región distinguen los flujos.
+verde es un hito cumplido, ámbar la preparación en curso o una resolución
+pendiente (cuenta, compra), índigo lo que espera entrar a cocina, marino el
+traslado del delivery, morado lo que espera ser entregado y verde lo ya entregado. El violeta no
+representa estados de pedido: identifica WhatsApp. La cuenta finalizada usa gris neutro. El nombre y la región distinguen los flujos.
 El pedido tiene siete tonos distintos. Preparación y cuenta conservan su ubicación
-separada. Preparación y cuenta usan las mismas píldoras suaves del componente
+separada. Preparación y cuenta usan las mismas píldoras sólidas del componente
 `Status`, sin borde exterior. Dos productos con el mismo estado mantienen el
 mismo color; no se colorean por producto. `teal-100` / `teal-700` son tokens compartidos,
 también accesibles en Tailwind.
@@ -687,6 +738,25 @@ de referencia (`design-system/detail-view.tsx`):
 - Aplicado en: detalle de pedido, venta, cobro en POS, turno de caja, gasto y
   cliente.
 
+### Ventas: consulta del historial
+
+La consulta adapta los detalles operativos de la [referencia Zillo](https://www.behance.net/gallery/248955609/Zillo-Restaurant-POS-System)
+a la identidad FudIA **sin alterar su orden**: periodos, búsqueda y fechas
+personalizadas, franja compacta del total y tabla. No incorpora tarjetas de
+indicadores ni un segundo título de historial. La franja conserva importe,
+cantidad de ventas y promedio por pedido sobre una sola superficie. Son datos
+de todo el filtro, incluida la búsqueda, nunca sumas de la página visible.
+Sin ventas se omite el promedio; la carga usa un skeleton y un error oculta
+la franja para no mostrar cifras ficticias.
+
+El historial usa `DataTable`.
+Conserva las ocho columnas, cabecera marino, importes alineados a la derecha y
+`Status` suave verde «Pagada». Toda fila abre el detalle; `RowActionButton` sigue
+siendo la entrada de teclado. En móvil se conserva la tabla nativa con columna
+de pedido fija y scroll horizontal accesible. Solo los periodos permanecen fijos
+bajo la barra del shell; indicadores, búsqueda y fechas siguen el scroll.
+La selección permite flechas, Home y End con una sola parada de Tab.
+
 ### Detalle de venta (organización)
 
 **Detalle de venta** sigue el patrón de «Detalle del pedido» (siguiente
@@ -723,7 +793,7 @@ icono del canal; identidad con estado de pago, fecha y «Canal · Atendido por»
 tarjeta de cliente solo si existe; pestañas «Productos» y «Pagos» (con
 «Devolver» en cada pago cuando corresponde) y «Resumen de cobro» fijo («Saldo
 pendiente» o «Total pagado»). Excepción: el código `PED-…` se muestra como texto
-secundario junto al estado, porque en POS no aparece en el listado. Mismo
+secundario junto al estado para relacionar el detalle con el pedido del listado. Mismo
 tamaño que el pedido y hoja inferior en móvil; el modal de registrar cobro
 conserva su pantalla completa.
 
@@ -1153,7 +1223,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   decimales y su unidad; un saldo nulo muestra «Sin dato», nunca cero.
   El origen de inventario se explica en el lugar del cupo: «Desde Inventario»
   y «Se actualiza con las entradas y ventas». Sin control ocupa el espacio
-  conjunto de cupo y balance con «Sin límite de cantidad» y su explicación;
+  conjunto de cupo y balance con «Sin límite», sin explicación redundante;
   la disponibilidad derivada indica su cálculo automático sin inventar
   cantidades ni repetir guiones. `Status` conserva sus tonos: Disponible
   verde, Pocas unidades ámbar, Agotado y Fuera de horario gris, siempre tenues.
@@ -1176,9 +1246,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   176 px, Acciones 200 px; filas de 88 px mínimo con relleno vertical de 12 px.
   La validación en línea identifica el mínimo y bloquea Guardar si el valor
   no es entero o es menor al mayor entre 1 y las porciones ya vendidas.
-  «Agotar hoy» y «Reactivar» son alternativas secundarias: la primera usa
-  texto y borde `warning`, fondo blanco y hover `warning-50`, sin rojo ni
-  relleno ámbar sólido; Reactivar conserva azul. Historial usa `clock`,
+  «Agotar hoy» usa `Button kind="danger-outline"`: rojo suave de la paleta,
+  sin recoloración local. «Reactivar» conserva `secondary` azul. Historial usa `clock`,
   tooltip y nombre accesible en escritorio; en contenedores estrechos muestra
   también la etiqueta. Guardar es la única acción sólida y solo existe mientras
   hay un cupo editado. Los valores de columnas y controles se centralizan en
@@ -1213,7 +1282,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   nunca hay scroll horizontal de página. **Excepción a las pestañas móviles de dos
   en dos:** los tres carriles de Cocina (`kitchen-mobile-tabs`) se ven siempre
   juntos en columnas iguales, sin pares deslizables ni hueco de relleno, porque
-  el cocinero necesita ver los tres estados a la vez.
+  el cocinero necesita ver los tres estados a la vez. Cada pestaña usa el `tone`
+  de su carril (`indigo`, `orange`, `green`; ver Pestañas generales).
 - Marcado por plato (2026-11-05): en «En preparación» cada línea de la comanda es una
   fila táctil de 44 px con el check circular del sistema (anillo 20 px `line-strong`;
   marcado `primary-600` con check blanco). Tocarla marca el plato listo y tocarla otra
@@ -1229,13 +1299,12 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
 - Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
   y «Por entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
-  contador y etiquetas: azul para «Por preparar», violeta para «En preparación»,
-  verde para «Por entregar» y ámbar exclusivamente para «Por vencer» o «Con demora». El cuerpo del carril permanece neutro y la cabecera completa usa un fondo semántico de contraste medio/alto: `kds-pending` (índigo) para «Por preparar», `digital-500` para «En preparación» y `brand-600` para «Por entregar». Azul y violeta usan título/descripción en `surface`; el verde `brand-600` usa `ink-950` para el título y `ink-800` para la descripción, evitando que el texto se pierda sobre el fondo verde vivo. Icono y contador se apoyan en `surface` y conservan `brand-700` como acento. Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
+  contador y etiquetas: índigo para «Por preparar», naranja para «En preparación»,
+  morado para «Por entregar» y rojo vivo exclusivamente para «Por vencer» o «Con demora» (el naranja ya pertenece a «En preparación»). El cuerpo del carril permanece neutro y la cabecera completa usa un fondo vivo: `kds-pending` (`indigo-600`) para «Por preparar», `kds-cooking` (`warning-500`, `#FD9F0A`) para «En preparación» y `kds-ready` (`purple-600`, `#681A92`, con tinte `kds-ready-soft`) para «Por entregar». Los tres usan título y descripción en blanco (`surface`), sin tinta oscura, según el patrón blanco + color vivo aprobado el 2026-11-05. Icono y contador se apoyan en `surface` y usan el tono oscuro de su familia (`kds-*-dark`). El aviso «N con demora» es una píldora sólida `danger-500` con texto blanco; el tiempo de la comanda «Por vencer» usa fondo `danger-50` y texto `danger-700`, y «Con demora» añade borde `danger-500`, siempre con icono `danger-500` y etiqueta explícita. El violeta digital no aparece en Cocina: identifica WhatsApp; el morado `#681A92` es solo «Por entregar». Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
   acciones primarias azules; el verde no se usa como CTA antes de confirmar el
   éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
   sombras o transformaciones decorativas que compitan con la información.
-  `danger` no se usa para retrasos de cocina porque se reserva para errores y
-  acciones destructivas. El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
+  El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
   minutos, horas/minutos o días/horas según corresponda. La urgencia siempre
   incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Por entregar»);
   nunca depende solo del color. El objetivo de preparación aparece como dato
@@ -1491,6 +1560,11 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   la acción de cobrar es iconográfica, usa `RowActionButton` y muestra tooltip,
   igual que el resto de acciones de fila. El turno de caja se presenta como
   contexto compacto y no como una segunda cabecera de página.
+- Identidad del pedido en POS: debajo de la mesa o cliente se muestra únicamente
+  el número `PED-…`, como texto secundario. Distingue atenciones de una misma
+  mesa sin añadir fecha, hora ni columnas. Si el número ya es la identidad
+  principal (sin mesa ni cliente), no se repite. Mostrador conserva su línea
+  existente de número y productos.
 - Venta por mostrador en la bandeja del POS (2026-11-02): la columna
   «Preparación» muestra el estado del pedido con `orderStatus` (matriz de
   operación, sin tonos locales) junto a «Cobro», porque preparación y pago son
@@ -1519,7 +1593,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   «Detalle de cobro», icono y X; el código va fuera de ella. En escritorio,
   Mesa, Canal, Atendido por (solo Salón) y Fecha del pedido van en una sola fila.
   `modal-record-data` es una franja: fondo `primary-50` (azul tenue de marca,
-  no el violeta `digital-*`, reservado a canales digitales y «En preparación»),
+  no el violeta `digital-*`, reservado a WhatsApp y canales digitales),
   borde `primary-100`, radio de tile y las parejas en columnas separadas por
   líneas `primary-200`. Cada columna mide según su contenido (`grid-auto-columns:
   auto`) y el espacio sobrante se reparte, para que la fecha quepa en una línea.
@@ -1734,8 +1808,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   (`--control-height`). El ícono de «Guardar» es un check (✓), no un disquete.
 - La cabecera de los modales de registro usa el patrón compartido: padding
   horizontal de 24 px en escritorio y 16 px en móvil, título h2 de 18 px e
-  icono blanco de 20 px sin recuadro, en un espacio de 44×44 px. La X tiene
-  contorno blanco de 32×32 px y área táctil de 44×44 px; no se fijan dimensiones
+  icono blanco de 20 px sin recuadro, en un espacio de 44×44 px. La X es blanca
+  sin contorno, con área táctil de 44×44 px; no se fijan dimensiones
   locales para reducir la cabecera. Durante el guardado la X conserva su blanco
   y opacidad completa, aunque esté deshabilitada para evitar cierres prematuros.
   Formularios como Producto usan `ModalForm` y `ModalBody` para que solo el cuerpo
@@ -2083,8 +2157,20 @@ agregan botones a usuarios sin permisos para hacer más visible el pie.
 Cantidad, producto e importe permanecen en una rejilla común, también a 390 px.
 El nombre admite varias líneas sin mandar el importe a una fila aparte.
 `ModalItemList` presenta una lista simple, sin encabezados Cant. / Producto / Importe
-ni borde exterior. Las líneas se separan únicamente con `line`. Cantidades en círculos de 32 px, con cifras
-tabulares, fondo `primary-100` y texto `primary-700` de la paleta existente;
+ni borde exterior. Las líneas se separan únicamente con `line`. Cantidades como texto («1×») en negrita
+`indigo-600`, cifras tabulares y sin círculo ni fondo, en una columna de 32 px.
+Pedido/mesa, venta y cobro usan la misma línea compartida
+(`.modal-item-row.has-state` + `.modal-item-state`, en `modal.css`) y el helper
+`lineServiceState` (API pública `@/modules/operations/orders`); venta y cobro reciben
+`order.serviceItems` desde `pos/orders/{id}` y muestran el mismo estado real por plato.
+Cada línea abre con un icono sólido de 24 px del
+estado de su preparación (`IconTile vivid`, misma familia que `Status`: reloj
+índigo pendiente, llama naranja preparando, campanita morada por entregar, un solo
+check verde entregado, X roja cancelado; el seguimiento y el carril de Cocina usan los
+mismos iconos), seguido de «1× nombre» y el importe a la
+derecha; debajo, precio c/u y destino, con el estado en texto gris bold alineado
+a la derecha (siempre visible). Si las preparaciones difieren, el icono muestra
+lo que más falta (preparando > pendiente > listo);
 son lectura, nunca botón ni indicador de estado. No se repite un conteo agregado de
 unidades en el encabezado de productos. Responsables se presentan
 en el contexto del cuerpo, antes de la fecha. La fecha se alinea al extremo derecho,
@@ -2172,7 +2258,7 @@ En móvil (≤700 px), donde la columna Canal se oculta, el origen baja como lí
 discreta «Mostrador» bajo el cliente (`order-mobile-origin`), antes de la fecha.
 
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha en el contexto
-del cuerpo y cantidades circulares por producto, sin conteo agregado de unidades.
+del cuerpo y cantidades en texto índigo por producto, sin conteo agregado de unidades.
 «Registrado» muestra siempre la fecha y hora del registro en la zona del local,
 nunca un tiempo relativo como «Hace 17 h». La tabla y el detalle reutilizan el
 formateador regional compartido. En móvil, la fecha aparece bajo la identidad del
@@ -2237,10 +2323,16 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
   `.table-actions button.danger`, `.ds-icon-button`, `.ds-icon-button:hover`
   y `.standard-actions`. `globals.css` solo conserva reglas complementarias
   no duplicadas (como `.ds-icon-button svg`, `:focus-visible` y `:disabled`).
-- Los tooltips de etiqueta (una línea en botones iconográficos) reutilizan el
-  patrón `[data-tooltip]` de `table-actions.css`. Los tooltips de contenido
-  (descripción, listas) usan el componente `Tooltip`, dueño único de
-  `tooltip.css`. No se añaden reglas de tooltip en otras hojas.
+- Todos los tooltips viven en un portal a `document.body`, con posición fija
+  y `z-tooltip`. Ninguno se dibuja como pseudoelemento dentro del disparador:
+  `overflow`, tablas, cabeceras fijas o modales no pueden recortarlos.
+  `TooltipLayer`, montado una vez en `Providers`, atiende las etiquetas
+  `[data-tooltip]` de acciones y ayudas, incluso si aparecen después de cargar.
+  Abren con mouse o foco de teclado, conservan `aria-describedby` y cierran al
+  actuar, desplazar, retirar el control o pulsar Escape. `placeTooltip` limita
+  la burbuja al viewport y cambia de lado si falta espacio.
+  Los tooltips de contenido usan `Tooltip` con la misma capa y geometría.
+  `tooltip.css` es el único dueño de su apariencia; no hay correcciones locales.
 - No se permiten bloques posteriores que reescriban una clase para corregir
   estilos anteriores.
 - Las diferencias de estado, tamaño o dispositivo usan clases modificadoras,
@@ -2273,7 +2365,7 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
 ## Directorios maestros
 
 El dashboard usa términos cotidianos del restaurante: «Ventas · Hoy»,
-«Pedidos cobrados», «Promedio por pedido», «Pedidos en atención»,
+«Pedidos cobrados», «Promedio por pedido», «Pedidos activos»,
 «Saldo por cobrar», «Pendientes por revisar» y «Productos más vendidos». No
 muestra «Ventas netas» ni «Ticket promedio», ni referencias a devoluciones. Los
 nombres técnicos `salesNet` y `averageTicket` se conservan en el contrato de API.
@@ -2284,25 +2376,27 @@ vivo (columna lateral «Ahora mismo»). Un único selector Hoy / 7 días / 30 d�
 sobre todo el contenido, filtra ventas, indicadores, desgloses y productos; la
 operación en vivo y las alertas siempre son actuales.
 
-- **Mosaico de indicadores.** Cuatro tarjetas con icono duotono de 18 px en
-  cuadro tenue, etiqueta de 13 px y cifra con números tabulares: «Ventas ·
-  {periodo}», «Pedidos cobrados», «Promedio por pedido» y «Pedidos en atención».
-  Ventas es la protagonista por tamaño: columna 1.4 veces más ancha y cifra de
-  36 px (28 px en móvil); las demás usan 28 px (22 px en móvil).
+- **Mosaico de indicadores** (patrón Zillo, aprobado 2026-11-06). Cuatro
+  tarjetas con la etiqueta de 13 px / 700 `ink-700` arriba a la izquierda (la
+  flecha ↗ a su lado cuando abre el detalle), el icono en un círculo vivo de
+  40 px arriba a la derecha y la cifra de 36 px con números tabulares debajo:
+  «Ventas · {periodo}», «Pedidos cobrados», «Promedio por pedido» y «Pedidos en
+  atención». Ventas es la protagonista por ancho: columna 1.4 veces más ancha.
+  En móvil las cifras bajan a 28 px. Las etiquetas caben en una sola línea: textos cortos, sin envolver.
 - **Tono por indicador.** Para distinguirlos de un vistazo, cada indicador lleva
   un tono de la identidad: Ventas en verde restaurante (`brand`),
   Pedidos cobrados en azul operativo (`primary`), Promedio por pedido en violeta
-  digital (`digital`) y Pedidos en atención en ámbar (`warning`). El tono solo
-  colorea el cuadro del icono (Ventas y Pedidos cobrados usan `IconTile vivid`;
-  violeta y ámbar conservan el fondo tenue), un tinte de esquina
-  (tono 50 que se funde con la superficie al 62 %), el borde (tono 100), el
+  digital (`digital`) y Pedidos activos en ámbar (`warning`). El tono solo
+  colorea el círculo del icono (`IconTile vivid` en los cuatro, icono blanco),
+  un tinte de esquina (tono 100 al 60 % que se funde con la superficie al
+  70 %), el borde (tono 100), el
   minigráfico y la barra de cocina. Las cifras siguen en `ink-950` y la variación
   conserva su verde o rojo propio; no es un estado ni se reutiliza fuera del
   mosaico.
 - **Variación.** Ventas, Pedidos cobrados y Promedio por pedido llevan su
   variación y un minigráfico del periodo (curva suave con área tenue en el tono
   del indicador y el último valor resaltado); Ventas añade el importe anterior.
-  Pedidos en atención muestra los pedidos en cocina y una barra con su
+  Pedidos activos muestra los pedidos en cocina y una barra con su
   proporción. La variación es una pastilla con el porcentaje y signo (+/−) en
   verde o rojo tenue, seguida de la comparación en texto `ink-500` («vs. el
   viernes pasado»). Una flecha ascendente, descendente o un signo menos acompaña
@@ -2311,9 +2405,9 @@ operación en vivo y las alertas siempre son actuales.
   comparación no tuvo ventas no hay porcentaje posible: se omiten la variación y
   el importe anterior (sin textos del tipo «Sin ventas para comparar»); los demás
   indicadores conservan su descripción.
-  En 1180 px el mosaico pasa a 2 × 2; en ≤600 px Ventas y Pedidos en atención
-  ocupan su fila y las otras dos comparten la suya, con etiquetas que envuelven
-  en lugar de truncarse.
+  En 1180 px el mosaico pasa a 2 × 2; en ≤600 px Ventas y Pedidos activos
+  ocupan su fila y las otras dos comparten la suya, con etiquetas de una sola
+  línea.
 - **Evolución de ventas.** Tarjeta a ancho completo de la columna principal con
   la hora pico o el mejor día en la cabecera (en móvil, en una franja bajo el
   título). Una sola serie: las ventas del periodo como onda

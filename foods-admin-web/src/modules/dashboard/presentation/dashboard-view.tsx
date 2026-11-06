@@ -27,7 +27,7 @@ const capitalize=(text:string)=>text.charAt(0).toUpperCase()+text.slice(1);
 
 type Change={value:string;text:string;direction:"up"|"down"|"flat"};
 type AlertItem={count:number;title:string;detail:string;href:string;tone:"warning"|"info";icon:IconName};
-type AreaPanel={title:string;icon:IconName;href:string;rows:{label:string;value:string;tone?:"primary"|"green"}[]};
+type AreaPanel={title:string;icon:IconName;href:string;rows:{label:string;value:string;tone?:"primary"|"green"|"purple"}[]};
 
 export function DashboardView(){
   const session=useSession();
@@ -113,7 +113,7 @@ export function DashboardView(){
   if(enabled("cocina"))areas.push({title:"Cocina",icon:"kitchen",href:pageRoutes.kitchen,rows:[
     {label:"Por preparar",value:String(operations.kitchenConfirmed)},
     {label:"En preparación",value:String(operations.kitchenPreparing)},
-    {label:"Por entregar",value:String(operations.readyOrders),tone:"green"},
+    {label:"Por entregar",value:String(operations.readyOrders),tone:"purple"},
   ]});
   if(enabled("delivery"))areas.push({title:"Delivery",icon:"truck",href:pageRoutes.delivery,rows:[
     {label:"Por despachar",value:String(operations.deliveryPending)},
@@ -142,26 +142,26 @@ export function DashboardView(){
     <div className={"dash-board"+(query.isPlaceholderData?" refreshing":"")} aria-busy={query.isFetching}>
       <section className="dash-kpis" aria-label="Indicadores del periodo">
         <article className="panel dash-kpi lead green dash-enter" style={enter(0)}>
-          <div className="dash-kpi-head"><IconTile name="sales" tone="brand" appearance="vivid" className="dash-kpi-icon"/><small>Ventas · {shown.title}</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}</div>
+          <div className="dash-kpi-head"><small>Ventas · {shown.title}</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="sales" tone="brand" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={salesNet} format={money}>{money(data.salesNet)}</CountUp></strong>
           {changeLine(salesChange)}
           {salesChange&&previous&&<em className="dash-kpi-before">Antes: {money(previous.salesNet)}</em>}
           <Sparkline values={salesSeries}/>
         </article>
         <article className="panel dash-kpi blue dash-enter" style={enter(1)}>
-          <div className="dash-kpi-head"><IconTile name="receipt" tone="primary" appearance="vivid" className="dash-kpi-icon"/><small>Pedidos cobrados</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver pedidos cobrados"><Icon name="arrowUpRight" size={16}/></Link>}</div>
+          <div className="dash-kpi-head"><small>Pedidos cobrados</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver pedidos cobrados"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="receipt" tone="primary" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={data.paidOrders} format={compact}>{String(data.paidOrders)}</CountUp></strong>
           {changeLine(ordersChange,"Pagados por completo en el periodo")}
           <Sparkline values={orderSeries}/>
         </article>
         <article className="panel dash-kpi violet dash-enter" style={enter(2)}>
-          <div className="dash-kpi-head"><IconTile name="payment" tone="digital" className="dash-kpi-icon"/><small>Promedio por pedido</small></div>
+          <div className="dash-kpi-head"><small>Promedio por pedido</small><IconTile name="payment" tone="digital" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={Number(data.averageTicket)||0} format={money}>{money(data.averageTicket)}</CountUp></strong>
           {changeLine(ticketChange,"Por pedido cobrado")}
           <Sparkline values={ticketSeries}/>
         </article>
         <article className="panel dash-kpi amber dash-enter" style={enter(3)}>
-          <div className="dash-kpi-head"><IconTile name="orders" tone="warning" className="dash-kpi-icon"/><small>Pedidos en atención</small>{canOpen(pageRoutes.orders)&&<Link href={pageRoutes.orders} className="stat-card-link" aria-label="Ver pedidos en atención"><Icon name="arrowUpRight" size={16}/></Link>}</div>
+          <div className="dash-kpi-head"><small>Pedidos activos</small>{canOpen(pageRoutes.orders)&&<Link href={pageRoutes.orders} className="stat-card-link" aria-label="Ver pedidos activos"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="orders" tone="warning" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={data.openOrders} format={compact}>{String(data.openOrders)}</CountUp></strong>
           <em>{data.kitchenPending?`${data.kitchenPending} en cocina`:"Sin pedidos en cocina"}</em>
           {data.openOrders>0&&<RankTrack ratio={kitchenShare} index={0}/>}

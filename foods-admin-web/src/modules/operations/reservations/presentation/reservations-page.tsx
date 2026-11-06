@@ -102,7 +102,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
           </label>
           <label>
             <FieldLabel hint="Tiempo durante el cual la mesa queda ocupada para evitar reservas solapadas.">Duración de mesa (min)</FieldLabel>
-            <Input icon="clock" type="number" inputMode="numeric" min="15" max="360" step="15" {...register("durationMinutes")} aria-invalid={Boolean(errors.durationMinutes)}/>
+            <Input icon="clock" type="number" inputMode="numeric" min="15" max="360" step="1" {...register("durationMinutes")} aria-invalid={Boolean(errors.durationMinutes)}/>
             {errors.durationMinutes?.message&&<small className="field-error">{errors.durationMinutes.message}</small>}
           </label>
 

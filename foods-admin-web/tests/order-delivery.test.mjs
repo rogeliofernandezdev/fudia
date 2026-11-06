@@ -79,8 +79,8 @@ test("los botones se bloquean durante la mutación",()=>{
  assert.match(html,/aria-busy="true"/);
 });
 test("la preparación y el saldo se muestran sin mezclarse",()=>{
- assert.equal(orderStatus("listo").tone,"green");
- assert.equal(orderStatus("entregado").tone,"teal");
+ assert.equal(orderStatus("listo").tone,"purple");
+ assert.equal(orderStatus("entregado").tone,"green");
  const html=renderDetail({order:ready});
  assert.match(html,/Por entregar/);
  assert.match(html,/Saldo pendiente/);

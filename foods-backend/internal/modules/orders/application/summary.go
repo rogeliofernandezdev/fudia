@@ -30,5 +30,10 @@ func (a *Orders) PaymentOrder(ctx context.Context, s scope, id string) (domain.O
 	if err != nil {
 		return o, orderFailure(apperror.Unavailable, "payments_unavailable", "No pudimos cargar el detalle del pedido.")
 	}
+	// Cobro y Venta muestran el estado real de preparación de cada línea, igual que el detalle de pedido.
+	o.ServiceItems, err = a.repo.ServiceItems(ctx, s, id)
+	if err != nil {
+		return o, orderFailure(apperror.Unavailable, "payments_unavailable", "No pudimos cargar el estado de los productos.")
+	}
 	return o, nil
 }

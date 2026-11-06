@@ -14,7 +14,7 @@ const controls=compile("presentation/order-service-controls.tsx",name=>{
  if(name.endsWith("service-flow"))return flow;
  if(name.endsWith("order-actions"))return actions;
  if(name.endsWith("order-meta"))return metadata;
- if(name==="@/design-system")return{Button:"Button",Status:"Status"};
+ if(name==="@/design-system")return{Button:"Button"};
  if(name==="@/providers")return{useSession:()=>({user:{id:userId},can:()=>manage}),useFeedback:()=>({notify:v=>feedback.push(v)})};
  if(name==="@tanstack/react-query")return{useQueryClient:()=>({setQueryData:()=>{},invalidateQueries:q=>invalidations.push(q.queryKey)}),useMutation:config=>{mutations.push(config);return{isPending:false,mutate:v=>mutations.push(v)}}};
  if(name.endsWith("service-api"))return{closeOrderAccount:id=>({id})};
@@ -41,7 +41,7 @@ test("el producto muestra solo destino y estado; la entrega no se repite por fil
  userId="waiter";manage=true;
  const ready=nodes(controls.OrderItemService({order,itemId:"item"}));
  assert.equal(ready.some(n=>n.type==="Button"),false);
- assert.ok(ready.some(n=>n.type==="Status"&&n.props.children==="Por entregar"));
+ assert.ok(ready.some(n=>n.type==="span"&&n.props.className==="order-service-state"&&n.props.children==="Por entregar"),"el estado por producto es texto; el color lo lleva el icono de la línea");
  for(const [viewer,permission] of [["other",true],["waiter",false]]){userId=viewer;manage=permission;assert.equal(nodes(controls.OrderItemService({order,itemId:"item"})).some(n=>n.type==="Button"),false)}
  userId="waiter";manage=true;
  for(const status of ["confirmado","preparando","entregado"]){assert.equal(nodes(controls.OrderItemService({order:{...order,serviceItems:[{...order.serviceItems[0],status}]},itemId:"item"})).some(n=>n.type==="Button"),false)}

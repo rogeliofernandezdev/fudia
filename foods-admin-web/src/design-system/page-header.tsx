@@ -66,11 +66,19 @@ export function PageHeader({title,description,action,back,meta}:{title:string;de
   {action&&<div className="page-header-actions">{action}</div>}
  </header>;
 }
-/** Tonos tenues definidos en docs/02_DESIGN_SYSTEM.md: sky cuenta abierta, blue confirmado, green listo/éxito, violet preparación, orange por resolver, teal entregado, red cancelado/error, gray neutro/finalizado. */
-export function Status({tone="green",active,icon,emphasis=false,children}:{tone?:"green"|"blue"|"sky"|"orange"|"red"|"violet"|"gray"|"teal"|"navy";active?:boolean;icon?:IconName;emphasis?:boolean;children:React.ReactNode}){
+/**
+ * Estado con etiqueta explícita (docs/02_DESIGN_SYSTEM.md › niveles de estado):
+ * suave por defecto (fondo tenue, texto oscuro y punto) para registros, compras, caja, cuenta y pago;
+ * `solid` (relleno vivo y texto blanco) solo para estados operativos del pedido: Pedidos, Salón, Cobro y detalle.
+ */
+export function Status({tone="green",active,icon,emphasis=false,solid=false,children}:{tone?:"green"|"blue"|"sky"|"orange"|"red"|"violet"|"purple"|"gray"|"teal"|"navy";active?:boolean;icon?:IconName;emphasis?:boolean;solid?:boolean;children:React.ReactNode}){
  const binary=active!==undefined;
  const glyph=binary?(active?"circleCheck":"circleMinus"):icon;
- return <span className={`status ${binary?(active?"green":"gray"):tone}${emphasis?" emphasized":""}`}>{glyph?<Icon name={glyph} size={emphasis?16:14} className="status-icon"/>:<i aria-hidden="true"/>}{children}</span>
+ return <span className={`status ${binary?(active?"green":"gray"):tone}${solid?" solid":""}${emphasis?" emphasized":""}`}>{glyph?<Icon name={glyph} size={emphasis?16:14} className="status-icon"/>:<i aria-hidden="true"/>}{children}</span>
+}
+/** Atributo o configuración (no es un estado): etiqueta neutra gris con icono, sin color semántico. */
+export function Tag({icon,children}:{icon?:IconName;children:React.ReactNode}){
+ return <span className="tag">{icon&&<Icon name={icon} size={14}/>}{children}</span>;
 }
 export function Pagination({page,size,total,onPage,onSize,mode="full"}:{page:number;size:number;total:number;onPage:(page:number)=>void;onSize:(size:number)=>void;mode?:"full"|"simple"|"compact"}){
  const last=Math.max(1,Math.ceil(total/size));const safePage=Math.min(Math.max(page,1),last);const pages=paginationItems(safePage,last);const start=total?(safePage-1)*size+1:0;const end=Math.min(safePage*size,total);

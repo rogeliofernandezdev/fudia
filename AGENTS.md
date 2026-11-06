@@ -19,7 +19,7 @@ Construir una plataforma SaaS multiempresa para restaurantes peruanos.
 11. No copiar marcas, logotipos ni piezas publicitarias de las referencias.
 12. Ejecutar lint, typecheck, tests y build antes de cerrar una implementación.
 13. Evitar información visual redundante en wizards y formularios: si el progreso ya está representado por pasos visibles, no repetir indicadores como "Paso X de Y".
-14. Respetar la matriz de estados aprobada en el sistema visual de cada frontend: fondos tenues, texto legible y etiqueta explícita. Reutilizar sus componentes, tokens y mapeos centrales; no recolorear estados por pantalla ni introducir variantes sólidas sin aprobación.
+14. Respetar la matriz de estados aprobada en el sistema visual de cada frontend, con etiqueta explícita. En `foods-admin-web` los estados usan tres niveles (aprobado 2026-11-05): sólido solo para lo operativo del pedido, suave para registros, cuenta y pago, y etiqueta neutra para atributos. Reutilizar sus componentes, tokens y mapeos centrales; no recolorear estados por pantalla ni cambiar su variante sin aprobación.
 15. No mostrar códigos generados por la base (tipo `CJ-6E57C7`, `CAJ-…`, `CLI-…`, `OC-…`, `REC-…`) en pantallas, PDF, archivos, notas ni mensajes. Excepciones: el código del pedido (`PED-…`) y el número fiscal de un comprobante electrónico (serie-correlativo, p. ej. `F001-123`), que la ley exige en su representación. Identificar cada registro por datos que el usuario reconoce: nombre, proveedor, fecha o local.
 
 ## Identidad

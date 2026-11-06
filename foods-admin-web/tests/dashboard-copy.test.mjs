@@ -50,7 +50,7 @@ test("dashboard presenta la cifra del periodo, indicadores y comparación con da
  const view=render(base);
  const values=view.filter(node=>node.type==="strong").map(node=>text(node.props.children));
  assert.deepEqual(values,["S/ 140.00","4","S/ 35.00","3"]);
- for(const label of ["Ventas · Hoy","Pedidos cobrados","Promedio por pedido","Pedidos en atención","2 en cocina","Pendientes por revisar","Productos más vendidos","Ahora mismo","Saldo por cobrar","Antes: S/ 100.00"])assert.ok(has(view,label),label);
+ for(const label of ["Ventas · Hoy","Pedidos cobrados","Promedio por pedido","Pedidos activos","2 en cocina","Pendientes por revisar","Productos más vendidos","Ahora mismo","Saldo por cobrar","Antes: S/ 100.00"])assert.ok(has(view,label),label);
  assert.ok(has(view,"+40% vs. el miércoles pasado"),"Hoy se compara con el mismo día de la semana anterior");
  assert.ok(has(view,"-20% vs. el miércoles pasado"),"Pedidos cobrados conserva su propia variación");
  assert.equal(view.some(node=>/devoluci[oó]n/i.test(text(node.props?.children))),false);
@@ -130,7 +130,7 @@ test("dashboard organiza un mosaico de cuatro indicadores con Ventas como protag
  assert.equal(text(change.props.children[0]),"+40%","El porcentaje va en su propia pastilla");
  assert.ok(view.some(node=>node.type==="DonutChart"&&node.props.label==="Cobros por medio de pago"),"Medios de pago se muestra como anillo");
  assert.equal(view.filter(node=>node.type==="BarList").length,2,"Canal y categoría conservan barras");
- assert.ok(view.some(node=>node.type==="RankTrack"),"Pedidos en atención muestra la proporción en cocina");
+ assert.ok(view.some(node=>node.type==="RankTrack"),"Pedidos activos muestra la proporción en cocina");
  const delays=view.filter(node=>node.props?.className?.includes("dash-enter")).map(node=>node.props.style.animationDelay);
  assert.deepEqual(delays.slice(0,5),["0ms","50ms","100ms","150ms","200ms"],"La entrada se escalona en orden de lectura");
 });

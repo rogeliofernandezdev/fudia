@@ -22,14 +22,15 @@
 /* Mosaico de indicadores: Ventas es la protagonista por tamaño; cada indicador lleva su tono tenue de identidad */
 .dash-kpis{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:var(--space-4);transition:opacity var(--duration-base)}
 .dash-kpi{display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-4) var(--space-5)}
-.dash-kpi.green{border-color:var(--brand-100);background:linear-gradient(160deg,var(--brand-50),var(--surface) 62%)}
-.dash-kpi.blue{border-color:var(--primary-100);background:linear-gradient(160deg,var(--primary-50),var(--surface) 62%)}
-.dash-kpi.violet{border-color:var(--digital-100);background:linear-gradient(160deg,var(--digital-50),var(--surface) 62%)}
-.dash-kpi.amber{border-color:var(--warning-100);background:linear-gradient(160deg,var(--warning-50),var(--surface) 62%)}
-.dash-kpi-head{display:flex;align-items:center;gap:var(--space-2-5);min-width:0}
-.dash-kpi-head small{flex:1;min-width:0;overflow:hidden;font-size:var(--font-size-sm);line-height:var(--line-height-tight);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap;color:var(--ink-600)}
-.dash-kpi strong{font-size:var(--font-size-2xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);letter-spacing:var(--letter-spacing-snug);white-space:nowrap;color:var(--ink-950)}
-.dash-kpi.lead strong{font-size:var(--font-size-3xl);line-height:var(--line-height-none);letter-spacing:var(--letter-spacing-tight)}
+.dash-kpi.green{border-color:var(--brand-100);background:linear-gradient(160deg,color-mix(in srgb,var(--brand-100) 60%,var(--surface)),var(--surface) 70%)}
+.dash-kpi.blue{border-color:var(--primary-100);background:linear-gradient(160deg,color-mix(in srgb,var(--primary-100) 60%,var(--surface)),var(--surface) 70%)}
+.dash-kpi.violet{border-color:var(--digital-100);background:linear-gradient(160deg,color-mix(in srgb,var(--digital-100) 60%,var(--surface)),var(--surface) 70%)}
+.dash-kpi.amber{border-color:var(--warning-100);background:linear-gradient(160deg,color-mix(in srgb,var(--warning-100) 60%,var(--surface)),var(--surface) 70%)}
+.dash-kpi-head{display:flex;align-items:flex-start;gap:var(--space-2);min-width:0}
+.dash-kpi-icon{flex:none;width:var(--size-40);height:var(--size-40);margin-left:auto;border-radius:50%}
+.dash-kpi-head small{flex:0 1 auto;min-width:0;padding-top:var(--space-1);overflow:hidden;font-size:var(--font-size-sm);line-height:var(--line-height-tight);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap;color:var(--ink-700)}
+.dash-kpi strong{margin-top:var(--space-1);font-size:var(--font-size-3xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);letter-spacing:var(--letter-spacing-snug);white-space:nowrap;color:var(--ink-950)}
+.dash-kpi.lead strong{letter-spacing:var(--letter-spacing-tight)}
 .dash-kpi em{font-size:var(--font-size-xs);font-style:normal;color:var(--ink-500)}
 .dash-kpi.green .dash-spark-stop{stop-color:var(--brand-600)}
 .dash-kpi.violet .dash-spark-stop{stop-color:var(--digital-500)}
@@ -178,6 +179,7 @@
 .dash-area dd{margin:0;font-size:var(--font-size-sm);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-950)}
 .dash-area dd.primary{color:var(--primary-600)}
 .dash-area dd.green{color:var(--brand-700)}
+.dash-area dd.purple{color:var(--purple-600)}
 
 /* Alertas */
 .alerts>header>b{display:grid;place-items:center;min-width:var(--size-24);height:var(--size-24);padding:0 var(--space-2);border-radius:var(--radius-pill);font-size:var(--font-size-control);font-weight:var(--weight-bold);color:var(--warning);background:var(--warning-50)}
@@ -238,10 +240,8 @@
 @media(width<=600px){
   .dash-kpis{gap:var(--space-3)}
   .dash-kpi{padding:var(--space-3-5) var(--space-4)}
-  .dash-kpi-head small{white-space:normal}
   .dash-kpi.lead,.dash-kpi:last-child{grid-column:1/-1}
-  .dash-kpi strong{font-size:var(--font-size-xl)}
-  .dash-kpi.lead strong{font-size:var(--font-size-2xl)}
+  .dash-kpi strong{font-size:var(--font-size-2xl)}
   .dash-kpi .dash-spark{height:var(--size-32)}
 }
 @media(width<=520px){

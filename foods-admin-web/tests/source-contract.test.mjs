@@ -429,21 +429,28 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(kitchen.includes('icon={next==="listo"?"check":"cookingPot"}'),"La acción Iniciar usa la misma metáfora de preparación");
   assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
   assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending)}'),"Por preparar usa azul sólido del patrón");
-  assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa violeta sólido del patrón");
+  assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa naranja sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready)}'),"Listo usa brand-600 como fondo");
-  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header h2{color:var(--ink-950)}'),"Listo usa ink-950 para recuperar contraste del título");
-  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header small{color:var(--ink-800);opacity:1}'),"Listo usa ink-800 sin opacidad para contrastar sobre verde vivo");
-  assert.ok(css.includes('.kitchen-lane>header h2{overflow:hidden;margin:0;color:var(--surface)'),"Los títulos de carril conservan contraste blanco");
+  assert.equal(/\.kitchen-lane\[data-status="listo"\]>header (?:h2|small)\{/.test(css),false,"Ningún carril mezcla tinta oscura: todos llevan texto blanco");
+  assert.ok(css.includes('.kitchen-lane>header h2{overflow:hidden;margin:0;color:var(--surface)'),"Los títulos de carril usan texto blanco");
   assert.equal(css.includes("border-left:4px solid transparent"),false,"Los carriles no usan barra lateral de color");
   assert.equal(css.includes(".kitchen-lane::before"),false,"Los carriles no usan franja superior de color");
   assert.ok(kitchen.includes("ticket.tableName?.toUpperCase()"),"Los nombres de mesa se muestran en mayúsculas");
-  assert.ok(css.includes("background:var(--cloud-100)"),"El progreso usa tokens del sistema");
-  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking:var(--digital-500)"),"En preparación usa violeta del patrón operativo");
-  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking-dark:var(--digital-700)"),"El texto de preparación usa violeta oscuro");
-  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking-soft:var(--digital-100)"),"El fondo de preparación usa violeta suave");
-  assert.ok(css.includes(".kitchen-ticket-time.late{background:var(--warning-50);border-color:var(--warning-600);color:var(--warning-600)}"),"La demora usa warning y no danger");
-  const lateRules=css.split("\n").filter(line=>line.includes(".late"));
-  assert.equal(lateRules.some(line=>line.includes("danger-600")),false,"Los estados de demora no usan danger; rojo queda disponible para errores reales");
+  assert.match(css,/\.kitchen-progress-track\{[^}]*background:var\(--kds-cooking-soft\)\}/,"El progreso usa el tinte del carril En preparación con tokens del sistema");
+  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking:var(--warning-500)"),"En preparación usa el naranja vivo #FD9F0A");
+  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking-dark:var(--warning-600)"),"El acento de preparación usa ámbar legible");
+  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking-soft:var(--warning-100)"),"El fondo de preparación usa crema suave");
+  assert.ok(css.includes(".kitchen-ticket-time.late{background:var(--danger-500);border-color:var(--danger-500);color:var(--surface)}"),"Con demora: rojo sólido; el naranja pertenece a En preparación");
+  assert.ok(css.includes(".kitchen-ticket-time.warning{background:var(--surface);border-color:var(--danger-500);color:var(--danger-700)}"),"Por vencer: solo contorno rojo, distinto de Con demora");
+  assert.ok(css.includes('.kitchen-lane[data-status="preparando"] .kitchen-ticket-head{background:var(--kds-cooking-soft)}'),"la cabecera del ticket conserva el tinte de su carril");
+  const lateRules=css.split("\n").filter(line=>/\.(?:late|warning)\b/.test(line));
+  assert.equal(lateRules.some(line=>line.includes("warning-")),false,"La urgencia no reutiliza el naranja del carril");
+  assert.ok(css.includes(".kitchen-attention{")&&/\.kitchen-attention\{[^}]*background:var\(--danger-500\);color:var\(--surface\)/.test(css),"«N con demora» es una píldora roja viva con texto blanco");
+  assert.ok(kitchen.includes('icon:"cookingPot",tone:"orange"'),"La pestaña móvil de En preparación usa el tono naranja del carril");
+  const tabsCss=read("src/design-system/styles/tabs.css");
+  assert.ok(tabsCss.includes(".ds-tabs button.tone-orange>b{background:var(--warning-500)}"),"El contador toma el color vivo de su pestaña");
+  assert.ok(tabsCss.includes(".ds-tabs button[class*=tone-].active{color:var(--ink-950)"),"La etiqueta activa queda en tinta oscura, nunca en color vivo");
+  assert.equal(css.includes("digital-"),false,"El violeta no aparece en Cocina: identifica WhatsApp");
   assert.equal(css.includes("#"),false,"Cocina no introduce colores hexadecimales directos");
   assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");
 });
@@ -561,7 +568,8 @@ test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   assert.ok(page.includes("<ModalForm")&&page.includes("<ModalBody>"),"La reserva usa cuerpo desplazable y pie fijo estándar, sin márgenes negativos");
   const sharedModal=read("src/design-system/styles/modal.css");
   assert.match(sharedModal,/\.modal-body\{[^}]*overflow-x:hidden/,"El cuerpo del modal nunca crea desplazamiento horizontal por tooltips ocultos");
-  assert.match(sharedModal,/\.modal-body \.field-hint\[data-tooltip\]:after\{[^}]*right:/,"Las ayudas de campo abren hacia dentro del modal");
+  assert.doesNotMatch(sharedModal,/\.modal-body \.field-hint\[data-tooltip\]:after/,"Las ayudas de campo viven fuera del recorte del modal");
+  assert.ok(read("src/providers/providers.tsx").includes("<TooltipLayer/>"),"La capa global muestra acciones y ayudas sobre los modales");
   assert.ok(css.includes("grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr)"),"La columna principal conserva mayor jerarquia");
   const modalStart=page.indexOf("function ReservationDialog");
   const modal=page.slice(modalStart);
@@ -664,7 +672,8 @@ test("solo el pedido muestra un código generado; caja y turnos se identifican p
     pos:read("src/modules/operations/pos/presentation/pos-page.tsx"),
   };
   for(const [name,source] of Object.entries(cash)){
-    for(const code of ["shift.code","openShift!.code","s.code","{item.code}</small>"])assert.equal(source.includes(code),false,`${name} no muestra ${code} (CJ-/CAJ-)`);
+    for(const code of ["shift.code","openShift!.code","s.code"])assert.equal(source.includes(code),false,`${name} no muestra ${code} (CJ-/CAJ-)`);
+    if(name!=="pos")assert.equal(source.includes("{item.code}</small>"),false,`${name} no muestra códigos de caja`);
   }
   assert.ok(cash.dialog.includes("shift.cashRegisterName??\"Vista previa del cierre\""),"El informe se titula con el nombre de la caja");
   assert.ok(cash.pos.includes("data.order.code"),"El pedido conserva su código");

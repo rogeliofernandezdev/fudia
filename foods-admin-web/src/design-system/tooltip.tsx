@@ -31,7 +31,7 @@ export function placeTooltip(trigger:{left:number;top:number;bottom:number},bubb
  * Tooltip de contenido (texto de varias líneas o listas) para un disparador visual.
  * Abre con hover de puntero fino, foco de teclado y toque o pulsación larga en táctil;
  * se cierra con Escape o al tocar fuera, y acompaña al disparador al desplazar. Las etiquetas de una sola línea
- * de botones iconográficos siguen usando `[data-tooltip]`.
+ * de botones iconográficos usan `[data-tooltip]` y la capa global `TooltipLayer`.
  */
 export function Tooltip({content,label,children,className=""}:{
   content:ReactNode;

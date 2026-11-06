@@ -3,7 +3,9 @@ import "./styles/tabs.css";
 import {useRef,type KeyboardEvent,type ReactNode} from "react";
 import {Icon,type IconName} from "./icons";
 
-export type TabItem<T extends string>={value:T;label:string;count?:number;icon:IconName};
+/** Familia de color de una pestaña con significado propio (carril, canal). Sin tono, la pestaña usa el azul de selección. */
+export type TabTone="primary"|"indigo"|"orange"|"purple"|"green"|"violet";
+export type TabItem<T extends string>={value:T;label:string;count?:number;icon:IconName;tone?:TabTone};
 
 /**
  * Alinea navegación y acciones de la vista sin llevarlas a la cabecera.
@@ -31,7 +33,7 @@ export function Tabs<T extends string>({items,value,onChange,label,className=""}
   return <div ref={list} className={`ds-tabs ${className}`.trim()} role="tablist" aria-label={label}>
     {items.map((item,index)=>{
       const selected=item.value===value;
-      return <button key={item.value} type="button" role="tab" aria-selected={selected} tabIndex={selected?0:-1} className={selected?"active":""} onClick={()=>onChange(item.value)} onKeyDown={event=>move(event,index)}>
+      return <button key={item.value} type="button" role="tab" aria-selected={selected} tabIndex={selected?0:-1} className={[selected?"active":"",item.tone?`tone-${item.tone}`:""].filter(Boolean).join(" ")} data-value={item.value} onClick={()=>onChange(item.value)} onKeyDown={event=>move(event,index)}>
         <Icon name={item.icon} size={16}/>
         <span>{item.label}</span>
         {item.count!==undefined&&<b>{item.count}</b>}

@@ -33,15 +33,15 @@ export function SalesPage(){
   // Los periodos rápidos se recalculan con la fecha del local en cada render: al pasar la medianoche local, «Hoy» avanza solo.
   const range:DateRange=period==="custom"?{from,to}:periodRange(period,localToday(location?.timezone));
   const invalidRange=Boolean(range.from&&range.to&&range.from>range.to);
-  const hasFilters=Boolean(q||range.from||range.to);
+  const hasFilters=Boolean(q||period!=="today");
   const sales=useQuery({queryKey:["sales",debouncedQ,range.from,range.to,page,size],queryFn:()=>listSales({q:debouncedQ,page,pageSize:size,from:range.from,to:range.to}),enabled:!invalidRange,refetchInterval:30000});
   // Editar una fecha a mano parte del rango visible y pasa a «Personalizado».
   const custom=(next:Partial<DateRange>)=>{setFrom(next.from??range.from);setTo(next.to??range.to);setPeriod("custom");setPage(1)};
   const detail=useQuery({queryKey:["sale-detail",detailId],queryFn:()=>getSaleDetail(detailId!),enabled:Boolean(detailId)});
   const money=useMoney();
   const date=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
-  return <><PageHeader title="Ventas" description="Historial real de pedidos completamente cobrados del local."/>
-    <section className="panel management standardized-management sales-panel">
+  return <><PageHeader title="Ventas" description="Consulta los pedidos cobrados y sus pagos en tu local."/>
+    <section className="panel standardized-management sales-panel" aria-label="Ventas del local">
       <SalesPeriods period={period} choose={value=>{if(value==="custom"){custom({})}else{setPeriod(value);setPage(1)}}}/>
       <SalesFilters q={q} period={period} from={range.from} to={range.to} invalidRange={invalidRange} search={value=>{setQ(value);setPage(1)}} start={value=>custom({from:value})} end={value=>custom({to:value})} clear={()=>custom({from:"",to:""})}/>
       {!invalidRange&&<SalesPeriodSummary period={period} range={range} loading={sales.isLoading} error={sales.isError} count={sales.data?.total??0} amount={sales.data?.amountTotal} money={money} day={value=>formatRegionalCalendarDate(value,location?.country,{day:"numeric",month:"short"})}/>}
@@ -61,10 +61,17 @@ export function SalesPage(){
   </>;
 }
 
-/** Periodos rápidos: hijo directo del panel para quedar fijos en móvil mientras se recorre la lista. */
+/** Selección inmediata por toque o teclado; una sola franja fija al recorrer el historial. */
 function SalesPeriods({period,choose}:{period:SalesPeriod;choose:(value:SalesPeriod)=>void}){
   return <div className="sales-periods" role="radiogroup" aria-label="Periodo de ventas">
-    {salesPeriods.map(option=><button type="button" key={option.value} role="radio" aria-checked={period===option.value} className={`sales-period${period===option.value?" active":""}`} onClick={()=>choose(option.value)}>{option.label}</button>)}
+    {salesPeriods.map((option,index)=><button type="button" key={option.value} role="radio" aria-checked={period===option.value} tabIndex={period===option.value?0:-1} className={`sales-period${period===option.value?" active":""}`} onClick={()=>choose(option.value)} onKeyDown={event=>{
+      const direction=event.key==="ArrowRight"||event.key==="ArrowDown"?1:event.key==="ArrowLeft"||event.key==="ArrowUp"?-1:0;
+      if(!direction&&event.key!=="Home"&&event.key!=="End")return;
+      event.preventDefault();
+      const next=event.key==="Home"?0:event.key==="End"?salesPeriods.length-1:(index+direction+salesPeriods.length)%salesPeriods.length;
+      choose(salesPeriods[next].value);
+      event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
+    }}>{option.label}</button>)}
   </div>;
 }
 
@@ -95,14 +102,14 @@ function SalesPeriodSummary({period,range,loading,error,count,amount,money,day}:
   return <div className="sales-period-summary" role="status" aria-live="polite">
     <span>{title}</span>
     <strong className="tabular">{money(amount)}</strong>
-    <small>{count===1?"1 venta":`${count} ventas`}{count>0&&<> · Ticket promedio <b className="tabular">{money(total/count)}</b></>}</small>
+    <small>{count===1?"1 venta":`${count} ventas`}{count>0&&<> · Promedio por pedido <b className="tabular">{money(total/count)}</b></>}</small>
   </div>;
 }
 
 function SalesResults({items,money,date,view}:{items:Sale[];money:(value:string|number)=>string;date:(value:string)=>string;view:(id:string)=>void}){
   const action=(sale:Sale)=><div className="standard-actions"><RowActionButton action="view" label={`Ver detalle de la venta ${sale.code}`} onClick={()=>view(sale.id)}/></div>;
   return <>
-    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((sale,i)=><tr className={i%2?"alternate":""} key={sale.id}><td><span className="row-icon"><Icon name="receipt"/></span><b>{sale.code}</b></td><td><b>{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small>{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td>{date(sale.createdAt)}</td><td><b>{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td>{action(sale)}</td></tr>)}</tbody></DataTable>
+    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(sale=><tr className="sales-row" key={sale.id} onClick={()=>view(sale.id)}><td><span className="sales-order-code"><Icon name="receipt" size={16}/><b>{sale.code}</b></span></td><td><b className="sales-customer">{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small className="sales-customer-name">{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td><time dateTime={sale.createdAt}>{date(sale.createdAt)}</time></td><td><b className="sales-row-total tabular">{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td onClick={event=>event.stopPropagation()}>{action(sale)}</td></tr>)}</tbody></DataTable>
   </>;
 }
 

@@ -45,10 +45,10 @@ function load(path){
  }});return exports;
 }
 const {ProductAvailabilityManager}=load("modules/menu/availability/presentation/product-availability-manager");
-const css=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n");
+const css=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n").replaceAll(".availability-",".availability-previous-")+"\n"+readFileSync(resolve(root,"src/modules/menu/availability/presentation/product-availability.css"),"utf8");
 assert.match(css,/availability-quota-editor/);
 const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];assert.ok(font);
-const output=resolve(process.argv[2]);mkdirSync(output,{recursive:true});
+const output=resolve(process.argv[2]&&!process.argv[2].startsWith("--")?process.argv[2]:".cache/availability-preview");mkdirSync(output,{recursive:true});
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  mode=new URL(req.url,"http://localhost").searchParams.get("mode")??"normal";
@@ -56,6 +56,7 @@ const server=createServer((req,res)=>{
  res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}${css}.availability-preview{padding:32px;max-width:1600px;margin:auto}@media(width<=600px){.availability-preview{padding:16px}}</style></head><body><main class="availability-preview">${markup}</main></body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
+if(process.argv.includes("--serve")){console.log(`Availability QA: http://127.0.0.1:${server.address().port} (sin API ni escrituras)`);await new Promise(()=>{});}
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");let browser;
 const issues=[];
 try{
@@ -68,9 +69,9 @@ try{
   assert.equal(await page.locator(".availability-panel").evaluate(el=>getComputedStyle(el).boxShadow),"none","Border-only panel survives compiled cascade");
   if(width===390)assert.ok(await page.locator(".availability-toolbar select").evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16),"Touch select typography");
   if(!["loading","error","empty","readonly"].includes(state))assert.ok(await page.locator(".availability-soldout-action").evaluateAll(elements=>{
-   const probe=document.createElement("span");probe.style.color="var(--warning)";document.body.append(probe);const warning=getComputedStyle(probe).color;probe.remove();
-   return elements.every(el=>{const style=getComputedStyle(el);return style.color===warning&&style.borderTopColor===warning});
-  }),"Warning action survives compiled cascade");
+   const probe=document.createElement("span");probe.style.color="var(--danger-600)";document.body.append(probe);const danger=getComputedStyle(probe).color;probe.style.color="var(--danger-200)";const border=getComputedStyle(probe).color;probe.remove();
+   return elements.every(el=>{const style=getComputedStyle(el);return style.color===danger&&style.borderTopColor===border});
+  }),"Shared soft-red action survives compiled cascade");
   if(!["loading","error","empty"].includes(state)){
    assert.equal(await page.locator(".availability-list-head>span").count(),5);
    if(!await page.locator(".availability-card").evaluateAll(elements=>elements.every(el=>el.scrollWidth<=el.clientWidth+1)))issues.push(`${state} ${width}: card overflow`);
@@ -84,9 +85,9 @@ try{
    const action=page.locator(".availability-soldout-action").first();await action.hover();
    assert.ok(await action.evaluate(async el=>{
     await new Promise(requestAnimationFrame);await Promise.all(el.getAnimations().map(animation=>animation.finished));
-    const probe=document.createElement("span");probe.style.background="var(--warning-50)";document.body.append(probe);const expected=getComputedStyle(probe).backgroundColor;probe.remove();
+    const probe=document.createElement("span");probe.style.background="var(--danger-100)";document.body.append(probe);const expected=getComputedStyle(probe).backgroundColor;probe.remove();
     return getComputedStyle(el).backgroundColor===expected;
-   }),"Warning hover remains soft, never indigo");
+   }),"Destructive hover uses the shared soft red");
   }
   console.log(`${width}px ${state}: verificado`);await page.close();
  }

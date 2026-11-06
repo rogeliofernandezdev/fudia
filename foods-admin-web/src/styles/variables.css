@@ -87,13 +87,20 @@
   --digital-500: #7c3aed;
   --digital-700: #5421a8;
 
+  /* «Por entregar»: morado de la referencia aprobada (2026-11-05), distinto del violeta digital de WhatsApp. */
+  --purple-100: #f2e6f8;
+  --purple-200: #ddbfee;
+  --purple-600: #681a92;
+
   /* Entrega completada: azul petróleo, distinto de Listo y de Pagada. */
   --teal-100: #e6f5f7;
+  --teal-500: #0e9aab;
   --teal-700: #0b6b78;
   --teal-200: #cce4e8;
 
   /* Cuenta abierta: celeste, distinto del índigo de Confirmado. */
   --sky-100: #e0f2fe;
+  --sky-500: #0ea5e9;
   --sky-800: #075985;
   /* Tinte de selección de chips: un paso sobre el fondo tenue de su familia */
   --sky-200: #c2dded;
@@ -461,7 +468,7 @@
   --z-sheet: 120;
   --z-confirm: 130;
   --z-toast: 140;
-  --z-tooltip: 135;
+  --z-tooltip: 150;
   --z-feedback: 140;
   --z-loader: 200;
 
@@ -515,11 +522,12 @@ body {
 .kitchen-page {
   --kds-pending: var(--indigo-600);
   --kds-pending-dark: var(--indigo-700);
-  --kds-cooking: var(--digital-500);
-  --kds-cooking-dark: var(--digital-700);
-  --kds-cooking-soft: var(--digital-100);
-  --kds-ready: var(--brand-600);
-  --kds-ready-dark: var(--brand-700);
+  --kds-cooking: var(--warning-500);
+  --kds-cooking-dark: var(--warning-600);
+  --kds-cooking-soft: var(--warning-100);
+  --kds-ready: var(--purple-600);
+  --kds-ready-dark: var(--purple-600);
+  --kds-ready-soft: var(--purple-100);
   --kds-note: var(--note-100);
   --kds-note-ink: var(--note-ink);
 }

@@ -10,7 +10,7 @@ test("Ventas muestra una unica tabla con los registros de la pagina",()=>{
   const source=read("src/modules/sales/presentation/sales-page.tsx");
   const css=postcss.parse(read("src/modules/sales/presentation/sales.css"));
   assert.match(source,/<DataTable label="Historial de ventas"/);
-  assert.match(source,/items\.map\(\(sale,i\)=>/);
+  assert.match(source,/items\.map\(sale=>/);
   assert.match(source,/key=\{sale\.id\}/);
   assert.doesNotMatch(source,/management-cards|sales-cards/);
   assert.match(source,/<Pagination page=\{page\} size=\{size\} total=\{sales\.data\?\.total\?\?0\}/);

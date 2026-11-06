@@ -32,8 +32,9 @@ test("los inputs ocultos con position:absolute se anclan a su etiqueta con posit
  assert.ok(hidden.includes(".combo-toggle > input"),"el interruptor Obligatorio de menús y combos queda cubierto");
 });
 
-test("los tooltips de acciones de fila crecen hacia la izquierda y no desbordan la tabla",()=>{
+test("los tooltips de acciones de fila no forman parte del área desplazable de la tabla",()=>{
  const css=readFileSync(new URL("../src/design-system/styles/table-actions.css",import.meta.url),"utf8");
- assert.ok(css.includes(":is(.standard-actions,.table-actions,td:last-child) [data-tooltip]:after{left:auto;right:0;transform:translateY(var(--size-4))}"),"anclado al borde derecho del botón");
- assert.match(css,/@media \(hover:hover\) and \(pointer:fine\)\{[^@]*:is\(\.standard-actions,\.table-actions,td:last-child\) \[data-tooltip\]:hover:after\{transform:translateY\(0\)\}/,"al mostrarse no vuelve a centrarse");
+ assert.doesNotMatch(css,/\[data-tooltip\]/,"sin pseudoelementos dentro del viewport de la tabla");
+ const layer=readFileSync(new URL("../src/design-system/tooltip-layer.tsx",import.meta.url),"utf8");
+ assert.ok(layer.includes("createPortal")&&layer.includes("document.body"),"capa independiente del scroll y los recortes");
 });

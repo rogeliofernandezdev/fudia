@@ -35,7 +35,7 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.match(page,/formatTableOccupation\(t\.occupiedSince,clock\)/);
  assert.match(page,/setInterval\(\(\)=>setClock\(Date\.now\(\)\),30000\)/);
  assert.match(page,/floor\.isError&&!floor\.data/);
- assert.match(page,/<Status tone=\{meta\.tone\} emphasis>\{meta\.label\}<\/Status>/,"estado destacado con la variante compartida");
+ assert.match(page,/<Status tone=\{meta\.tone\} emphasis solid>\{meta\.label\}<\/Status>/,"estado operativo destacado y sólido con la variante compartida");
  assert.match(page,/<Status tone="green" emphasis>Libre<\/Status>/,"Libre usa el estado positivo compartido aprobado");
  assert.doesNotMatch(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.doesNotMatch(page,/className="salon-table-order-status"/);

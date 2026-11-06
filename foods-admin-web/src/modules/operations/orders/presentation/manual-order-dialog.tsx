@@ -4,7 +4,7 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,ConfirmDialog,Dialog,FormField,Input,ModalHeader,ModalFooter,MoneyInput,Tabs} from "@/design-system";
 import {LocationMap,type Coordinates} from "@/design-system/location-map";
-import {channelIcons} from "./order-meta";
+import {channelIcons,channelTone} from "./order-meta";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {Draft} from "../../salon/domain/types";
 import {ComandaView} from "./comanda-view";
@@ -79,7 +79,7 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave,q
      <div className="manual-order-body">
       <fieldset className="manual-order-fields" disabled={locked}>
        <div className="manual-order-type">
-        <Tabs className="manual-order-channel" label="Tipo de atención" value={channel} onChange={value=>setValue("channel",value,{shouldDirty:true,shouldValidate:Boolean(errors.channel)})} items={channelOptions.map(option=>({value:option.value,label:option.label,icon:channelIcons[option.value]??"receipt"}))}/>
+        <Tabs className="manual-order-channel" label="Tipo de atención" value={channel} onChange={value=>setValue("channel",value,{shouldDirty:true,shouldValidate:Boolean(errors.channel)})} items={channelOptions.map(option=>({value:option.value,label:option.label,icon:channelIcons[option.value]??"receipt",tone:channelTone(option.value)}))}/>
         {errors.channel?.message&&<small className="field-error" role="alert">{errors.channel.message}</small>}
        </div>
        <FormField className="manual-order-name" label="Nombre del cliente" optional={!delivery} error={errors.customerName?.message}><Input icon="user" {...register("customerName")} autoComplete="name" maxLength={160}/></FormField>

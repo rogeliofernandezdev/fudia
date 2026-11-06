@@ -62,7 +62,7 @@ p{text-wrap:pretty}
 .button.primary{color:var(--surface);background:var(--primary-600);box-shadow:var(--elevation-primary)}
 .button.secondary{color:var(--primary-700);border-color:var(--primary-200);background:var(--surface)}
 .button.ghost{color:var(--ink-700);border-color:var(--line);background:var(--surface)}
-.button.danger{color:var(--surface);background:var(--danger)}
+.button.danger{color:var(--surface);background:var(--danger-500)}
 .button.danger-outline{color:var(--danger);border-color:var(--danger-200);background:var(--danger-50)}
 .button.success{color:var(--surface);background:var(--primary-600);box-shadow:var(--elevation-primary)}
 .button:focus-visible,.toolbar button:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}
@@ -74,7 +74,9 @@ p{text-wrap:pretty}
 .panel header small{color:var(--ink-500);font-size:var(--font-size-xs);font-weight:var(--weight-medium)}
 .panel header select{height:var(--control-height);padding:0 var(--space-8) 0 var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 
-/* Estados con texto e icono */
+/* Estados en tres niveles (2026-11-05). Suave por defecto: fondo tenue, texto oscuro
+   y punto de su familia (registros, compras, caja, cuenta y pago). `.solid`: relleno vivo
+   con texto blanco, solo para estados operativos del pedido. Atributos usan `.tag`. */
 .status{display:inline-flex;align-items:center;gap:var(--space-1-5);width:max-content;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-pill);color:var(--brand-800);background:var(--brand-100);font-size:var(--font-size-label);font-weight:var(--weight-semibold);line-height:var(--line-height-snug)}
 .status i{width:var(--size-6);height:var(--size-6);border-radius:var(--radius-pill);background:currentColor}
 .status-icon{display:block;flex:none;stroke-width:2}
@@ -85,11 +87,27 @@ p{text-wrap:pretty}
 .status.gray{color:var(--ink-500);background:var(--cloud-100)}
 .status.red{color:var(--danger-700);background:var(--danger-50)}
 .status.violet{color:var(--digital-700);background:var(--digital-100)}
+.status.purple{color:var(--purple-600);background:var(--purple-100)}
 .status.teal{color:var(--teal-700);background:var(--teal-100)}
-/* Variante de contorno marino; la mesa Libre utiliza el estado positivo green. */
-.status.navy{color:var(--navigation-900);background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-1-5) var(--navigation-900)}
+.status.navy{color:var(--navigation-900);background:var(--cloud-150)}
 .status.emphasized{padding:var(--space-1-5) var(--space-3);font-weight:var(--weight-bold)}
 .status.gray.emphasized{color:var(--ink-800);background:var(--cloud-150)}
+.status.solid{color:var(--surface);font-weight:var(--weight-bold)}
+.status.solid i,.status.solid .status-icon{color:var(--surface)}
+.status.solid.green{background:var(--brand-600)}
+.status.solid.blue{background:var(--indigo-600)}
+.status.solid.sky{background:var(--sky-500)}
+.status.solid.orange{background:var(--warning-500)}
+.status.solid.gray{background:var(--ink-500)}
+.status.solid.red{background:var(--danger-500)}
+.status.solid.violet{background:var(--digital-500)}
+.status.solid.purple{background:var(--purple-600)}
+.status.solid.teal{background:var(--teal-500)}
+.status.solid.navy{background:var(--navigation-900)}
+.status.solid.gray.emphasized{color:var(--surface);background:var(--ink-700)}
+/* Atributo neutro (no es estado): gris, sin color semántico. */
+.tag{display:inline-flex;align-items:center;gap:var(--space-1-5);width:max-content;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-control);color:var(--ink-700);background:var(--cloud-100);font-size:var(--font-size-label);font-weight:var(--weight-medium);line-height:var(--line-height-snug)}
+.tag svg{flex:none;color:var(--ink-500)}
 
 /* Barra de filtros */
 .toolbar{display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
@@ -180,7 +198,7 @@ p{text-wrap:pretty}
 .switch-row input:disabled+span{opacity:var(--opacity-disabled)}
 .switch-row:has(input:disabled){cursor:not-allowed}
 .switch-row>span:after{content:"";display:block;width:var(--size-18);height:var(--size-18);border-radius:var(--radius-pill);background:var(--surface);box-shadow:var(--elevation-1);transition:transform var(--duration-base) var(--easing-out)}
-.switch-row input:checked+span{background:var(--brand-700)}
+.switch-row input:checked+span{background:var(--primary-600)}
 .switch-row input:checked+span:after{transform:translate(var(--size-14))}
 .switch-row input:focus-visible+span{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}
 .switch-row b{display:grid;font-size:var(--font-size-label)}
@@ -205,7 +223,7 @@ p{text-wrap:pretty}
   .button.primary:hover:not(:disabled),.button.success:hover:not(:disabled){background:var(--primary-700)}
   .button.secondary:hover:not(:disabled){border-color:var(--primary-300);background:var(--primary-50)}
   .button.ghost:hover:not(:disabled){color:var(--ink-950);border-color:var(--line-strong);background:var(--cloud-50)}
-  .button.danger:hover:not(:disabled){background:var(--danger-700)}
+  .button.danger:hover:not(:disabled){background:var(--danger-600)}
   .button.danger-outline:hover:not(:disabled){border-color:var(--danger-600);background:var(--danger-100)}
   .ds-input:hover:not(:disabled,:focus,[aria-invalid=true]),.ds-select:hover:not(:disabled,:focus,[aria-invalid=true]),.ds-textarea:hover:not(:disabled,:focus,[aria-invalid=true]),.form-grid :is(input,select,textarea):hover:not(:disabled,:focus,[aria-invalid=true]),.ds-input-shell:hover:not(:focus-within),.react-select-container .rs__control:hover{border-color:var(--line-strong)}
   .hover-scroll:hover{scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}

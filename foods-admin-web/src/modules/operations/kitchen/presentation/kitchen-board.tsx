@@ -3,17 +3,17 @@ import "../../styles/salon-comanda.css";
 import "./kitchen.css";
 import {useEffect,useState} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ErrorState,Icon,IconName,PageHeader,Skeleton,Tabs} from "@/design-system";
+import {Button,ErrorState,Icon,IconName,PageHeader,Skeleton,Tabs,type TabTone} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {KitchenResponse,KitchenStatus,KitchenTicket} from "../domain/types";
 import {applyPlateStatus,isTrackedPlate,plateProgress,type PlateStatus} from "../domain/plates";
 import {listKitchenTickets,updateKitchenItemStatus,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
 
-const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName}>= [
-  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock"},
-  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"},
-  {status:"listo",label:"POR ENTREGAR",shortLabel:"Por entregar",description:"Esperando entrega",icon:"check"},
+const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName;tone:TabTone}>= [
+  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock",tone:"indigo"},
+  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot",tone:"orange"},
+  {status:"listo",label:"POR ENTREGAR",shortLabel:"Por entregar",description:"Esperando entrega",icon:"bell",tone:"purple"},
 ];
 
 /** Icono por área de preparación; las áreas y sus nombres llegan del API. */
@@ -58,7 +58,7 @@ function formatElapsed(minutes:number){
 function urgencyCopy(tone:ReturnType<typeof urgency>):{label:string|null;icon:IconName}{
   if(tone==="late")return {label:"Con demora",icon:"alert"};
   if(tone==="warning")return {label:"Por vencer",icon:"alert"};
-  if(tone==="ready")return {label:"Por entregar",icon:"check"};
+  if(tone==="ready")return {label:"Por entregar",icon:"bell"};
   if(tone==="fresh")return {label:"A tiempo",icon:"clock"};
   return {label:null,icon:"clock"};
 }
@@ -138,10 +138,10 @@ export function KitchenBoard(){
   const now=serverBase&&tickets.dataUpdatedAt?serverBase+Math.max(0,clock-tickets.dataUpdatedAt):clock;
   const items=tickets.data?.items??[];
   const counts=tickets.data?.counts??{confirmado:0,preparando:0,listo:0};
-  const attention=items.filter(ticket=>{
-    const tone=urgency(ticket,now);
-    return tone==="warning"||tone==="late";
-  }).length;
+  // El aviso separa lo vencido de lo que está por vencer: nunca rotula «con demora» a un ticket a tiempo.
+  const late=items.filter(ticket=>urgency(ticket,now)==="late").length;
+  const dueSoon=items.filter(ticket=>urgency(ticket,now)==="warning").length;
+  const attentionLabel=[late>0&&`${late} con demora`,dueSoon>0&&`${dueSoon} por vencer`].filter(Boolean).join(" · ");
 
   const channelLabel=(value:string)=>tickets.data?.channelOptions.find(option=>option.value===value)?.label??value;
   const busyId=advance.isPending?advance.variables?.ticket.id:null;
@@ -151,7 +151,7 @@ export function KitchenBoard(){
       title={destination==="bar"?"Barra":"Cocina"}
       description="Prepara y libera pedidos del local con una cola clara por estado."
       action={<div className="kitchen-header-tools">
-        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={14}/>{attention} con demora</span>}
+        {attentionLabel&&<span className={`kitchen-attention${late>0?"":" is-due-soon"}`}><Icon name="alert" size={14}/>{attentionLabel}</span>}
         {/* Estación: qué pantalla se opera (Cocina o Barra). No es un filtro de pedidos. */}
         {(tickets.data?.destinationOptions?.length??0)>1&&<div className="kitchen-station">
           <span className="kitchen-filter-label">Estación</span>
@@ -169,7 +169,7 @@ export function KitchenBoard(){
       </div>}
     </section>
 
-    <Tabs className="kitchen-mobile-tabs" label="Estado de las comandas" value={mobileLane} onChange={setMobileLane} items={lanes.map(lane=>({value:lane.status,label:lane.shortLabel,icon:lane.icon,count:counts[lane.status]}))}/>
+    <Tabs className="kitchen-mobile-tabs" label="Estado de las comandas" value={mobileLane} onChange={setMobileLane} items={lanes.map(lane=>({value:lane.status,label:lane.shortLabel,icon:lane.icon,tone:lane.tone,count:counts[lane.status]}))}/>
 
     {tickets.isPending?<KitchenLoading/>:tickets.isError?<ErrorState className="kitchen-state" title="No pudimos cargar la cola de cocina" text={tickets.error.message} onRetry={()=>void tickets.refetch()}/>:<div className="kitchen-board">
       {lanes.map(lane=>{
@@ -223,7 +223,7 @@ export function KitchenBoard(){
 
                 {ticket.notes&&<p className="kitchen-ticket-note"><Icon name="edit" size={14}/><span><b>Nota del pedido:</b> {ticket.notes}</span></p>}
 
-                {canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"cookingPot"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})} loading={busyId===ticket.id}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={14}/>Listo para entregar</span>:null}
+                {canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"cookingPot"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})} loading={busyId===ticket.id}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="bell" size={14}/>Listo para entregar</span>:null}
               </article>;
             })}
             {!laneItems.length&&<p className="kitchen-lane-empty">{lane.status==="confirmado"?"Sin pedidos por preparar.":lane.status==="preparando"?"Nada en preparación.":"Nada esperando entrega."}</p>}

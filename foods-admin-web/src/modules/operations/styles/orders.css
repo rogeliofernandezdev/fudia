@@ -192,6 +192,10 @@
   gap:var(--space-1);
 }
 
+/* Toda la fila abre el detalle (en móvil el ojo queda tras el desplazamiento);
+   el botón «Ver detalle» se conserva para teclado y lectores de pantalla. */
+.orders-row{cursor:pointer}
+
 .orders-loading{
   min-height:var(--size-340);
 }

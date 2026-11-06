@@ -1,7 +1,7 @@
 "use client";
 import type {ReactNode} from "react";
 import {useMutation,useQueryClient} from "@tanstack/react-query";
-import {Button,Status} from "@/design-system";
+import {Button} from "@/design-system";
 import {useSession,useFeedback} from "@/providers";
 import {canManageOrderService} from "../domain/order-actions";
 import {canAddConsumption,canCloseAccount,type TableAccount} from "../domain/service-flow";
@@ -17,7 +17,7 @@ function useServiceMutation(){
  },onError:error=>notify({tone:"danger",title:"No se pudo actualizar",message:error.message})});
 }
 
-/** Destino y estado por producto. `lead` (precio unitario) comparte la fila con el destino; el estado queda alineado a la derecha y se omite con `hideStatus` cuando todas las preparaciones comparten estado y el estado del pedido ya lo expresa. `exclude` omite preparaciones ya presentadas en la línea de componentes del combo. */
+/** Destino y estado por producto. `lead` (precio unitario) comparte la fila con el destino; el estado queda alineado a la derecha como texto (el color lo aporta el icono sólido de la línea) y se omite con `hideStatus`. `exclude` omite preparaciones ya presentadas en la línea de componentes del combo. */
 export function OrderItemService({order,itemId,lead,hideStatus=false,exclude}:{order:TableAccount;itemId:string;lead?:ReactNode;hideStatus?:boolean;exclude?:ReadonlySet<string>}){
  const items=(order.serviceItems??[]).filter(item=>item.orderItemId===itemId&&!exclude?.has(item.id));
  if(!items.length)return lead?<div className="order-service-lines"><div className="order-service-line"><div>{lead}</div></div></div>:null;
@@ -25,7 +25,7 @@ export function OrderItemService({order,itemId,lead,hideStatus=false,exclude}:{o
  return <div className="order-service-lines">
   {!single&&lead&&<div className="order-service-line"><div>{lead}</div></div>}
   {items.map(item=><div className="order-service-line" key={item.id}>
-   <div>{single&&lead}{!single&&<span>{item.name}</span>}<small>{item.destinationLabel}</small></div>{!hideStatus&&<Status tone={serviceStatusTone(item.status)}>{item.statusLabel}</Status>}
+   <div>{single&&lead}{!single&&<span>{item.name}</span>}<small>{item.destinationLabel}</small></div>{!hideStatus&&<span className="order-service-state" data-tone={serviceStatusTone(item.status)}>{item.statusLabel}</span>}
   </div>)}
  </div>;
 }

@@ -14,7 +14,7 @@ import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
 import type {ServiceItem} from "../domain/service-flow";
 import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
 import {OrderTimeline} from "./order-timeline";
-import {channelIcons,isEditableOrder,openedAgo,orderStatus,registeredAt,serviceStatusTone,tableTitle} from "./order-meta";
+import {channelIcons,isEditableOrder,lineServiceStatus,openedAgo,orderStatus,registeredAt,serviceStateLook,tableTitle} from "./order-meta";
 import {OrderAccountActions,OrderItemService,accountLabel,accountTone} from "./order-service-controls";
 
 /**
@@ -57,10 +57,6 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const items=order?.items??[];
   const point=order?deliveryPoint(order):null;
-  // Si todas las preparaciones repiten el estado del pedido (Nuevo/Sin enviar, Preparando, Listo, Entregado), no se muestran por línea.
-  // Confirmado se conserva: «Pendiente» indica que la comanda enviada aún no empieza a prepararse.
-  const services=order?.serviceItems??[];
-  const sharedService=Boolean(order&&order.status!=="confirmado"&&services.length>0&&services.every(service=>service.status===order.status));
   const title=table||order?.channel==="salon"?tableTitle(order?.tableName):order?(order.tableName||order.customerName||"Pedido"):"Pedido";
   const subtitle=order?(table?order.customerName:order.tableName&&order.customerName?order.customerName:""):"";
   const opened=order?(table?openedAgo(order.createdAt,location?.country,location?.timezone):registeredAt(order.createdAt,location?.country,location?.timezone)):"";
@@ -86,7 +82,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
         <div className="order-detail-content">
           <section className="order-detail-hero" aria-label="Resumen del pedido">
             <div className="order-detail-identity">
-              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></div>
+              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone} solid>{meta.label}</Status></div></div>
               <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>
               <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
             </div>
@@ -107,15 +103,15 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
           </section>
 
           <Tabs className="order-detail-tabs" label="Información del pedido" value={tab} onChange={setTab} items={[
-            {value:"products",label:"Productos",icon:"dish",count:items.length},
-            {value:"tracking",label:"Seguimiento",icon:"route"},
+            {value:"products",label:"Productos",icon:"dish",tone:"orange",count:items.length},
+            {value:"tracking",label:"Seguimiento",icon:"route",tone:"indigo"},
           ]}/>
 
           <div className="order-detail-panel" role="tabpanel" aria-labelledby="order-detail-products-title" hidden={tab!=="products"}>
             <h3 id="order-detail-products-title" className="sr-only">Productos del pedido</h3>
             <section className="order-detail-consumption" aria-labelledby="order-detail-products-title">
               <ModalItemList className="order-detail-items">
-                {items.map(item=><OrderDetailLine key={item.id} order={order} item={item} hideStatus={sharedService}/>)}
+                {items.map(item=><OrderDetailLine key={item.id} order={order} item={item}/>)}
                 {!items.length&&<div className="order-detail-empty" role="listitem"><Icon name="receipt" size={20}/><span>Sin ítems cargados aún.</span></div>}
               </ModalItemList>
             </section>
@@ -158,7 +154,8 @@ function comboComponents(item:OrderItem,services:ServiceItem[]){
 }
 
 /** Fila de producto: cantidad, nombre e importe; debajo precio c/u y, en combos, el bloque neutro de componentes a modo de carta (grupo | plato, destino si difiere y estado). */
-function OrderDetailLine({order,item,hideStatus}:{order:Order;item:OrderItem;hideStatus:boolean}){
+function OrderDetailLine({order,item}:{order:Order;item:OrderItem}){
+  // El estado de cada línea siempre se ve: icono sólido de color y su etiqueta en texto a la derecha.
   const money=useMoney();
   const components=item.itemType==="combo"?comboComponents(item,order.serviceItems??[]):[];
   const shown=new Set(components.flatMap(component=>component.service?[component.service.id]:[]));
@@ -166,18 +163,21 @@ function OrderDetailLine({order,item,hideStatus}:{order:Order;item:OrderItem;hid
   // Si todos los componentes van al mismo destino, se indica una sola vez junto al precio en lugar de repetirlo por fila.
   const destinations=new Set(components.map(component=>component.service?.destinationLabel));
   const sharedDestination=combo&&destinations.size===1&&!destinations.has(undefined)?components[0].service?.destinationLabel:undefined;
-  return <div className="modal-item-row order-detail-line" role="listitem">
-    <b className="modal-item-quantity order-detail-qty">{Number(item.qty)}×</b>
+  const state=lineServiceStatus((order.serviceItems??[]).filter(service=>service.orderItemId===item.id).map(service=>service.status),order.status);
+  const look=serviceStateLook(state);
+  // Fila 1: estado sólido · «1× nombre» · importe. Fila 2: precio c/u · destino · estado en texto.
+  return <div className="modal-item-row has-state order-detail-line" role="listitem">
+    <IconTile className="modal-item-state" name={look.icon} tone={look.tone} appearance="vivid" size="sm"/>
     <div className="order-detail-line-info">
-      <span>{item.name}</span>
+      <span><b className="modal-item-quantity order-detail-qty">{Number(item.qty)}×</b>{item.name}</span>
       {item.note&&<ModalItemNote>{item.note}</ModalItemNote>}
-      <OrderItemService order={order} itemId={item.id} lead={<><small>{money(item.unitPrice)} c/u</small>{sharedDestination&&<small>{sharedDestination}</small>}</>} hideStatus={hideStatus} exclude={shown}/>
+      <OrderItemService order={order} itemId={item.id} lead={<><small>{money(item.unitPrice)} c/u</small>{sharedDestination&&<small>{sharedDestination}</small>}</>} exclude={shown}/>
       <ModalItemComponents label={`Componentes de ${item.name}`} items={components.map(({selection,service})=>({
         key:selection.groupId+selection.productId,
         group:selection.groupName,
         name:selection.name,
         extra:Number(selection.surcharge)>0&&<small>+{money(selection.surcharge)}</small>,
-        side:<>{service&&!sharedDestination&&<span>{service.destinationLabel}</span>}{service&&!hideStatus&&<Status tone={serviceStatusTone(service.status)}>{service.statusLabel}</Status>}</>,
+        side:<>{service&&!sharedDestination&&<span>{service.destinationLabel}</span>}{service&&<span className="order-service-state">{service.statusLabel}</span>}</>,
       }))}/>
     </div>
     <strong className="order-detail-line-total">{money(Number(item.qty)*Number(item.unitPrice))}</strong>

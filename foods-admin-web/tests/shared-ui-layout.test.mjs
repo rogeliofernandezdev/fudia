@@ -85,7 +85,7 @@ test("la barra compartida alinea acciones en escritorio y les da una fila comple
 test("con teclado abierto en móvil el modal cede alto al formulario sin perder acciones",()=>{
  const css=sheet("design-system/styles/modal.css");const keyboard="(width<=600px) and (height<=560px)";
  assert.equal(declaration(css,".crud-modal.size-md","max-height",keyboard),"100dvh");
- assert.equal(declaration(css,".modal-header","min-height",keyboard),"var(--size-52)");
+ assert.equal(declaration(css,".modal-header","min-height",keyboard),"var(--size-48)","más compacta que los 52 px habituales");
  assert.equal(declaration(css,".modal-header h2","font-size",keyboard),"var(--font-size-md)");
  assert.equal(declaration(css,".modal-context","display",keyboard),"none");
  assert.equal(declaration(css,".modal-footer","display",keyboard),undefined,"el pie sigue visible");
@@ -122,8 +122,8 @@ test("pestañas móviles muestran pares completos con ajuste por grupo y etiquet
 });
 test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todos los tamaños",()=>{
  const css=sheet("design-system/styles/modal.css");
- assert.equal(declaration(css,".crud-modal>header","padding"),"var(--space-2) var(--space-6)");
- assert.equal(declaration(css,".crud-modal>header","min-height"),"var(--size-64)");
+ assert.equal(declaration(css,".crud-modal>header","padding"),"var(--space-1) var(--space-6)");
+ assert.equal(declaration(css,".crud-modal>header","min-height"),"var(--size-52)","cabecera compacta de 52 px");
  assert.equal(declaration(css,".crud-modal>header","background"),"var(--navigation-900)");
  assert.doesNotMatch(read("design-system/styles/modal.css"),/modal-accent/);
  assert.doesNotMatch(read("design-system/modal.tsx"),/modal-accent/);
@@ -135,15 +135,14 @@ test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todo
  for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-44)");
  assert.equal(declaration(css,".modal-footer>.modal-footer-note","flex-basis"),"100%");
 });
-test("icono blanco en recuadro translúcido y X blanca con solo contorno y sin hover de color",()=>{
+test("icono y X blancos directos sobre la cabecera marina, sin caja ni contorno",()=>{
  const css=sheet("design-system/styles/modal.css");
- assert.equal(declaration(css,".modal-title-icon","background"),"var(--surface-alpha-16)");
+ assert.equal(declaration(css,".modal-title-icon","background"),"transparent");
  assert.equal(declaration(css,".modal-title-icon","color"),"var(--surface)");
  assert.equal(declaration(css,".modal-close","background"),"transparent");
  assert.equal(declaration(css,".modal-close","border"),"0");
- assert.equal(declaration(css,".modal-close::before","border"),"var(--stroke-1) solid var(--surface)");
- for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close::before",prop),"var(--size-32)");
- assert.equal(declaration(css,".modal-close::before","pointer-events"),"none");
+ let closeFrame=false;css.walkRules(rule=>{if(rule.selector.includes("modal-close::before"))closeFrame=true;});
+ assert.equal(closeFrame,false,"la X no lleva recuadro");
  for(const selector of [".crud-modal>header .modal-title-icon>svg",".crud-modal>header>button>svg"]){
   for(const prop of ["width","height"])assert.equal(declaration(css,selector,prop),"var(--size-20)");
  }

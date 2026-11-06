@@ -1,14 +1,14 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
 import {canChargeAccount,canCollectOrder} from "../../orders/domain/service-flow";
-import {orderStatus,originLabel} from "../../orders/presentation/order-meta";
+import {lineServiceState,orderStatus,originLabel} from "../../orders/presentation/order-meta";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents,DetailContact,DetailTimeline,Skeleton,Tabs} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,IconName,IconTile,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents,DetailContact,DetailTimeline,Skeleton,Tabs} from "@/design-system";
 import {useCurrency,useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -168,9 +168,9 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
           const preparation=orderStatus(item.status);
           const subject=item.tableName||item.customerName||item.code;
           return <tr className={index%2?"alternate":""} key={item.id}>
-            <td><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><b>{subject}</b>{item.origin==="counter"&&<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>}</td>
+            <td><span className="pos-order-identity"><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><span className="pos-order-copy"><b>{subject}</b>{item.origin==="counter"?<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>:subject!==item.code&&<small className="pos-order-reference">{item.code}</small>}</span></span></td>
             <td><span className="pos-channel-cell"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span></td>
-            <td><Status tone={preparation.tone}>{preparation.label}</Status></td>
+            <td><Status tone={preparation.tone} solid>{preparation.label}</Status></td>
             <td className="pos-money"><b>{money(Number(item.total))}</b></td>
             <td className="pos-money">{money(Number(item.paidAmount))}</td>
             <td className="pos-money"><strong className="pos-balance">{money(Number(item.remainingAmount))}</strong></td>
@@ -184,8 +184,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         const meta=paymentMeta[item.paymentStatus];
         const subject=item.tableName||item.customerName||item.code;
         return <article key={item.id}>
-          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b>{item.origin==="counter"&&<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>}</div><Status tone={meta.tone}>{meta.label}</Status></header>
-          <div className="pos-card-channel"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/><span>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span><Status tone={orderStatus(item.status).tone}>{orderStatus(item.status).label}</Status></div>
+          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b>{item.origin==="counter"?<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>:subject!==item.code&&<small className="pos-order-reference">{item.code}</small>}</div><Status tone={meta.tone}>{meta.label}</Status></header>
+          <div className="pos-card-channel"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/><span>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span><Status tone={orderStatus(item.status).tone} solid>{orderStatus(item.status).label}</Status></div>
           <dl><div><dt>Total</dt><dd>{money(Number(item.total))}</dd></div><div><dt>Pagado</dt><dd>{money(Number(item.paidAmount))}</dd></div><div className="remaining"><dt>Saldo</dt><dd>{money(Number(item.remainingAmount))}</dd></div></dl>
           <footer>{actionsFor(item)}</footer>
         </article>;
@@ -310,13 +310,13 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
         </section>
 
         <Tabs className="pos-detail-tabs" label="Información del cobro" value={tab} onChange={setTab} items={[
-          {value:"products",label:"Productos",icon:"dish",count:data.order.items?.length??0},
-          {value:"payments",label:"Pagos",icon:"payment",count:data.payments.length},
+          {value:"products",label:"Productos",icon:"dish",tone:"orange",count:data.order.items?.length??0},
+          {value:"payments",label:"Pagos",icon:"payment",tone:"primary",count:data.payments.length},
         ]}/>
 
         <section className="detail-panel pos-detail-panel" role="tabpanel" aria-labelledby="pos-detail-products-title" hidden={tab!=="products"}>
           <h3 id="pos-detail-products-title" className="sr-only">Productos del pedido</h3>
-          {data.order.items?.length?<ModalItemList>{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}><b className="modal-item-quantity">{Number(item.qty)}×</b><div className="modal-item-info"><span className="modal-item-name">{item.name}</span>{item.note&&<ModalItemNote>{item.note}</ModalItemNote>}<span className="modal-item-meta"><span>{formatMoney(Number(item.unitPrice))} c/u</span></span><ModalItemComponents label={`Detalle de ${item.name}`} items={[...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{formatMoney(Number(selection.surcharge))}</small>})),...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name}))]}/></div><strong className="modal-item-total">{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
+          {data.order.items?.length?<ModalItemList>{data.order.items.map(item=>{const line=lineServiceState(data.order.serviceItems??[],item.id,data.order.status);return <div className="modal-item-row has-state" role="listitem" key={item.id}><IconTile className="modal-item-state" name={line.look.icon} tone={line.look.tone} appearance="vivid" size="sm"/><div className="modal-item-info"><span className="modal-item-name"><b className="modal-item-quantity">{Number(item.qty)}×</b>{item.name}</span>{item.note&&<ModalItemNote>{item.note}</ModalItemNote>}<span className="modal-item-meta"><span>{formatMoney(Number(item.unitPrice))} c/u</span>{line.destination&&<span>{line.destination}</span>}{line.label&&<span className="modal-item-status">{line.label}</span>}</span><ModalItemComponents label={`Detalle de ${item.name}`} items={[...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{formatMoney(Number(selection.surcharge))}</small>})),...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name}))]}/></div><strong className="modal-item-total">{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>})}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
         </section>
         <section className="detail-panel pos-detail-panel" role="tabpanel" aria-labelledby="pos-detail-payments-title" hidden={tab!=="payments"}>
           <h3 id="pos-detail-payments-title" className="sr-only">Pagos registrados</h3>

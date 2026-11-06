@@ -8,17 +8,17 @@
 .crud-modal.size-lg{width:min(var(--size-880),100%)}
 .crud-modal.size-xl{width:min(var(--size-1040),100%)}
 
-.crud-modal>header,.modal-header{flex:none;position:relative;display:grid;grid-template-columns:minmax(0,1fr) var(--size-44);align-items:center;gap:var(--space-3);column-gap:var(--space-4);min-height:var(--size-64);padding:var(--space-2) var(--space-6);border-bottom:var(--stroke-1) solid var(--navigation-950);background:var(--navigation-900)}
+.crud-modal>header,.modal-header{flex:none;position:relative;display:grid;grid-template-columns:minmax(0,1fr) var(--size-44);align-items:center;gap:var(--space-3);column-gap:var(--space-4);min-height:var(--size-52);padding:var(--space-1) var(--space-6);border-bottom:var(--stroke-1) solid var(--navigation-950);background:var(--navigation-900)}
 .crud-modal>header:has(>.modal-title-icon),.modal-header.has-icon{grid-template-columns:var(--size-44) minmax(0,1fr) var(--size-44)}
 .crud-modal>header>div:not(.modal-heading-meta,.modal-header-details){display:grid;flex:1;gap:var(--space-1);min-width:0}
 .crud-modal h2{margin:0;color:var(--ink-950);font-size:var(--font-size-lg);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-tight);text-wrap:balance;overflow-wrap:anywhere}
 .crud-modal>header h2,.modal-header h2{margin:0;color:var(--surface);font-size:var(--font-size-lg);font-weight:var(--weight-bold);line-height:var(--line-height-tight);overflow-wrap:anywhere}
 .crud-modal>header>button,.modal-close{position:relative;display:grid;flex:none;place-items:center;width:var(--size-44);height:var(--size-44);padding:0;border:0;border-radius:var(--radius-control);background:transparent;color:var(--surface);transition:transform var(--duration-press) var(--easing-out)}
-.crud-modal>header>button::before,.modal-close::before{content:"";position:absolute;inset:50% auto auto 50%;width:var(--size-32);height:var(--size-32);box-sizing:border-box;transform:translate(-50%,-50%);border:var(--stroke-1) solid var(--surface);border-radius:var(--radius-control);pointer-events:none}
 .crud-modal>header>button:focus-visible,.modal-close:focus-visible{outline:var(--stroke-2) solid var(--surface);outline-offset:var(--space-0-5)}
 .crud-modal>header>button:active:not(:disabled),.modal-close:active:not(:disabled){transform:scale(var(--press-scale-icon))}
 .crud-modal>header>button:disabled,.modal-close:disabled{cursor:not-allowed;opacity:1}
-.modal-title-icon{display:grid;flex:none;place-items:center;justify-self:center;width:var(--size-40);height:var(--size-40);border-radius:var(--radius-tile);color:var(--surface);background:var(--surface-alpha-16)}
+/* Cabecera marina: icono y X blancos directos, sin caja ni contorno. */
+.modal-title-icon{display:grid;flex:none;place-items:center;justify-self:center;width:var(--size-40);height:var(--size-40);color:var(--surface);background:transparent}
 .crud-modal>header .modal-title-icon>svg,.crud-modal>header>button>svg,.modal-header .modal-title-icon>svg,.modal-header>.modal-close>svg{width:var(--size-20);height:var(--size-20);flex:none}
 .crud-modal>header .modal-heading,.modal-header .modal-heading{display:grid;flex:1 1 0;min-width:0}
 .modal-heading h2{min-width:0;text-wrap:pretty}
@@ -67,27 +67,38 @@
 .modal-summary{flex:none;min-width:0;margin:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(var(--size-170),.7fr);align-items:center;gap:var(--space-3) var(--space-6);padding:var(--space-4) var(--space-6);border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
 /* Detalles: el pie de acciones comparte la superficie del resumen; una línea fina `line` separa las acciones. */
 .modal-workspace:has(>.modal-summary)+.modal-footer{background:var(--surface)}
+/* Con resumen al pie, la lista termina pegada a su línea divisoria: sin los 24 px de aire inferior del cuerpo. */
+.modal-workspace:has(>.modal-summary)>.modal-body{padding-bottom:var(--space-2)}
 /* Simetría: ficha del importe y acción principal comparten el ancho de acción (`--modal-summary-action-width`),
    ambas alineadas al borde derecho; una etiqueta más larga solo ensancha el botón. */
 @media (width>600px){.modal-workspace:has(>.modal-summary)+.modal-footer .button.primary{min-width:var(--modal-summary-action-width)}}
 .modal-item-list{display:grid;min-width:0}
-.modal-item-row{display:grid;grid-template-columns:var(--size-32) minmax(0,1fr) auto;align-items:start;gap:var(--space-3);padding-block:var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
+/* Filas compactas compartidas (pedido, venta, cobro): 10 px de aire vertical y 2 px entre nombre y datos. */
+.modal-item-row{display:grid;grid-template-columns:var(--size-32) minmax(0,1fr) auto;align-items:start;gap:var(--space-3);row-gap:var(--space-0-5);padding-block:var(--space-2-5);border-bottom:var(--stroke-1) solid var(--line)}
+/* Línea con estado (pedido, venta, cobro): icono sólido de 24 px · «1× nombre» · importe. */
+.modal-item-row.has-state{grid-template-columns:var(--size-24) minmax(0,1fr) auto}
+.modal-item-row.has-state>.modal-item-state{grid-column:1;grid-row:1;align-self:center;width:var(--size-24);height:var(--size-24);border-radius:var(--radius-pill)}
+.modal-item-row.has-state>.modal-item-state svg{width:var(--size-14);height:var(--size-14);stroke-width:2.5}
+.modal-item-row.has-state .modal-item-quantity{display:inline;min-height:0;margin-inline-end:var(--space-1-5)}
+/* Fila de datos: precio c/u · destino y, al extremo derecho bajo el importe, el estado en texto gris bold. */
+.modal-item-row.has-state .modal-item-info>.modal-item-meta{justify-self:stretch}
+.modal-item-meta>.modal-item-status{margin-inline-start:auto;color:var(--ink-600);font-weight:var(--weight-bold);white-space:nowrap}
+.modal-item-meta>.modal-item-status::before{content:none}
 .modal-item-row:first-child{padding-top:var(--space-1)}
 .modal-item-row:last-child{padding-bottom:var(--space-1);border-bottom:0}
-.modal-item-quantity{display:grid;place-items:center;min-width:0;min-height:var(--size-32);border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700);font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);overflow-wrap:anywhere}
+.modal-item-quantity{display:grid;place-items:center;min-width:0;min-height:var(--size-24);color:var(--indigo-600);font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);overflow-wrap:anywhere}
 /* Línea de producto compartida por los detalles de Pedidos/Salón, Ventas y POS: nombre, nota, «precio c/u · destino»,
    carta de componentes/modificadores e importe. Información secundaria siempre neutra (`cloud-50`, `line`, `ink-*`). */
 /* `modal-item-info` se disuelve en la retícula de la fila: nombre e importe comparten la primera fila y el resto ocupa
    todo el ancho bajo ellos, igual que en Pedidos/Salón. */
-.modal-item-row:has(>.modal-item-info){row-gap:var(--space-1-5)}
 .modal-item-info{display:contents}
 .modal-item-info>*{grid-column:2/-1;justify-self:start;min-width:0;max-width:100%}
 .modal-item-info>.modal-item-name{grid-column:2;grid-row:1}
 .modal-item-row>.modal-item-total{grid-column:3;grid-row:1}
-.modal-item-name{display:flex;align-items:center;min-height:var(--size-32);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);overflow-wrap:anywhere}
+.modal-item-name{display:flex;align-items:center;min-height:var(--size-24);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);overflow-wrap:anywhere}
 .modal-item-meta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
 .modal-item-meta>*+*::before{content:"·";margin-inline-end:var(--space-1-5);color:var(--ink-400)}
-.modal-item-total{display:flex;align-items:center;min-height:var(--size-32);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:var(--line-height-snug)}
+.modal-item-total{display:flex;align-items:center;min-height:var(--size-24);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:var(--line-height-snug)}
 .modal-item-note{justify-self:start;display:inline-flex;align-items:center;gap:var(--space-1-5);max-width:100%;padding:var(--space-1) var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-pill);background:var(--cloud-50);color:var(--ink-700);font-size:var(--font-size-label);font-style:normal;line-height:var(--line-height-snug);overflow-wrap:anywhere;white-space:pre-wrap}
 .modal-item-note svg{flex:none;color:var(--ink-500)}
 /* Carta: el relleno vertical vive en las celdas para que el filete no se corte entre filas; columnas con subgrid. */
@@ -117,9 +128,6 @@
 .crud-modal>:is(form,.modal-form){display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
 /* Modales: barra fina siempre visible cuando hay más contenido; no usar hover-scroll en el cuerpo (oculta la barra hasta el hover). */
 .modal-body{flex:1 1 auto;min-height:0;padding:var(--space-6);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
-/* Ayudas de campo dentro del modal: el tooltip crece hacia la izquierda del icono para no salirse del cuerpo ni crear desplazamiento horizontal. */
-.modal-body .field-hint[data-tooltip]:after{left:auto;right:calc(var(--size-8) * -1);transform:translateY(var(--size-4))}
-@media (hover:hover) and (pointer:fine){.modal-body .field-hint[data-tooltip]:is(:hover,:focus-visible):after{transform:translateY(0)}}
 .crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>form.modal-form-compact:not(.modal-form){padding-top:var(--space-3)}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
@@ -146,7 +154,7 @@
 .modal-loading-value{width:72%;height:var(--size-14)}
 
 /* Guardado en curso: bloquea desde el primer cuadro, atenúa tras --duration-fast y solo en esperas largas muestra un spinner sin texto. */
-.modal-busy{position:absolute;inset:var(--size-64) 0 var(--size-64);z-index:var(--z-header);display:grid;place-items:center;background:var(--surface-alpha-64);cursor:progress;animation:modal-busy-in var(--duration-base) var(--easing-out) var(--duration-fast) both}
+.modal-busy{position:absolute;inset:var(--size-52) 0 var(--size-64);z-index:var(--z-header);display:grid;place-items:center;background:var(--surface-alpha-64);cursor:progress;animation:modal-busy-in var(--duration-base) var(--easing-out) var(--duration-fast) both}
 .modal-busy-indicator{display:grid;place-items:center;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-pill);color:var(--primary-600);background:var(--surface);box-shadow:var(--elevation-3);animation:modal-busy-indicator-in var(--duration-base) var(--easing-out) var(--delay-long-wait) both}
 @keyframes modal-busy-in{from{opacity:0}}
 @keyframes modal-busy-indicator-in{from{opacity:0;transform:scale(.9)}}
@@ -206,7 +214,7 @@
    se oculta para que el formulario muestre más campos. Las acciones siguen visibles. */
 @media (width<=600px) and (height<=560px){
   .crud-modal,.crud-modal.compact,.crud-modal.size-sm,.crud-modal.size-md{max-height:100dvh;border-radius:0}
-  .crud-modal>header,.modal-header{min-height:var(--size-52);padding-block:var(--space-1)}
+  .crud-modal>header,.modal-header{min-height:var(--size-48);padding-block:var(--space-0-5)}
   .crud-modal>header h2,.modal-header h2{font-size:var(--font-size-md)}
   .modal-context{display:none}
   .modal-body,.crud-modal>form:not(.modal-form){padding-top:var(--space-4)}

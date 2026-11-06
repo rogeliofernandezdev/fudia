@@ -59,12 +59,13 @@ test("el tablero marca platos con check circular, progreso y reversión con erro
   assert.ok(board.includes('"Marcar listo"'),"marcar toda la comanda sigue disponible");
 });
 
-test("el check y la barra usan tokens del sistema, sin colores sólidos nuevos",()=>{
+test("el check y la barra usan el naranja del carril En preparación, con tokens del sistema",()=>{
   const css=resolveDesignScales(read("src/modules/operations/kitchen/presentation/kitchen.css"));
   assert.match(css,/\.kitchen-ticket-item\.kitchen-plate\{[^}]*min-height:44px/,"fila táctil de 44 px");
   assert.match(css,/\.kitchen-plate-check\{[^}]*width:20px;height:20px;[^}]*border:1\.5px solid var\(--line-strong\);border-radius:50%/);
-  assert.ok(css.includes(".kitchen-plate[data-ready=true] .kitchen-plate-check{border-color:var(--primary-600);background:var(--primary-600);color:var(--surface)}"));
+  assert.ok(css.includes(".kitchen-plate[data-ready=true] .kitchen-plate-check{border-color:var(--kds-cooking);background:var(--kds-cooking);color:var(--surface)}"));
   assert.ok(css.includes("text-decoration:line-through"),"el plato listo se tacha");
-  assert.match(css,/\.kitchen-progress-track i\{[^}]*background:var\(--primary-600\)/);
+  assert.match(css,/\.kitchen-progress-track i\{[^}]*background:var\(--kds-cooking\)/);
+  assert.match(css,/\.kitchen-lane\[data-status="preparando"\] \.kitchen-ticket-item>b\{background:var\(--kds-cooking-soft\);color:var\(--kds-cooking-dark\)\}/,"la cantidad conserva el círculo del color de su carril");
   assert.equal(/#[0-9a-f]{3,6}\b|rgba?\(/i.test(css),false);
 });

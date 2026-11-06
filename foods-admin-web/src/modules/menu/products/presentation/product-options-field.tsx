@@ -28,7 +28,7 @@ export function ProductOptionsField({groups,onChange,errors,currencySymbol,disab
     <div className="product-option-group-head">
      <FormField label="Grupo" error={errors[`${group.key}:name`]}><Input value={group.name} maxLength={80} disabled={disabled} placeholder="Ej. Acompañamiento" aria-invalid={Boolean(errors[`${group.key}:name`])} onChange={event=>patchGroup(group.key,{name:event.target.value})}/></FormField>
      <FormField label="Se elige"><Select value={String(group.maxSelections)} disabled={disabled} onChange={event=>patchGroup(group.key,{maxSelections:Number(event.target.value)})}>{Array.from({length:choices},(_,i)=>i+1).map(count=><option key={count} value={count}>{count===1?"Una opción":`Hasta ${count}`}</option>)}</Select></FormField>
-     <IconButton icon="trash" label={`Quitar el grupo ${group.name.trim()||index+1}`} className="product-option-remove" disabled={disabled} onClick={()=>onChange(groups.filter(item=>item.key!==group.key))}/>
+     <IconButton icon="trash" label={`Quitar el grupo ${group.name.trim()||index+1}`} className="danger product-option-remove" disabled={disabled} onClick={()=>onChange(groups.filter(item=>item.key!==group.key))}/>
     </div>
     <label className="switch-row compact"><input type="checkbox" checked={group.required} disabled={disabled} onChange={event=>patchGroup(group.key,{required:event.target.checked})}/><span/><b>Obligatorio</b></label>
     <ul className="product-option-list">
@@ -37,7 +37,7 @@ export function ProductOptionsField({groups,onChange,errors,currencySymbol,disab
       return <li key={option.key}>
        <Input value={option.name} maxLength={80} disabled={disabled} placeholder={optionIndex===0?"Ej. Arroz blanco":"Ej. Arroz chaufa"} aria-label={`Opción ${optionIndex+1}`} aria-invalid={Boolean(nameError)} onChange={event=>patchOption(group,option.key,{name:event.target.value})}/>
        <MoneyInput symbol={`+${currencySymbol}`} value={option.surcharge} disabled={disabled} placeholder="0.00" aria-label={`Recargo de la opción ${optionIndex+1}`} aria-invalid={Boolean(surchargeError)} onChange={event=>patchOption(group,option.key,{surcharge:event.target.value})}/>
-       <IconButton icon="close" label={`Quitar la opción ${option.name.trim()||optionIndex+1}`} disabled={disabled||group.options.length<=1} onClick={()=>removeOption(group,option.key)}/>
+       <IconButton icon="close" label={`Quitar la opción ${option.name.trim()||optionIndex+1}`} className="danger" disabled={disabled||group.options.length<=1} onClick={()=>removeOption(group,option.key)}/>
        {(nameError||surchargeError)&&<small className="product-option-error" role="alert">{nameError??surchargeError}</small>}
       </li>;
      })}
