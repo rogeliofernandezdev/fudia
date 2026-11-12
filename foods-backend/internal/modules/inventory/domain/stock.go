@@ -321,9 +321,15 @@ func ValidDateFilters(values ...string) bool {
 }
 
 type LocationSettings struct {
+	Name         *string `json:"name,omitempty"`
 	MinimumStock float64 `json:"minimumStock"`
 	ReorderPoint float64 `json:"reorderPoint"`
 	OptimalStock float64 `json:"optimalStock"`
+}
+
+type InventoryNameTarget struct {
+	ProductID *string
+	Name      string
 }
 
 // ValidLocationSettings checks every level fits the stock columns.

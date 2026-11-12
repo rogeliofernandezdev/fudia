@@ -139,6 +139,9 @@ func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in dom
 	if in.OptimalStock < in.ReorderPoint {
 		in.OptimalStock = in.ReorderPoint
 	}
+	if in.Name != nil {
+		return a.updateNamedItem(ctx, s, id, in)
+	}
 	_, err = a.repo.LocationSettings(ctx, s, id, in)
 	if err != nil {
 		return stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar los niveles del artículo.")

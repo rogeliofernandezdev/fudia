@@ -67,6 +67,7 @@ func menuFailure(kind apperror.Kind, code, message string) error {
 }
 
 type CatalogRepository interface {
+	RenameInventoryProduct(context.Context, scope, string, string) (int64, error)
 	PublicMenu(context.Context, scope, []string, string, time.Time) ([]domain.PublicMenuSnapshot, error)
 	PublicCombo(ctx context.Context, s scope, id string, day time.Time) (domain.PublicComboDetail, bool, error)
 	PublicComboGroups(context.Context, scope, string, time.Time) ([]domain.PublicComboGroup, error)

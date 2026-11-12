@@ -18,6 +18,7 @@ import (
 type scope = requestscope.Scope
 
 var ErrNotFound = errors.New("inventory record not found")
+var ErrNameTaken = errors.New("inventory item name already exists")
 
 type StockFilter struct {
 	Query, InventoryItemID, ProductID, MovementType, SourceType, From, To string
@@ -27,16 +28,20 @@ type Stock struct {
 	repo  StockRepository
 	work  unitofwork.Manager
 	audit audit.Repository
+	productNames menucontracts.ProductNames
 }
 
 func NewStock(repo StockRepository, work unitofwork.Manager, audit audit.Repository) *Stock {
-	return &Stock{repo, work, audit}
+	return &Stock{repo: repo, work: work, audit: audit}
 }
+func (a *Stock) WithProductNames(names menucontracts.ProductNames) *Stock { a.productNames=names; return a }
 func stockFailure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
 }
 
 type StockRepository interface {
+	LockItemName(context.Context, scope, string, string) (domain.InventoryNameTarget, error)
+	RenameItem(context.Context, scope, string, string) (int64, error)
 	// CatalogNameTaken serializes new article creation within the company until commit.
 	CatalogNameTaken(context.Context, scope, string) (bool, error)
 	OrderBusinessDate(ctx context.Context, s scope, orderID string) (string, error)
