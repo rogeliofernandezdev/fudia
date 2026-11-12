@@ -94,7 +94,7 @@ export type StockMovement={
 };
 
 
-export type InventorySettingsDraft={inventoryItemId:string;minimumStock:string;optimalStock:string};
+export type InventorySettingsDraft={inventoryItemId:string;name:string;minimumStock:string;optimalStock:string};
 export type InventoryTransferDraft={idempotencyKey:string;toLocationId:string;notes:string;items:Array<{inventoryItemId:string;quantity:string}>};
 export type InventoryTransferSummary={id:string;code:string;fromLocationName:string;toLocationName:string;notes:string;createdByName:string;createdAt:string;itemCount:number};
 export type LocationOption={id:string;name:string};

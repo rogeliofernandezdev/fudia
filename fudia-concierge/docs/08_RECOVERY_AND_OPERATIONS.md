@@ -357,3 +357,15 @@ páginas quedaban en otra instancia y no se enviaban;
 `tests/test_carta_media_by_intent.py`, 2026-11-04).
 Las garantías comerciales existentes no cambian. No se cambia el perfil global
 del bot ni se envían campañas. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.
+
+## Lectura de la cola y vida del worker
+
+Un fallo al leer la cola (Redis caído o reiniciado) no termina el worker: registra
+`concierge.queue.read_failed` con el tipo de error y el número de fallos seguidos,
+espera de 0,5 a 5 s y vuelve a leer. Antes el bucle terminaba sin dejar rastro y
+el servicio seguía respondiendo HTTP sin procesar ningún mensaje (en el chat web,
+«El restaurante está respondiendo…» indefinidamente).
+
+`/ready` incluye `worker` cuando el worker corre en el mismo proceso: es `false`
+si la tarea terminó, y entonces responde 503. `/health` sigue siendo solo vida del
+proceso.

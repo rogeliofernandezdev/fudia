@@ -18,6 +18,7 @@ export function createInventoryAdjustment(draft:InventoryAdjustmentDraft){
 }
 export function updateInventorySettings(draft:InventorySettingsDraft){
   return apiFetch<void>(`inventory/items/${draft.inventoryItemId}/settings`,{method:"PATCH",body:JSON.stringify({
+    ...(draft.name!==undefined?{name:draft.name.trim()}:{}),
     minimumStock:Number(draft.minimumStock||0),optimalStock:Number(draft.optimalStock||0),
   })});
 }

@@ -1990,6 +1990,12 @@ y detalle; no se limita a apilar columnas de escritorio.
 
 ### Presentación del artículo en Compras
 
+Inventario ofrece «Editar artículo» desde el lápiz de cada fila, con Nombre,
+Stock mínimo y Stock óptimo. El nombre llega prellenado; si es vendible, la ayuda
+explica que también se usa en Carta y productos. Duplicados se marcan junto a
+Nombre y conservan lo escrito. Guardar actualiza el catálogo y los niveles sin
+modificar existencias ni documentos anteriores; se respeta `inventory.manage`.
+
 El registro muestra «Unidad de inventario», «Presentación de compra» y su contenido, sin filas de
 «Otra presentación», radios de «Predeterminada» ni «Nueva combinación».
 Si la unidad es contable según el API (`unitCountable`: botella, lata, unidad,

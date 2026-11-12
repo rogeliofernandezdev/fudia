@@ -131,7 +131,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identitypg.NewAdministration(db), database.NewUnitOfWork(db), credentials.Credentials{}, subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)).WithCashCollection(payments)),
 		Identity:               identityhttp.New(identityService, os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
-		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
+		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)).WithProductNames(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), nil))),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewPurchaseLedger(inventorypg.NewStock(db)))),
 		Orders:                 orderhttp.New(orders),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),

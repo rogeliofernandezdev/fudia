@@ -8,6 +8,16 @@ distintas empresas mantienen catálogos independientes. Responde
 transacción con bloqueo por empresa y nombre, para impedir altas simultáneas
 duplicadas. Vincular un producto existente sigue reutilizando su ficha.
 
+`PATCH /v1/admin/inventory/items/{id}/settings` acepta `name` opcional (1–160
+caracteres tras quitar espacios de los extremos). Con `inventory.manage`, edita
+el artículo de la empresa y los niveles del local activo en una sola transacción.
+Un producto vinculado se renombra a través del contrato de Menu; conserva sus
+identificadores, precios, recetas, existencias y documentos anteriores.
+El mismo bloqueo por nombre protege creación y edición; el propio artículo y
+su producto vinculado no cuentan como duplicados. Un conflicto responde
+`409 inventory_item_name_taken`, sin guardar tampoco los niveles. Omitir `name`
+conserva el comportamiento de los clientes anteriores.
+
 `GET /v1/admin/orders/{id}` y su equivalente operativo incluyen
 `paymentReferences` en el detalle: números de operación ingresados al cobrar,
 con el nombre del medio de pago y en orden de registro. La proyección omite

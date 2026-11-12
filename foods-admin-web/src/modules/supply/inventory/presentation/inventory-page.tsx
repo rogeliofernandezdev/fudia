@@ -40,8 +40,8 @@ export function InventoryPage(){
  const locations=useQuery({queryKey:["transfer-locations"],queryFn:listTransferLocations,enabled:transferOpen,staleTime:30000});
  const settingsSave=useMutation({
   mutationFn:updateInventorySettings,
-  onSuccess:()=>{setSettingsItem(null);void client.invalidateQueries({queryKey:["inventory"]});notify({tone:"success",title:"Niveles actualizados",message:"Los niveles de reposición quedaron configurados para este local."})},
-  onError:error=>notify({tone:"danger",title:"No se pudieron guardar los niveles",message:error.message}),
+  onSuccess:()=>{setSettingsItem(null);for(const key of ["inventory","inventory-products","inventory-movements","purchase-inventory","purchase-item-picker","purchase-linkable-products","products","product-availability","order-catalog","recipes","recipe-inventory-options"])void client.invalidateQueries({queryKey:[key]});notify({tone:"success",title:"Artículo actualizado",message:"El nombre y los niveles de stock quedaron guardados."})},
+  onError:error=>{if("code" in error&&error.code==="inventory_item_name_taken")return;notify({tone:"danger",title:"No se pudo guardar el artículo",message:error.message})},
  });
  const transferSave=useMutation({
   mutationFn:createInventoryTransfer,
@@ -94,14 +94,14 @@ export function InventoryPage(){
        <td>{formatRegionalNumber(Number(item.averageUnitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
        <td><b>{formatRegionalNumber(Number(item.stockValue),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td><Status tone={meta.tone}>{meta.label}</Status></td>
-       <td>{can("inventory.manage")?<RowActionButton action="edit" onClick={()=>setSettingsItem(item)}/>:null}</td>
+       <td>{can("inventory.manage")?<RowActionButton action="edit" label="Editar artículo" onClick={()=>setSettingsItem(item)}/>:null}</td>
       </tr>;
      })}</tbody>
     </DataTable>}
    {!inventory.isLoading&&!inventory.isError&&<Pagination page={page} size={size} total={inventory.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
 
-  {settingsItem&&<InventorySettingsDialog item={settingsItem} busy={settingsSave.isPending} close={()=>setSettingsItem(null)} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch{/* La mutación ya comunica el error mediante onError. */}}}/>}
+  {settingsItem&&<InventorySettingsDialog item={settingsItem} busy={settingsSave.isPending} close={()=>setSettingsItem(null)} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch(error){if(error&&typeof error==="object"&&"code" in error&&error.code==="inventory_item_name_taken")throw error;}}}/>}
   {transferOpen&&(locations.isLoading?
    <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando transferencia" rows={5} title="Transferir a otro local" icon="truck" close={()=>setTransferOpen(false)}/>
    :locations.isError?

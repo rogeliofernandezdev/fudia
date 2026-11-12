@@ -42,11 +42,12 @@ function mount({busy=false,save=async()=>{},close=()=>{},record=item}={}){
 test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  const {dialog,form,nodes}=mount().render();
  assert.ok(dialog.props.children.includes(form));
- assert.equal(form.props.children[0].props.title,"Niveles de stock");
+ assert.equal(form.props.children[0].props.title,"Datos del artículo");
  assert.equal(form.props.children[0].props.children.props.className,"form-grid");
  assert.equal(form.props.children[1].type,"ModalFooter");
  assert.equal(form.props.children[1].props.children.length,2);
- assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Stock mínimo","Stock óptimo"]);
+ assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Nombre","Stock mínimo","Stock óptimo"]);
+ assert.equal(nodes.find(node=>node.type==="ModalHeader").props.title,"Editar artículo");
  assert.equal(nodes.some(node=>node.type==="Input"&&node.props.name==="reorderPoint"),false);
  assert.equal(dialog.props["aria-labelledby"],nodes.find(node=>node.type==="ModalHeader").props.titleId);
  assert.equal(dialog.props.className,"crud-modal compact modal-panel-in");
@@ -83,6 +84,36 @@ test("guardar conserva los niveles y su normalización existente",async()=>{
  assert.equal("reorderPoint" in saved[0],false);
  assert.equal(saved[0].optimalStock,"5");
  assert.equal(saved[0].inventoryItemId,item.inventoryItemId);
+ assert.equal(saved[0].name,item.name);
+});
+
+test("permite corregir el nombre y rechaza nombres vacíos o demasiado largos",async()=>{
+ const saved=[];const ui=mount({save:async draft=>saved.push(draft)});
+ for(const name of ["   ","a".repeat(161)]){
+  ui.control.setValue("name",name);await ui.render().button.props.onClick();
+  assert.equal(saved.length,0);assert.ok(ui.control.getFieldState("name").error);
+ }
+ ui.control.setValue("name","  Agua mineral  ");await ui.render().button.props.onClick();
+ assert.equal(saved.length,1);assert.equal(saved[0].name,"Agua mineral");
+ assert.equal(saved[0].minimumStock,"2");
+});
+
+test("el conflicto de nombre conserva el editor y permite corregir sin perder niveles",async()=>{
+ let calls=0;const ui=mount({save:async()=>{if(++calls===1)throw {code:"inventory_item_name_taken"};}});
+ ui.control.setValue("name","Nombre repetido");ui.control.setValue("minimumStock","8");
+ await ui.render().button.props.onClick();
+ assert.match(ui.control.getFieldState("name").error.message,/Ya existe/);
+ assert.equal(ui.control.getValues("minimumStock"),"8");
+ ui.control.setValue("name","Nombre corregido");await ui.render().button.props.onClick();
+ assert.equal(calls,2);assert.equal(ui.control.getFieldState("name").error,undefined);
+});
+
+test("el contrato de edición envía el nombre sin cambiar la identidad del artículo",async()=>{
+ const requests=[];
+ const api=compile("modules/supply/inventory/infrastructure/inventory-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>requests.push({path,body:JSON.parse(options.body)})}:require(name));
+ await api.updateInventorySettings({inventoryItemId:"water",name:"  Agua mineral  ",minimumStock:"5",optimalStock:"10"});
+ assert.equal(requests[0].path,"inventory/items/water/settings");
+ assert.deepEqual(requests[0].body,{name:"Agua mineral",minimumStock:5,optimalStock:10});
 });
 
 test("guardar omite el reorden heredado del contrato HTTP",async()=>{
@@ -95,7 +126,7 @@ test("guardar omite el reorden heredado del contrato HTTP",async()=>{
 
 test("unidades contables muestran enteros y rechazan fracciones en ambos niveles",async()=>{
  const saved=[];const ui=mount({save:async value=>saved.push(value)});
- assert.ok(ui.render().nodes.filter(node=>node.type==="Input").every(node=>node.props.step==="1"&&node.props.inputMode==="numeric"));
+ assert.ok(ui.render().nodes.filter(node=>node.type==="Input"&&node.props.type==="number").every(node=>node.props.step==="1"&&node.props.inputMode==="numeric"));
  for(const field of ["minimumStock","optimalStock"]){
   ui.control.setValue(field,"1.5");
   await ui.render().button.props.onClick();
@@ -110,7 +141,7 @@ test("unidades medibles conservan fracciones y eliminan solo ceros de presentaci
  const saved=[];const ui=mount({record:{...item,unitCountable:false,minimumStock:"0.500",reorderPoint:"1.250",optimalStock:"2.000"},save:async value=>saved.push(value)});
  assert.equal(ui.control.getValues("minimumStock"),"0.5");
  assert.equal(ui.control.getValues("optimalStock"),"2");
- assert.ok(ui.render().nodes.filter(node=>node.type==="Input").every(node=>node.props.step==="0.001"&&node.props.inputMode==="decimal"));
+ assert.ok(ui.render().nodes.filter(node=>node.type==="Input"&&node.props.type==="number").every(node=>node.props.step==="0.001"&&node.props.inputMode==="decimal"));
  await ui.render().button.props.onClick();assert.equal(saved[0].minimumStock,"0.5");
 });
 

@@ -25,16 +25,19 @@ type StockFilter struct {
 	Page, Size                                                            int
 }
 type Stock struct {
-	repo  StockRepository
-	work  unitofwork.Manager
-	audit audit.Repository
+	repo         StockRepository
+	work         unitofwork.Manager
+	audit        audit.Repository
 	productNames menucontracts.ProductNames
 }
 
 func NewStock(repo StockRepository, work unitofwork.Manager, audit audit.Repository) *Stock {
 	return &Stock{repo: repo, work: work, audit: audit}
 }
-func (a *Stock) WithProductNames(names menucontracts.ProductNames) *Stock { a.productNames=names; return a }
+func (a *Stock) WithProductNames(names menucontracts.ProductNames) *Stock {
+	a.productNames = names
+	return a
+}
 func stockFailure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
 }

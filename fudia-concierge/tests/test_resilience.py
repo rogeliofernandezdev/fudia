@@ -497,3 +497,45 @@ async def test_worker_stays_silent_while_a_retry_is_pending() -> None:
     await worker.process((await queue.read())[0])
 
     assert whatsapp.sent == []
+
+
+class FlakyReadQueue(MemoryInboundQueue):
+    """Redis may fail a read; the next one works again."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.failures = 2
+
+    async def read(self, limit: int = 10) -> list[QueueDelivery]:
+        if self.failures:
+            self.failures -= 1
+            raise ConnectionError("redis unavailable")
+        return await super().read(limit)
+
+
+@pytest.mark.asyncio
+async def test_worker_keeps_reading_after_the_queue_fails_a_read() -> None:
+    queue = FlakyReadQueue()
+    service = FakeService()
+    whatsapp = FakeWhatsApp()
+    worker = QueueWorker(queue, service, whatsapp)
+    await queue.enqueue(
+        InboundMessage(
+            message_id="wamid.after-outage",
+            phone="51999999999",
+            text="hola",
+            sender_phone_id="meta-phone",
+        )
+    )
+    task = asyncio.create_task(worker.run())
+    try:
+        for _ in range(400):
+            if whatsapp.sent:
+                break
+            await asyncio.sleep(0.01)
+        # The loop survived both failures and processed the waiting message.
+        assert queue.failures == 0 and not task.done()
+        assert whatsapp.sent == [("51999999999", "respuesta")]
+    finally:
+        await worker.stop()
+        await asyncio.wait_for(task, timeout=5)

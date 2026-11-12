@@ -120,6 +120,7 @@ class QueueWorker:
             if self.partner_messages is not None
             else None
         )
+        read_failures = 0
         try:
             while not self._stop.is_set():
                 capacity = (
@@ -130,9 +131,24 @@ class QueueWorker:
                     await self._wait_for_capacity()
                     continue
 
-                deliveries = await self.queue.read(
-                    limit=capacity
-                )
+                try:
+                    deliveries = await self.queue.read(
+                        limit=capacity
+                    )
+                except Exception as exc:
+                    # A Redis hiccup must not end the loop: the task would
+                    # stay dead while HTTP keeps answering and no message is
+                    # ever processed again.
+                    read_failures += 1
+                    log_event(
+                        logger,
+                        "concierge.queue.read_failed",
+                        errorType=type(exc).__name__,
+                        consecutive=read_failures,
+                    )
+                    await asyncio.sleep(min(0.5 * read_failures, 5.0))
+                    continue
+                read_failures = 0
                 if not deliveries:
                     await asyncio.sleep(0)
                     continue

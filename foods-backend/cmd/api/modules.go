@@ -88,6 +88,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	inventoryRepo := inventorypg.NewStock(db)
 	stock := inventoryapp.NewStock(inventoryRepo, work, audit)
 	menu := menuapp.NewCatalog(menupg.NewCatalog(db), work, audit, menufiles.Images{Directory: "./uploads/products"}).WithProductImages(images)
+	stock.WithProductNames(menu)
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	notices := noticeapp.New(noticepg.New(db), identityService)
 	orders := orderapp.New(orderpg.New(db), work, audit, stock).WithNotices(notices)

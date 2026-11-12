@@ -712,7 +712,7 @@ test("inventario busca artículos en el servidor y valoriza las entradas",()=>{
   assert.ok(lookup.includes("react-select/async")&&lookup.includes("searchInventoryProducts"),"El selector busca en el servidor");
   assert.ok(lookup.includes("createLookupSelectStyles"),"El selector reutiliza los estilos compartidos de búsqueda");
   for(const [name,source] of [["ajuste",adjustment],["transferencia",transfer],["Kárdex",kardex]])assert.ok(source.includes("<InventoryItemLookup"),name+" usa el buscador de artículos");
-  assert.equal(page.includes("inventory-products"),false,"Inventario no precarga artículos para los diálogos");
+  assert.doesNotMatch(page,/useQuery\s*\([^;]*["']inventory-products["']/,"Inventario no precarga artículos para los diálogos; invalidar su caché después de editar sí está permitido");
   assert.ok(adjustment.includes("Costo unitario"),"El ajuste de entrada pide costo unitario");
   assert.ok(adjustment.includes("el artículo todavía no tiene costo promedio"),"El costo es obligatorio sin promedio");
   assert.ok(api.includes('draft.movementType==="entry"&&draft.unitCost.trim()!==""'),"Solo las entradas envían costo");

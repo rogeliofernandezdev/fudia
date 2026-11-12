@@ -38,6 +38,11 @@ async def ready(
         "sessionStore": results[1] is True,
         "foodsBackend": results[2] is True,
     }
+    # With the worker in this process, a finished task means nobody reads the
+    # queue: HTTP still answers but no message would be processed.
+    task = getattr(request.app.state, "queue_worker_task", None)
+    if task is not None:
+        checks["worker"] = not task.done()
     is_ready = all(checks.values())
     return JSONResponse(
         status_code=200 if is_ready else 503,
