@@ -5,7 +5,7 @@ import "./reservations.css";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody,FormSection} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {listTables} from "../../tables/infrastructure/tables-api";
@@ -65,9 +65,9 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
 
-      <ModalHeader title="Datos de la reserva" titleId="reservation-title" icon="clock" subtitle={initial.id?"Editar reserva":"Nueva reserva"} onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={initial.id?"Editar reserva":"Nueva reserva"} titleId="reservation-title" icon="clock" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <ModalForm onSubmit={handleSubmit(save)} noValidate>
-        <ModalBody><FormSection icon="calendar" title="Datos de la reserva" bare><div className="form-grid reservation-form-grid">
+        <ModalBody><div className="form-grid reservation-form-grid">
           <label>
             Cliente
             <Input icon="user" autoFocus autoComplete="name" maxLength={180} {...register("customerName")} aria-invalid={Boolean(errors.customerName)} placeholder="Nombre del cliente"/>
@@ -111,7 +111,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
             <Textarea maxLength={500} rows={3} {...register("notes")} aria-invalid={Boolean(errors.notes)} placeholder="Preferencias, ocasión o indicaciones para el equipo"/>
             {errors.notes?.message&&<small className="field-error">{errors.notes.message}</small>}
           </label>
-        </div></FormSection></ModalBody>
+        </div></ModalBody>
         <ModalFooter>
           <Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>
           <Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button>

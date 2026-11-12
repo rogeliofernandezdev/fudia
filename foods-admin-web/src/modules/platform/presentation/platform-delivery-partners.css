@@ -1,0 +1,37 @@
+/* Plataforma › Centrales de delivery: mismo modal compacto que los canales de WhatsApp. */
+.platform-partner-modal{width:min(var(--size-540),calc(100vw - var(--size-32)))}
+.platform-partner-fields{padding:0}
+
+@media(max-width:600px){
+ .platform-partner-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
+}
+
+/* Orden global: número de posición con subir/bajar (chevron rotado). */
+.partner-order{display:inline-flex;align-items:center;gap:var(--space-1)}
+.partner-order>b{min-width:var(--space-5);color:var(--ink-950);font-variant-numeric:tabular-nums;text-align:center}
+.partner-order-up svg{transform:rotate(-90deg)}
+.partner-order-down svg{transform:rotate(90deg)}
+.platform-partners-panel .management-cards footer{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
+
+/* Detalle de empresa › Delivery Fudia (comparte la cabecera del panel de Concierge). */
+.delivery-company-panel{margin-top:var(--space-5)}
+.delivery-company-body{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3) var(--space-4);padding:var(--space-4) var(--space-5)}
+.delivery-company-body p{margin:0;color:var(--ink-700);font-size:var(--font-size-base)}
+@media(max-width:600px){
+ .delivery-company-body{padding:var(--space-4)}
+ .delivery-company-body>.button{flex:1 1 100%}
+}
+
+.partner-coverage-help{margin:0;color:var(--ink-700);font-size:var(--font-size-base)}
+.partner-coverage-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.partner-coverage-list li{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);min-width:0}
+.partner-coverage-list li>span{overflow-wrap:anywhere}
+.partner-coverage-count{margin:var(--space-2) 0 0;color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
+.partner-districts{min-width:0;margin:0;padding:0;border:0}
+.partner-districts legend{padding:0;font-size:var(--font-size-sm);font-weight:var(--weight-semibold);color:var(--ink-950)}
+.partner-district-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--space-3)}
+.partner-district-option{display:flex;align-items:center;gap:var(--space-2);min-height:var(--size-44);min-width:0;cursor:pointer;color:var(--ink-950);font-size:var(--font-size-base)}
+.partner-district-option input{width:var(--size-16);height:var(--size-16);flex-shrink:0;accent-color:var(--primary-700)}
+.partner-district-option span{overflow-wrap:anywhere}
+.partner-district-all{border-bottom:var(--stroke-1) solid var(--line);margin-bottom:var(--space-1)}
+@media(max-width:600px){.partner-district-grid{grid-template-columns:minmax(0,1fr)}}

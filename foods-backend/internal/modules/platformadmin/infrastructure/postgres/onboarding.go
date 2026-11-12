@@ -26,13 +26,13 @@ func (r *Platform) CreateTenant(ctx context.Context, s scope, in domain.TenantOn
 		RETURNING id
 	`, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.TaxID, in.SpecialTaxRegime)
 	batch.Queue(`
-		INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,opened_on)
-		SELECT o.id,$2,$3,$4,$5,$6,$7,$8,$9,fp.id,NULLIF($10,'')::date
+		INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,opened_on,district_code)
+		SELECT o.id,$2,$3,$4,$5,$6,$7,$8,$9,fp.id,NULLIF($10,'')::date,NULLIF($11,'')
 		FROM organizations o
 		JOIN organization_fiscal_profiles fp ON fp.organization_id=o.id AND fp.is_default
 		WHERE o.tax_id=$1
 		RETURNING id
-	`, in.TaxID, in.LocationName, in.LocationCode, in.Address, in.LocationPhone, in.LocationHours, in.Latitude, in.Longitude, in.Timezone, in.LocationOpenedOn)
+	`, in.TaxID, in.LocationName, in.LocationCode, in.Address, in.LocationPhone, in.LocationHours, in.Latitude, in.Longitude, in.Timezone, in.LocationOpenedOn, in.DistrictCode)
 	batch.Queue(`
 		INSERT INTO users(organization_id,email,full_name,password_hash)
 		SELECT id,$2,$3,$4 FROM organizations WHERE tax_id=$1

@@ -3,12 +3,13 @@
 .sales-filters>.form-field{min-width:0;margin:0}
 .sales-filters .form-field-label{line-height:var(--line-height-snug)}
 .sales-filters>.button{margin-top:calc(var(--font-size-label) * var(--line-height-snug) + var(--space-1-5));white-space:nowrap}
-/* Periodos rápidos: un toque, misma selección que las pestañas; las fechas quedan para rangos personalizados. */
+/* Periodos rápidos: `filter-pill` compartida (design-system/styles/filter-pill.css), la misma del origen en Cocina.
+   Las fechas quedan para rangos personalizados. */
 .sales-periods{display:flex;flex-wrap:wrap;gap:var(--space-2);padding:var(--space-4) var(--space-5) 0}
 /* Sin fechas (periodo rápido) el buscador ocupa toda la fila. */
 .sales-filters:not(.is-custom) .sales-search{grid-column:1/-1}
-.sales-period{min-height:var(--control-height);padding:0 var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-pill);background:var(--surface);color:var(--ink-600);font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;transition:var(--transition-surface)}
-.sales-period.active{border-color:var(--primary-300);background:var(--surface);color:var(--primary-700)}
+/* El buscador no lleva etiqueta visible (el placeholder la nombra); en Personalizado se alinea con los campos de fecha. */
+@media(min-width:901px){.sales-filters.is-custom>.sales-search{margin-top:calc(var(--font-size-label) * var(--line-height-snug) + var(--space-1-5))}}
 /* Franja compacta original: total de todo el filtro, después de la búsqueda. */
 .sales-period-summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-1) var(--space-3);padding:var(--space-3-5) var(--space-5);border-top:var(--stroke-1) solid var(--line);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
 .sales-period-summary>span{color:var(--ink-700);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
@@ -20,7 +21,7 @@
 .sales-skeleton i,.sales-skeleton b,.sales-skeleton span{display:block;background:linear-gradient(90deg,var(--cloud-100),var(--primary-25),var(--cloud-100));background-size:200% 100%;animation:sales-shimmer var(--duration-ambient) infinite}
 .sales-skeleton td>i{width:var(--size-72);height:var(--size-10);border-radius:var(--radius-control)}
 .sales-skeleton-name{align-items:center;gap:var(--space-2-5);display:flex}
-.sales-skeleton-name>span{flex:0 0 var(--size-16);width:var(--size-16);height:var(--size-16);border-radius:var(--radius-chip)}
+.sales-skeleton-name>span{flex:0 0 var(--size-34);width:var(--size-34);height:var(--size-34);border-radius:var(--radius-tile)}
 .sales-skeleton-name>div{gap:var(--space-1-5);display:grid}
 .sales-skeleton-name b{width:var(--size-88);height:var(--size-11);border-radius:var(--radius-control)}
 .sales-skeleton-name i{width:var(--size-62);height:var(--size-8);border-radius:var(--radius-control)}
@@ -31,8 +32,9 @@
 .sales-skeleton-action{width:var(--control-height);height:var(--control-height);border-radius:var(--radius-control);margin:auto}
 .sales-table-wrap .sales-table{min-width:var(--size-900)}
 .sales-row{cursor:pointer}
-.sales-order-code{display:inline-flex;align-items:center;gap:var(--space-2);color:var(--ink-800)}
-.sales-order-code>svg{flex:none;color:var(--ink-500)}
+/* Identidad de la fila: tile estándar `row-icon` (34 px, `primary-100`/`primary-700`) y código del pedido. */
+.sales-order-code{display:inline-flex;align-items:center;color:var(--ink-950)}
+.sales-order-code>.row-icon{flex:none}
 .sales-customer{display:block;max-width:var(--size-220);color:var(--ink-950);overflow-wrap:anywhere;white-space:normal}
 .sales-customer-name{max-width:var(--size-220);overflow-wrap:anywhere;white-space:normal}
 .sales-row-total{color:var(--ink-950)}
@@ -52,6 +54,8 @@
 .sales-detail-identity p>svg{flex:none}
 .sales-detail-identity p>span{min-width:0;overflow-wrap:anywhere}
 .sales-detail-identity .sales-detail-fiscal{flex-wrap:wrap}
+.sales-detail-meta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4)}
+/* Productos y pagos remetidos dentro de la sección de las pestañas (16 px; 12 px en móvil). */
 .sales-detail-panel{min-width:0;padding-inline:var(--space-4)}
 .sales-detail-lines .modal-item-row>div{min-width:0;overflow-wrap:anywhere}
 .sales-detail-empty{margin:0;color:var(--ink-500);font-size:var(--font-size-base);line-height:var(--line-height-normal)}
@@ -62,8 +66,7 @@
 .sales-detail-paid b{color:var(--ink-600)}
 .sales-detail-paid.has-payment b{color:var(--amount-paid)}
 .sales-detail-totals.is-paid .modal-summary-total span{color:var(--brand-700)}
-.sales-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}
-.sales-detail-skeleton-icon{flex-shrink:0}
+.sales-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}.sales-detail-skeleton-icon{flex-shrink:0}
 .sales-detail-skeleton-copy{min-width:0;display:grid;align-content:center;gap:var(--space-1-5)}
 .sales-detail-skeleton-action.ds-skeleton{width:var(--size-220);height:var(--control-height);border-radius:var(--radius-control)}
 @media(max-width:900px){
@@ -80,9 +83,9 @@
     contenedor de scroll, así el panel conserva su recorte sin anular el `sticky`. */
  .sales-panel{overflow:clip}
  .sales-periods{position:sticky;top:var(--size-64);z-index:var(--z-raised);flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--space-3) var(--space-4) var(--space-2);scroll-padding-inline:var(--space-4);background:var(--surface);box-shadow:0 var(--stroke-1) 0 var(--cloud-100)}
- .sales-period{flex:none;min-height:var(--size-44)}
  .sales-period-summary{padding-inline:var(--space-4)}
- .sales-table-wrap .sales-table :is(th,td):first-child{min-width:var(--size-160);max-width:var(--size-180)}
+ /* Columna fija: 12 px de relleno + tile de 34 px y su separación + código completo, sin tocar el borde. */
+ .sales-table-wrap .sales-table :is(th,td):first-child{min-width:var(--size-200);max-width:var(--size-208)}
  .sales-table-wrap .sales-table td:first-child b{max-width:var(--size-138)}
  .sales-filters{grid-template-columns:minmax(0,1fr);padding:var(--space-3) var(--space-4) var(--space-4)}
  .modal-backdrop:has(.sales-detail-modal){padding:0}
@@ -93,7 +96,3 @@
 }
 @keyframes sales-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.sales-summary-skeleton,.sales-skeleton i,.sales-skeleton b,.sales-skeleton span{animation:none}}
-
-@media (hover:hover) and (pointer:fine){
- .sales-period:not(.active):hover{border-color:var(--primary-300);color:var(--primary-700)}
-}

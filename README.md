@@ -11,13 +11,14 @@ celular, tablet y PC.
 | `fudia-image-processor` | Procesamiento asíncrono e independiente de imágenes subidas directamente a Storage |
 | `foods-admin-web` | Aplicación web única para POS, mesas, pedidos, cocina, caja, administración, catálogo, inventario, compras, reportes y configuración |
 | `fudia-concierge` | Asistente conversacional multicanal; inicia con pedidos por WhatsApp desde QR |
+| `fudia-whatsapp-gateway` | Transporte whatsmeow independiente, sesiones SQL y conexión continua; sin IA ni pedidos |
 | `foods-infrastructure` | Infraestructura como código, despliegue y observabilidad |
 
 Cada proyecto contiene su propio `AGENTS.md`, `README.md` y carpeta `docs/`.
 Las reglas específicas deben leerse completas antes de modificar ese proyecto;
 los documentos de la raíz conservan únicamente decisiones transversales.
 
-La solución se organiza en cinco proyectos. Fudia Concierge orquesta la
+La solución se organiza en seis proyectos. Fudia Concierge orquesta la
 conversación con el comensal y consume foods-backend como fuente de verdad. La
 facturación electrónica por país, la impresión y los pagos continúan encapsulados
 como integraciones del backend. No se crea una aplicación móvil nativa en la fase
@@ -38,3 +39,8 @@ proyecto.
 
 `foods-admin-web` mantiene el sistema visual principal en
 `docs/02_DESIGN_SYSTEM.md` dentro de su propio proyecto.
+
+WhatsApp por país, QR permanentes, historial de restaurantes y validación local:
+[arquitectura multiproveedor](docs/10_WHATSAPP_MULTIPROVIDER.md).
+
+Tercera opción de atención desde QR: [chat web propio](docs/11_WEB_CHAT.md).

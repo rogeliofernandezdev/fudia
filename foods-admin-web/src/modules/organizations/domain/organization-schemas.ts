@@ -3,6 +3,7 @@ import {zodResolver} from "@/shared/forms/zod-resolver";
 import type {LocationDraft,Organization,ProfileDraft,RateDraft} from "./types";
 
 export const locationSchema=z.object({
+ districtCode:z.string().regex(/^$|^[0-9]{6}$/,"Selecciona un distrito válido.").optional(),
  name:z.string().trim().min(1,"Ingresa el nombre del local.").max(120,"El nombre no puede superar 120 caracteres."),
  address:z.string().trim().min(3,"Ingresa la dirección del local."),
  phone:z.string().trim().max(40,"El teléfono no puede superar 40 caracteres."),

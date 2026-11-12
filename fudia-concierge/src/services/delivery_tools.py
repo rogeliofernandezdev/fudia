@@ -138,7 +138,7 @@ def delivery_order(
     order: dict[str, Any] = {
         "fulfillment": delivery.fulfillment,
         "customerName": delivery.customer_name,
-        "customerPhone": session.phone,
+        "customerPhone": session.contact_phone,
         "conversationId": session.conversation_id,
         "requestId": request_id,
         "items": lines,

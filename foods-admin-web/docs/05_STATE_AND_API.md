@@ -471,6 +471,36 @@ El borrador de filas es estado local; `deliveryFeeErrors` valida límites
 El backend vuelve a validar y es la autoridad. Al guardar se reemplaza la caché
 con la respuesta, sin otra consulta. Las tarifas aplican al local activo.
 
+## Delivery Fudia
+
+Desde la migración 000118, `GeographicFields` comparte el catálogo remoto
+`["geographic-areas",parentCode]` entre Locales, Primer local y cobertura de
+centrales (solo Plataforma). La ubicación del local persiste `districtCode`;
+cambiar departamento/provincia limpia sus descendientes y exige elegir distrito.
+Una central guarda en `coverageCodes` solo distritos marcados con casillas y
+recibe `coverageLabels` para mostrarlas por nombre. Las empresas no crean,
+seleccionan ni modifican centrales. El orden se aplica solo dentro de la cobertura.
+
+`src/modules/delivery` publica tipos, API y componentes. Todo pasa por el proxy
+`/api/admin` o `/api/platform`:
+
+- **Centrales (Plataforma):**
+  - Clave `["platform-delivery-partners"]`, con `GET|POST /platform/delivery-partners`
+    y `PATCH /platform/delivery-partners/{id}`.
+  - Desactivar reenvía nombre y WhatsApp con `active:false`.
+  - Subir o bajar envía el orden completo a `PUT /platform/delivery-partners/order`
+    y reemplaza la caché con la respuesta. Ante un error, recarga la lista.
+- **Empresa (Plataforma):** clave `["platform-organization-delivery",organizationId]`
+  (`GET|PUT /platform/organizations/{id}/delivery`). El proxy de plataforma
+  reenvía `PUT`.
+- **Local:** solo usa `["delivery-link",locationId]`
+  (`GET|POST locations/{id}/delivery-link`). Generar o regenerar el enlace
+  reemplaza la caché con la respuesta.
+- **Pedido:** la lectura trae `deliveryDispatchStatus`, `deliveryPartnerName`
+  y `deliveryPartnerFee`, sin otra consulta.
+  - `POST orders/{id}/delivery-dispatch/retry|own` invalidan `order`, `orders`,
+    `pos-order`, `pos-orders` y `notices`.
+
 ## Tope mensual de Fudia Concierge (solo Plataforma)
 
 `platform-api` es el único consumidor de `/v1/platform/concierge-usage*` y del
@@ -510,9 +540,11 @@ avisos ve cada rol y devuelve los textos redactados: el panel no arma mensajes
 ni filtra por rol.
 
 El backend solo devuelve avisos pendientes: cuando el pedido se atiende (comanda
-lista entregada, cuenta pagada, pedido nuevo cuya comanda ya está lista, o pedido
-cancelado) el aviso desaparece de la lista y del contador en la siguiente
-consulta. Abrir un aviso no lo quita: si no se atendió, sigue visible como leído.
+lista entregada, cuenta pagada, pedido nuevo cuya comanda ya está lista o ya fue
+entregado, o pedido cancelado) el aviso desaparece de la lista y del contador en
+la siguiente consulta (las mutaciones de Salón, Pedidos, Cocina y POS invalidan
+`["staff-notices"]` para actualizarla al instante). Abrir un aviso no lo quita:
+si no se atendió, sigue visible como leído.
 
 «Cuenta anterior sin cerrar» (`stale_account`, icono `clock`, tono `peach`) llega
 cuando alguien escanea el QR de una mesa cuya cuenta lleva más de 3 h sin pedidos;

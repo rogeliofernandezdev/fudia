@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
+	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
@@ -21,6 +22,8 @@ type Orders struct {
 	work    unitofwork.Manager
 	audit   audit.Repository
 	notices noticecontracts.Publisher
+	// dispatch ofrece los pedidos de delivery a las centrales de Delivery Fudia.
+	dispatch deliverycontracts.OrderDispatch
 }
 
 func New(repo OrderRepository, work unitofwork.Manager, audit audit.Repository, stock OrderStock) *Orders {
@@ -33,8 +36,37 @@ func (a *Orders) WithNotices(notices noticecontracts.Publisher) *Orders {
 	return a
 }
 
+// WithDispatch conecta el despacho a las centrales de Delivery Fudia.
+func (a *Orders) WithDispatch(dispatch deliverycontracts.OrderDispatch) *Orders {
+	a.dispatch = dispatch
+	return a
+}
+
+// dispatchChanged avisa al despacho, después del commit y con mejor esfuerzo,
+// que el pedido cambió (confirmado, cancelado o listo para recoger).
+func (a *Orders) dispatchChanged(ctx context.Context, s scope, orderID string) {
+	if a.dispatch != nil {
+		a.dispatch.OrderChanged(ctx, s, orderID)
+	}
+}
+
+// noticeOnTheWay avisa al cliente de WhatsApp que su delivery salió del local.
+func (a *Orders) noticeOnTheWay(ctx context.Context, s scope, o domain.Order) {
+	if a.notices == nil || o.Channel != "delivery" {
+		return
+	}
+	conversationID, err := a.repo.ConciergeConversation(ctx, s, o.ID)
+	if err != nil {
+		return
+	}
+	if customer, ok := noticecontracts.OrderOnTheWayForCustomer(o.ID, o.Channel, o.CustomerPhone, conversationID); ok {
+		_ = a.notices.PublishCustomer(ctx, s, customer)
+	}
+}
+
 // noticeReady publica, después del commit y con mejor esfuerzo, que una comanda está lista.
 func (a *Orders) noticeReady(ctx context.Context, s scope, orderID, ticketID, station string) {
+	a.dispatchChanged(ctx, s, orderID)
 	if a.notices == nil {
 		return
 	}
@@ -151,6 +183,10 @@ type OrderRepository interface {
 	InsertItems(ctx context.Context, s scope, orderID, roundID string, items []domain.PreparedOrderItem) error
 	SyncServiceStatus(ctx context.Context, s scope, id string) error
 	CompleteDeliveredAccount(ctx context.Context, s scope, orderID string) (bool, error)
+	// ReleaseDeliveryFee y RestoreDeliveryFee mueven el envío entre el pedido y
+	// la central de Delivery Fudia; devuelven 0 si no había nada que cambiar.
+	ReleaseDeliveryFee(ctx context.Context, s scope, orderID string) (int64, error)
+	RestoreDeliveryFee(ctx context.Context, s scope, orderID string, fee float64) (int64, error)
 	Record(context.Context, scope, string) (domain.Order, error)
 	ExistingSelections(context.Context, scope, string) ([]domain.PreparedOrderSelection, error)
 	ComboGroups(context.Context, scope, string) (map[string]*domain.ComboGroup, []string, error)

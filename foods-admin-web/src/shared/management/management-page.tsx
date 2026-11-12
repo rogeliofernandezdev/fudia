@@ -5,6 +5,7 @@ import {Button,Input,PageHeader,Pagination,RowActionButton,Select,Status} from "
 import {Icon,IconName} from "@/design-system/icons";
 import {DataTable} from "@/design-system/data-table";
 import {StatCard} from "@/design-system/stat-card";
+import {EmptyState} from "@/design-system/states";
 
 type Tone="green"|"blue"|"orange"|"gray";
 type Row={name:string;detail:string;category:string;value:string;state:string;tone?:Tone};
@@ -18,6 +19,6 @@ export function ManagementPage({eyebrow,title,description,action,actionIcon="plu
  <section className="stat-grid" aria-label="Resumen"><StatCard icon="layers" label="Total registrados" value={rows.length} meta="En todos los locales"/><StatCard icon="circleCheck" tone="brand" label="Operativos" value={rows.filter(r=>r.tone!=="orange"&&r.tone!=="gray").length} meta="Disponibles actualmente"/><StatCard icon="alert" label="Requieren atención" value={rows.filter(r=>r.tone==="orange").length} meta="Revisar hoy" attention/></section>
  <section className="panel management standardized-management"><div className="toolbar"><label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder={`Buscar en ${title.toLowerCase()}...`}/></label><Select chip aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option>{states.map(value=><option key={value}>{value}</option>)}</Select><button><Icon name="filter" size={18}/>Filtros</button><button><Icon name="download" size={18}/>Exportar</button></div>
  {visible.length?<><DataTable label={`Registros de ${title}`} containerClassName="hover-scroll"><thead><tr><th>{columns[0]}</th><th>{columns[1]}</th><th>{columns[2]}</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{visible.map((row,index)=><tr className={index%2?"alternate":""} key={row.name}><td><span className={`row-icon r${index%3}`}><Icon name="box" size={18}/></span><b title={row.name}>{row.name}</b><small title={row.detail}>{row.detail}</small></td><td>{row.category}</td><td><b>{row.value}</b></td><td><Status tone={row.tone}>{row.state}</Status></td><td><div className="standard-actions"><RowActionButton action="view"/><RowActionButton action="edit"/></div></td></tr>)}</tbody></DataTable>
-</>:<div className="catalog-state"><span><Icon name="search"/></span><b>No encontramos resultados</b><p>Ajusta la búsqueda o el estado para consultar otros registros.</p></div>}
+</>:(rows.length?<EmptyState icon="search" title="Sin coincidencias" text="Ajusta la búsqueda o el estado para consultar otros registros."/>:<EmptyState icon={actionIcon} title={`Aún no hay registros de ${title.toLowerCase()}`} text="Registra el primero para comenzar." action={<Button icon={actionIcon}>{action}</Button>}/>)}
  <Pagination page={safePage} size={size} total={filtered.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/></section></>;
 }

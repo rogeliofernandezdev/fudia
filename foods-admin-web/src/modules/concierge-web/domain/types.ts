@@ -1,0 +1,9 @@
+export type ChatActionName="add_item"|"add_modified_item"|"add_combo_item"|"remove_item"|"view_cart"|"prepare_confirmation"|"confirm_order"|"set_fulfillment"|"set_delivery_details"|"request_bill"|"request_human";
+export type ChatAction={name:ChatActionName;args?:Record<string,unknown>;confirmation_ref?:string};
+export type ChatInput={requestId:string;text?:string;action?:ChatAction;location?:{latitude:number;longitude:number}};
+export type ChatMessage={id:string;role:"user"|"assistant";text:string;imageUrl?:string;createdAt:number;status?:string};
+export type CartItem={productId:string;name:string;quantity:number;unitPrice:string;lineTotal:string;note:string;modifiers:{name:string}[];selections:{name:string}[]};
+export type ChatState={context:{organizationName:string;locationName:string;name:string;serviceType:"table"|"counter"|"delivery"};messages:ChatMessage[];cart:{items:CartItem[];total:string};confirmationRef:string|null;mode:"table"|"counter"|"delivery";customerName:string;pending:boolean;failed:boolean;active:boolean};
+export type ChatProduct={productId:string;name:string;description:string;price:string;imageUrl:string|null;categoryName:string|null;status:string;isCombo:boolean;hasModifiers:boolean;remaining:string|null};
+export type ChatMenu={restaurantLogoUrl:string|null;currencySymbol:string;items:ChatProduct[]};
+export type ProductOptions={kind:"combo"|"modifiers";detail:{name:string;groups:{id:string;name:string;required:boolean;minSelections:number;maxSelections:number;options:{id?:string;productId?:string;name:string;surcharge:string;available?:boolean}[]}[]}};

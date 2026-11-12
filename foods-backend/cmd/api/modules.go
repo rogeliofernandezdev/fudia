@@ -8,6 +8,9 @@ import (
 	conciergeapp "github.com/foods-platform/foods-backend/internal/modules/concierge/application"
 	conciergepg "github.com/foods-platform/foods-backend/internal/modules/concierge/infrastructure/postgres"
 	conciergehttp "github.com/foods-platform/foods-backend/internal/modules/concierge/transport/http"
+	deliveryapp "github.com/foods-platform/foods-backend/internal/modules/delivery/application"
+	deliverypg "github.com/foods-platform/foods-backend/internal/modules/delivery/infrastructure/postgres"
+	deliveryhttp "github.com/foods-platform/foods-backend/internal/modules/delivery/transport/http"
 	menuapp "github.com/foods-platform/foods-backend/internal/modules/menu/application"
 	menufiles "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/files"
 	menugcs "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/gcs"
@@ -25,6 +28,7 @@ import (
 	platformapp "github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
 	platformdiag "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/diagnostics"
 	platformpg "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/postgres"
+	platformwhatsapp "github.com/foods-platform/foods-backend/internal/modules/platformadmin/providers/concierge"
 	platformhttp "github.com/foods-platform/foods-backend/internal/modules/platformadmin/transport/http"
 	purchaseapp "github.com/foods-platform/foods-backend/internal/modules/purchasing/application"
 	purchasepg "github.com/foods-platform/foods-backend/internal/modules/purchasing/infrastructure/postgres"
@@ -39,6 +43,7 @@ import (
 	subscriptionpg "github.com/foods-platform/foods-backend/internal/modules/subscriptions/infrastructure/postgres"
 	subscriptionhttp "github.com/foods-platform/foods-backend/internal/modules/subscriptions/transport/http"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
+	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	httpapi "github.com/foods-platform/foods-backend/internal/transport/httpapi"
 
 	"context"
@@ -57,7 +62,24 @@ import (
 	"os"
 )
 
-func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
+// orderHandoff pasa a «en camino» el pedido que recogió una central de Delivery Fudia.
+type orderHandoff struct{ orders *orderapp.Orders }
+
+func (h orderHandoff) MarkOnTheWay(ctx context.Context, s requestscope.Scope, orderID string) error {
+	return h.orders.MarkDeliveryOnTheWayInTransaction(ctx, s, orderID)
+}
+
+func (h orderHandoff) ReleaseDeliveryFee(ctx context.Context, s requestscope.Scope, orderID string) error {
+	return h.orders.ReleaseDeliveryFeeInTransaction(ctx, s, orderID)
+}
+
+func (h orderHandoff) RestoreDeliveryFee(ctx context.Context, s requestscope.Scope, orderID string, fee float64) error {
+	return h.orders.RestoreDeliveryFeeInTransaction(ctx, s, orderID, fee)
+}
+
+// newAPI compone el API y devuelve el despachador de Delivery Fudia, cuyo
+// barrido periódico avanza la cascada de centrales.
+func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *deliveryapp.Dispatcher) {
 	// Composition is the only layer that knows concrete PostgreSQL adapters.
 	// A single unit of work and shared stateless adapters preserve transactions
 	// across Orders, Inventory, Billing and tenant onboarding.
@@ -69,6 +91,9 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	notices := noticeapp.New(noticepg.New(db), identityService)
 	orders := orderapp.New(orderpg.New(db), work, audit, stock).WithNotices(notices)
+	deliveryRepo := deliverypg.New(db)
+	dispatcher := deliveryapp.NewDispatcher(deliveryRepo, work).WithNotices(notices).WithHandoff(orderHandoff{orders})
+	orders.WithDispatch(dispatcher)
 
 	accessRepo := subscriptionpg.NewAccess(db)
 	access := subscriptionapp.NewAccess(accessRepo)
@@ -77,6 +102,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	profiles := orgapp.NewRestaurantProfiles(orgpg.NewRestaurantProfiles(db), menu.RestaurantMedia())
 	platform := platformapp.New(platformpg.New(db), work, organizations, subscriptions,
 		credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})
+	platform.WithWhatsApp(platformwhatsapp.New(os.Getenv("FUDIA_CONCIERGE_URL"), os.Getenv("FUDIA_CONCIERGE_API_KEY")))
 
 	paymentsRepo := billingpg.NewPayments(db)
 	methods := billingapp.NewMethods(billingpg.NewMethods(db), work)
@@ -91,7 +117,9 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	customers := customerapp.New(customerpg.New(db))
 
 	concierge := conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers).WithNotices(notices)
+	concierge.WithDirectory(conciergepg.New(db), platform, work)
 	return httpapi.NewWithHandlers(httpapi.Handlers{
+		Delivery:               deliveryhttp.New(deliveryapp.NewPartners(deliveryRepo, work), dispatcher),
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
 		Tips:                   billinghttp.NewTips(tips),
 		SpecialTaxes:           orghttp.NewSpecialTaxes(orgapp.NewSpecialTaxes(taxRepository, audit)),
@@ -100,7 +128,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),
 		Concierge:              conciergehttp.New(concierge, func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
-		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit).WithTableGuard(concierge)),
+		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit).WithTableGuard(concierge).WithOrigins(conciergepg.NewUsage(db), platform)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work).WithTips(tips)),
@@ -118,7 +146,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		Orders:                 orderhttp.New(orders),
 		Notices:                noticehttp.New(notices),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
-	})
+	}), dispatcher
 }
 func configureProductImages(ctx context.Context, db *pgxpool.Pool) (*menuapp.ProductImages, func(), error) {
 	provider := os.Getenv("PRODUCT_IMAGE_STORAGE")

@@ -48,7 +48,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer closeImages()
-	mux := newAPI(db, images).Routes()
+	api, dispatcher := newAPI(db, images)
+	mux := api.Routes()
+	go sweepDeliveryDispatch(ctx, logger, dispatcher)
 	mux.HandleFunc("GET /health", health)
 	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)
@@ -61,6 +63,28 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Error("api_stopped", "error", err)
 		os.Exit(1)
+	}
+}
+
+// deliverySweepInterval es cada cuánto se revisan ofertas vencidas a centrales,
+// pedidos listos para recoger y despachos de pedidos cancelados. Concierge
+// también avanza la cascada cada vez que consulta su bandeja de salida.
+const deliverySweepInterval = 20 * time.Second
+
+type deliverySweeper interface{ Sweep(context.Context) error }
+
+func sweepDeliveryDispatch(ctx context.Context, logger *slog.Logger, dispatcher deliverySweeper) {
+	ticker := time.NewTicker(deliverySweepInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := dispatcher.Sweep(ctx); err != nil && ctx.Err() == nil {
+				logger.Warn("delivery_sweep_failed", "error", err)
+			}
+		}
 	}
 }
 

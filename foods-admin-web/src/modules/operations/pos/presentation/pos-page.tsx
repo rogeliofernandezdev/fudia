@@ -25,7 +25,7 @@ const FiscalPrintDialog=dynamic(()=>import("@/modules/einvoicing").then(module=>
 const paymentMeta={
   pending:{label:"Sin pagos",tone:"gray" as const},
   partial:{label:"Pago parcial",tone:"orange" as const},
-  paid:{label:"Pagado",tone:"green" as const},
+  paid:{label:"Pagada",tone:"green" as const},
 };
 const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
 const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
@@ -83,7 +83,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function refresh(){
     void qc.invalidateQueries({queryKey:["pos-orders"]});
     void qc.invalidateQueries({queryKey:["pos-order"]});
-    for(const key of ["salon-floor","orders","order"])void qc.invalidateQueries({queryKey:[key]});
+    for(const key of ["salon-floor","orders","order","staff-notices"])void qc.invalidateQueries({queryKey:[key]});
     void qc.invalidateQueries({queryKey:["cash-registers"]});
     void qc.invalidateQueries({queryKey:["cash-shift"]});
     void qc.invalidateQueries({queryKey:["pos-cash-access"]});
@@ -160,7 +160,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 
       {orders.isLoading?<POSLoading/>
       :orders.isError?<ErrorState title="No pudimos cargar los pedidos" text={orders.error.message} onRetry={()=>void orders.refetch()}/>
-      :!items.length?<EmptyState icon="receipt" title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":paymentStatus==="all"?"Aún no hay pedidos":"No hay pedidos con ese estado de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
+      :!items.length?<EmptyState icon={q?"search":"receipt"} title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":paymentStatus==="all"?"Aún no hay pedidos":"No hay pedidos con ese estado de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
       :<DataTable label="Pedidos para cobrar" containerClassName="hover-scroll pos-table-wrap" className="pos-table">
         <thead><tr><th>Pedido</th><th>Canal</th><th>Preparación</th><th className="pos-money">Total</th><th className="pos-money">Pagado</th><th className="pos-money">Saldo</th><th>Cobro</th><th className="pos-th-actions">Acciones</th></tr></thead>
         <tbody>{items.map((item,index)=>{
@@ -221,6 +221,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       loading={detail.isLoading}
       error={detail.error?.message}
       data={detail.data}
+      preview={items.find(item=>item.id===detailId)}
       canManage={canManage}
       hasShift={Boolean(refundShift)}
       formatMoney={money}
@@ -260,7 +261,7 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,s
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className={"crud-modal pos-payment-modal modal-panel-in"+(state?"":" pos-checkout-modal")} role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
 
-    <ModalHeader title={data?.order.tableName||data?.order.customerName||"Cobrar saldo"} titleId="pos-payment-entry-title" icon="cash" subtitle="Cobro" onClose={close} busy={busy} closeLabel="Cerrar"/>
+    <ModalHeader title={data?.order.tableName||data?.order.customerName||"Cobrar saldo"} titleId="pos-payment-entry-title" icon="cash" onClose={close} busy={busy} closeLabel="Cerrar"/>
     {form??(state?state.retry?<ErrorState title={state.title} text={state.text} onRetry={state.retry}/>:<EmptyState icon={state.icon} title={state.title} text={state.text} action={state.cash?cashLink():undefined}/>:<POSPaymentLoading/>)}
   </Dialog></div>;
 }
@@ -275,42 +276,52 @@ function POSPaymentLoading(){return <div className="modal-body pos-payment-body 
 </div>}
 
 /** Detalle de cobro con el patrón de Detalle de pedido: cabecera con mesa o cliente, identidad, tarjeta, pestañas y resumen fijo. */
-export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket,prebill}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void;prebill?:()=>void}){
+export function POSDetailDialog({loading,error,data,preview,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket,prebill}:{loading:boolean;error?:string;data?:POSOrderDetail;preview?:Pick<POSOrderSummary,"tableName"|"customerName"|"channel">;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void;prebill?:()=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
-  const tableName=data?.order.tableName?.trim();
-  const title=tableName?(/^mesa\b/i.test(tableName)?tableName:`Mesa ${tableName}`):data?.order.customerName||(data?"Venta directa":"Detalle de cobro");
-  const icon:IconName=tableName?"utensils":data?channelIcons[data.order.channel]??"receipt":"receipt";
+  // La cabecera no espera al API: con la fila del listado ya se conocen mesa, cliente y canal.
+  const head=data?.order??preview;
+  const tableName=head?.tableName?.trim();
+  const title=tableName?(/^mesa\b/i.test(tableName)?tableName:`Mesa ${tableName}`):head?.customerName||(head?"Venta directa":"Detalle de cobro");
+  const icon:IconName=tableName?"utensils":head?channelIcons[head.channel]??"receipt":"receipt";
   const paid=Number(data?.paidAmount??0);
   const remaining=Number(data?.remainingAmount??0);
   const[tab,setTab]=useState<"products"|"payments">("products");
+  const pending=remaining>0.00001;
+  const tip=data?.tip;
+  const tipCharged=Boolean(tip&&!tip.directToStaff);
+  // El resumen no repite el importe principal: Total y Pagado neto solo explican un saldo o una propina cobrada.
+  const breakdown=pending||Boolean(tip);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title" aria-busy={loading}>
-    {loading?<POSDetailLoading close={close} withFooter={Boolean(ticket)}/>:<>
+    {loading?<POSDetailLoading close={close} withFooter={Boolean(ticket)} heading={head?{title,icon}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
     <ModalHeader title={title} titleId="pos-detail-title" icon={icon} onClose={close} closeLabel="Cerrar detalle"/>
     {error?<div className="modal-body pos-detail-body"><ErrorState title="No pudimos cargar el cobro" text={error} onRetry={retry}/></div>
     :!data?<div className="modal-body pos-detail-body"><EmptyState icon="receipt" title="No hay detalle disponible"/></div>
-    :<ModalWorkspace summary={<section className={`modal-summary pos-detail-totals${remaining<=0.00001?" is-paid":""}`} aria-labelledby="pos-detail-summary-title">
+    :<ModalWorkspace summary={<section className={`modal-summary pos-detail-totals is-band${pending?"":" is-paid"}`} aria-labelledby="pos-detail-summary-title">
       <div className="modal-summary-heading"><h3 id="pos-detail-summary-title" className="modal-section-title">Resumen de cobro</h3></div>
-      <div className="modal-summary-lines">
-        <div className="modal-summary-line"><span>Total del pedido</span><b>{formatMoney(Number(data.order.total))}</b></div>
-        <div className={`modal-summary-line pos-detail-paid${paid>0.00001?" has-payment":""}`}><span>Pagado neto</span><b>{formatMoney(paid)}</b></div>
-        {data.tip&&<div className="modal-summary-line"><span>{data.tip.directToStaff?"Propina directa al personal":"Propina cobrada"}</span><b>{formatMoney(Number(data.tip.amount))}</b></div>}
-      </div>
-      <div className="modal-summary-total"><span>{remaining>0.00001?"Saldo pendiente":data.tip&&!data.tip.directToStaff?"Total pagado con propina":"Total pagado"}</span><strong>{formatMoney(remaining>0.00001?remaining:Number(data.order.total)+(data.tip&&!data.tip.directToStaff?Number(data.tip.amount):0))}</strong></div>
+      {breakdown&&<div className="modal-summary-lines">
+        {(pending||tipCharged)&&<div className="modal-summary-line"><span>Total</span><b>{formatMoney(Number(data.order.total))}</b></div>}
+        {tip&&<div className="modal-summary-line"><span>{tip.directToStaff?"Propina directa al personal":"Propina cobrada"}</span><b>{formatMoney(Number(tip.amount))}</b></div>}
+        {pending&&<div className={`modal-summary-line pos-detail-paid${paid>0.00001?" has-payment":""}`}><span>Pagado neto</span><b>{formatMoney(paid)}</b></div>}
+      </div>}
+      <div className="modal-summary-total"><span>{pending?"Saldo pendiente":tipCharged?"Total pagado con propina":"Total pagado"}</span><strong>{formatMoney(pending?remaining:Number(data.order.total)+(tipCharged?Number(tip!.amount):0))}</strong></div>
     </section>}>
     <div className="modal-body pos-detail-body" tabIndex={0} aria-label="Productos y pagos del pedido">
       <div className="pos-detail-content">
         <section className="pos-detail-hero" aria-label="Resumen del cobro">
           <div className="pos-detail-identity">
             <div className="pos-detail-status" aria-label="Estado de pago"><Status tone={paymentMeta[data.paymentStatus].tone}>{paymentMeta[data.paymentStatus].label}</Status><span>{data.order.code}</span></div>
-            <p><Icon name="clock" size={14}/><time dateTime={data.order.createdAt}>{formatDateTime(data.order.createdAt)}</time></p>
-            <p><Icon name={channelIcons[data.order.channel]??"receipt"} size={14}/><span>{[channelLabel[data.order.channel]??data.order.channel,data.order.channel==="salon"&&`Atendido por ${data.order.waiterName||"sin asignar"}`].filter(Boolean).join(" · ")}</span></p>
+            {/* Fecha y canal comparten una línea; bajan a la siguiente solo si no caben. */}
+            <div className="pos-detail-meta">
+              <p><Icon name="clock" size={14}/><time dateTime={data.order.createdAt}>{formatDateTime(data.order.createdAt)}</time></p>
+              <p><Icon name={channelIcons[data.order.channel]??"receipt"} size={14}/><span>{[channelLabel[data.order.channel]??data.order.channel,data.order.channel==="salon"&&`Atendido por ${data.order.waiterName||"sin asignar"}`].filter(Boolean).join(" · ")}</span></p>
+            </div>
             {data.fiscalDocument&&<p className="pos-detail-fiscal"><Icon name={data.fiscalDocument.documentType==="invoice"?"invoice":"receipt"} size={14}/><span>{data.fiscalDocument.label} {data.fiscalDocument.number}</span>{data.fiscalDocument.status!=="ACCEPTED"&&<FiscalStatus status={data.fiscalDocument.status}/>}</p>}
           </div>
           {data.order.customerName&&<DetailContact name={data.order.customerName}/>}
         </section>
 
         <Tabs className="pos-detail-tabs" label="Información del cobro" value={tab} onChange={setTab} items={[
-          {value:"products",label:"Productos",icon:"dish",tone:"orange",count:data.order.items?.length??0},
+          {value:"products",label:"Productos",icon:"dish",tone:"primary",count:data.order.items?.length??0},
           {value:"payments",label:"Pagos",icon:"payment",tone:"primary",count:data.payments.length},
         ]}/>
 
@@ -346,10 +357,12 @@ function POSLoading(){return <>
 </>}
 
 /** Skeleton con la geometría final: cabecera, identidad, tarjeta, pestañas, productos, resumen y acción. */
-function POSDetailLoading({close,withFooter}:{close:()=>void;withFooter:boolean}){return <>
-  <ModalHeader title={<><span className="sr-only">Cargando detalle de cobro</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId="pos-detail-title"
-    iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)"/>} onClose={close} closeLabel="Cerrar detalle"/>
-  <ModalWorkspace summary={<section className="modal-summary" aria-hidden="true">
+/** Con `heading` (datos de la fila) la cabecera ya es la real; solo sin ellos (enlace directo) se dibuja su skeleton. */
+function POSDetailLoading({close,withFooter,heading,withContact}:{close:()=>void;withFooter:boolean;heading?:{title:string;icon:IconName};withContact:boolean}){return <>
+  {heading?<ModalHeader title={heading.title} titleId="pos-detail-title" icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
+  :<ModalHeader title={<><span className="sr-only">Cargando detalle de cobro</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId="pos-detail-title"
+    iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)"/>} onClose={close} closeLabel="Cerrar detalle"/>}
+  <ModalWorkspace summary={<section className="modal-summary is-band" aria-hidden="true">
     <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/></div>
     <div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><Skeleton width="var(--size-72)" height="var(--size-9)"/><Skeleton width="var(--size-68)" height="var(--size-16)"/></div>)}</div>
     <div className="modal-summary-total"><Skeleton width="var(--size-116)" height="var(--size-10)"/><Skeleton width="var(--size-108)" height="var(--size-24)"/></div>
@@ -358,7 +371,7 @@ function POSDetailLoading({close,withFooter}:{close:()=>void;withFooter:boolean}
     <div className="pos-detail-content" aria-hidden="true">
       <div className="pos-detail-hero">
         <div className="pos-detail-identity"><Skeleton width="var(--size-72)" height="var(--size-24)" radius="var(--radius-pill)"/><Skeleton width="var(--size-150)" height="var(--size-9)"/></div>
-        <Skeleton width="100%" height="var(--size-68)" radius="var(--radius-card)"/>
+        {withContact&&<Skeleton width="100%" height="var(--size-68)" radius="var(--radius-card)"/>}
       </div>
       <Skeleton width="min(var(--size-320),100%)" height="var(--size-44)" radius="var(--radius-pill)"/>
       <ModalItemList className="pos-detail-panel">

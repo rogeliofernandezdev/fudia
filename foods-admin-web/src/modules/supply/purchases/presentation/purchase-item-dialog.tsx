@@ -61,7 +61,7 @@ export function PurchaseItemDialog({
     staleTime:10000,
   });
   // Sin Recetas casi todo se compra para revender; con Recetas lo habitual es un insumo.
-  const{control,register,handleSubmit,setValue,reset,formState:{errors,isSubmitted,isSubmitting}}=useForm<PurchaseInventoryItemDraft>({
+  const{control,register,handleSubmit,setValue,setError,reset,formState:{errors,isSubmitted,isSubmitting}}=useForm<PurchaseInventoryItemDraft>({
     defaultValues:{...blankDraft,mode:usesRecipes?"new_ingredient":"new_product"},
     resolver:purchaseInventoryItemResolver,
     mode:"onSubmit",
@@ -79,6 +79,11 @@ export function PurchaseItemDialog({
     // Lock before asynchronous validation; await the request before allowing a retry.
     submitting.current=true;
     try{await handleSubmit(draft=>save(draft))()}
+    catch(error){
+      if(error&&typeof error==="object"&&"code" in error&&error.code==="inventory_item_name_taken"){
+        setError("name",{type:"server",message:"Ya existe un artículo o producto con ese nombre. Búscalo y selecciónalo en lugar de crear uno nuevo."},{shouldFocus:true});
+      }
+    }
     finally{submitting.current=false}
   }
 
@@ -105,7 +110,7 @@ export function PurchaseItemDialog({
   const stockFields=<section className="purchase-item-section">
     <div className="purchase-section-title"><span><Icon name="box" size={18}/></span><div><b>Unidad y presentación</b><small>Cómo se almacena y cómo se compra.</small></div></div>
     <div className="form-grid">
-      <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
+      <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} help={usesRecipes?"Elige la unidad que usas para medir este insumo en tus recetas.":undefined} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
       <label>Stock mínimo<Input type="number" min="0" step="0.001" inputMode="decimal" {...register("minimumStock")} aria-invalid={Boolean(errors.minimumStock)}/>{errors.minimumStock?.message&&<small className="field-error">{errors.minimumStock.message}</small>}</label>
     </div>
     <PurchasePresentationsField unit={unit} value={presentations} disabled={locked} onBusyChange={setCatalogBusy} error={errors.presentations?.message??errors.unitsPerPresentation?.message} onUnitRuleChange={rule=>{setValue("unitCountable",rule.countable);setValue("unitName",rule.unitName)}} onChange={rows=>{

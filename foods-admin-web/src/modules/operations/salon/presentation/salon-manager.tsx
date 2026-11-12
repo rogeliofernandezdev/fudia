@@ -97,7 +97,7 @@ export function SalonManager({initialOrderId}:{initialOrderId?:string}={}){
     refetchInterval:query=>query.state.data?.completedAt?false:10000,
   });
 
-  const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","products","sales"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);
+  const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","products","sales","staff-notices"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);
 
   const advance=useMutation({
     mutationFn:(v:{id:string;status:string})=>v.status==="confirmado"?sendSalonOrder(v.id):updateSalonOrderStatus(v.id,v.status),
@@ -274,7 +274,7 @@ export function SalonManager({initialOrderId}:{initialOrderId?:string}={}){
       {detailId&&(
         <div className="modal-backdrop modal-overlay-in">
           <Dialog onResponseClose={closeDetail} className="crud-modal order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={orderDetailTitleId} aria-busy={loading}>
-            {loading?<OrderDetailSkeleton variant="table" close={closeDetail}/>:(
+            {loading?<OrderDetailSkeleton variant="table" close={closeDetail} preview={tables.find(table=>table.order?.id===detailId)?.order??undefined}/>:(
               <OrderDetailContent
                 variant="table"
                 order={detail.data}

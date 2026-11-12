@@ -100,7 +100,7 @@ export function KitchenBoard(){
     mutationFn:({ticket,status}:{ticket:KitchenTicket;status:Extract<KitchenStatus,"preparando"|"listo">})=>updateKitchenTicketStatus(ticket.id,status),
     onSuccess:(_,variables)=>{
       void qc.invalidateQueries({queryKey:["kitchen-tickets"]});
-      for(const key of ["orders","salon-floor","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]});
+      for(const key of ["orders","salon-floor","pos-orders","pos-order","dashboard","staff-notices"])void qc.invalidateQueries({queryKey:[key]});
       void qc.invalidateQueries({queryKey:["order",variables.ticket.orderId]});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo actualizar la comanda",message:error.message}),
@@ -120,7 +120,7 @@ export function KitchenBoard(){
       patchPlate(ticket.id,itemId,status);
     },
     onSuccess:(_,variables)=>{
-      for(const key of ["orders","salon-floor","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]});
+      for(const key of ["orders","salon-floor","pos-orders","pos-order","dashboard","staff-notices"])void qc.invalidateQueries({queryKey:[key]});
       void qc.invalidateQueries({queryKey:["order",variables.ticket.orderId]});
     },
     onError:(error,{ticket,itemId,previous})=>{
@@ -160,12 +160,13 @@ export function KitchenBoard(){
       </div>}
     />
 
-    {/* Filtro por origen del pedido (canal), con icono por canal; afecta solo la cola de esta estación. */}
+    {/* Filtro por origen del pedido (canal), con icono por canal; afecta solo la cola de esta estación.
+        Usa la `filter-pill` compartida con los periodos de Ventas: sin fondo y el elegido con anillo y check. */}
     <section className="kitchen-filters" aria-label="Filtrar por origen del pedido">
       <span className="kitchen-filter-label">Origen del pedido</span>
       {tickets.isPending?<Skeleton width="min(var(--size-320),100%)" height="var(--size-44)" radius="var(--radius-pill)"/>
       :<div className="cmd-chips" role="group" aria-label="Origen del pedido">
-        {[{value:"",label:"Todos"},...(tickets.data?.channelOptions??[])].map(option=><button type="button" key={option.value} className="cmd-chip" aria-pressed={channel===option.value} onClick={()=>setChannel(option.value)}>{channel===option.value?<span className="cmd-chip-check" aria-hidden="true"><Icon name="check" size={14}/></span>:option.value&&<Icon name={channelIcons[option.value]??"receipt"} size={16}/>}{option.label}</button>)}
+        {[{value:"",label:"Todos"},...(tickets.data?.channelOptions??[])].map(option=><button type="button" key={option.value} className="filter-pill" aria-pressed={channel===option.value} onClick={()=>setChannel(option.value)}>{channel===option.value?<span className="filter-pill-check" aria-hidden="true"><Icon name="check" size={14}/></span>:option.value&&<Icon name={channelIcons[option.value]??"receipt"} size={16}/>}{option.label}</button>)}
       </div>}
     </section>
 

@@ -96,6 +96,16 @@ CUSTOMER_NOTICES = Counter(
     "Customer notices from foods-backend (order ready) by relay and preparation result.",
     ["result"],
 )
+DELIVERY_PARTNER_MESSAGES = Counter(
+    "fudia_concierge_delivery_partner_messages_total",
+    "Delivery Fudia messages to courier centrals by kind (offer, ready, cancelled) and send result.",
+    ["kind", "result"],
+)
+DELIVERY_PARTNER_ACTIONS = Counter(
+    "fudia_concierge_delivery_partner_actions_total",
+    "Courier central button presses (accept, reject, pickup) by foods-backend outcome.",
+    ["action", "outcome"],
+)
 MESSAGES_SUPERSEDED = Counter(
     "fudia_concierge_messages_superseded_total",
     "Messages or replies dropped because a newer QR context replaced them.",

@@ -203,6 +203,25 @@ o locales. El dashboard prueba agregación conjunta de cobros de ambos códigos.
 `orders/domain/channels_test.go` protege la única opción «Recojo en local» y la
 compatibilidad. La integración requiere PostgreSQL efímero.
 
+`delivery_dispatch_integration_test.go` (Delivery Fudia, migración 000113)
+cubre: alta de centrales con teléfono normalizado y duplicado rechazado; orden
+global (vacío 400, incompleto 409, completo 200); empresa sin Delivery Fudia por
+defecto y su activación; empresa inexistente 404; empresa desactivada sin
+despacho; oferta a la 1.ª central al crear un delivery
+confirmado con detalle del pedido; botón de otro número ignorado; rechazo que
+pasa a la 2.ª; aceptación tardía `taken`; vencimiento por barrido que deja el
+despacho sin asignar con aviso a caja; «Reintentar» desde la 1.ª; aceptación
+idempotente; «Recoger» antes de cocina `not_ready`; lectura del pedido con central;
+«listo para recoger» al terminar cocina; «Recoger» que pasa el pedido a en camino
+(doble toque sin efecto); historial; delivery propio que retira la oferta;
+cancelación con aviso a la central que aceptó y aislamiento entre empresas.
+`delivery/domain/dispatch_test.go` valida teléfonos, configuración y estados.
+`delivery_link_integration_test.go` (migración 000115) cubre: sin enlace al
+inicio; generación del token; resolución pública con `serviceType=delivery`;
+carta con el token; pedido de mesa y cuenta rechazados con `delivery_link_only`;
+recojo sin mesa; apertura de conversación de delivery; regenerar invalida el
+token anterior (resolución pública y carta) y otra empresa no lo ve ni lo regenera.
+
 `delivery/domain/fees_test.go` prueba la distancia en línea recta redondeada a
 0.01 km, la elección del primer rango que cubre la distancia, la ausencia de
 cobertura sin rangos o más allá del mayor límite y la validación de rangos
@@ -277,3 +296,11 @@ ninguno para mesa ni para el mostrador registrado por el personal; 401 sin clave
 de Concierge; reclamo reservado, vencido y vuelto a entregar; confirmación
 idempotente y 404 para un aviso inexistente. Unitarias en
 `notifications/domain/customer_test.go` (canales que avisan y validación).
+
+## Cobertura geográfica y consistencia de Delivery Fudia
+
+La migración 000118 y las regresiones de reasignación, pagos, rollback del costo de
+envío, desactivación y cobertura se describen en
+[15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md). Ejecutar la suite completa
+con PostgreSQL temporal; los permisos de cobertura se prueban con cookie real
+de empresa, no solo llamando directamente a handlers.

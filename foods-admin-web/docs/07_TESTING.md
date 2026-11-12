@@ -269,6 +269,20 @@ mapeo central de avisos (ámbar cerca del tope, rojo tope alcanzado, «Solo
 medición» en modo medir), skeleton/error/vacío de cada vista, el modal de detalle
 de solo lectura y la ausencia de topes comerciales fijos en el frontend.
 
+`delivery-fudia.test.mjs` cubre:
+
+- La matriz del despacho (etiquetas y tonos sin rojo).
+- Cuándo caja puede reintentar o usar su delivery propio.
+- El orden global (subir/bajar) y el panel por empresa.
+- Que el local ya no elige modo ni centrales.
+- El aviso «Ninguna central aceptó» (pantalla, enlace, tono e icono).
+- Que las centrales vienen del API.
+- Que el enlace usa la ruta pública del QR.
+- El vacío de Plataforma.
+
+`location-plan-limit.test.mjs` comprueba además que el enlace de delivery
+aparece al editar el local y que el local no guarda modo ni centrales.
+
 Probar validaciones, permisos, filtros, errores y vacíos. Validar 390 px, escritorio
 y accesibilidad. Puertas: lint, typecheck, tests y build.
 
@@ -622,3 +636,12 @@ independiente desde el shell (el shell no consulta avisos y la campana no import
 el shell), skeleton/error/vacío y anuncio `aria-live`, refresco de 15 s solo con
 `tables.read` o `cash.manage`, endpoints del contrato OpenAPI, área táctil de
 44 px y rojo reservado al contador sin leer.
+
+## Geografía y cobertura de centrales
+
+`geographic-fields.test.mjs` verifica selección dependiente, limpieza de
+descendientes, distrito obligatorio, carga, error recuperable y vacío.
+`tests/helpers/delivery-coverage-preview.mjs` monta componentes reales en Chrome
+con catálogo ilustrativo y sin escrituras: marca y desmarca distritos, conserva la selección al cambiar de provincia y guarda con el
+filtro auxiliar vacío y comprueba 390×844, 390×480 y 1440×900, pie visible,
+ausencia de desborde y controles móviles de al menos 44 px.

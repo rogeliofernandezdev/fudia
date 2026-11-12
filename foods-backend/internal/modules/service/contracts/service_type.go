@@ -9,4 +9,6 @@ type ServiceType = domain.ServiceType
 const (
 	ServiceTypeTable   = domain.ServiceTypeTable
 	ServiceTypeCounter = domain.ServiceTypeCounter
+	// ServiceTypeDelivery: enlace de delivery del local (pide delivery o recojo).
+	ServiceTypeDelivery = domain.ServiceTypeDelivery
 )

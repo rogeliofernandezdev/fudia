@@ -6,6 +6,76 @@ las operaciones de local llevan también location_id.
 
 Fechas se guardan en UTC; importes monetarios usan numeric, nunca flotantes.
 
+## Delivery Fudia: centrales y despacho (migraciones 000113, 000117 y 000118)
+
+La cobertura por distritos marcados con casillas (filtrados por departamento y
+provincia), propiedad exclusiva de
+Plataforma, y la consistencia transaccional del despacho se detallan en
+[15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md). El orden global se filtra
+por el distrito del local; sin distrito o cobertura no se ofrece a otras zonas.
+
+Delivery Fudia se gestiona globalmente:
+
+- La plataforma registra las centrales de reparto en `delivery_partners`: nombre,
+  WhatsApp con código de país (solo dígitos, único) y `priority`, el orden global.
+  Una central nueva queda al final.
+- La plataforma activa Delivery Fudia por empresa en
+  `organization_delivery_settings.enabled`. Todos los locales de la empresa lo
+  usan. Sin fila equivale a delivery propio: Fudia solo recibe el pedido.
+- La migración 000117 retiró la configuración por local (`location_delivery_settings`
+  y `location_delivery_partners`). Las empresas que ya usaban Delivery Fudia en
+  algún local quedaron activadas.
+
+Un pedido de delivery confirmado (alta con `sendToKitchen`, «Enviar comanda» o
+estado Confirmado) de una empresa con Delivery Fudia abre un `delivery_dispatches` (uno
+por pedido) y se ofrece a la 1.ª central: `delivery_dispatch_offers` guarda cada
+intento con su `action_token` (generado por PostgreSQL, viaja en los botones) y
+su vencimiento (3 minutos desde que Concierge confirma el envío; 5 minutos si el
+mensaje nunca se pudo enviar). Un rechazo o un vencimiento ofrece el pedido a la
+siguiente central activa del orden global que aún no lo recibió en la vuelta
+(`round`); la `priority` de la oferta es su posición en la vuelta; sin más centrales el despacho
+queda `unassigned` y se publica el aviso `delivery_unassigned` a caja.
+«Reintentar» abre otra vuelta desde la 1.ª central; «Usar delivery propio» lo deja
+en `own` y retira las ofertas. Al aceptar, se retiran las demás ofertas; si cocina
+ya terminó, la central recibe de inmediato «listo para recoger». «Recoger» pasa el
+pedido a `en_camino` por el caso de uso de Orders y el despacho a `picked_up`. Un
+pedido cancelado cierra el despacho y avisa a la central que había aceptado.
+
+`delivery_partner_messages` es la bandeja de salida hacia las centrales (`offer`,
+`ready`, `cancelled`, uno por oferta y tipo), reclamada por Concierge como
+`customer_notices`. El backend nunca llama a Meta. Orders avisa al despacho
+después de cada commit (`delivery/contracts.OrderDispatch`, mejor esfuerzo) y un
+barrido cada 20 s en `cmd/api` (también al reclamar la bandeja) corrige lo que
+falte: despachos por crear, ofertas vencidas, «listo» por enviar y cancelaciones.
+`orders` expone `deliveryDispatchStatus` y `deliveryPartnerName` en su lectura.
+El estado del pedido (`orders.status`) no cambia por el despacho, salvo el paso a
+`en_camino` al recoger; `SyncServiceStatus` no lo toca.
+
+Cobro (migración 000116): la central paga al local solo el pedido. Al aceptar se
+guarda el envío en `delivery_dispatches.partner_fee` y Orders lo descuenta del
+pedido (`delivery_fee=0`, `total=subtotal`, auditoría
+`order.delivery_fee_to_partner`; `fee_released=true`), de modo que cobro,
+comprobante y reportes cuadran con lo que cobra el local. No se descuenta si lo
+cobrado ya supera el costo del pedido. Si el local vuelve a su delivery propio,
+el envío regresa al pedido (`order.delivery_fee_restored`). Ambos pasos corren
+en la misma transacción que el despacho. Si ya había pagos antes de aceptar,
+se conserva el envío y se deja el reparto al local (`payment_conflict`), sin
+asignar una central ni marcar un descuento inexistente. Los mensajes a la central
+calculan lo que cobra al cliente como `subtotal + partner_fee`, y la lectura del
+pedido expone `deliveryPartnerFee`.
+
+## Enlace/QR de delivery por local (migración 000115)
+
+`location_delivery_links` guarda un token por local (32 hex, generado por
+PostgreSQL, único). Se resuelve igual que el QR de una mesa en
+`/v1/public/tables/{token}` y en las rutas de Concierge, con
+`serviceType=delivery`, nombre «Delivery» y sin mesa. Abre el WhatsApp de Fudia
+ya ligado al local para pedir delivery o recojo sin haber escaneado antes una
+mesa. No es una fila de `tables`: no ocupa mesas, no aparece en Mesas ni cuenta
+en el límite del plan. Con ese token, Concierge solo crea pedidos por
+`delivery-orders`. Pedido de mesa, cuenta y llamado al mozo responden
+`409 delivery_link_only`. Regenerarlo invalida el token anterior.
+
 ## Responsabilidad de la atención
 
 `orders.waiter_id` identifica al usuario que tomó la comanda manual de la mesa.
@@ -30,6 +100,9 @@ y avisa `order_sent` al cliente. En mesa (canal `salon` o `whatsapp`) con respon
 solo ese mozo puede enviar. `concierge_order_requests` guarda ahora `customer_phone`
 y `round_id` para avisar a cada WhatsApp por su ronda; `customer_notices` admite
 `order_sent` y deduplica por `(order_id,kind,dedupe_key)` (la ronda).
+La migración 000114 agrega `order_on_the_way`: el paso a `en_camino` de un
+delivery creado por Concierge avisa una vez «va en camino» (lo despacha el
+personal o lo recoge una central de Delivery Fudia).
 
 ## Prerregistro de clientes de WhatsApp
 
@@ -121,8 +194,8 @@ Las audiencias se resuelven al leer con la autorización de Identity en el local
 los pendientes: un aviso sale de la campana y del contador cuando su pedido ya se
 atendió (comanda lista → en camino o entregado; cuenta pedida → pedido completado;
 pedido nuevo → la cocina ya marcó lista esa comanda, es decir, existe un aviso
-`order_ready` posterior del mismo pedido, o el pedido se completó; cualquier pedido
-cancelado). Los pedidos por QR llegan ya confirmados y cada ronda avisa sobre el
+`order_ready` posterior del mismo pedido, el pedido ya se entregó sin ítems por
+enviar, o se completó; cualquier pedido cancelado). Los pedidos por QR llegan ya confirmados y cada ronda avisa sobre el
 mismo pedido, por eso el pedido nuevo no se resuelve por estado. Los llamados al
 mozo siguen visibles sus 24 horas. Marcar como leído no aplica este filtro. Los avisos
 se publican después del commit del evento con mejor esfuerzo: un fallo no revierte
@@ -890,3 +963,23 @@ hechos. `cash_shift_users` conserva las asignaciones y sus fechas de retiro;
 `activeUserNames` expone únicamente el equipo vigente del turno abierto y devuelve
 un arreglo vacío al cerrar. La búsqueda de turnos admite al abridor, al autor del
 cierre y a los integrantes actuales, siempre dentro de la empresa y local.
+
+
+## WhatsApp multiproveedor (120–122)
+
+`platform_whatsapp_channels` mantiene un único registro actual por país con
+proveedor, revisión, verificación y marca de reconciliación. Los registros previos
+se archivan sin borrado. `platform_whatsapp_channel_history` registra actor,
+instantáneas y fecha. `platform_whatsapp_routes` conserva referencias inmutables
+de transporte; no son otros canales operativos ni contienen credenciales.
+
+`concierge_customer_identities` separa PN verificado de alias opacos del proveedor.
+Un LID nunca se convierte a teléfono por su forma; solo evidencia autenticada
+permite vincular su historial a un PN. `concierge_venue_visits` guarda identidad,
+empresa/local reales, cliente existente opcional, última visita y cantidad.
+`concierge_conversation_origins` fija canal y destinatario por atención; repetir
+su apertura no incrementa visitas. Los UUID propios se generan en PostgreSQL.
+
+Los avisos al cliente y a centrales fijan su canal en la creación. Cambiar la
+configuración del país no cambia el remitente de una conversación o aviso antiguo.
+Estos datos y la administración de números son exclusivos de Fudia.

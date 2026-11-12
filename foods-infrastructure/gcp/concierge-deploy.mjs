@@ -15,6 +15,14 @@ function required(env, key, pattern) {
   if (!value || (pattern && !pattern.test(value))) throw new Error(`Configura ${key} con un valor válido.`);
   return value;
 }
+// Plantillas de Meta para Delivery Fudia: opcionales; vacías, Concierge envía
+// mensajes interactivos (solo dentro de la ventana de 24 h).
+const TEMPLATE_KEYS = ["WHATSAPP_DELIVERY_OFFER_TEMPLATE", "WHATSAPP_DELIVERY_READY_TEMPLATE", "WHATSAPP_DELIVERY_CANCELLED_TEMPLATE"];
+function optional(env, key, pattern) {
+  const value = env[key] ?? "";
+  if (value && !pattern.test(value)) throw new Error(`Configura ${key} con un valor válido.`);
+  return value;
+}
 function bounded(env, key, fallback, min, max) {
   const value = env[key] || String(fallback);
   if (!/^\d+$/.test(value) || +value < min || +value > max) throw new Error(`${key} fuera de rango.`);
@@ -40,7 +48,10 @@ export function conciergeConfiguration(env) {
   const job = required(env, "GCP_CONCIERGE_PREFLIGHT_JOB", resource);
   const names = [backend, http, worker, job, env.GCP_FRONTEND_SERVICE, env.GCP_IMAGE_PROCESSOR_SERVICE].filter(Boolean);
   if (new Set(names).size !== names.length) throw new Error("Concierge no puede reutilizar nombres de otros componentes.");
-  const secrets = secretReferences(required(env, "GCP_CONCIERGE_SECRETS"), secretKeys);
+  const secrets = secretReferences(required(env, "GCP_CONCIERGE_SECRETS"), [...secretKeys,"WHATSAPP_META_ACCOUNTS","WHATSAPP_GATEWAY_KEY","WHATSAPP_GATEWAY_INGRESS_KEY"]);
+  const gatewayURL = env.WHATSAPP_GATEWAY_URL ? httpsURL(env.WHATSAPP_GATEWAY_URL, "Gateway WhatsApp") : "";
+  const gatewayKeys = ["WHATSAPP_GATEWAY_KEY","WHATSAPP_GATEWAY_INGRESS_KEY"];
+  if ((gatewayURL && gatewayKeys.some(key=>!secrets.has(key))) || (!gatewayURL && gatewayKeys.some(key=>secrets.has(key)))) throw new Error("Gateway WhatsApp exige URL HTTPS y ambas referencias privadas.");
   if (secretKeys.some(key => !secrets.has(key))) throw new Error("GCP_CONCIERGE_SECRETS debe incluir Redis, integración y los tres secretos Meta.");
   const backendSecrets = secretReferences(required(env, "GCP_BACKEND_SECRETS"), ["DATABASE_URL", "FUDIA_CONCIERGE_API_KEY"]);
   if (!backendSecrets.has("DATABASE_URL") || backendSecrets.get("FUDIA_CONCIERGE_API_KEY") !== secrets.get("FUDIA_CONCIERGE_API_KEY")) {
@@ -54,7 +65,9 @@ export function conciergeConfiguration(env) {
   if (`${worker}-${suffix}`.length > 63) throw new Error("Nombre de worker/revisión demasiado largo.");
   return {
     project, region, http, worker, job, httpIdentity, workerIdentity, backend, backendIdentity,
-    secrets, ca, sha, suffix,
+    secrets, ca, sha, suffix, gatewayURL,
+    webChatURL: env.WEB_CHAT_URL ? httpsURL(env.WEB_CHAT_URL, "WEB_CHAT_URL") : "",
+    whatsappCountry: optional(env,"WHATSAPP_COUNTRY_CODE",/^[A-Z]{2}$/) || "PE",
     registry: `${region}-docker.pkg.dev`,
     image: `${region}-docker.pkg.dev/${project}/${repository}/fudia-concierge:${sha}-${runID}-${attempt}`,
     network: required(env, "GCP_CONCIERGE_NETWORK", resource),
@@ -68,6 +81,8 @@ export function conciergeConfiguration(env) {
     maxHTTP: bounded(env, "GCP_CONCIERGE_HTTP_MAX_INSTANCES", 1, 1, 5),
     concurrency: bounded(env, "QUEUE_WORKER_CONCURRENCY", 8, 1, 32),
     sessionTTL: bounded(env, "SESSION_TTL_SECONDS", 3600, 600, 86400),
+    templates: TEMPLATE_KEYS.map((key) => [key, optional(env, key, /^[a-z0-9_]{1,512}$/)]).filter(([, value]) => value),
+    templateLanguage: optional(env, "WHATSAPP_TEMPLATE_LANGUAGE", /^[a-z]{2}(_[A-Z]{2})?$/) || "es",
   };
 }
 
@@ -98,8 +113,13 @@ export function runtimeArgs(c, apiURL, worker = false, caAsEnv = worker) {
       "LLM_PROVIDER=vertex", `GOOGLE_CLOUD_PROJECT=${c.project}`, `GOOGLE_CLOUD_LOCATION=${c.location}`,
       `GEMINI_MODEL_LITE=${c.lite}`, `GEMINI_MODEL_FLASH=${c.flash}`,
       `WHATSAPP_PHONE_ID=${c.phone}`, `WHATSAPP_GRAPH_VERSION=${c.graph}`,
+      `WHATSAPP_COUNTRY_CODE=${c.whatsappCountry ?? "PE"}`,
+      ...(c.gatewayURL ? [`WHATSAPP_GATEWAY_URL=${c.gatewayURL}`] : []),
+      ...(c.webChatURL ? [`WEB_CHAT_URL=${c.webChatURL}`] : []),
       `SESSION_TTL_SECONDS=${c.sessionTTL}`, `QUEUE_WORKER_CONCURRENCY=${c.concurrency}`,
       "QUEUE_SHUTDOWN_GRACE_SECONDS=8",
+      ...(c.templates ?? []).map(([key, value]) => `${key}=${value}`),
+      `WHATSAPP_TEMPLATE_LANGUAGE=${c.templateLanguage ?? "es"}`,
     ].join(",")];
 }
 

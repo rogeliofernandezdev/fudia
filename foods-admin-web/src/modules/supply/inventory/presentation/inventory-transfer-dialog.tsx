@@ -45,7 +45,7 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
 
-      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" icon="truck" subtitle="Inventario" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" icon="truck" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="inventory-transfer-body">
           <FormSection icon="route" title="Ruta del traslado" bare>

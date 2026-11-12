@@ -51,7 +51,7 @@ export function SalesPage(){
       :<SalesResults items={sales.data.items} money={money} date={date} view={setDetailId}/>}
       {!invalidRange&&!sales.isLoading&&!sales.isError&&<Pagination page={page} size={size} total={sales.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
     </section>
-    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} ticket={()=>{
+    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} preview={sales.data?.items.find(sale=>sale.id===detailId)} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} ticket={()=>{
       // Reprint what was delivered: the electronic document, or the payment ticket.
       const document=deliveredDocument(detail.data?.fiscalDocument);setDetailId(null);
       if(document)setFiscal({documentId:document.id,orderId:detailId});else setTicket({orderId:detailId,notice:ticketNoticeFor(detail.data?.fiscalDocument)});
@@ -61,17 +61,17 @@ export function SalesPage(){
   </>;
 }
 
-/** Selección inmediata por toque o teclado; una sola franja fija al recorrer el historial. */
+/** Selección inmediata por toque o teclado; `filter-pill` compartida con el origen de Cocina, con check en el elegido. */
 function SalesPeriods({period,choose}:{period:SalesPeriod;choose:(value:SalesPeriod)=>void}){
   return <div className="sales-periods" role="radiogroup" aria-label="Periodo de ventas">
-    {salesPeriods.map((option,index)=><button type="button" key={option.value} role="radio" aria-checked={period===option.value} tabIndex={period===option.value?0:-1} className={`sales-period${period===option.value?" active":""}`} onClick={()=>choose(option.value)} onKeyDown={event=>{
+    {salesPeriods.map((option,index)=><button type="button" key={option.value} role="radio" aria-checked={period===option.value} tabIndex={period===option.value?0:-1} className="filter-pill" onClick={()=>choose(option.value)} onKeyDown={event=>{
       const direction=event.key==="ArrowRight"||event.key==="ArrowDown"?1:event.key==="ArrowLeft"||event.key==="ArrowUp"?-1:0;
       if(!direction&&event.key!=="Home"&&event.key!=="End")return;
       event.preventDefault();
       const next=event.key==="Home"?0:event.key==="End"?salesPeriods.length-1:(index+direction+salesPeriods.length)%salesPeriods.length;
       choose(salesPeriods[next].value);
       event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
-    }}>{option.label}</button>)}
+    }}>{period===option.value&&<span className="filter-pill-check" aria-hidden="true"><Icon name="check" size={14}/></span>}{option.label}</button>)}
   </div>;
 }
 
@@ -79,7 +79,7 @@ function SalesFilters({q,period,from,to,invalidRange,search,start,end,clear}:{q:
   const custom=period==="custom";
   // Las fechas solo aparecen en «Personalizado»: con un periodo rápido, la franja del total ya nombra el periodo.
   return <div className={`sales-filters${custom?" is-custom":""}`}>
-    <FormField as="div" label="Buscar" className="sales-search"><SearchField value={q} onChange={event=>search(event.target.value)} placeholder="Pedido, cliente o mesa…" label="Buscar pedido, cliente o mesa"/></FormField>
+    <SearchField className="sales-search" value={q} onChange={event=>search(event.target.value)} placeholder="Buscar pedido, cliente o mesa…" label="Buscar ventas por pedido, cliente o mesa"/>
     {custom&&<>
      <FormField label="Desde"><Input type="date" value={from} min="0001-01-01" max={to||"9999-12-31"} onChange={event=>start(event.target.value)}/></FormField>
      <FormField label="Hasta" help={to?undefined:"Vacío: hasta hoy"} error={invalidRange?"La fecha final no puede ser anterior a la inicial.":undefined}><Input type="date" value={to} min={from||"0001-01-01"} max="9999-12-31" onChange={event=>end(event.target.value)}/></FormField>
@@ -109,7 +109,7 @@ function SalesPeriodSummary({period,range,loading,error,count,amount,money,day}:
 function SalesResults({items,money,date,view}:{items:Sale[];money:(value:string|number)=>string;date:(value:string)=>string;view:(id:string)=>void}){
   const action=(sale:Sale)=><div className="standard-actions"><RowActionButton action="view" label={`Ver detalle de la venta ${sale.code}`} onClick={()=>view(sale.id)}/></div>;
   return <>
-    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(sale=><tr className="sales-row" key={sale.id} onClick={()=>view(sale.id)}><td><span className="sales-order-code"><Icon name="receipt" size={16}/><b>{sale.code}</b></span></td><td><b className="sales-customer">{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small className="sales-customer-name">{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td><time dateTime={sale.createdAt}>{date(sale.createdAt)}</time></td><td><b className="sales-row-total tabular">{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td onClick={event=>event.stopPropagation()}>{action(sale)}</td></tr>)}</tbody></DataTable>
+    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(sale=><tr className="sales-row" key={sale.id} onClick={()=>view(sale.id)}><td><span className="sales-order-code"><span className="row-icon"><Icon name="receipt" size={18}/></span><b>{sale.code}</b></span></td><td><b className="sales-customer">{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small className="sales-customer-name">{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td><time dateTime={sale.createdAt}>{date(sale.createdAt)}</time></td><td><b className="sales-row-total tabular">{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td onClick={event=>event.stopPropagation()}>{action(sale)}</td></tr>)}</tbody></DataTable>
   </>;
 }
 

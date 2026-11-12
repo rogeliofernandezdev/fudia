@@ -1,0 +1,307 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fudia WhatsApp Gateway — API privada",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8020"
+    }
+  ],
+  "security": [
+    {
+      "gatewayKey": []
+    }
+  ],
+  "paths": {
+    "/v1/link": {
+      "post": {
+        "description": "Inicia QR privado de dispositivo para el país. No activa configuración operativa.",
+        "responses": {
+          "200": {
+            "description": "Resultado privado sin caché",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credencial inválida"
+          },
+          "503": {
+            "description": "No disponible"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "countryCode"
+                ],
+                "properties": {
+                  "countryCode": {
+                    "type": "string",
+                    "pattern": "^[A-Z]{2}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sessions/{id}": {
+      "get": {
+        "description": "Consulta privada, país debe coincidir. QR temporal solo durante vinculación.",
+        "responses": {
+          "200": {
+            "description": "Resultado privado sin caché",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connection"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credencial inválida"
+          },
+          "503": {
+            "description": "No disponible"
+          },
+          "404": {
+            "description": "Sesión inexistente o de otro país"
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "countryCode",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/messages": {
+      "post": {
+        "description": "Espera aleatoria de 2,5–5 segundos por envío nuevo. Idempotencia por sesión y callbackRef; 202 es incierto, nunca aceptación confirmada.",
+        "responses": {
+          "200": {
+            "description": "Resultado privado sin caché",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credencial inválida"
+          },
+          "503": {
+            "description": "No disponible"
+          },
+          "202": {
+            "description": "Envío incierto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResult"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "callbackRef reutilizado con otro contenido"
+          },
+          "400": {
+            "description": "Mensaje o destinatario inválido"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/live": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Salud mínima"
+          }
+        },
+        "security": []
+      }
+    },
+    "/ready": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Salud mínima"
+          }
+        },
+        "security": []
+      }
+    },
+    "/metrics": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Métricas sin PII"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "gatewayKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Fudia-Gateway-Key"
+      }
+    },
+    "schemas": {
+      "SendRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sessionRef",
+          "recipient",
+          "callbackRef",
+          "kind"
+        ],
+        "properties": {
+          "sessionRef": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "callbackRef": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "buttons": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "title"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SendResult": {
+        "type": "object",
+        "required": [
+          "state",
+          "externalId"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "sent",
+              "sending",
+              "uncertain",
+              "delivered",
+              "read",
+              "failed"
+            ]
+          },
+          "externalId": {
+            "type": "string"
+          }
+        }
+      },
+      "Connection": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "sessionRef": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "qrCode": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

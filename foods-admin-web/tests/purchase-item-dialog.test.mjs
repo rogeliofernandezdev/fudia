@@ -17,6 +17,23 @@ const presentationContent=compile("modules/supply/purchases/domain/presentation-
 const schema=compile("modules/supply/purchases/domain/purchase-schema.ts",name=>name==="./presentation-content"?presentationContent:require(name));
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const valid={name:"Agua mineral",categoryId:"drinks",price:"3.50",unit:"botella",presentationType:"package",unitsPerPresentation:"10"};
+
+test("un nombre duplicado se marca sin perder los datos y permite corregirlo",async()=>{
+ for(const mode of ["new_product","new_ingredient"]){
+  let calls=0;
+  const ui=mount({save:async()=>{if(++calls===1)throw {code:"inventory_item_name_taken"};}});
+  ui.chooseMode(mode);ui.fill(valid);
+  await ui.render().button.props.onClick();await tick();
+  assert.match(ui.control.getFieldState("name").error.message,/Ya existe un artículo o producto/);
+  assert.equal(ui.control.getValues("name"),valid.name);
+  assert.equal(ui.control.getValues("unit"),valid.unit);
+  assert.equal(ui.control.getValues("unitsPerPresentation"),valid.unitsPerPresentation);
+  ui.fill({name:"Agua mineral grande"});
+  await ui.render().button.props.onClick();await tick();
+  assert.equal(calls,2);
+  assert.equal(ui.control.getFieldState("name").error,undefined);
+ }
+});
 function mount({save=async()=>{},busy=false,modules={},linkable=[]}={}){
  const state=[],refs=[];let cursor=0,refCursor=0,formControl;
  const {PurchaseItemDialog}=compile("modules/supply/purchases/presentation/purchase-item-dialog.tsx",name=>{

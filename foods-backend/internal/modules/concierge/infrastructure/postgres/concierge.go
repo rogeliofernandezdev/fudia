@@ -33,7 +33,7 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 	var out application.QRContext
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT t.organization_id::text,t.location_id::text,t.id::text,t.name,
-		       o.trade_name,l.name,p.currency_symbol,t.service_type
+		       o.trade_name,l.name,p.currency_symbol,t.service_type,p.country_code::text
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
@@ -44,6 +44,20 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 		JOIN organization_fiscal_profiles p
 		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
 		WHERE t.qr_token=$1 AND t.active AND t.qr_enabled
+		UNION ALL
+		-- Enlace de delivery del local: sin mesa (table id vacío).
+		SELECT d.organization_id::text,d.location_id::text,'','Delivery',
+		       o.trade_name,l.name,p.currency_symbol,'delivery',p.country_code::text
+		FROM location_delivery_links d
+		JOIN organizations o ON o.id=d.organization_id AND o.active
+		JOIN locations l ON l.id=d.location_id AND l.organization_id=d.organization_id AND l.active
+		JOIN organization_modules om
+		  ON om.organization_id=d.organization_id
+		 AND om.module_key='whatsapp_bot'
+		 AND om.active
+		JOIN organization_fiscal_profiles p
+		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		WHERE d.qr_token=$1 AND d.active
 		LIMIT 1
 	`, strings.TrimSpace(token)).Scan(
 		&out.Scope.OrganizationID,
@@ -54,6 +68,7 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 		&out.LocationName,
 		&out.CurrencySymbol,
 		&out.ServiceType,
+		&out.CountryCode,
 	)
 	if err != nil {
 		return application.QRContext{}, conciergeError(err)

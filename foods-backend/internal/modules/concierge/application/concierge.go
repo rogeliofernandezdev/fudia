@@ -5,15 +5,17 @@ import (
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
+	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
+	platformcontracts "github.com/foods-platform/foods-backend/internal/modules/platformadmin/contracts"
 	servicecontracts "github.com/foods-platform/foods-backend/internal/modules/service/contracts"
-	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
+	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
 	"math"
 	"strings"
 )
@@ -22,9 +24,10 @@ var ErrNotFound = errors.New("concierge record not found")
 
 type scope = requestscope.Scope
 type QRContext struct {
-	Scope                                                              scope
-	TableID, TableName, OrganizationName, LocationName, CurrencySymbol string
-	// ServiceType decide el flujo del QR: mesa con cuenta abierta o mostrador.
+	Scope                                                                           scope
+	TableID, TableName, OrganizationName, LocationName, CurrencySymbol, CountryCode string
+	// ServiceType decide el flujo del QR: mesa con cuenta abierta, mostrador
+	// o enlace de delivery del local (sin mesa: solo delivery o recojo).
 	ServiceType servicecontracts.ServiceType
 }
 type MenuResult struct {
@@ -47,13 +50,16 @@ type Orders interface {
 	StaleTableAccount(ctx context.Context, s scope, tableID string) (ordercontracts.StaleTableAccount, error)
 }
 type Concierge struct {
-	repo     Repository
-	menu     Menu
-	orders   Orders
-	audit    audit.Repository
-	branding orgcontracts.BrandingReader
+	channels  platformcontracts.WhatsAppRoutes
+	directory RestaurantRepository
+	work      unitofwork.Manager
+	repo      Repository
+	menu      Menu
+	orders    Orders
+	audit     audit.Repository
+	branding  orgcontracts.BrandingReader
 	customers Customers
-	notices  noticecontracts.Publisher
+	notices   noticecontracts.Publisher
 }
 
 func New(repo Repository, menu Menu, orders Orders, audit audit.Repository) *Concierge {
@@ -74,6 +80,7 @@ func (a *Concierge) WithCustomers(customers Customers) *Concierge {
 	a.customers = customers
 	return a
 }
+
 // WithNotices avisa al personal de pedidos, cuentas y llamados que llegan por WhatsApp.
 func (a *Concierge) WithNotices(notices noticecontracts.Publisher) *Concierge {
 	a.notices = notices
@@ -123,6 +130,11 @@ type Repository interface {
 	ReplaceDeliveryFees(ctx context.Context, s scope, tiers []deliverycontracts.FeeTier) error
 }
 
+// errDeliveryLinkOnly: el enlace de delivery del local solo toma pedidos de
+// delivery o recojo (delivery-orders); no hay mesa, cuenta ni llamado al mozo.
+var errDeliveryLinkOnly = conciergeFailure(apperror.Conflict, "delivery_link_only",
+	"Este enlace es para pedidos de delivery o recojo en el local.")
+
 func (a *Concierge) resolve(ctx context.Context, token string) (QRContext, error) {
 	qr, err := a.repo.ResolveQR(ctx, token)
 	if errors.Is(err, ErrNotFound) {
@@ -163,6 +175,7 @@ func (a *Concierge) Modifiers(ctx context.Context, token, id string) (menucontra
 	}
 	return a.menu.PublicModifiers(ctx, qr.Scope, id)
 }
+
 // Submit es el único punto que decide el flujo de un pedido por QR según el
 // tipo de atención: la mesa conserva su cuenta abierta, ocupación y rondas; el
 // mostrador crea un pedido independiente por cliente que va a preparación y a
@@ -171,6 +184,9 @@ func (a *Concierge) Submit(ctx context.Context, token string, in ordercontracts.
 	qr, err := a.resolve(ctx, token)
 	if err != nil {
 		return ordercontracts.TableSubmission{}, err
+	}
+	if qr.ServiceType == servicecontracts.ServiceTypeDelivery {
+		return ordercontracts.TableSubmission{}, errDeliveryLinkOnly
 	}
 	if qr.ServiceType == servicecontracts.ServiceTypeCounter {
 		out, err := a.orders.SubmitCounter(ctx, qr.Scope, qr.TableID, token, in)
@@ -210,6 +226,9 @@ func (a *Concierge) Bill(ctx context.Context, token string, in domain.BillReques
 	}
 	if qr.ServiceType == servicecontracts.ServiceTypeCounter {
 		return result, conciergeFailure(apperror.Conflict, "counter_has_no_bill", "En el mostrador no hay cuenta abierta: cada pedido se paga en caja.")
+	}
+	if qr.ServiceType == servicecontracts.ServiceTypeDelivery {
+		return result, errDeliveryLinkOnly
 	}
 
 	out, err := a.orders.TableBill(ctx, qr.Scope, qr.TableID)
@@ -267,6 +286,9 @@ func (a *Concierge) Handoff(ctx context.Context, token string, in domain.Handoff
 	if in.Reason == "" {
 		in.Reason = "El comensal solicitó atención del personal."
 	}
+	if qr.ServiceType == servicecontracts.ServiceTypeDelivery {
+		return result, errDeliveryLinkOnly
+	}
 
 	var id string
 	err = func() error { var err error; id, err = a.repo.RequestHandoff(ctx, s, qr, in); return err }()
@@ -290,6 +312,9 @@ func (a *Concierge) HandoffStatus(ctx context.Context, token, conversationID str
 	conversationID = strings.TrimSpace(conversationID)
 	if conversationID == "" || len(conversationID) > 160 {
 		return nil, conciergeFailure(apperror.Invalid, "invalid_handoff", "La conversación no es válida.")
+	}
+	if qr.ServiceType == servicecontracts.ServiceTypeDelivery {
+		return nil, nil
 	}
 	out, err := a.repo.HandoffStatus(ctx, qr.Scope, conversationID, qr)
 	if errors.Is(err, ErrNotFound) {

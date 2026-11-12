@@ -83,5 +83,6 @@ func (a *Orders) SendUnsent(ctx context.Context, s scope, id string) (domain.Ord
 			}
 		}
 	}
+	a.dispatchChanged(ctx, s, id)
 	return o, nil
 }

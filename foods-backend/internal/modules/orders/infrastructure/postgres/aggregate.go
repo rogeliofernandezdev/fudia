@@ -10,7 +10,12 @@ import (
 const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),COALESCE(to_char(completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
 COALESCE(waiter_id::text,''),COALESCE((SELECT u.full_name FROM users u WHERE u.id=orders.waiter_id AND u.organization_id=orders.organization_id),''),
 ARRAY(SELECT DISTINCT u.full_name FROM payments p JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id WHERE p.order_id=orders.id AND p.organization_id=orders.organization_id AND p.location_id=orders.location_id ORDER BY u.full_name),COALESCE(to_char(bill_closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
-delivery_latitude::float8,delivery_longitude::float8,delivery_distance_km::float8`
+delivery_latitude::float8,delivery_longitude::float8,delivery_distance_km::float8,
+COALESCE((SELECT d.status FROM delivery_dispatches d WHERE d.order_id=orders.id AND d.organization_id=orders.organization_id),''),
+COALESCE((SELECT p.name FROM delivery_dispatches d JOIN delivery_partners p ON p.id=COALESCE(d.accepted_partner_id,(
+  SELECT f.partner_id FROM delivery_dispatch_offers f WHERE f.dispatch_id=d.id AND f.status='pending' ORDER BY f.created_at DESC LIMIT 1))
+  WHERE d.order_id=orders.id AND d.organization_id=orders.organization_id),''),
+COALESCE((SELECT d.partner_fee::text FROM delivery_dispatches d WHERE d.order_id=orders.id AND d.organization_id=orders.organization_id AND d.fee_released),'')`
 const netPaidSQL = `
 	COALESCE((
 	  SELECT sum(
@@ -24,7 +29,7 @@ const netPaidSQL = `
 
 func scanOrder(row pgx.Row) (domain.Order, error) {
 	var o domain.Order
-	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames, &o.BillClosedAt, &o.DeliveryLatitude, &o.DeliveryLongitude, &o.DeliveryDistanceKm)
+	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames, &o.BillClosedAt, &o.DeliveryLatitude, &o.DeliveryLongitude, &o.DeliveryDistanceKm, &o.DeliveryDispatchStatus, &o.DeliveryPartnerName, &o.DeliveryPartnerFee)
 	o.Origin = domain.Origin(o.Channel)
 	o.Channel = domain.NormalizeChannel(o.Channel)
 	o.AccountState = "open"

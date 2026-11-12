@@ -60,6 +60,14 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 - Prometheus client
 - HTTP para integración con foods-backend
 
+## Delivery Fudia
+
+Cuando un local trabaja con las centrales de reparto de Fudia, Concierge envía a
+cada central la oferta del pedido con «Aceptar» y «Rechazar», luego «listo para
+recoger» con «Recoger», y aplica sus botones en foods-backend. Las plantillas que
+hay que aprobar en Meta y el flujo completo están en
+[`docs/09_DELIVERY_PARTNERS.md`](docs/09_DELIVERY_PARTNERS.md).
+
 ## Prompts
 
 - `prompts/concierge_router.md`: clasificación unificada `out_of_scope / menu / order / service`.
@@ -94,3 +102,12 @@ No se ha ejecutado ese despliegue ni el gate externo por agregar este código.
 El alcance de código definido para Concierge está cerrado: QR por mesa y habilitación global por módulo, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
 La recuperación por etapas, el envío separado, el lock con fencing, el orden por conversación y la retención están implementados y cubiertos por pruebas con dobles y con un emulador de Redis (`docs/08_RECOVERY_AND_OPERATIONS.md`). Esas pruebas no sustituyen la validación real: siguen pendientes la integración contra Redis real (CI o staging), la confirmación de que Meta devuelve `biz_opaque_callback_data` en los estados y el **gate de activación externa** con credenciales reales de Meta/Vertex AI/Redis y una prueba de humo en el entorno desplegado. Ninguno se considera ejecutado mientras no se proporcionen esas credenciales y entorno.
+
+
+## WhatsApp por país
+
+Meta es el proveedor predeterminado. El registro operativo lo administra Fudia
+en Plataforma → Países y WhatsApp. La alternativa whatsmeow usa el servicio
+independiente `../fudia-whatsapp-gateway`; no reemplaza Python, Gemini ni Redis.
+Los QR consultan el canal vigente y las respuestas conservan su canal original.
+Configuración, migración y límites: [guía multiproveedor](../docs/10_WHATSAPP_MULTIPROVIDER.md).

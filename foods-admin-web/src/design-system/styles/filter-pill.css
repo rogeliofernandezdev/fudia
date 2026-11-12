@@ -1,0 +1,10 @@
+/* Píldora de filtro (periodos de Ventas, origen del pedido en Cocina): sin fondo, contorno `primary-300` y texto
+   `primary-700`; la elegida se ve igual que el hover (contorno `primary-600` de 2 px, también sin fondo) y suma un
+   check sólido `primary-600` de 18 px. Sirve con `aria-pressed` (filtros) o `aria-checked` (radiogroup). */
+.filter-pill{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1-5);min-height:var(--control-height);padding:var(--space-1-5) var(--space-3-5);border:var(--stroke-1) solid var(--primary-300);border-radius:var(--radius-pill);background:var(--surface);color:var(--primary-700);font-size:var(--font-size-sm);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);white-space:nowrap;scroll-snap-align:start;cursor:pointer;user-select:none;touch-action:manipulation;transition:border-color var(--duration-fast) var(--easing-out),box-shadow var(--duration-fast) var(--easing-out)}
+.filter-pill>svg{flex:none}
+.filter-pill:is([aria-pressed=true],[aria-checked=true]){border-color:var(--primary-600);box-shadow:var(--ring-outline-primary)}
+.filter-pill-check{display:grid;place-items:center;flex:none;width:var(--size-18);height:var(--size-18);border-radius:var(--radius-pill);background:var(--primary-600);color:var(--surface)}
+.filter-pill-check>svg{stroke-width:2.4}
+@media(width<=600px){.filter-pill{min-height:var(--size-44)}}
+@media(hover:hover) and (pointer:fine){.filter-pill:not([aria-pressed=true]):not([aria-checked=true]):hover{border-color:var(--primary-600);box-shadow:var(--ring-outline-primary)}}

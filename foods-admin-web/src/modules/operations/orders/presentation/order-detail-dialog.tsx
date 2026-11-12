@@ -2,9 +2,10 @@
 import "./order-detail.css";
 import Link from "next/link";
 import {useState} from "react";
-import {Button,ErrorState,Icon,IconTile,Skeleton,Status,Tabs} from "@/design-system";
+import {Button,DetailFacts,ErrorState,Icon,IconTile,Skeleton,Status,Tabs,type IconName} from "@/design-system";
 import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents} from "@/design-system/modal";
 import {useMoney,useSession} from "@/providers";
+import {OrderDispatchBlock} from "@/modules/delivery";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
 import {canChargeAccount,canCollectOrder} from "../domain/service-flow";
@@ -12,7 +13,7 @@ import {deliveryPoint} from "../domain/delivery-point";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
 import type {ServiceItem} from "../domain/service-flow";
-import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
+import {OrderAttribution} from "./order-attribution";
 import {OrderTimeline} from "./order-timeline";
 import {channelIcons,isEditableOrder,lineServiceStatus,openedAgo,orderStatus,registeredAt,serviceStateLook,tableTitle} from "./order-meta";
 import {OrderAccountActions,OrderItemService,accountLabel,accountTone} from "./order-service-controls";
@@ -24,6 +25,17 @@ import {OrderAccountActions,OrderItemService,accountLabel,accountTone} from "./o
  */
 export type OrderDetailVariant="table"|"order";
 export const orderDetailTitleId="order-detail-title";
+/** Datos que ya trae la fila o la mesa: bastan para la cabecera mientras carga el detalle. */
+export type OrderDetailPreview=Pick<Order,"tableName"|"customerName"|"channel">;
+
+/** Título e icono de la cabecera; los comparten el detalle y su skeleton para no esperar al API. */
+function orderDetailHeading(variant:OrderDetailVariant,order?:OrderDetailPreview):{title:string;icon:IconName}{
+  const table=variant==="table";
+  return {
+    title:table||order?.channel==="salon"?tableTitle(order?.tableName):order?(order.tableName||order.customerName||"Pedido"):"Pedido",
+    icon:table?"utensils":order?channelIcons[order.channel]??"receipt":"receipt",
+  };
+}
 
 type ContentProps<T extends Order>={
   variant:OrderDetailVariant;
@@ -51,31 +63,37 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const paid=Number(order?.paidAmount??0);
   const remaining=Number(order?.remainingAmount??order?.total??0);
   const hasPayments=paid>0.00001;
+  const pending=remaining>0.00001;
+  const hasDelivery=Number(order?.deliveryFee??0)>0;
+  // El resumen no repite el importe principal: el desglose solo aparece si suma delivery y «Pagado neto» solo con saldo.
+  const breakdown=hasDelivery||pending;
   const canCharge=Boolean(order&&canCollectOrder(order,user?.id,can("cash.manage"),cashCollection)&&canChargeAccount(order)&&remaining>0.00001);
   const canCancel=Boolean(order&&canCancelOrder(order));
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const items=order?.items??[];
+  const paymentReferences=(order?.paymentReferences??[]).filter(payment=>payment.reference.trim());
   const point=order?deliveryPoint(order):null;
-  const title=table||order?.channel==="salon"?tableTitle(order?.tableName):order?(order.tableName||order.customerName||"Pedido"):"Pedido";
+  const heading=orderDetailHeading(variant,order);
   const subtitle=order?(table?order.customerName:order.tableName&&order.customerName?order.customerName:""):"";
   const opened=order?(table?openedAgo(order.createdAt,location?.country,location?.timezone):registeredAt(order.createdAt,location?.country,location?.timezone)):"";
   return <>
 
-    <ModalHeader title={title} titleId={orderDetailTitleId} icon={table?"utensils":order?channelIcons[order.channel]??"receipt":"receipt"} onClose={close} closeLabel="Cerrar detalle"/>
+    <ModalHeader title={heading.title} titleId={orderDetailTitleId} icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
 
     {error?(
       <div className="modal-body order-detail-body"><ErrorState title="No pudimos cargar el pedido" text={error} onRetry={retry} retrying={retrying}/></div>
     ):order&&meta&&<>
       <ModalWorkspace summary={
-        <section className={`modal-summary order-detail-totals${remaining<=0.00001?" is-paid":""}`} aria-labelledby="order-detail-account-title">
+        <section className={`modal-summary order-detail-totals is-band${pending?"":" is-paid"}`} aria-labelledby="order-detail-account-title">
           <div className="modal-summary-heading"><h3 id="order-detail-account-title" className="modal-section-title">Resumen de cuenta</h3>{order.channel==="salon"&&<Status tone={accountTone(order)} icon="receipt" emphasis>{accountLabel(order)}</Status>}</div>
-          <div className="modal-summary-lines">
-            <div className="modal-summary-line"><span>Subtotal</span><b>{money(order.subtotal)}</b></div>
-            {Number(order.deliveryFee)>0&&<div className="modal-summary-line"><span>Delivery</span><b>{money(order.deliveryFee)}</b></div>}
-            <div className={`modal-summary-line order-detail-paid${hasPayments?" has-payment":""}`}><span>Pagado</span><b>{money(paid)}</b></div>
-          </div>
-          <div className="modal-summary-total"><span>{remaining>0.00001?"Saldo pendiente":"Total pagado"}</span><strong>{money(remaining>0.00001?remaining:order.total)}</strong></div>
+          {breakdown&&<div className="modal-summary-lines">
+            {hasDelivery&&<><div className="modal-summary-line"><span>Subtotal</span><b>{money(order.subtotal)}</b></div>
+            <div className="modal-summary-line"><span>Delivery</span><b>{money(order.deliveryFee)}</b></div></>}
+            {pending&&<><div className="modal-summary-line"><span>Total</span><b>{money(order.total)}</b></div>
+            <div className={`modal-summary-line order-detail-paid${hasPayments?" has-payment":""}`}><span>Pagado neto</span><b>{money(paid)}</b></div></>}
+          </div>}
+          <div className="modal-summary-total"><span>{pending?"Saldo pendiente":"Total pagado"}</span><strong>{money(pending?remaining:order.total)}</strong></div>
         </section>
       }>
       <div className="modal-body order-detail-body" tabIndex={0} aria-label="Productos y datos del pedido">
@@ -83,8 +101,11 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
           <section className="order-detail-hero" aria-label="Resumen del pedido">
             <div className="order-detail-identity">
               <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone} solid>{meta.label}</Status></div></div>
-              <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>
-              <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
+              {/* Fecha y responsables comparten una línea; bajan a la siguiente solo si no caben. */}
+              <div className="order-detail-meta">
+                <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>
+                <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
+              </div>
             </div>
             {(subtitle||order.customerName||order.customerPhone)&&<div className="order-detail-contact">
               <IconTile name="user" tone="teal"/>
@@ -99,11 +120,16 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
                   {point.distanceKm!==null&&<span className="order-detail-map-distance">{formatRegionalNumber(point.distanceKm,location?.country,{maximumFractionDigits:1})} km</span>}
                 </span>}
               </p></div>
+              <OrderDispatchBlock order={order} canManage={canManage} money={money} disabled={busy}/>
             </section>}
           </section>
 
+          {paymentReferences.length>0&&<section className="order-detail-payment-references" aria-label="Números de operación de los pagos registrados">
+            {paymentReferences.map((payment,index)=><DetailFacts key={index} items={[{label:"Número de operación",wide:true,value:<>{payment.reference}<small>{payment.methodName}</small></>}]}/>)}
+          </section>}
+
           <Tabs className="order-detail-tabs" label="Información del pedido" value={tab} onChange={setTab} items={[
-            {value:"products",label:"Productos",icon:"dish",tone:"orange",count:items.length},
+            {value:"products",label:"Productos",icon:"dish",tone:"primary",count:items.length},
             {value:"tracking",label:"Seguimiento",icon:"route",tone:"indigo"},
           ]}/>
 
@@ -184,14 +210,19 @@ function OrderDetailLine({order,item}:{order:Order;item:OrderItem}){
   </div>;
 }
 
-/** Skeleton con la geometría final: cabecera, atribución, productos, cuenta y acciones. */
-export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;close:()=>void}){
+/**
+ * Skeleton con la geometría final: identidad, pestañas, productos, cuenta en franja y acciones.
+ * Con `preview` (fila del listado o mesa del Salón) la cabecera ya es la real; solo sin ella (enlace directo) se dibuja su skeleton.
+ */
+export function OrderDetailSkeleton({variant,close,preview}:{variant:OrderDetailVariant;close:()=>void;preview?:OrderDetailPreview}){
+  const heading=preview?orderDetailHeading(variant,preview):null;
   return <>
 
-    <ModalHeader title={<><span className="sr-only">{variant==="table"?"Cargando detalle de la mesa":"Cargando detalle del pedido"}</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId={orderDetailTitleId}
-      iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)" className="order-detail-skeleton-icon"/>} onClose={close} closeLabel="Cerrar detalle"/>
+    {heading?<ModalHeader title={heading.title} titleId={orderDetailTitleId} icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
+    :<ModalHeader title={<><span className="sr-only">{variant==="table"?"Cargando detalle de la mesa":"Cargando detalle del pedido"}</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId={orderDetailTitleId}
+      iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)" className="order-detail-skeleton-icon"/>} onClose={close} closeLabel="Cerrar detalle"/>}
     <ModalWorkspace summary={
-      <section className="modal-summary" aria-hidden="true">
+      <section className="modal-summary is-band" aria-hidden="true">
         <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/><Skeleton width="var(--size-108)" height="var(--size-24)" radius="var(--radius-pill)"/></div>
         <div className="modal-summary-lines">
           {Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><Skeleton width="var(--size-72)" height="var(--size-9)"/><Skeleton width="var(--size-68)" height="var(--size-16)"/></div>)}
@@ -199,11 +230,13 @@ export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;
         <div className="modal-summary-total"><Skeleton width="var(--size-116)" height="var(--size-10)"/><Skeleton width="var(--size-108)" height="var(--size-24)"/></div>
       </section>
     }>
-    <div className="modal-body order-detail-body">
+    <div className="modal-body order-detail-body" role="status" aria-label={variant==="table"?"Cargando detalle de la mesa":"Cargando detalle del pedido"}>
       <div className="order-detail-content" aria-hidden="true">
-        <div className="order-detail-information modal-inline-metadata"><OrderAttributionSkeleton/><span className="modal-inline-date"><Skeleton width="var(--size-150)" height="var(--size-9)"/></span></div>
-        <section className="order-detail-consumption">
-          <div className="order-detail-section-head modal-section-rule"><Skeleton width="var(--size-156)" height="var(--size-13)"/><Skeleton width="var(--size-48)" height="var(--size-9)"/></div>
+        <div className="order-detail-hero">
+          <div className="order-detail-identity"><Skeleton width="var(--size-92)" height="var(--size-24)" radius="var(--radius-pill)"/><Skeleton width="var(--size-220)" height="var(--size-9)"/></div>
+        </div>
+        <Skeleton width="min(var(--size-320),100%)" height="var(--size-44)" radius="var(--radius-pill)"/>
+        <section className="order-detail-panel">
           <ModalItemList className="order-detail-items">
             {Array.from({length:3},(_,index)=><div className="modal-item-row order-detail-line" role="listitem" key={index}>
               <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-pill)" className="order-detail-skeleton-qty"/>

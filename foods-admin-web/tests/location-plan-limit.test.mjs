@@ -28,7 +28,9 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
   if(name==="@tanstack/react-query")return {useQueryClient:()=>({invalidateQueries:async options=>{invalidations.push(options.queryKey)}}),useMutation:options=>{mutations.push(options);return {isPending:false}},useQuery:options=>{queries.push(options);return {data:{items:options.queryKey[0]==="locations"?items:[],total:items.length},isLoading:false,isError:false}}};
   if(name==="./restaurant-profile-settings")return {ProfileLogoSlot:()=>null,ProfileMenuPanel:()=>null,useRestaurantProfile:()=>({})};
   if(name==="./organization-panel")return {OrganizationPanel:"OrganizationPanel"};
+  if(name==="./geographic-fields")return {GeographicFields:"GeographicFields"};
   if(name==="@/modules/operations/tips")return {TipSettingsFields:"TipSettingsFields",getTipSettings:()=>{},tipDraftFromPolicy:value=>value};
+  if(name==="@/modules/delivery")return {LocationDeliverySection:"LocationDeliverySection"};
   if(name==="@/shared/api/client")return {ApiClientError:class extends Error{}};
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};
@@ -50,7 +52,10 @@ test("Propinas se configura dentro del formulario del local, no desde la fila",a
  await ui.mutations[0].onSuccess(undefined,{value:other,tips:{mode:"collect",percentage:10,showSuggestion:true,allowFixed:true,channels:["salon"]}});
  assert.ok(ui.invalidations.some(key=>key[0]==="tip-settings"));
  const source=readFileSync(new URL("modules/organizations/presentation/organization-admin.tsx",root),"utf8");
- assert.ok(source.includes("save(v,tips&&tipPolicy.data?.editable?tips:undefined)"),"solo se envían propinas editadas por quien puede cambiarlas");
+ assert.ok(source.includes("tips&&tipPolicy.data?.editable?tips:undefined"),"solo se envían propinas editadas por quien puede cambiarlas");
+ // El local solo muestra su enlace/QR de delivery: centrales y activación son globales.
+ assert.ok(source.includes("{initial.id&&<LocationDeliverySection"),"el enlace de delivery aparece al editar el local");
+ assert.ok(!source.includes("saveLocationDelivery"),"el local ya no configura centrales ni modo");
 });
 
 test("Emprende con un local bloquea Nuevo local también desde el handler, pero permite editar",()=>{

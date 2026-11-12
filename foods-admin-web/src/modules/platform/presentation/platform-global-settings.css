@@ -1,11 +1,24 @@
 .platform-channel-modal{width:min(var(--size-540),calc(100vw - var(--size-32)))}
 .platform-channel-modal form{padding:0}
-.platform-channel-fields{padding:var(--space-5) var(--space-5)}
+.platform-channel-fields{padding:0}
 .platform-channel-fields .ds-input[readonly]{color:var(--ink-600);background:var(--cloud-100);cursor:default}
 
 @media(max-width:600px){
  .platform-channel-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
- .platform-channel-fields{padding:var(--space-4)}
+ .platform-channel-fields{padding:0}
 }
 
 /* Canales — encabezados en mayúsculas como el resto de listados */
+
+.whatsapp-link{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-3);min-width:0}
+.whatsapp-link p{margin:0;overflow-wrap:anywhere}
+.whatsapp-device-qr{display:block;width:var(--size-240);max-width:100%;height:auto;align-self:center}
+.whatsapp-history{min-width:0;overflow-wrap:anywhere}
+.whatsapp-history summary{display:flex;align-items:center;min-height:var(--control-height);cursor:pointer;color:var(--primary-700)}
+.whatsapp-history ol{padding-inline-start:var(--space-5)}
+.whatsapp-history li{margin-block:var(--space-3)}
+.whatsapp-history p{margin:0}
+@media(max-width:600px){.whatsapp-link>.button{width:100%}}
+
+.whatsapp-device-placeholder{display:block;width:var(--size-240);max-width:100%;height:var(--size-240);align-self:center}
+.whatsapp-history-placeholder{display:block;width:100%;height:var(--size-44)}

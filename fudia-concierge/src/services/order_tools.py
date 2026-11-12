@@ -87,9 +87,7 @@ class OrderTools:
                 (
                     line
                     for line in self.context.session.cart
-                    if line.product_id == product_id
-                    and not line.modifiers
-                    and not line.selections
+                    if line.product_id == product_id and not line.modifiers and not line.selections
                 ),
                 None,
             )
@@ -121,9 +119,7 @@ class OrderTools:
             product_id = str(args.get("productId", "")).strip()
             before = len(self.context.session.cart)
             self.context.session.cart = [
-                line
-                for line in self.context.session.cart
-                if line.product_id != product_id
+                line for line in self.context.session.cart if line.product_id != product_id
             ]
             if len(self.context.session.cart) == before:
                 return {
@@ -170,6 +166,8 @@ class OrderTools:
                     }
             session.awaiting_confirmation = True
             if not session.pending_order_request_id:
+                session.order_submission_started = False
+            if not session.pending_order_request_id:
                 session.pending_order_request_id = uuid4().hex
             cart = self.context.cart_payload()
             result: dict[str, Any] = {"cart": cart}
@@ -196,14 +194,10 @@ class OrderTools:
             quantity = Decimal(str(line.quantity))
             if line.product_id == product_id:
                 total += quantity
-            total += quantity * sum(
-                1 for selection in line.selections if selection.product_id == product_id
-            )
+            total += quantity * sum(1 for selection in line.selections if selection.product_id == product_id)
         return total
 
-    def _stock_shortfall(
-        self, item: MenuItem, quantity: float
-    ) -> dict[str, Any] | None:
+    def _stock_shortfall(self, item: MenuItem, quantity: float) -> dict[str, Any] | None:
         """Portions or units left today cap what the cart may hold, so the
         diner hears it while ordering instead of when confirming."""
         if item.remaining is None:
@@ -229,11 +223,7 @@ class OrderTools:
         quantity = float(args.get("quantity", 0))
         note = str(args.get("note", "")).strip()
         raw_modifiers = args.get("modifiers", [])
-        if (
-            not product_id
-            or quantity <= 0
-            or not isinstance(raw_modifiers, list)
-        ):
+        if not product_id or quantity <= 0 or not isinstance(raw_modifiers, list):
             return {"ok": False, "code": "invalid_item"}
 
         item = await self.context.fudia.get_product(
@@ -275,12 +265,7 @@ class OrderTools:
             group_id = str(raw.get("groupId", "")).strip()
             option_id = str(raw.get("optionId", "")).strip()
             key = (group_id, option_id)
-            if (
-                not group_id
-                or not option_id
-                or key in seen
-                or group_id not in groups
-            ):
+            if not group_id or not option_id or key in seen or group_id not in groups:
                 return {
                     "ok": False,
                     "code": "invalid_modifier_selection",
@@ -296,10 +281,7 @@ class OrderTools:
                 group.minSelections,
                 1 if group.required else 0,
             )
-            if (
-                len(selected) < minimum
-                or len(selected) > group.maxSelections
-            ):
+            if len(selected) < minimum or len(selected) > group.maxSelections:
                 return {
                     "ok": False,
                     "code": "modifier_group_incomplete",
@@ -307,10 +289,7 @@ class OrderTools:
                     "minSelections": minimum,
                     "maxSelections": group.maxSelections,
                 }
-            options = {
-                option.id: option
-                for option in group.options
-            }
+            options = {option.id: option for option in group.options}
             for option_id in selected:
                 option = options.get(option_id)
                 if option is None:
@@ -351,11 +330,7 @@ class OrderTools:
         quantity = float(args.get("quantity", 0))
         note = str(args.get("note", "")).strip()
         raw_selections = args.get("selections", [])
-        if (
-            not product_id
-            or quantity <= 0
-            or not isinstance(raw_selections, list)
-        ):
+        if not product_id or quantity <= 0 or not isinstance(raw_selections, list):
             return {"ok": False, "code": "invalid_combo"}
 
         combo = await self.context.fudia.get_combo(
@@ -375,12 +350,7 @@ class OrderTools:
             group_id = str(raw.get("groupId", "")).strip()
             option_id = str(raw.get("productId", "")).strip()
             key = (group_id, option_id)
-            if (
-                not group_id
-                or not option_id
-                or key in seen
-                or group_id not in groups
-            ):
+            if not group_id or not option_id or key in seen or group_id not in groups:
                 return {
                     "ok": False,
                     "code": "invalid_combo_selection",
@@ -396,10 +366,7 @@ class OrderTools:
                 group.minSelections,
                 1 if group.required else 0,
             )
-            if (
-                len(selected) < minimum
-                or len(selected) > group.maxSelections
-            ):
+            if len(selected) < minimum or len(selected) > group.maxSelections:
                 return {
                     "ok": False,
                     "code": "combo_group_incomplete",
@@ -407,10 +374,7 @@ class OrderTools:
                     "minSelections": minimum,
                     "maxSelections": group.maxSelections,
                 }
-            options = {
-                option.productId: option
-                for option in group.options
-            }
+            options = {option.productId: option for option in group.options}
             for option_id in selected:
                 option = options.get(option_id)
                 if option is None:
@@ -438,12 +402,8 @@ class OrderTools:
 
         # The combo and each chosen dish draw from today's portions or stock.
         for stocked_id in [combo.id, *(selection.product_id for selection in selections)]:
-            stocked = await self.context.fudia.get_product(
-                self.context.token(), stocked_id
-            )
-            shortfall = (
-                self._stock_shortfall(stocked, quantity) if stocked else None
-            )
+            stocked = await self.context.fudia.get_product(self.context.token(), stocked_id)
+            shortfall = self._stock_shortfall(stocked, quantity) if stocked else None
             if shortfall:
                 return shortfall
 
@@ -470,10 +430,7 @@ class OrderTools:
         session = self.context.session
         if not session.cart:
             return {"ok": False, "code": "empty_cart"}
-        if (
-            not session.awaiting_confirmation
-            or not explicit_confirmation(self.context.user_message)
-        ):
+        if not session.awaiting_confirmation or not explicit_confirmation(self.context.user_message):
             return {
                 "ok": False,
                 "code": "confirmation_required",
@@ -486,9 +443,21 @@ class OrderTools:
         if not session.pending_order_request_id:
             session.pending_order_request_id = uuid4().hex
         request_id = session.pending_order_request_id
+        session.order_submission_started = True
         lines = order_lines(session.cart)
         if session.mode == "delivery":
+            if not session.contact_phone:
+                self.context.invalidate_confirmation()
+                return {"ok": False, "code": "customer_phone_required", "missing": ["customerPhone"]}
             return await self._confirm_delivery_order(request_id, lines)
+        if not session.contact_phone and session.provider != "FUDIA_WEB":
+            self.context.invalidate_confirmation()
+            return {
+                "ok": False,
+                "code": "customer_phone_required",
+                "missing": ["customerPhone"],
+                "message": "Necesito un número de contacto con código de país antes de confirmar.",
+            }
         counter = session.mode == "counter"
         customer_name = session.delivery.customer_name if counter else ""
         if counter and not customer_name:
@@ -500,7 +469,7 @@ class OrderTools:
             }
         payload: dict[str, Any] = {
             "token": self.context.token(),
-            "phone": session.phone,
+            "phone": session.contact_phone,
             "conversationId": session.conversation_id,
             "lines": lines,
         }
@@ -516,7 +485,7 @@ class OrderTools:
         try:
             result = await self.context.fudia.create_order(
                 self.context.token(),
-                session.phone,
+                session.contact_phone,
                 lines,
                 conversation_id=session.conversation_id,
                 request_id=request_id,
@@ -529,6 +498,7 @@ class OrderTools:
         session.cart = []
         session.awaiting_confirmation = False
         session.pending_order_request_id = None
+        session.order_submission_started = False
         session.last_order_id = result.id
         order = {
             "id": result.id,
@@ -565,7 +535,7 @@ class OrderTools:
             request_id,
             {
                 "token": self.context.token(),
-                "phone": session.phone,
+                "phone": session.contact_phone,
                 "conversationId": session.conversation_id,
                 "mode": "delivery",
                 "order": order,
@@ -585,6 +555,7 @@ class OrderTools:
         session.cart = []
         session.awaiting_confirmation = False
         session.pending_order_request_id = None
+        session.order_submission_started = False
         session.last_order_id = result.id
         confirmed = {
             "id": result.id,

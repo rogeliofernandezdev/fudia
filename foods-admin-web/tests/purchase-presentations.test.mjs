@@ -78,11 +78,11 @@ test("compra individual: nombre del catálogo remoto y conversión uno, sin camb
  let tree=ui.render();assert.equal(tree.find(node=>node.type==="option"&&node.props.value==="unit").props.children,"Lata");
  tree.find(node=>node.type==="Select").props.onChange({target:{value:"unit"}});
  assert.equal(ui.rows[0].presentationType,"unit");assert.equal(ui.rows[0].unitsPerPresentation,"1");
- tree=ui.render();assert.equal(tree.find(node=>node.props["aria-label"]==="Contenido de la presentación").props.disabled,true);
+ tree=ui.render();assert.equal(tree.find(node=>node.type==="Input").props.disabled,true);
 });
 test("presentaciones: una selección y contenido, sin controles redundantes",()=>{
  const ui=mount();ui.render();
- let tree=ui.render();tree.find(node=>node.props["aria-label"]==="Contenido de la presentación").props.onChange({target:{value:"10"}});
+ let tree=ui.render();tree.find(node=>node.type==="Input").props.onChange({target:{value:"10"}});
  assert.equal(ui.rows.length,1);assert.equal(ui.rows[0].isDefault,true);assert.equal(ui.rows[0].unitsPerPresentation,"10");
  tree=ui.render();assert.equal(tree.filter(node=>node.type==="Select").length,1);
  assert.equal(tree.some(node=>["Otra presentación","Predeterminada","Nueva combinación"].includes(node.props.children)),false);
@@ -174,7 +174,7 @@ test("unidad contable: un paquete de botellas no puede contener menos de 1",()=>
 test("unidad contable: el campo sube de 1 en 1, muestra el error y reporta la regla una vez",()=>{
  const ui=mount({initial:[{presentationType:"crate",unitsPerPresentation:"0.001",isDefault:true}]});
  ui.render();const tree=ui.render();
- const input=tree.find(node=>node.type==="Input"&&node.props["aria-label"]==="Contenido de la presentación");
+ const input=tree.find(node=>node.type==="Input");
  assert.equal(input.props.min,"1");assert.equal(input.props.step,"1");assert.equal(input.props["aria-invalid"],true);
  assert.ok(tree.some(node=>node.props?.role==="alert"&&String(node.props.children).includes("al menos 1 botella")));
  assert.equal(tree.some(node=>node.props?.className==="purchase-presentation-equivalence"),false,"no muestra una equivalencia imposible");
@@ -182,7 +182,7 @@ test("unidad contable: el campo sube de 1 en 1, muestra el error y reporta la re
  const kilos=[{code:"unit",name:"Unidad base",unit:"kg",unitName:"Kilogramo",unitCountable:false,isDefault:false},{code:"bag",name:"Bolsa",unit:"kg",unitName:"Kilogramo",unitCountable:false,isDefault:true}];
  const measured=mount({unit:"kg",items:kilos,initial:[{presentationType:"bag",unitsPerPresentation:"0.5",isDefault:true}]});
  measured.render();const measuredTree=measured.render();
- const measuredInput=measuredTree.find(node=>node.type==="Input"&&node.props["aria-label"]==="Contenido de la presentación");
+ const measuredInput=measuredTree.find(node=>node.type==="Input");
  assert.equal(measuredInput.props.min,"0.001");assert.equal(measuredInput.props["aria-invalid"],false);
  assert.equal(measuredTree.some(node=>node.props?.role==="alert"),false);
 });

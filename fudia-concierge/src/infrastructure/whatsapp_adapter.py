@@ -29,6 +29,8 @@ class WhatsAppAdapter(Protocol):
 
 
 class MetaWhatsAppAdapter:
+    supports_templates = True
+
     def __init__(
         self,
         token: str,
@@ -58,9 +60,9 @@ class MetaWhatsAppAdapter:
         if not self.token or not self.phone_id or not self.graph_version:
             raise RuntimeError("WhatsApp no está configurado.")
 
-    async def display_phone_digits(self) -> str:
+    async def display_phone_digits(self, *, force_refresh: bool = False) -> str:
         now = time.monotonic()
-        if self._display_phone_digits and now < self._display_phone_expires_at:
+        if not force_refresh and self._display_phone_digits and now < self._display_phone_expires_at:
             return self._display_phone_digits
 
         self._ensure_configured()
@@ -120,6 +122,25 @@ class MetaWhatsAppAdapter:
         self._display_phone_expires_at = now + 300.0
         return digits
 
+    async def connection_info(self) -> tuple[str, bool]:
+        self._ensure_configured()
+        response = await self._http().get(
+            f"https://graph.facebook.com/{self.graph_version}/{self.phone_id}",
+            headers={"Authorization": f"Bearer {self.token}"},
+            params={"fields": "id,display_phone_number,code_verification_status,platform_type,status"},
+        )
+        response.raise_for_status()
+        body = response.json()
+        digits = re.sub(r"\D", "", str(body.get("display_phone_number", "")))
+        connected = (
+            str(body.get("id", "")) == self.phone_id
+            and bool(re.fullmatch(r"[1-9][0-9]{7,14}", digits))
+            and body.get("code_verification_status") == "VERIFIED"
+            and body.get("platform_type") == "CLOUD_API"
+            and body.get("status") == "CONNECTED"
+        )
+        return digits, connected
+
     async def start_url(
         self,
         qr_token: str,
@@ -157,6 +178,63 @@ class MetaWhatsAppAdapter:
             "text": {"body": message},
         }
         await self._send_payload(payload, callback_ref)
+
+    async def send_template(
+        self,
+        phone: str,
+        name: str,
+        language: str,
+        body: list[str],
+        button_payloads: list[str],
+    ) -> None:
+        """Plantilla aprobada por Meta: única forma de escribir fuera de la
+        ventana de 24 h (centrales de Delivery Fudia). Cada payload va en el
+        botón de respuesta rápida de su posición y vuelve en el webhook."""
+        components: list[dict[str, object]] = []
+        if body:
+            components.append(
+                {"type": "body", "parameters": [{"type": "text", "text": value} for value in body]}
+            )
+        for index, payload in enumerate(button_payloads):
+            components.append(
+                {
+                    "type": "button",
+                    "sub_type": "quick_reply",
+                    "index": str(index),
+                    "parameters": [{"type": "payload", "payload": payload}],
+                }
+            )
+        await self._send_payload(
+            {
+                "messaging_product": "whatsapp",
+                "to": phone,
+                "type": "template",
+                "template": {"name": name, "language": {"code": language}, "components": components},
+            },
+            "",
+        )
+
+    async def send_buttons(self, phone: str, body: str, buttons: list[tuple[str, str]]) -> None:
+        """Mensaje interactivo con hasta 3 botones (id, título); Meta solo lo
+        entrega dentro de la ventana de 24 h."""
+        await self._send_payload(
+            {
+                "messaging_product": "whatsapp",
+                "to": phone,
+                "type": "interactive",
+                "interactive": {
+                    "type": "button",
+                    "body": {"text": body[:1024]},
+                    "action": {
+                        "buttons": [
+                            {"type": "reply", "reply": {"id": button_id, "title": title[:20]}}
+                            for button_id, title in buttons[:3]
+                        ]
+                    },
+                },
+            },
+            "",
+        )
 
     async def send_image(self, phone: str, url: str, caption: str = "", callback_ref: str = "") -> None:
         await self._send_payload(

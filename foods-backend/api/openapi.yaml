@@ -2,6 +2,25 @@ openapi: 3.1.0
 info: { title: Foods API, version: 0.15.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
+  /v1/platform/whatsapp-channels:
+    get: {"operationId": "listPlatformWhatsAppChannels", "security": [{"sessionCookie": []}], "description": "Solo administrador global. Un registro actual por país; consulta estado operativo sin revelar credenciales.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"type": "object", "required": ["items", "providerOptions"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/PlatformWhatsAppChannel"}}, "providerOptions": {"type": "array", "items": {"$ref": "#/components/schemas/Option"}}}}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Solo administrador global"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}}
+    post: {"operationId": "createPlatformWhatsAppChannel", "security": [{"sessionCookie": []}], "description": "Meta por defecto. Alta rechazada si el país ya tiene configuración. Activar exige verificación real del proveedor.", "responses": {"201": {"description": "Resultado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformWhatsAppChannel"}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Solo administrador global"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}, "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformWhatsAppChannelInput"}}}}}
+  /v1/platform/whatsapp-channels/{id}:
+    parameters: [{"$ref": "#/components/parameters/EntityId"}]
+    patch: {"operationId": "updatePlatformWhatsAppChannel", "security": [{"sessionCookie": []}], "description": "Edita el mismo registro. País inmutable. revision evita sobrescrituras. El cambio crea una referencia histórica inmutable; no mueve pedidos ni conversaciones.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformWhatsAppChannel"}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Solo administrador global"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}, "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlatformWhatsAppChannelInput"}}}}}
+  /v1/platform/whatsapp-channels/link:
+    post: {"operationId": "linkPlatformWhatsApp", "security": [{"sessionCookie": []}], "description": "Solo administrador global. Sin sessionRef inicia vinculación; con sessionRef consulta estado y QR vigente. Respuesta privada Cache-Control no-store.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WhatsAppConnection"}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Solo administrador global"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}, "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WhatsAppLinkInput"}}}}}
+  /v1/platform/whatsapp-channels/{id}/history:
+    parameters: [{"$ref": "#/components/parameters/EntityId"}]
+    get: {"operationId": "listWhatsAppChannelHistory", "security": [{"sessionCookie": []}], "description": "Auditoría del registro del país y duplicados archivados; sin secretos.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/WhatsAppChannelHistory"}}}}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Solo administrador global"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}}
+  /v1/integrations/concierge/whatsapp/routes:
+    get: {"operationId": "listConciergeWhatsAppRoutes", "security": [{"conciergeServiceKey": []}], "description": "Contrato interno. Referencias de transporte actuales e históricas. Nunca usar el canal actual como fallback para respuestas antiguas.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"type": "object", "required": ["items"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/WhatsAppRoute"}}}}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Credencial interna inválida"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}}
+  /v1/integrations/concierge/whatsapp/legacy-route:
+    post: {"operationId": "registerConciergeLegacyRoute", "security": [{"conciergeServiceKey": []}], "description": "Importa una referencia Meta original verificada desde configuración de servidor. Idempotente e inmutable. Solo restaura el registro migrado si el número coincide y existía un único activo; duplicados requieren revisión manual.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"type": "object", "required": ["registered"], "properties": {"registered": {"type": "boolean"}}}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Credencial interna inválida"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}, "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WhatsAppRoute"}}}}}
+  /v1/integrations/concierge/restaurants/search:
+    post: {"operationId": "searchConciergeRestaurants", "security": [{"conciergeServiceKey": []}], "description": "Busca historial o descubrimiento del país del canal activo. Solo restaurantes activos con Concierge. PN verificado o identidad opaca; no inferir teléfono de LID.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RestaurantPage"}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Credencial interna inválida"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}, "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RestaurantSearchInput"}}}}}
+  /v1/integrations/concierge/restaurants/context:
+    post: {"operationId": "resolveConciergeRestaurantContext", "security": [{"conciergeServiceKey": []}], "description": "Revalida empresa/local/país y obtiene QR de delivery/recojo sin cambiar tokens existentes. No crea ni mueve pedidos.", "responses": {"200": {"description": "Resultado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RestaurantOption"}}}}, "400": {"description": "Solicitud inválida"}, "401": {"description": "Sin autenticación"}, "403": {"description": "Credencial interna inválida"}, "409": {"description": "País duplicado, configuración modificada o proveedor no operativo"}, "503": {"description": "Servicio no disponible"}}, "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["channelKey", "locationId"], "properties": {"channelKey": {"type": "string"}, "locationId": {"type": "string", "format": "uuid"}}}}}}}
   /v1/admin/organization/profile:
     get:
       summary: Consultar identidad del restaurante
@@ -333,6 +352,51 @@ paths:
         "204": { description: Aviso despachado; repetir la operación no cambia nada }
         "401": { description: Clave de Concierge inválida }
         "404": { description: Aviso inexistente }
+  /v1/integrations/concierge/delivery-messages/pending:
+    get:
+      operationId: claimDeliveryPartnerMessages
+      summary: Reclama mensajes pendientes para las centrales de Delivery Fudia
+      description: >-
+        Bandeja de salida global hacia las centrales de delivery (clave X-Fudia-Concierge-Key). Antes de reclamar,
+        el backend avanza la cascada: vence ofertas sin respuesta (3 min desde el envío, o 5 min si nunca se
+        pudo enviar), pasa a la siguiente central del orden global, avisa «listo para recoger» a la central que aceptó
+        y cancela despachos de pedidos cancelados. Tipos: offer (botones Aceptar/Rechazar, vence en
+        expiresInSeconds), ready (botón Recoger) y cancelled (sin botones). Los botones llevan actionToken.
+        Cada consulta reserva hasta `limit` mensajes por 60 s (máximo 5 intentos, mensajes de las últimas 2 horas
+        y aún vigentes). Concierge redacta el texto y deduplica por id.
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        "200": { description: Mensajes reservados, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/DeliveryPartnerMessage" } } } } } } }
+        "401": { description: Clave de Concierge inválida }
+  /v1/integrations/concierge/delivery-messages/{id}/dispatched:
+    post:
+      operationId: markDeliveryPartnerMessageDispatched
+      summary: Confirma que Concierge envió el mensaje a la central
+      description: Para una oferta, desde este momento corren sus 3 minutos. Repetir la operación no cambia nada.
+      security: [{ conciergeServiceKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/EntityId" }]
+      responses:
+        "204": { description: Mensaje despachado }
+        "401": { description: Clave de Concierge inválida }
+        "404": { description: Mensaje inexistente }
+  /v1/integrations/concierge/delivery-actions:
+    post:
+      operationId: applyDeliveryPartnerAction
+      summary: Aplica el botón que pulsó una central (Aceptar, Rechazar o Recoger)
+      description: >-
+        Solo responde a la central ofertada: phone debe ser su WhatsApp; un token desconocido o de otro número
+        devuelve outcome=not_found. accept da accepted, already_accepted, taken (otra central lo tomó o ya no se le
+        ofrece), expired o cancelled; si cocina ya terminó, se encola de inmediato «listo para recoger».
+        reject da rejected (pasa a la siguiente central) o taken. pickup da picked_up (el pedido pasa a en_camino;
+        repetirlo no cambia nada), not_ready o taken. La central cobra al cliente al entregar; Fudia no gestiona ese cobro.
+      security: [{ conciergeServiceKey: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionInput" } } } }
+      responses:
+        "200": { description: Resultado de la acción, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionResult" } } } }
+        "400": { description: Acción inválida }
+        "401": { description: Clave de Concierge inválida }
   /v1/integrations/concierge/{token}/menu:
     get:
       operationId: listConciergeMenu
@@ -1358,7 +1422,7 @@ paths:
       responses:
         "201": { description: Artículo creado con stock cero, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryProductOption" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
-        "409": { description: "Categoría, producto o artículo en conflicto; producto con receta, combo o pedidos abiertos al vincularlo" }
+        "409": { description: "inventory_item_name_taken si ya existe un producto o insumo con el mismo nombre en la empresa (incluidos inactivos, sin distinguir mayúsculas ni espacios repetidos). También categoría, producto o artículo en conflicto; producto con receta, combo o pedidos abiertos al vincularlo.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/purchase-linkable-products:
     get:
@@ -2198,6 +2262,131 @@ paths:
       description: "Pasa a Cocina/Barra lo guardado sin enviar: un pedido Nuevo o las rondas que el cliente pidió por Fudia Concierge (ítems con status nuevo, «Sin enviar»; Cocina no los ve). La hora del ticket empieza al enviarlo. Quien envía queda como responsable (waiterId) si el pedido aún no tiene uno; en una mesa asignada solo su mozo puede enviar (403 order_assigned_to_another_waiter). Cada WhatsApp que pidió lo enviado recibe el aviso order_sent («en preparación»). Exige orders.manage. Sin nada por enviar responde 409 nothing_to_send."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Comanda enviada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: "nothing_to_send u order_closed" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/orders/{id}/delivery-dispatch:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getOrderDeliveryDispatch
+      summary: Despacho del pedido a las centrales de Delivery Fudia, con el historial de ofertas
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Despacho, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryDispatch" } } } }
+        "404": { description: "delivery_dispatch_not_found: el pedido no usa centrales" }
+  /v1/admin/orders/{id}/delivery-dispatch/retry:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: retryOrderDeliveryDispatch
+      summary: Vuelve a ofrecer el pedido desde la 1.ª central del orden global (nueva vuelta)
+      description: "Permitido si ninguna central aceptó (unassigned) o si el local había elegido su delivery propio (own), mientras el pedido de delivery siga confirmado, en preparación o listo. Exige orders.manage."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Pedido ofrecido de nuevo, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryDispatch" } } } }
+        "404": { description: Pedido inexistente }
+        "409": { description: "delivery_dispatch_in_progress, delivery_not_dispatchable o delivery_partners_missing" }
+  /v1/admin/orders/{id}/delivery-dispatch/own:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: useOwnDeliveryForOrder
+      summary: Deja el pedido para el delivery propio del local
+      description: "Retira las ofertas pendientes; si una central ya había aceptado, recibe el aviso de cancelación. Exige orders.manage."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Despacho en modo own, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryDispatch" } } } }
+        "404": { description: Pedido inexistente }
+        "409": { description: "delivery_already_picked_up u order_closed" }
+  /v1/admin/locations/{id}/delivery-link:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getLocationDeliveryLink
+      summary: Enlace/QR de delivery del local
+      description: "Exige organizations.read. token vacío si aún no se generó. El token se resuelve como un QR (/v1/public/tables/{token}, /start de Concierge) con serviceType=delivery: abre el WhatsApp de Fudia ya ligado al local para pedir delivery o recojo, sin mesa."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Enlace, content: { application/json: { schema: { $ref: "#/components/schemas/LocationDeliveryLink" } } } }
+        "404": { description: Local inexistente en la empresa }
+    post:
+      operationId: rotateLocationDeliveryLink
+      summary: Genera el enlace de delivery del local o lo reemplaza por uno nuevo
+      description: "Exige organizations.manage. Regenerar invalida el token anterior: los QR impresos con él dejan de abrir."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Enlace vigente, content: { application/json: { schema: { $ref: "#/components/schemas/LocationDeliveryLink" } } } }
+        "404": { description: Local inexistente en la empresa }
+  /v1/admin/geographic-areas:
+    get:
+      operationId: listGeographicAreas
+      security: [{ sessionCookie: [] }]
+      description: "Catálogo INEI de Perú. Sin parentCode devuelve departamentos; con código de departamento, provincias; con código de provincia, distritos. Solo lectura para cualquier sesión autenticada; las empresas no administran cobertura."
+      parameters:
+        - { in: query, name: parentCode, schema: { type: string, pattern: "^([0-9]{2}|[0-9]{4})?$" } }
+      responses:
+        "200": { description: Zonas, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/GeographicArea" } } } } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { description: Catálogo no disponible }
+  /v1/platform/delivery-partners:
+    get:
+      operationId: listDeliveryPartners
+      summary: Centrales de delivery con las que trabaja Fudia, en su orden global (solo administrador de plataforma)
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Centrales, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/DeliveryPartner" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createDeliveryPartner
+      summary: Registra una central de delivery
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerInput" } } } }
+      responses:
+        "201": { description: Central registrada, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartner" } } } }
+        "400": { description: invalid_delivery_partner }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: delivery_partner_phone_taken }
+  /v1/platform/delivery-partners/order:
+    put:
+      operationId: reorderDeliveryPartners
+      summary: Fija el orden global de las centrales (la primera recibe primero cada pedido)
+      description: "Debe incluir todas las centrales registradas; si la lista cambió entre tanto responde 409 delivery_partner_order_outdated."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerOrderInput" } } } }
+      responses:
+        "200": { description: Centrales en el nuevo orden, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/DeliveryPartner" } } } } } } }
+        "400": { description: invalid_delivery_partner_order }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: delivery_partner_order_outdated }
+  /v1/platform/organizations/{id}/delivery:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getOrganizationDelivery
+      summary: Indica si la empresa usa Delivery Fudia en todos sus locales
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Estado, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationDelivery" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Empresa inexistente }
+    put:
+      operationId: setOrganizationDelivery
+      summary: Activa o desactiva Delivery Fudia para todos los locales de la empresa
+      description: "Los pedidos ya ofrecidos a una central siguen su curso."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [enabled], properties: { enabled: { type: boolean } } } } } }
+      responses:
+        "200": { description: Estado guardado, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationDelivery" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Empresa inexistente }
+  /v1/platform/delivery-partners/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateDeliveryPartner
+      summary: Edita o desactiva una central de delivery
+      description: "Una central desactivada deja de recibir ofertas; conserva su lugar en el orden y la cascada la omite."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerInput" } } } }
+      responses:
+        "200": { description: Central actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartner" } } } }
+        "400": { description: invalid_delivery_partner }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Central inexistente }
+        "409": { description: delivery_partner_phone_taken }
   /v1/admin/kitchen/tickets:
     get:
       operationId: listKitchenTickets
@@ -2280,15 +2469,118 @@ components:
     Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Forbidden: { description: "Permiso insuficiente. code=forbidden; message nombra la acción que falta con su etiqueta del editor de roles y dónde agregarla.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
+    GeographicArea:
+      type: object
+      required: [code, parentCode, name, label]
+      properties:
+        code: { type: string, pattern: "^([0-9]{2}|[0-9]{4}|[0-9]{6})$" }
+        parentCode: { type: string }
+        name: { type: string }
+        label: { type: string, description: Nombre y sus ámbitos superiores }
+    DeliveryPartner:
+      type: object
+      required: [id, name, whatsappPhone, active, priority, coverageCodes, coverageLabels, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        whatsappPhone: { type: string, pattern: "^[1-9][0-9]{7,14}$", description: "WhatsApp con código de país, solo dígitos." }
+        active: { type: boolean }
+        priority: { type: integer, minimum: 1, description: "Orden global entre centrales con cobertura del local. Una central nueva queda al final." }
+        coverageCodes: { type: array, items: { type: string }, description: "Distritos INEI marcados explícitamente por Fudia. Vacío nunca representa cobertura nacional." }
+        coverageLabels: { type: array, items: { type: string }, description: Nombres de las zonas en el mismo orden que coverageCodes }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DeliveryPartnerInput:
+      type: object
+      required: [name, whatsappPhone, coverageCodes]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        whatsappPhone: { type: string, description: "Con código de país; se guardan solo los dígitos (ej. +51 987 654 321 se guarda 51987654321)." }
+        active: { type: boolean, description: "Omitido: activa al crear y sin cambios al editar. Desactivar retira las ofertas pendientes; los pedidos aceptados conservan su asignación." }
+        coverageCodes: { type: array, maxItems: 2000, uniqueItems: true, items: { type: string, pattern: "^[0-9]{6}$" }, description: "Al menos un distrito del catálogo para una central activa. Solo Plataforma puede escribir. 400 invalid_delivery_coverage ante zonas inexistentes. Guardado atómico con la central." }
+    DeliveryPartnerOrderInput:
+      type: object
+      required: [partnerIds]
+      properties:
+        partnerIds: { type: array, minItems: 1, uniqueItems: true, items: { type: string, format: uuid }, description: "Todas las centrales registradas, en el orden en que reciben cada pedido." }
+    OrganizationDelivery:
+      type: object
+      required: [organizationId, enabled]
+      properties:
+        organizationId: { type: string, format: uuid }
+        enabled: { type: boolean, description: "true: los pedidos de delivery de todos sus locales se ofrecen a las centrales de Fudia." }
+        updatedAt: { type: string, format: date-time }
+    LocationDeliveryLink:
+      type: object
+      required: [locationId, token, active]
+      properties:
+        locationId: { type: string, format: uuid }
+        token: { type: string, description: "32 caracteres hexadecimales; vacío si aún no se generó." }
+        active: { type: boolean }
+        updatedAt: { type: string, format: date-time }
+    DeliveryDispatch:
+      type: object
+      required: [orderId, status, round, offers]
+      properties:
+        orderId: { type: string, format: uuid }
+        status: { type: string, enum: [searching, accepted, unassigned, picked_up, own, cancelled] }
+        round: { type: integer, minimum: 1, description: "Vuelta de ofertas; Reintentar abre una nueva desde la 1.ª central." }
+        partnerName: { type: string, description: "Central que aceptó o a la que se ofrece ahora." }
+        acceptedAt: { type: string, format: date-time }
+        pickedUpAt: { type: string, format: date-time }
+        offers: { type: array, items: { type: object, required: [partnerName, round, priority, status, createdAt], properties: { partnerName: { type: string }, round: { type: integer }, priority: { type: integer }, status: { type: string, enum: [pending, accepted, rejected, expired, withdrawn] }, createdAt: { type: string, format: date-time }, expiresAt: { type: string, format: date-time }, respondedAt: { type: string, format: date-time } } } }
+    DeliveryPartnerMessage:
+      type: object
+      required: [id, kind, partnerName, partnerPhone, actionToken, expiresInSeconds, orderCode, organizationName, locationName, locationAddress, customerName, customerPhone, address, reference, notes, items, currencySymbol, subtotal, deliveryFee, total, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [offer, ready, cancelled] }
+        partnerName: { type: string }
+        partnerPhone: { type: string, description: "WhatsApp de la central, solo dígitos con código de país." }
+        actionToken: { type: string, format: uuid, description: "Va en los botones (accept/reject en offer, pickup en ready)." }
+        expiresInSeconds: { type: integer, description: "180 en offer; 0 en los demás." }
+        orderCode: { type: string }
+        organizationName: { type: string }
+        locationName: { type: string }
+        locationAddress: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address: { type: string }
+        reference: { type: string }
+        latitude: { type: [number, "null"] }
+        longitude: { type: [number, "null"] }
+        distanceKm: { type: [number, "null"] }
+        notes: { type: string }
+        items: { type: array, items: { type: object, required: [quantity, name], properties: { quantity: { type: number }, name: { type: string }, note: { type: string } } } }
+        currencySymbol: { type: string }
+        subtotal: { type: string, description: "Costo del pedido: lo que la central paga al restaurante al recoger." }
+        deliveryFee: { type: string, description: "Precio del delivery: lo cobra y se lo queda la central." }
+        total: { type: string, description: "Lo que la central cobra al cliente al entregar (subtotal + deliveryFee)." }
+        createdAt: { type: string, format: date-time }
+    DeliveryPartnerActionInput:
+      type: object
+      required: [action, token, phone]
+      properties:
+        action: { type: string, enum: [accept, reject, pickup] }
+        token: { type: string, format: uuid }
+        phone: { type: string, description: "WhatsApp que pulsó el botón." }
+    DeliveryPartnerActionResult:
+      type: object
+      required: [outcome]
+      properties:
+        outcome: { type: string, enum: [accepted, already_accepted, rejected, taken, expired, cancelled, not_ready, picked_up, not_found, payment_conflict] }
+        orderCode: { type: string }
+        organizationName: { type: string }
+        locationName: { type: string }
     ConciergeCustomerNotice:
       type: object
       required: [id, kind, orderId, orderCode, fulfillment, customerPhone, conversationId, organizationName, locationName, createdAt]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [order_ready, order_sent], description: "order_sent: el personal envió a cocina lo que pidió (una vez por ronda y WhatsApp); order_ready: pedido de mostrador o recojo listo" }
+        kind: { type: string, enum: [order_ready, order_sent, order_on_the_way], description: "order_sent: el personal envió a cocina lo que pidió (una vez por ronda y WhatsApp); order_ready: pedido de mostrador o recojo listo; order_on_the_way: el delivery salió del local (el personal lo despachó o la central de Delivery Fudia lo recogió), una vez por pedido" }
         orderId: { type: string, format: uuid }
         orderCode: { type: string, description: Código PED- del pedido }
-        fulfillment: { type: string, enum: [counter, pickup, table, delivery], description: "counter: mostrador; pickup: recojo en el local; table y delivery solo en order_sent" }
+        fulfillment: { type: string, enum: [counter, pickup, table, delivery], description: "counter: mostrador; pickup: recojo en el local; table y delivery solo en order_sent; order_on_the_way siempre es delivery" }
         customerPhone: { type: string, description: Número de WhatsApp con el que se creó el pedido }
         conversationId: { type: string }
         organizationName: { type: string }
@@ -2299,7 +2591,7 @@ components:
       required: [id, kind, title, detail, createdAt, read]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account] }
+        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned] }
         title: { type: string, maxLength: 120, description: Texto final redactado por el backend }
         detail: { type: string, maxLength: 240 }
         orderId: { type: string, format: uuid }
@@ -2488,7 +2780,7 @@ components:
     SubscriptionPlan: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlanInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
     PlatformSubscriptionPlanInput: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlanInput" }, { type: object, properties: { maxConciergeConversations: { type: [integer, "null"], minimum: 1, description: "Tope mensual de conversaciones de Concierge; null es ilimitado. Solo Plataforma." } } }] }
     PlatformSubscriptionPlan: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlan" }, { type: object, required: [maxConciergeConversations], properties: { maxConciergeConversations: { type: [integer, "null"] } } }] }
-    ConciergeConversationInput: { type: object, required: [conversationId, kind], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, kind: { type: string, enum: [table, delivery], description: "table: atención iniciada por QR; delivery: delivery o recojo después de la mesa" } } }
+    ConciergeConversationInput: { type: object, required: [conversationId, kind], properties: { channelKey: { type: string }, recipient: { type: string, maxLength: 160 }, identity: { $ref: "#/components/schemas/ConciergeCustomerIdentity" }, conversationId: { type: string, minLength: 1, maxLength: 160 }, kind: { type: string, enum: [table, delivery], description: "table: atención iniciada por QR; delivery: delivery o recojo después de la mesa" } } }
     ConciergeConversation: { type: object, required: [conversationId, kind, month], properties: { conversationId: { type: string }, kind: { type: string, enum: [table, delivery] }, month: { type: string, pattern: "^[0-9]{4}-[0-9]{2}$" } } }
     ConciergeUsageReport: { type: object, required: [requestId, tiers], properties: { requestId: { type: string, minLength: 1, maxLength: 160 }, tiers: { type: array, minItems: 1, maxItems: 2, items: { $ref: "#/components/schemas/ConciergeTierTokens" } } } }
     ConciergeTierTokens: { type: object, required: [tier, inputTokens, outputTokens], properties: { tier: { type: string, enum: [lite, flash] }, inputTokens: { type: integer, minimum: 0 }, outputTokens: { type: integer, minimum: 0 } } }
@@ -2529,7 +2821,7 @@ components:
         countryOptions: { type: array, items: { $ref: "#/components/schemas/PlatformCountryOption" } }
         currencyOptions: { type: array, items: { $ref: "#/components/schemas/CurrencyOption" } }
         specialTaxRegimeOptions: { type: array, description: IGV reducido de cada país con sus periodos; el paso Fiscal ofrece la casilla solo para el país elegido., items: { $ref: "#/components/schemas/SpecialTaxRegime" } }
-    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { foundedOn: { type: string, format: date }, locationOpenedOn: { type: string, format: date }, tipSettings: { $ref: "#/components/schemas/TipSettings" }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string, description: Zona IANA elegida para el primer local; también inicializa la zona predeterminada de la empresa., example: America/Lima }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, specialTaxRegime: { type: [string, "null"], description: "IGV reducido del país en que la empresa está acogida (padrón MYPE de SUNAT); se guarda en el primer perfil fiscal. null = tasa general. 400 invalid_special_tax_regime si no corresponde al país." }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
+    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { foundedOn: { type: string, format: date }, locationOpenedOn: { type: string, format: date }, tipSettings: { $ref: "#/components/schemas/TipSettings" }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string, description: Zona IANA elegida para el primer local; también inicializa la zona predeterminada de la empresa., example: America/Lima }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, specialTaxRegime: { type: [string, "null"], description: "IGV reducido del país en que la empresa está acogida (padrón MYPE de SUNAT); se guarda en el primer perfil fiscal. null = tasa general. 400 invalid_special_tax_regime si no corresponde al país." }, locationName: { type: string }, locationCode: { type: string }, districtCode: { type: string, pattern: "^$|^[0-9]{6}$", description: "Distrito INEI del primer local peruano. Omitido conserva compatibilidad; sin distrito no se asignan centrales." }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
     DashboardHourlySale:
       type: object
       required: [hour, total]
@@ -2644,7 +2936,7 @@ components:
     OrganizationInput: { type: object, required: [legalName, tradeName, taxId, timezone], properties: { legalName: { type: string, maxLength: 180 }, tradeName: { type: string, maxLength: 180 }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string } } }
     Organization: { allOf: [{ $ref: "#/components/schemas/OrganizationInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
     FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean }, specialTaxRegime: { type: [string, "null"], description: "Código de SpecialTaxRegime del mismo país en que la empresa está acogida (padrón). null = solo tasa general. 400 invalid_special_tax_regime si no corresponde al país." } } }
-    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean }, tipSettings: { allOf: [{ $ref: "#/components/schemas/TipSettings" }], description: "Opcional. Propinas propias del local, guardadas en la misma transacción que el local; si se rechazan (400 invalid_tip_settings, 403 tips_settings_forbidden: solo el administrador reservado), el local no cambia. Omitido conserva la configuración actual." } } }
+    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { districtCode: { type: string, pattern: "^$|^[0-9]{6}$", description: "Distrito INEI del local peruano; omitido conserva el valor al editar, vacío lo elimina. El catálogo devuelve sus nombres. Sin distrito no se asignan centrales." }, openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean }, tipSettings: { allOf: [{ $ref: "#/components/schemas/TipSettings" }], description: "Opcional. Propinas propias del local, guardadas en la misma transacción que el local; si se rechazan (400 invalid_tip_settings, 403 tips_settings_forbidden: solo el administrador reservado), el local no cambia. Omitido conserva la configuración actual." } } }
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Uso informativo de la categoría. El cliente lo deduce del formulario de origen (Carta: prepared; Compras o Inventario: retail) y no lo pide al usuario; el backend lo amplía a both cuando la categoría recibe un producto del otro tipo." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
@@ -2990,7 +3282,7 @@ components:
     TableInput: { type: object, required: [name], properties: { name: { type: string }, seats: { type: integer, minimum: 1, default: 2 }, zone: { type: string }, active: { type: boolean }, qrEnabled: { type: boolean, default: true }, serviceType: { $ref: "#/components/schemas/TableServiceType" } } }
     ConciergeCustomerProfile: { type: object, required: [known, customerName, marketingConsent], properties: { known: { type: boolean }, customerName: { type: string }, marketingConsent: { type: string, enum: [pending, asked, granted, declined, withdrawn] } } }
     ConciergeMarketingConsentInput: { type: object, required: [customerPhone, requestId, decision], properties: { customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, decision: { type: string, enum: [asked, granted, declined, withdrawn] }, evidence: { type: string, maxLength: 500, description: "Texto literal del cliente (o de la pregunta enviada para asked)." } } }
-    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, serviceType: { $ref: "#/components/schemas/TableServiceType" }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
+    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { countryCode: { type: string }, organizationId: { type: string, format: uuid }, locationId: { type: string, format: uuid }, name: { type: string }, serviceType: { $ref: "#/components/schemas/TableServiceType" }, seats: { type: integer, minimum: 0 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
     ConciergeMenuItem: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers, recommended], properties: { recommended: { type: boolean, description: "Producto recomendado por el local en la carta digital; se lista primero." }, productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean }, remaining: { type: [number, "null"], description: "Porciones o unidades que quedan hoy en el local; null si el producto no controla cantidad. Al confirmar, foods-backend vuelve a validar y responde insufficient_stock o insufficient_portions." } } } ] }
     ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { restaurantLogoUrl: { type: [string, "null"], format: uri }, virtualMenuUrls: { type: array, items: { type: string, format: uri } }, items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
     ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
@@ -3092,11 +3384,24 @@ components:
         deliveryLatitude: { type: [number, "null"], minimum: -90, maximum: 90, readOnly: true, description: "Latitud del punto de entrega fijado por WhatsApp en Concierge o marcado en el mapa del alta manual; null si no hay ubicación." }
         deliveryLongitude: { type: [number, "null"], minimum: -180, maximum: 180, readOnly: true, description: "Longitud del punto de entrega; null cuando deliveryLatitude es null." }
         deliveryDistanceKm: { type: [number, "null"], minimum: 0, readOnly: true, description: "Distancia en línea recta desde el local usada para cotizar el delivery; null si no se cotizó." }
+        deliveryDispatchStatus: { type: string, enum: [searching, accepted, unassigned, picked_up, own, cancelled], readOnly: true, description: "Despacho a las centrales de Delivery Fudia; se omite si el pedido no usa centrales." }
+        deliveryPartnerName: { type: string, readOnly: true, description: "Central que aceptó o a la que se ofrece ahora." }
+        deliveryPartnerFee: { type: string, readOnly: true, description: "Envío cedido a la central que aceptó (lo cobra ella al cliente; ya no suma al total del pedido). Se omite si no se cedió." }
         tableId: { type: string }
         tableName: { type: string }
         waiterId: { type: string, readOnly: true, description: "Usuario que tomó la comanda de Salón, derivado de la sesión al crearla. Vacío si no hay asignación. No se admite en altas ni ediciones." }
         waiterName: { type: string, readOnly: true, description: Nombre del responsable de atención dentro de la empresa }
         collectedByNames: { type: array, readOnly: true, uniqueItems: true, items: { type: string }, description: "Nombres de quienes registraron pagos de este pedido y local, ordenados y sin duplicados; [] si no existen cobros. Incluye pagos luego devueltos para conservar autoría. Cada pago del detalle conserva su propio createdByName." }
+        paymentReferences:
+          type: array
+          readOnly: true
+          description: "Números de operación ingresados en los pagos del pedido, en orden de registro. Solo el detalle los incluye; omite referencias vacías. Conserva los pagos posteriormente devueltos como historial. No son códigos generados por la base de datos."
+          items:
+            type: object
+            required: [methodName, reference]
+            properties:
+              methodName: { type: string }
+              reference: { type: string, maxLength: 120 }
         notes: { type: string }
         subtotal: { type: string }
         deliveryFee: { type: string }
@@ -3116,3 +3421,14 @@ components:
     AllergenInput: { type: object, required: [name], properties: { name: { type: string, minLength: 2, maxLength: 60, description: Se recortan y colapsan los espacios } } }
     Allergen: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }
     Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string, format: uuid } } }
+    WhatsAppProvider: {"type": "string", "enum": ["META_CLOUD_API", "WHATSMEOW", "FUDIA_WEB"], "default": "META_CLOUD_API"}
+    PlatformWhatsAppChannelInput: {"type": "object", "required": ["countryCode", "phoneNumber", "displayName", "active"], "properties": {"countryCode": {"type": "string", "pattern": "^[A-Z]{2}$"}, "phoneNumber": {"type": "string"}, "displayName": {"type": "string"}, "active": {"type": "boolean"}, "provider": {"$ref": "#/components/schemas/WhatsAppProvider"}, "sessionRef": {"type": "string", "maxLength": 80, "writeOnly": true}, "revision": {"type": "integer", "minimum": 1}}}
+    PlatformWhatsAppChannel: {"type": "object", "required": ["id", "countryCode", "countryName", "phoneNumber", "displayName", "active", "provider", "connectionState", "revision", "needsReconciliation"], "properties": {"id": {"type": "string", "format": "uuid"}, "countryCode": {"type": "string"}, "countryName": {"type": "string"}, "phoneNumber": {"type": "string"}, "displayName": {"type": "string"}, "active": {"type": "boolean"}, "provider": {"$ref": "#/components/schemas/WhatsAppProvider"}, "connectionState": {"type": "string"}, "revision": {"type": "integer"}, "needsReconciliation": {"type": "boolean"}}}
+    WhatsAppLinkInput: {"type": "object", "required": ["countryCode"], "properties": {"countryCode": {"type": "string", "pattern": "^[A-Z]{2}$"}, "sessionRef": {"type": "string", "format": "uuid"}}}
+    WhatsAppConnection: {"type": "object", "required": ["provider", "countryCode", "state", "phoneNumber"], "properties": {"provider": {"$ref": "#/components/schemas/WhatsAppProvider"}, "countryCode": {"type": "string"}, "sessionRef": {"type": "string"}, "state": {"type": "string"}, "phoneNumber": {"type": "string"}, "qrCode": {"type": "string", "description": "Dato temporal privado para QR de dispositivo; nunca persistir en cliente ni compartir."}, "expiresAt": {"type": "string", "format": "date-time"}}}
+    WhatsAppChannelHistory: {"type": "object", "required": ["action", "createdAt", "after"], "properties": {"action": {"type": "string"}, "createdAt": {"type": "string", "format": "date-time"}, "before": {"type": ["object", "null"]}, "after": {"type": "object"}}}
+    WhatsAppRoute: {"type": "object", "required": ["routingKey", "countryCode", "provider", "providerKey", "phoneNumber", "active", "legacy"], "properties": {"routingKey": {"type": "string"}, "countryCode": {"type": "string"}, "provider": {"$ref": "#/components/schemas/WhatsAppProvider"}, "providerKey": {"type": "string", "description": "Referencia técnica interna; no es una credencial."}, "phoneNumber": {"type": "string"}, "active": {"type": "boolean"}, "legacy": {"type": "boolean"}}}
+    ConciergeCustomerIdentity: {"type": "object", "required": ["provider", "subject"], "properties": {"provider": {"$ref": "#/components/schemas/WhatsAppProvider"}, "subject": {"type": "string", "maxLength": 256}, "verifiedPhone": {"type": "string", "description": "Solo evidencia autenticada del proveedor. Un teléfono escrito por el cliente no prueba identidad."}}}
+    RestaurantSearchInput: {"type": "object", "required": ["channelKey", "identity", "onlyVisited", "offset"], "properties": {"channelKey": {"type": "string"}, "identity": {"$ref": "#/components/schemas/ConciergeCustomerIdentity"}, "onlyVisited": {"type": "boolean"}, "offset": {"type": "integer", "minimum": 0, "maximum": 10000}}}
+    RestaurantOption: {"type": "object", "required": ["organizationId", "locationId", "organizationName", "locationName", "visitCount"], "properties": {"organizationId": {"type": "string", "format": "uuid"}, "locationId": {"type": "string", "format": "uuid"}, "organizationName": {"type": "string"}, "locationName": {"type": "string"}, "visitCount": {"type": "integer", "minimum": 0}, "lastVisitedAt": {"type": "string"}, "qrToken": {"type": "string"}}}
+    RestaurantPage: {"type": "object", "required": ["items", "hasMore", "offset"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/RestaurantOption"}}, "hasMore": {"type": "boolean"}, "offset": {"type": "integer"}}}

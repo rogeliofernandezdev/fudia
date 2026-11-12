@@ -82,6 +82,17 @@ func StaleAccount(tableID, tableName, orderID, staleSince string) Input {
 	}
 }
 
+// DeliveryUnassigned avisa a caja que ninguna central de Delivery Fudia aceptó el
+// pedido en esta vuelta (round): puede reintentar o usar su delivery propio.
+func DeliveryUnassigned(orderID, code, customer string, round int) Input {
+	return Input{
+		Kind: KindDeliveryUnassigned, Audience: AudienceCashier,
+		Title:   "Ninguna central aceptó el delivery",
+		Detail:  Join(code, customer, "Reintenta o usa tu delivery propio"),
+		OrderID: orderID, DedupeKey: dedupe("delivery-unassigned", orderID, strconv.Itoa(round)),
+	}
+}
+
 // OrderReady avisa que una comanda está lista para entregar. En mesa la
 // entrega el mozo; mostrador, recojo y delivery se avisan también a caja.
 func OrderReady(ticketID, station, orderID, tableID, tableName, code, customer string) Input {

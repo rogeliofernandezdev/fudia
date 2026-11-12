@@ -10,6 +10,10 @@ const CustomerOrderReady = "order_ready"
 // por WhatsApp (los pedidos del bot esperan «Enviar comanda»).
 const CustomerOrderSent = "order_sent"
 
+// CustomerOrderOnTheWay avisa que el pedido de delivery salió del local
+// (el personal lo despachó o la central de Delivery Fudia lo recogió).
+const CustomerOrderOnTheWay = "order_on_the_way"
+
 // Formas de entrega que avisan «pedido listo»: el cliente recoge en el local.
 // «En preparación» también avisa en mesa y delivery.
 const (
@@ -28,6 +32,8 @@ type CustomerInput struct {
 
 // CustomerNotice es un aviso reclamado por Concierge para enviarlo.
 type CustomerNotice struct {
+	RoutingKey       string `json:"channelKey"`
+	Recipient        string `json:"recipient"`
 	ID               string `json:"id"`
 	Kind             string `json:"kind"`
 	OrderID          string `json:"orderId"`
@@ -58,7 +64,7 @@ func OrderReadyForCustomer(orderID, channel, phone, conversationID string) (Cust
 		Kind: CustomerOrderReady, OrderID: strings.TrimSpace(orderID),
 		CustomerPhone: strings.TrimSpace(phone), ConversationID: strings.TrimSpace(conversationID),
 	}
-	ok := FulfillmentFor(channel) != "" && in.OrderID != "" && in.CustomerPhone != "" &&
+	ok := FulfillmentFor(channel) != "" && in.OrderID != "" &&
 		len(in.CustomerPhone) <= 32 && in.ConversationID != "" && len(in.ConversationID) <= 160
 	return in, ok
 }
@@ -76,6 +82,18 @@ func ChannelFulfillment(channel string) string {
 	return FulfillmentTable
 }
 
+// OrderOnTheWayForCustomer arma el aviso «va en camino» solo para delivery con
+// un cliente de WhatsApp identificado; se avisa una vez por pedido.
+func OrderOnTheWayForCustomer(orderID, channel, phone, conversationID string) (CustomerInput, bool) {
+	in := CustomerInput{
+		Kind: CustomerOrderOnTheWay, OrderID: strings.TrimSpace(orderID),
+		CustomerPhone: strings.TrimSpace(phone), ConversationID: strings.TrimSpace(conversationID),
+	}
+	ok := channel == "delivery" && in.OrderID != "" &&
+		len(in.CustomerPhone) <= 32 && in.ConversationID != "" && len(in.ConversationID) <= 160
+	return in, ok
+}
+
 // OrderSentForCustomer arma el aviso «en preparación» para el WhatsApp que pidió
 // una ronda (key) cuando el personal la envía a Cocina.
 func OrderSentForCustomer(orderID, phone, conversationID, key string) (CustomerInput, bool) {
@@ -84,7 +102,7 @@ func OrderSentForCustomer(orderID, phone, conversationID, key string) (CustomerI
 		CustomerPhone: strings.TrimSpace(phone), ConversationID: strings.TrimSpace(conversationID),
 		DedupeKey: strings.TrimSpace(key),
 	}
-	ok := in.OrderID != "" && in.CustomerPhone != "" && len(in.CustomerPhone) <= 32 &&
+	ok := in.OrderID != "" && len(in.CustomerPhone) <= 32 &&
 		in.ConversationID != "" && len(in.ConversationID) <= 160 && len(in.DedupeKey) <= 200
 	return in, ok
 }

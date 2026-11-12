@@ -38,8 +38,12 @@ func ValidUsageMode(mode string) bool {
 }
 
 type ConversationInput struct {
-	ConversationID string `json:"conversationId"`
-	Kind           string `json:"kind"`
+	ChannelKey     string           `json:"channelKey,omitempty"`
+	Recipient      string           `json:"recipient,omitempty"`
+	Identity       CustomerIdentity `json:"identity,omitempty"`
+	ProviderKey    string           `json:"-"`
+	ConversationID string           `json:"conversationId"`
+	Kind           string           `json:"kind"`
 }
 type ConversationView struct {
 	ConversationID string `json:"conversationId"`

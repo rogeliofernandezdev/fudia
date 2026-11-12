@@ -17,6 +17,7 @@ from src.domain.models import (
     ConversationSession,
     CustomerMemory,
     CustomerProfile,
+    DeliveryActionResult,
     DeliveryOptions,
     DeliveryQuote,
     InboundMessage,
@@ -84,7 +85,7 @@ class FudiaBackend(Protocol):
         """Store the question or the answer with its literal evidence;
         idempotent by `request_id`."""
     async def open_conversation(
-        self, token: str, conversation_id: str, kind: str
+        self, token: str, conversation_id: str, kind: str, origin: dict[str, Any] | None = None
     ) -> None:
         """Count a new attention; idempotent by `conversation_id`. Raises
         `FudiaError` with `CONVERSATION_LIMIT_CODE` when no new conversation
@@ -96,6 +97,10 @@ class FudiaBackend(Protocol):
         request_id: str,
         tiers: list[dict[str, Any]],
     ) -> None: ...
+    async def apply_delivery_action(
+        self, action: str, token: str, phone: str
+    ) -> DeliveryActionResult:
+        """Botón de una central de Delivery Fudia; repetirlo no duplica el efecto."""
 
 
 # foods-backend rejects opening a conversation (never one in progress).

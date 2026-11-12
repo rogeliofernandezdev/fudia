@@ -39,7 +39,7 @@ func orderRowValues(lat, lng, km any) []any {
 		"order-1", "D-001", "delivery", "nuevo", "", "Ana", "999888777", "Av. Arequipa 123", "Frente al parque",
 		"", "", "", "40.00", "5.00", "45.00", "2026-10-16T12:00:00-05:00", "2026-10-16T12:00:00-05:00", "",
 		"", "", []string{}, "",
-		lat, lng, km,
+		lat, lng, km, "", "", "",
 	}
 }
 

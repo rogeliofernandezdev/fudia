@@ -138,4 +138,7 @@ la extensión puede quedar en un esquema fuera del `search_path` y la función d
 de resolverse solo en el entorno restaurado. Para valores aleatorios usar
 `gen_random_uuid()`, nativo desde PostgreSQL 13. La prueba de integración
 `TestTableWritesWorkWhenPgcryptoIsOutsideSearchPath` reproduce ese escenario
-dentro de una transacción revertida.
+dentro de una transacción revertida. Los enlaces de delivery usan el mismo
+mecanismo: `TestDeliveryLinksWorkWhenPgcryptoIsOutsideSearchPath` comprueba la
+migración 115, la creación y regeneración del QR y la corrección 119 para bases
+que ya tenían el valor predeterminado anterior, sin cambiar tokens existentes.

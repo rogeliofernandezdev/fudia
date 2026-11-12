@@ -88,6 +88,8 @@ test("con teclado abierto en móvil el modal cede alto al formulario sin perder 
  assert.equal(declaration(css,".modal-header","min-height",keyboard),"var(--size-48)","más compacta que los 52 px habituales");
  assert.equal(declaration(css,".modal-header h2","font-size",keyboard),"var(--font-size-md)");
  assert.equal(declaration(css,".modal-context","display",keyboard),"none");
+ assert.equal(declaration(css,".modal-body","padding"),"var(--space-2) var(--space-6) var(--space-6)");
+ assert.equal(declaration(css,".modal-body","padding-top",keyboard),undefined,"el teclado no reintroduce espacio superior");
  assert.equal(declaration(css,".modal-footer","display",keyboard),undefined,"el pie sigue visible");
  assert.equal(declaration(css,".modal-footer","padding-block",keyboard),"var(--space-2) calc(var(--space-2) + var(--safe-area-bottom))");
 });
@@ -130,7 +132,7 @@ test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todo
  assert.equal(declaration(css,".crud-modal>header h2","color"),"var(--surface)");
  assert.equal(declaration(css,".modal-close","color"),"var(--surface)");
  assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--surface)");
- assert.equal(declaration(css,".modal-body","padding"),"var(--space-6)");
+ assert.equal(declaration(css,".modal-body","padding"),"var(--space-2) var(--space-6) var(--space-6)");
  assert.equal(declaration(css,".modal-footer","padding"),"var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom))");
  for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-44)");
  assert.equal(declaration(css,".modal-footer>.modal-footer-note","flex-basis"),"100%");

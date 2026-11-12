@@ -35,7 +35,7 @@ export function FiscalDocumentsPage(){
     <Select chip aria-label="Filtrar por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}><option value="">Todos los estados</option>{(list.data?.statusOptions??[]).map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select>
    </div>
    {list.isLoading?<TableSkeleton columns={columns} label="Cargando comprobantes"/>:list.isError?<ErrorState title="No pudimos cargar los comprobantes" text={list.error.message} onRetry={()=>void list.refetch()} retrying={list.isFetching}/>:!items.length?
-    <EmptyState icon="receipt" title={filtered?"Sin coincidencias":"Aún no hay comprobantes"} text={filtered?"Prueba con otro número, cliente o estado.":"Se registran al cobrar eligiendo boleta o factura."}/>:
+    <EmptyState icon={filtered?"search":"receipt"} title={filtered?"Sin coincidencias":"Aún no hay comprobantes"} text={filtered?"Prueba con otro número, cliente o estado.":"Se registran al cobrar eligiendo boleta o factura."}/>:
     <DataTable label="Comprobantes electrónicos" containerClassName="hover-scroll"><thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead><tbody>{items.map((item,i)=><tr className={i%2?"alternate":""} key={item.id}>
      <td><span className={`row-icon r${i%3}`}><Icon name={item.documentType==="invoice"?"invoice":"receipt"} size={18}/></span><b>{item.number}</b><small>{item.label} · {item.orderCode}</small></td>
      <td>{day(item.issueDate)}</td>

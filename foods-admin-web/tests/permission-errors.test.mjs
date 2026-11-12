@@ -32,5 +32,5 @@ test("Recetas explica el permiso que falta para los insumos y no ofrece reintent
   assert.ok(page.includes("Pide a un administrador que lo agregue a tu rol en Usuarios y roles."),"dice quién y dónde lo resuelve");
   assert.ok(!page.includes("No tienes permisos para realizar esta acción"),"no repite el texto genérico");
   assert.ok(page.includes("disabled={save.isPending||ingredientsForbidden||"),"«Agregar insumo» no se ofrece si no se pueden listar insumos");
-  assert.ok(page.includes('!isPermissionError(recipes.error)&&<Button kind="secondary" icon="refresh"'),"el listado tampoco ofrece reintentar un 403");
+  assert.ok(page.includes('onRetry={isPermissionError(recipes.error)?undefined:'),"el listado tampoco ofrece reintentar un 403");
 });

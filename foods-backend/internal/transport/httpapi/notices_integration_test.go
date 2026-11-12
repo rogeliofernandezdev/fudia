@@ -38,6 +38,7 @@ func TestNoticeFeedHidesAttendedOrders(t *testing.T) {
 	}
 	notice("order_ready", ready, "listo pendiente")
 	notice("order_ready", delivered, "listo entregado")
+	notice("pickup_order", delivered, "nuevo entregado")
 	notice("pickup_order", fresh, "nuevo pendiente")
 	notice("pickup_order", cooked, "nuevo ya listo")
 	notice("order_ready", cooked, "listo del nuevo")
@@ -59,7 +60,7 @@ func TestNoticeFeedHidesAttendedOrders(t *testing.T) {
 			t.Errorf("%q debe seguir en la campana", title)
 		}
 	}
-	for _, title := range []string{"listo entregado", "nuevo ya listo", "listo cancelado", "cuenta pagada"} {
+	for _, title := range []string{"listo entregado", "nuevo entregado", "nuevo ya listo", "listo cancelado", "cuenta pagada"} {
 		if got[title] {
 			t.Errorf("%q ya fue atendido y no debe listarse", title)
 		}

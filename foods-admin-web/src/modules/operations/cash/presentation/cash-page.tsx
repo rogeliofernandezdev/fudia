@@ -266,7 +266,7 @@ export function CashPage(){
 
           {history.isLoading?<TableSkeleton columns={historyColumns} rows={6} label="Cargando turnos"/>
           :history.isError?<ErrorState title="No pudimos cargar los turnos" text={history.error.message} onRetry={()=>void history.refetch()}/>
-          :!historyItems.length?<EmptyState icon="clock" title={q||status?"Sin coincidencias":"Aún no hay turnos registrados"} text={q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}/>
+          :!historyItems.length?<EmptyState icon={q||status?"search":"clock"} title={q||status?"Sin coincidencias":"Aún no hay turnos registrados"} text={q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}/>
           :<DataTable label="Historial de turnos de caja" containerClassName="hover-scroll cash-history-table">
             <thead><tr>{historyColumns.map((column,index)=><th className={index>=5&&index<=7?"cash-history-amount":undefined} scope="col" key={column}>{column}</th>)}</tr></thead>
             <tbody>{historyItems.map((item,index)=>{
@@ -324,7 +324,7 @@ export function CashPage(){
       save={draft=>cashOperation.mutate({shiftId:operationTarget.id,draft})}
     />}
     {detailId&&(detail.isLoading
-      ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} close={()=>setDetailId(null)}/>
+      ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} title="Detalle del turno" icon="sales" close={()=>setDetailId(null)}/>
       :detail.isError
         ?<CashDetailError message={detail.error.message} retrying={detail.isFetching} retry={()=>void detail.refetch()} close={()=>setDetailId(null)}/>
         :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)} viewReport={()=>{setDetailId(null);setReportId(detailId);}}/>)}
@@ -365,17 +365,17 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
   return <div className="cash-registers-workspace">
     <section className="cash-overview" aria-label="Resumen operativo de cajas">
       <div className="cash-overview-copy">
-        <IconTile name="sales" tone="primary" appearance="vivid" size="lg" className="cash-overview-icon"/>
-        <div><small>Estado operativo</small><b>{open.length?open.length+" "+(open.length===1?"caja operando":"cajas operando"):"Sin turnos abiertos"}</b><p>{available} {available===1?"caja disponible":"cajas disponibles"} para iniciar turno.</p></div>
+        <IconTile name="sales" tone={open.length?"brand":"primary"} appearance="vivid" size="lg" className="cash-overview-icon"/>
+        <div><b>{open.length?open.length+" "+(open.length===1?"caja operando":"cajas operando"):"Sin turnos abiertos"}</b><p>{available} {available===1?"caja disponible":"cajas disponibles"} para iniciar turno.</p></div>
       </div>
       <div className="cash-overview-metrics">
         <div><small>Cajas activas</small><strong>{active.length}</strong></div>
-        <div><small>Turnos abiertos</small><strong>{open.length}</strong></div>
+        <div className="open-shifts"><small>Turnos abiertos</small><strong>{open.length}</strong></div>
         <div className="money"><small>{restricted?"Efectivo de tu turno":"Efectivo esperado"}</small><strong>{restricted&&!visibleOpen.length?"—":hiddenExpected?"Cierre ciego":money(expected)}</strong></div>
       </div>
     </section>
 
-    <div className="cash-registers-heading"><h2>Cajas del local</h2><span>Actualización automática</span></div>
+    <div className="cash-registers-heading"><h2>Cajas del local</h2><span><Icon name="refresh" size={14}/>Actualización automática</span></div>
 
     <div className="cash-registers-grid">{items.map(item=>{
       const shift=item.openShift;
@@ -384,7 +384,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
       const cardClass="cash-register-card"+(!item.active?" inactive":shift?" open":"");
       return <article className={cardClass} key={item.id}>
         <header>
-          <div className="cash-register-name"><IconTile name="sales" tone={item.active&&shift?"brand":"primary"} appearance="vivid" className="cash-register-symbol"/><div><h3>{item.name}</h3></div></div>
+          <div className="cash-register-name"><IconTile name="sales" tone={!item.active?"neutral":shift?"brand":"primary"} appearance={item.active?"vivid":"soft"} className="cash-register-symbol"/><div><h3>{item.name}</h3></div></div>
           <div className="cash-register-header-actions">
             <Status tone={statusTone}>{statusLabel}</Status>
             {canManageRegisters&&<div className="cash-register-admin">
@@ -395,15 +395,17 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
         </header>
 
         {shift?<>
+          <div className="cash-register-content">
           <section className="cash-register-live">
+            {shift.detailsVisible!==false&&<div className="cash-register-balance"><small>{shift.expectedVisible?"Saldo esperado":"Cierre ciego"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>}
             <div className="cash-register-live-copy">
-              <small>Turno en curso</small>
-              <p><Icon name="users" size={14}/>Cajero: {cashShiftAttribution(shift).name}</p>
-              {shift.detailsVisible!==false&&<p>Equipo actual: {cashShiftTeamName(shift)}</p>}
-              <p><Icon name="clock" size={14}/><time dateTime={shift.openedAt}>Apertura: {dateTime(shift.openedAt)}</time></p>
-              <em>Día operativo {businessDate(shift.businessDate)}</em>
+              <dl>
+                <div><dt>Cajero</dt><dd>{cashShiftAttribution(shift).name}</dd></div>
+                {shift.detailsVisible!==false&&<div><dt>Equipo actual</dt><dd>{cashShiftTeamName(shift)}</dd></div>}
+                <div><dt>Apertura</dt><dd><time dateTime={shift.openedAt}>{dateTime(shift.openedAt)}</time></dd></div>
+                <div><dt>Día operativo</dt><dd>{businessDate(shift.businessDate)}</dd></div>
+              </dl>
             </div>
-            {shift.detailsVisible!==false&&<div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>}
           </section>
           {shift.detailsVisible===false?<div className="cash-register-blind"><Icon name="lock" size={14}/><span>Este turno está a cargo de otro cajero.</span></div>:<>
           {shift.expectedVisible?<section className="cash-register-flow">
@@ -411,24 +413,27 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
             <div className="income"><span className="cash-flow-label"><IconTile name="plus" tone="brand" appearance="vivid" size="sm"/><small>Ingresos</small></span><b>+{money(Number(shift.incomeAmount))}</b></div>
             <div className="expense"><span className="cash-flow-label"><IconTile name="minus" tone="danger" appearance="vivid" size="sm"/><small>Egresos</small></span><b>-{money(Number(shift.expenseAmount))}</b></div>
           </section>:<div className="cash-register-blind"><Icon name="lock" size={14}/><span>El detalle de efectivo está oculto hasta cerrar el turno.</span></div>}
+          </>}
+          </div>
+          {shift.detailsVisible!==false&&<>
           <footer>
             <div className="cash-register-tools">
-              <RowActionButton action="view" label={`Ver turno de ${item.name}`} onClick={()=>view(shift)}/>
+              <Button kind="secondary" icon="eye" aria-label={`Ver turno de ${item.name}`} onClick={()=>view(shift)}>Ver turno</Button>
               {canManage&&<>
                 <IconButton icon="users" label="Equipo del turno" onClick={()=>team(shift)}/>
                 <IconButton icon="share" label="Operaciones de caja" onClick={()=>operation(shift)}/>
               </>}
             </div>
-            {canManage&&<>
+            {canManage&&<div className="cash-register-actions">
               <Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button>
               <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button>
               {canCloseCashShift(shift,currentUserId,canManage)&&<Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>}
-            </>}
+            </div>}
           </footer>
           </>}
         </>:<div className="cash-register-idle">
           <span><Icon name={item.active?"clock":"power"} size={20}/></span>
-          <div><small>{item.active?"LISTA PARA OPERAR":"FUERA DE OPERACIÓN"}</small><b>{item.active?"Sin turno activo":"Caja desactivada"}</b><p>{item.active?"Inicia un turno para registrar fondo, movimientos y arqueo.":"Actívala cuando vuelva a utilizarse en el local."}</p></div>
+          <div><b>{item.active?"Sin turno activo":"Caja desactivada"}</b><p>{item.active?"Inicia un turno para registrar fondo, movimientos y arqueo.":"Actívala cuando vuelva a utilizarse en el local."}</p></div>
           {canManage&&item.active&&<Button icon="clock" onClick={()=>start(item)}>Iniciar turno</Button>}
         </div>}
       </article>;
@@ -448,4 +453,4 @@ function CashRegistersSkeleton(){return <div className="cash-registers-workspace
   </article>)}</div>
 </div>}
 
-function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><ModalHeader title="Detalle no disponible" titleId="cash-detail-error-title" icon="alert" subtitle="Turno de caja" onClose={close} closeLabel="Cerrar"/><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}
+function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><ModalHeader title="Detalle no disponible" titleId="cash-detail-error-title" icon="alert" onClose={close} closeLabel="Cerrar"/><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}

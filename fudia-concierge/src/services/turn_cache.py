@@ -18,6 +18,7 @@ from src.domain.models import (
     ComboDetail,
     ConsentDecision,
     CustomerProfile,
+    DeliveryActionResult,
     DeliveryOptions,
     DeliveryQuote,
     MenuItem,
@@ -190,11 +191,12 @@ class TurnScopedFudia:
         )
 
     async def open_conversation(
-        self, token: str, conversation_id: str, kind: str
+        self, token: str, conversation_id: str, kind: str, origin: dict[str, Any] | None = None,
     ) -> None:
-        await self._write(
-            self._backend.open_conversation(token, conversation_id, kind)
-        )
+        if origin is None:
+            await self._write(self._backend.open_conversation(token, conversation_id, kind))
+        else:
+            await self._write(self._backend.open_conversation(token, conversation_id, kind, origin=origin))
 
     async def report_usage(
         self,
@@ -204,3 +206,6 @@ class TurnScopedFudia:
         tiers: list[dict[str, Any]],
     ) -> None:
         await self._backend.report_usage(token, conversation_id, request_id, tiers)
+
+    async def apply_delivery_action(self, action: str, token: str, phone: str) -> DeliveryActionResult:
+        return await self._backend.apply_delivery_action(action, token, phone)

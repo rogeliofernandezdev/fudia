@@ -104,11 +104,15 @@ class ReplyDispatcher:
         await self.records.put_record(record)
         OUTBOUND_REPLIES.labels(state="sending").inc()
         try:
+            sender = self.whatsapp
+            resolver = getattr(self.whatsapp, "for_channel", None)
+            if resolver is not None:
+                sender = await resolver(message.sender_phone_id)
             if record.part_index == 0:
-                await self.whatsapp.send_text(message.phone, record.reply, callback_ref=ref)
+                await sender.send_text(message.phone, record.reply, callback_ref=ref)
             else:
                 image = record.media[record.part_index - 1]
-                await self.whatsapp.send_image(message.phone, image.url, image.caption, callback_ref=ref)
+                await sender.send_image(message.phone, image.url, image.caption, callback_ref=ref)
         except WhatsAppDeliveryUncertain:
             record.last_error = "delivery_uncertain"
             await self._transition(record, "uncertain", DeliveryOutcome.DEFERRED)

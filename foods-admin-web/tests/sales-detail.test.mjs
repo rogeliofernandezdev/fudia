@@ -61,6 +61,9 @@ test("una sola tabla permite abrir cada venta sin duplicar acciones",()=>{
  assert.deepEqual(selected,["sale-1"]);
  assert.ok(rendered.some(node=>node.type==="th"&&node.props.children==="Acciones"));
  assert.ok(rendered.some(node=>node.type==="DataTable"));
+ const rowIcon=rendered.find(node=>node.type==="span"&&node.props.className==="row-icon");
+ assert.ok(rowIcon,"la columna Pedido usa el tile estándar row-icon");
+ assert.equal(rowIcon.props.children.props.name,"receipt");assert.equal(rowIcon.props.children.props.size,18);
  assert.equal(rendered.some(node=>node.props.className==="management-cards sales-cards"),false);
 });
 
@@ -111,14 +114,19 @@ test("filtros de Ventas usan controles homologados y límites visibles",()=>{
  const {SalesFilters,SalesPeriods}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesFilters,SalesPeriods};\n");
  const changes=[];const callbacks={search:value=>changes.push(["q",value]),start:value=>changes.push(["from",value]),end:value=>changes.push(["to",value]),clear:()=>changes.push(["clear"])};
  const view=nodes(SalesFilters({q:"Mesa",period:"custom",from:"2026-10-01",to:"2026-10-07",invalidRange:false,...callbacks}));
- assert.deepEqual(Array.from(view.filter(node=>node.type==="FormField"),node=>node.props.label),["Buscar","Desde","Hasta"]);
+ assert.deepEqual(Array.from(view.filter(node=>node.type==="FormField"),node=>node.props.label),["Desde","Hasta"],"el buscador no lleva etiqueta visible");
  // Los periodos viven fuera de los filtros para quedar fijos en móvil.
  assert.equal(view.some(node=>node.type==="button"&&node.props.role==="radio"),false);
  const periods=nodes(SalesPeriods({period:"custom",choose:value=>changes.push(["period",value])})).filter(node=>node.type==="button"&&node.props.role==="radio");
- assert.deepEqual(Array.from(periods,node=>node.props.children),["Hoy","Esta semana","Este mes","Mes anterior","Personalizado"]);
- assert.equal(periods.find(node=>node.props["aria-checked"]).props.children,"Personalizado");
+ const periodLabel=node=>[node.props.children].flat().at(-1);
+ assert.deepEqual(Array.from(periods,periodLabel),["Hoy","Esta semana","Este mes","Mes anterior","Personalizado"]);
+ const chosen=periods.find(node=>node.props["aria-checked"]);
+ assert.equal(periodLabel(chosen),"Personalizado");
+ assert.equal(chosen.props.children[0].props.className,"filter-pill-check","el chip elegido lleva el check del estándar de filtros");
+ assert.ok(periods.every(node=>node.props.className==="filter-pill"),"los periodos usan la píldora de filtro compartida");
+ assert.equal(periods.filter(node=>node.props.children[0]).length,1);
  const inputs=view.filter(node=>node.type==="Input");const searchField=view.find(node=>node.type==="SearchField");
- assert.equal(searchField.props.value,"Mesa");
+ assert.equal(searchField.props.value,"Mesa");assert.equal(searchField.props.className,"sales-search");assert.equal(searchField.props.placeholder,"Buscar pedido, cliente o mesa…");
  assert.equal(inputs[0].props.type,"date");assert.equal(inputs[0].props.max,"2026-10-07");assert.equal(inputs[1].props.min,"2026-10-01");
  searchField.props.onChange({target:{value:"Ana"}});inputs[0].props.onChange({target:{value:"2026-10-02"}});inputs[1].props.onChange({target:{value:"2026-10-06"}});
  view.find(node=>node.type==="Button").props.onClick();periods[1].props.onClick();
@@ -129,10 +137,20 @@ test("filtros de Ventas usan controles homologados y límites visibles",()=>{
  assert.equal(empty.find(node=>node.type==="FormField"&&node.props.label==="Hasta").props.help,"Vacío: hasta hoy");
  const preset=nodes(SalesFilters({q:"",period:"today",from:"2026-10-07",to:"2026-10-07",invalidRange:false,...callbacks}));
  assert.equal(preset.some(node=>node.type==="Button"),false,"«Limpiar fechas» solo en Personalizado");
- assert.deepEqual(Array.from(preset.filter(node=>node.type==="FormField"),node=>node.props.label),["Buscar"],"Desde y Hasta solo aparecen en Personalizado");
+ assert.deepEqual(Array.from(preset.filter(node=>node.type==="FormField"),node=>node.props.label),[],"Desde y Hasta solo aparecen en Personalizado");
  assert.equal(preset.find(node=>node.props?.className?.startsWith?.("sales-filters")).props.className,"sales-filters");
  const css=read("src/modules/sales/presentation/sales.css");
  assert.equal(css.includes(".sales-search-control"),false,"el buscador usa SearchField homologado");
+ assert.doesNotMatch(css,/\.sales-period[{.:]/,"sin estilos locales de píldora: el periodo usa filter-pill");
+ const pill=read("src/design-system/styles/filter-pill.css");
+ assert.match(pill,/\.filter-pill\{[^}]*border:var\(--stroke-1\) solid var\(--primary-300\);[^}]*background:var\(--surface\);color:var\(--primary-700\)/,"píldoras sin fondo, con contorno de la paleta");
+ assert.match(pill,/\.filter-pill:is\(\[aria-pressed=true\],\[aria-checked=true\]\)\{border-color:var\(--primary-600\);box-shadow:var\(--ring-outline-primary\)\}/,"la elegida se ve como el hover, sin fondo");
+ assert.match(pill,/\.filter-pill:not\(\[aria-pressed=true\]\):not\(\[aria-checked=true\]\):hover\{border-color:var\(--primary-600\);box-shadow:var\(--ring-outline-primary\)\}/);
+ assert.match(read("src/app/layout.tsx"),/import "@\/design-system\/styles\/filter-pill\.css";/,"la píldora se registra una vez en el layout");
+ const kitchen=read("src/modules/operations/kitchen/presentation/kitchen-board.tsx");
+ assert.match(kitchen,/className="filter-pill" aria-pressed=\{channel===option\.value\}/,"el origen en Cocina usa la misma píldora que Ventas");
+ assert.match(kitchen,/<span className="filter-pill-check" aria-hidden="true">/);
+ assert.doesNotMatch(kitchen,/className="cmd-chip"/);
  assert.match(css,/@media\(max-width:600px\)\{[\s\S]*?\.sales-filters\{grid-template-columns:minmax\(0,1fr\)/);
 });
 
@@ -166,16 +184,18 @@ test("cambiar fechas reinicia la página, limpiar conserva búsqueda y un rango 
 
 test("detalle de venta muestra productos, composición, cuenta y pagos sin mutaciones",()=>{
  const view=mount();const content=JSON.stringify(view.map(node=>[node.props.children,node.props.steps,node.props.items,node.props.title,node.props.name,node.props.detail]));
- for(const text of ["Familia Pérez","Mesa 5","Menú criollo","Lomo saltado","Ensalada","Subtotal","Delivery","Total","Pagado neto","Convenio empresa","REF-1","Caja principal","Ana","Cobrado ","Devuelto "]){assert.ok(content.includes(text),text)}
+ for(const text of ["Familia Pérez","Mesa 5","Menú criollo","Lomo saltado","Ensalada","Subtotal","Delivery","Total","Convenio empresa","REF-1","Caja principal","Ana","Cobrado ","Devuelto "]){assert.ok(content.includes(text),text)}
  assert.ok(content.includes("MON 50.00"),"el pago muestra su neto");
  assert.ok(view.some(node=>node.type==="strong"&&node.props.children==="MON 55.00"));
  assert.equal(view.filter(node=>node.type==="ModalHeader").length,1);
  assert.equal(view.filter(node=>node.type==="Button").length,0);
  assert.equal(view.filter(node=>node.type==="ModalFooter").length,0,"sin acción real no se inventa un footer vacío");
- assert.equal(view.find(node=>node.type==="ModalWorkspace").props.summary.props.className,"modal-summary sales-detail-totals is-paid");
+ assert.equal(view.find(node=>node.type==="ModalWorkspace").props.summary.props.className,"modal-summary sales-detail-totals is-band is-paid");
  assert.equal(view.find(node=>node.type==="Status").props.children,"Pagada");
  assert.equal(view.find(node=>node.type==="Status").props.emphasis,undefined,"el estado acompaña la identidad sin énfasis");
  assert.deepEqual(Array.from(view.find(node=>node.type==="Tabs").props.items,item=>item.label),["Productos","Pagos"],"sin pestaña de Detalles: dos datos no justifican una pestaña");
+ assert.deepEqual(Array.from(view.find(node=>node.type==="Tabs").props.items,item=>item.tone),["primary","primary"],"Productos y Pagos comparten el azul en el detalle de venta");
+ assert.equal(content.includes("Pagado neto"),false,"saldada, «Pagado neto» repetiría el Total pagado");
  assert.equal(view.find(node=>node.type==="Dialog").props["aria-labelledby"],"sales-detail-title");
 });
 
@@ -190,7 +210,14 @@ test("detalle de venta mantiene cierre explícito, reintento, skeleton y vacíos
  const empty=mount({data:{...data,order:{...data.order,items:[]},payments:[]}});
  assert.ok(empty.some(node=>node.props.children==="No hay productos registrados."));
  assert.ok(empty.some(node=>node.props.children==="No hay pagos registrados."));
- assert.ok(mount({data:{...data,paymentStatus:"partial",remainingAmount:"5"}}).some(node=>node.props.children==="Saldo pendiente"));
+ const partial=mount({data:{...data,paymentStatus:"partial",remainingAmount:"5",paidAmount:"50"}});
+ assert.ok(partial.some(node=>node.props.children==="Saldo pendiente"));
+ const partialLines=Array.from(partial.filter(node=>/^modal-summary-line( |$)/.test(node.props?.className??"")),node=>node.props.children[0].props.children);
+ assert.deepEqual(partialLines,["Subtotal","Delivery","Total","Pagado neto"],"con saldo, el desglose explica cómo se llega al pendiente");
+ const single=mount({data:{...data,order:{...data.order,deliveryFee:"0",subtotal:"55"},remainingAmount:"0"}});
+ const summary=single.find(node=>node.type==="ModalWorkspace").props.summary;
+ assert.equal(summary.props.className,"modal-summary sales-detail-totals is-band is-paid");
+ assert.equal(nodes(summary).some(node=>node.props?.className==="modal-summary-lines"),false,"sin delivery ni saldo no se repite el total como Subtotal ni Pagado neto");
 });
 
 test("canal y mozo acompañan la fecha en la identidad, sin pestaña ni datos repetidos",()=>{
@@ -214,8 +241,9 @@ test("CSS de ventas tiene dueño único por contexto y el modal sigue la hoja m�
  assert.deepEqual(decls(css,".crud-modal.sales-detail-modal"),decls(order,".crud-modal.order-detail"),"mismo ancho, alto y columna que el pedido");
  assert.deepEqual(decls(css,".crud-modal.sales-detail-modal","(max-width:600px)"),decls(order,".crud-modal.order-detail","(max-width:600px)"),"misma hoja inferior en móvil");
  assert.deepEqual(decls(css,".modal-backdrop:has(.sales-detail-modal)","(max-width:600px)"),decls(order,".modal-backdrop:has(.order-detail)","(max-width:600px)"));
- assert.deepEqual(decls(css,".sales-detail-panel","(max-width:600px)"),{"padding-inline":"var(--space-3)"});
- assert.equal(decls(css,".sales-detail-panel")["padding-inline"],"var(--space-4)");
+ assert.deepEqual(decls(css,".sales-detail-panel","(max-width:600px)"),{"padding-inline":"var(--space-3)"},"productos y pagos remetidos 12 px en móvil");
+ assert.equal(decls(css,".sales-detail-panel")["padding-inline"],"var(--space-4)","y 16 px en escritorio, dentro de la sección de las pestañas");
+ assert.match(read("src/design-system/styles/modal.css"),/\.modal-summary\.is-band\{grid-template-columns:minmax\(0,1fr\)\}/,"la franja del total es compartida por venta, cobro y pedido");
  assert.ok(mount().some(node=>node.props.className==="modal-body sales-detail-body"),"el cuerpo compartido es el único scroll, con barra siempre visible");
  for(const rule of css.nodes.filter(node=>node.type==="rule"&&node.selector.includes("sales-detail-lines"))){assert.equal(rule.nodes.some(decl=>["border","border-radius","background"].includes(decl.prop)),false,"listas sin tarjeta ni color local");}
 });

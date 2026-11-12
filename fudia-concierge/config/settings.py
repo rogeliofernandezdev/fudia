@@ -67,6 +67,15 @@ class Settings(BaseSettings):
     queue_maintenance_interval_seconds: float = Field(default=300.0, ge=10)
     # Avisos «pedido listo» de foods-backend: frecuencia de consulta de su bandeja.
     customer_notice_poll_seconds: float = Field(default=10.0, ge=2, le=300)
+    # Delivery Fudia: frecuencia de consulta de los mensajes a centrales de
+    # reparto (cada oferta vence a los 3 minutos de enviada).
+    delivery_partner_poll_seconds: float = Field(default=5.0, ge=2, le=60)
+    # Plantillas aprobadas en Meta para escribir a las centrales fuera de la
+    # ventana de 24 h. Vacías: mensaje interactivo (solo dentro de la ventana).
+    whatsapp_delivery_offer_template: str = ""
+    whatsapp_delivery_ready_template: str = ""
+    whatsapp_delivery_cancelled_template: str = ""
+    whatsapp_template_language: str = "es"
     # Processing records: finished ones, and ones that may still be needed to
     # recover an operation (must outlive the dead-letter retention).
     processing_record_ttl_seconds: int = Field(default=259_200, ge=3_600)
@@ -83,6 +92,10 @@ class Settings(BaseSettings):
     conversation_lock_wait_seconds: float = 8.0
     rate_limit_messages: int = 30
     rate_limit_window_seconds: int = 60
+    # New web chat sessions accepted per QR and window. A table never needs
+    # this many; it bounds scripted opens of a public QR link.
+    web_chat_session_limit: int = Field(default=60, ge=1)
+    web_chat_session_window_seconds: int = Field(default=600, ge=60)
     max_message_chars: int = 2_000
     webhook_max_payload_bytes: int = Field(default=262_144, ge=1024, le=1_048_576)
 
@@ -111,6 +124,15 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-5.6-luna"
     # Lighter OpenAI tier; empty means "use OPENAI_MODEL for every task".
     openai_model_lite: str = ""
+
+    # Credential allowlist, including assets retained for historical routes.
+    # This does not create additional operational country configurations.
+    whatsapp_meta_accounts: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
+    whatsapp_country_code: str = "PE"
+    web_chat_url: str = ""
+    whatsapp_gateway_url: str = ""
+    whatsapp_gateway_key: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
+    whatsapp_gateway_ingress_key: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
 
     whatsapp_token: str = ""
     whatsapp_phone_id: str = ""
@@ -186,12 +208,30 @@ class Settings(BaseSettings):
             "FUDIA_API_URL": self.fudia_api_url,
             "FUDIA_CONCIERGE_API_KEY": self.fudia_concierge_api_key,
             "REDIS_URL": self.redis_url,
-            "WHATSAPP_TOKEN": self.whatsapp_token,
-            "WHATSAPP_PHONE_ID": self.whatsapp_phone_id,
-            "WHATSAPP_VERIFY_TOKEN": self.whatsapp_verify_token,
-            "WHATSAPP_APP_SECRET": self.whatsapp_app_secret,
-            "WHATSAPP_GRAPH_VERSION": self.whatsapp_graph_version,
         }
+        meta_enabled = bool(
+            self.whatsapp_token or self.whatsapp_phone_id or self.whatsapp_meta_accounts.get_secret_value()
+        )
+        if meta_enabled:
+            if not self.whatsapp_meta_accounts.get_secret_value():
+                required["WHATSAPP_TOKEN"] = self.whatsapp_token
+                required["WHATSAPP_PHONE_ID"] = self.whatsapp_phone_id
+            required.update(
+                {
+                    "WHATSAPP_VERIFY_TOKEN": self.whatsapp_verify_token,
+                    "WHATSAPP_APP_SECRET": self.whatsapp_app_secret,
+                    "WHATSAPP_GRAPH_VERSION": self.whatsapp_graph_version,
+                }
+            )
+        if self.whatsapp_gateway_url:
+            if (
+                len(self.whatsapp_gateway_key.get_secret_value()) < 32
+                or len(self.whatsapp_gateway_ingress_key.get_secret_value()) < 32
+            ):
+                raise ValueError("WhatsApp gateway requires two private keys of at least 32 characters.")
+        if not meta_enabled and not self.whatsapp_gateway_url and not self.web_chat_url:
+            required["WHATSAPP_TOKEN"] = ""
+            required["WHATSAPP_PHONE_ID"] = ""
         if self.llm_provider == "vertex":
             required["GOOGLE_CLOUD_PROJECT"] = self.google_cloud_project
             required["GOOGLE_CLOUD_LOCATION"] = self.google_cloud_location

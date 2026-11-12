@@ -4,6 +4,9 @@ import "net/http"
 
 func (a *API) Routes() *http.ServeMux {
 	m := http.NewServeMux()
+	if a.handlers.Organizations != nil {
+		m.Handle("GET /v1/admin/geographic-areas", a.auth(http.HandlerFunc(a.handlers.Organizations.GeographicAreas)))
+	}
 	if a.handlers.Notices != nil {
 		// Campana del panel: cada usuario ve solo las audiencias de sus permisos en el local.
 		m.Handle("GET /v1/admin/notices", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.handlers.Notices.Feed))))
@@ -12,6 +15,27 @@ func (a *API) Routes() *http.ServeMux {
 		// Bandeja de salida de avisos al cliente: solo Concierge con su clave de servicio.
 		m.Handle("GET /v1/integrations/concierge/notices/pending", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Notices.ClaimCustomer)))
 		m.Handle("POST /v1/integrations/concierge/notices/{id}/dispatched", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Notices.MarkCustomerDispatched)))
+	}
+	if d := a.handlers.Delivery; d != nil {
+		// Centrales de Delivery Fudia: solo la plataforma las registra.
+		m.Handle("GET /v1/platform/delivery-partners", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.ListPartners))))
+		m.Handle("POST /v1/platform/delivery-partners", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.CreatePartner))))
+		m.Handle("PATCH /v1/platform/delivery-partners/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.UpdatePartner))))
+		// Orden global: la primera central recibe primero cada pedido de todos los locales.
+		m.Handle("PUT /v1/platform/delivery-partners/order", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.ReorderPartners))))
+		// Delivery Fudia se activa por empresa desde la plataforma.
+		m.Handle("GET /v1/platform/organizations/{id}/delivery", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.OrganizationDelivery))))
+		m.Handle("PUT /v1/platform/organizations/{id}/delivery", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.SetOrganizationDelivery))))
+		// Enlace/QR de delivery del local: abre el WhatsApp de Fudia ya ligado al local.
+		m.Handle("GET /v1/admin/locations/{id}/delivery-link", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(d.DeliveryLink))))
+		m.Handle("POST /v1/admin/locations/{id}/delivery-link", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(d.RotateDeliveryLink))))
+		m.Handle("GET /v1/admin/orders/{id}/delivery-dispatch", a.auth(a.requirePermission("orders.read", http.HandlerFunc(d.OrderDispatch))))
+		m.Handle("POST /v1/admin/orders/{id}/delivery-dispatch/retry", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(d.RetryDispatch))))
+		m.Handle("POST /v1/admin/orders/{id}/delivery-dispatch/own", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(d.UseOwnDelivery))))
+		// Bandeja de salida a las centrales y respuestas de sus botones: solo Concierge.
+		m.Handle("GET /v1/integrations/concierge/delivery-messages/pending", a.conciergeServiceAuth(http.HandlerFunc(d.ClaimMessages)))
+		m.Handle("POST /v1/integrations/concierge/delivery-messages/{id}/dispatched", a.conciergeServiceAuth(http.HandlerFunc(d.MarkMessageDispatched)))
+		m.Handle("POST /v1/integrations/concierge/delivery-actions", a.conciergeServiceAuth(http.HandlerFunc(d.PartnerAction)))
 	}
 	if a.handlers.Tips != nil {
 		m.Handle("GET /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.Tips.GetSettings))))
@@ -39,6 +63,12 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/platform/whatsapp-channels", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listPlatformWhatsAppChannels))))
 	m.Handle("POST /v1/platform/whatsapp-channels", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.createPlatformWhatsAppChannel))))
 	m.Handle("PATCH /v1/platform/whatsapp-channels/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updatePlatformWhatsAppChannel))))
+	m.Handle("POST /v1/platform/whatsapp-channels/link", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.handlers.Platform.LinkWhatsApp))))
+	m.Handle("GET /v1/platform/whatsapp-channels/{id}/history", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.handlers.Platform.WhatsAppHistory))))
+	m.Handle("GET /v1/integrations/concierge/whatsapp/routes", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Platform.WhatsAppRoutes)))
+	m.Handle("POST /v1/integrations/concierge/whatsapp/legacy-route", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Platform.RegisterLegacyRoute)))
+	m.Handle("POST /v1/integrations/concierge/restaurants/search", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Concierge.Restaurants)))
+	m.Handle("POST /v1/integrations/concierge/restaurants/context", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Concierge.RestaurantContext)))
 	m.Handle("GET /v1/platform/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listPlatformOrganizations))))
 	m.Handle("POST /v1/platform/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.onboardTenant))))
 	m.Handle("GET /v1/platform/organizations/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getPlatformOrganization))))

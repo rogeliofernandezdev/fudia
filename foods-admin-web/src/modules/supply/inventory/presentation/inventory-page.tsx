@@ -80,7 +80,7 @@ export function InventoryPage(){
    {inventory.isLoading?<TableSkeleton columns={inventoryColumns} label="Cargando inventario"/>:inventory.isError?
     <ErrorState title="No pudimos cargar el inventario" text={inventory.error.message} onRetry={()=>void inventory.refetch()}/>
    :!items.length?
-    <EmptyState icon="stock" title={search?"Sin coincidencias":"No hay artículos de inventario"} text={search?"Prueba con otro nombre.":"Inventario solo permite consultar y ajustar artículos existentes."}/>
+    <EmptyState icon={search?"search":"stock"} title={search?"Sin coincidencias":"Aún no hay artículos"} text={search?"Prueba con otro nombre.":"Inventario solo permite consultar y ajustar artículos existentes."}/>
    :<DataTable label="Inventario del local" containerClassName="hover-scroll inventory-table-wrap">
      <thead><tr>{inventoryColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
      <tbody>{items.map((item,index)=>{
@@ -103,7 +103,7 @@ export function InventoryPage(){
 
   {settingsItem&&<InventorySettingsDialog item={settingsItem} busy={settingsSave.isPending} close={()=>setSettingsItem(null)} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch{/* La mutación ya comunica el error mediante onError. */}}}/>}
   {transferOpen&&(locations.isLoading?
-   <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando transferencia" rows={5} close={()=>setTransferOpen(false)}/>
+   <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando transferencia" rows={5} title="Transferir a otro local" icon="truck" close={()=>setTransferOpen(false)}/>
    :locations.isError?
    <TransferLoadError message={locations.error.message} close={()=>setTransferOpen(false)} retry={()=>void locations.refetch()}/>
    :<InventoryTransferDialog locations={locations.data?.items??[]} currentLocationId={location?.id??""} busy={transferSave.isPending} close={()=>setTransferOpen(false)} save={draft=>transferSave.mutate(draft)}/>
@@ -116,7 +116,7 @@ export function InventoryPage(){
 function TransferLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-load-error-title">
 
-  <ModalHeader title="No pudimos cargar los locales" titleId="inventory-load-error-title" icon="alert" subtitle="Inventario" onClose={close} closeLabel="Cerrar"/>
+  <ModalHeader title="No pudimos cargar los locales" titleId="inventory-load-error-title" icon="alert" onClose={close} closeLabel="Cerrar"/>
   <ErrorState title="Locales no disponibles" text={message} onRetry={retry}/>
  </Dialog></div>;
 }

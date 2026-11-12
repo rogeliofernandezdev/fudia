@@ -50,6 +50,7 @@ type FiscalProfileInput struct {
 	SpecialTaxRegime *string `json:"specialTaxRegime"`
 }
 type LocationView struct {
+	DistrictCode    string   `json:"districtCode"`
 	ID              string   `json:"id"`
 	Name            string   `json:"name"`
 	Code            string   `json:"code"`
@@ -66,6 +67,7 @@ type LocationView struct {
 	Active          bool     `json:"active"`
 }
 type LocationInput struct {
+	DistrictCode    *string  `json:"districtCode,omitempty"`
 	Name            string   `json:"name"`
 	Code            string   `json:"code"`
 	Address         string   `json:"address"`
@@ -142,6 +144,20 @@ type PlatformCountryOption struct {
 }
 
 func ValidateLocationInput(in *LocationInput) bool {
+	if in.DistrictCode != nil {
+		code := strings.TrimSpace(*in.DistrictCode)
+		in.DistrictCode = &code
+		if code != "" {
+			if len(code) != 6 {
+				return false
+			}
+			for _, r := range code {
+				if r < '0' || r > '9' {
+					return false
+				}
+			}
+		}
+	}
 	if in.OpenedOn != nil && *in.OpenedOn != "" {
 		if _, err := time.Parse("2006-01-02", *in.OpenedOn); err != nil {
 			return false

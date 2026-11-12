@@ -12,7 +12,7 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
   if(hasBody)headers.set("Content-Type","application/json");
   try{
     const response=await fetch(target,{method:request.method,headers,body:hasBody?await request.text():undefined,cache:"no-store"});
-    const responseHeaders=new Headers();
+    const responseHeaders=new Headers({"Cache-Control":"no-store"});
     const contentType=response.headers.get("content-type");
     const requestId=response.headers.get("x-request-id");
     if(contentType)responseHeaders.set("Content-Type",contentType);
@@ -30,4 +30,5 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
 export const GET=proxy;
 export const POST=proxy;
 export const PATCH=proxy;
+export const PUT=proxy;
 export const DELETE=proxy;

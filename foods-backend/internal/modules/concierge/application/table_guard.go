@@ -21,7 +21,7 @@ type TableGuard interface {
 // Orders vuelve a validar al recibir el pedido.
 func (a *Concierge) GuardTable(ctx context.Context, token string) error {
 	qr, err := a.resolve(ctx, token)
-	if err != nil || qr.ServiceType == servicecontracts.ServiceTypeCounter {
+	if err != nil || qr.ServiceType == servicecontracts.ServiceTypeCounter || qr.ServiceType == servicecontracts.ServiceTypeDelivery {
 		return nil
 	}
 	account, err := a.orders.StaleTableAccount(ctx, qr.Scope, qr.TableID)

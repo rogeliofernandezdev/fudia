@@ -228,7 +228,7 @@ test("detalle de cobro sigue el patrón del pedido: cabecera con mesa, identidad
  assert.ok(identity.some(node=>node.type==="time"&&node.props.children==="7 oct. 2026"));
  assert.ok(identity.some(node=>node.type==="span"&&node.props.children==="Salón · Atendido por Daniel Machaca Rojasa"));
  assert.equal(view.some(node=>node.type==="DetailContact"),false,"sin cliente no hay tarjeta");
- const workspace=view.find(node=>node.type==="ModalWorkspace");assert.equal(workspace.props.summary.props.className,"modal-summary pos-detail-totals");
+ const workspace=view.find(node=>node.type==="ModalWorkspace");assert.equal(workspace.props.summary.props.className,"modal-summary pos-detail-totals is-band");
  assert.ok(nodes(workspace.props.summary).some(node=>node.props.children==="Pagado neto"));
  assert.ok(nodes(workspace.props.summary).some(node=>node.props.children==="Saldo pendiente"));
  assert.equal(nodes(workspace.props.summary).some(node=>node.type==="Status"),false,"el estado encabeza el cuerpo y no se repite en el resumen");
@@ -237,8 +237,16 @@ test("detalle de cobro sigue el patrón del pedido: cabecera con mesa, identidad
  assert.ok(view.some(node=>node.props.children==="Sin pagos registrados."));
  assert.equal(view.some(node=>node.props.className==="pos-detail-summary"),false);
  const paid=nodes(POSDetailDialog({loading:false,data:{...detail,order:{...detail.order,customerName:"Ana"},paidAmount:"40",remainingAmount:"0",paymentStatus:"paid"},canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{}}));
- assert.equal(paid.find(node=>node.type==="ModalWorkspace").props.summary.props.className,"modal-summary pos-detail-totals is-paid");
- assert.ok(nodes(paid.find(node=>node.type==="ModalWorkspace").props.summary).some(node=>node.props.children==="Total pagado"));
+ const paidSummary=paid.find(node=>node.type==="ModalWorkspace").props.summary;
+ assert.equal(paidSummary.props.className,"modal-summary pos-detail-totals is-band is-paid","el total es una franja a todo el ancho");
+ assert.ok(nodes(paidSummary).some(node=>node.props.children==="Total pagado"));
+ assert.equal(nodes(paidSummary).some(node=>node.props?.className==="modal-summary-lines"),false,"no repite el total como Total ni Pagado neto");
+ assert.equal(nodes(paid).find(node=>node.type==="Status").props.children,"Pagada","mismo nombre de estado que la venta");
+ assert.deepEqual(Array.from(view.find(node=>node.type==="Tabs").props.items,item=>item.tone),["primary","primary"],"Productos y Pagos en azul, como en la venta");
+ const tipped=nodes(POSDetailDialog({loading:false,data:{...detail,tip:{amount:"4",directToStaff:false},paidAmount:"44",remainingAmount:"0",paymentStatus:"paid"},canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{}}));
+ const tippedLines=Array.from(nodes(tipped.find(node=>node.type==="ModalWorkspace").props.summary).filter(node=>/^modal-summary-line( |$)/.test(node.props?.className??"")),node=>node.props.children[0].props.children);
+ assert.deepEqual(tippedLines,["Total","Propina cobrada"],"la propina cobrada se explica con el total del pedido");
+ assert.ok(nodes(tipped.find(node=>node.type==="ModalWorkspace").props.summary).some(node=>node.props.children==="Total pagado con propina"));
  assert.equal(paid.find(node=>node.type==="DetailContact").props.name,"Ana");
  assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/<h3 id="pos-detail-payments-title" className="sr-only">/,"cada panel conserva su título accesible");
 });
@@ -341,7 +349,7 @@ test("el cobro usa el catálogo de medios de pago y la nota de caja sigue a Impa
   assert.deepEqual(labels,["Efectivo","Tarjeta","Yape","Plin"],"las opciones vienen del catálogo, en su orden");
   assert.equal(defaults.method,"cash","el primer medio activo queda seleccionado");
   assert.equal(all.some(node=>node.props?.className==="pos-cash-impact"),false,"el cobro no repite un aviso sobre la caja que ya se eligió");
-  assert.equal(all.some(node=>node.type==="FormField"&&node.props.label==="Referencia"),watched!=="cash");
+  assert.equal(all.some(node=>node.type==="FormField"&&node.props.label==="Número de operación"),watched!=="cash");
  }
  const source=readFileSync(new URL("pos-dialogs.tsx",root),"utf8");
  assert.equal(source.includes('["cash","card","transfer","other"]'),false,"el cobro no fija los medios en el frontend");

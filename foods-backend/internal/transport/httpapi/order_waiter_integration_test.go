@@ -107,7 +107,7 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 	call(owner, "PATCH", created.ID, `{"status":"entregado"}`, api.updateOrderStatus, 200)
 	call(owner, "POST", created.ID, "", api.closeOrderBill, 200)
 	for _, amount := range []int{10, 15} {
-		w = call(cashier, "POST", "", fmt.Sprintf(`{"orderId":%q,"method":"card","amount":%d,"createdByName":"Luis Mozo"}`, created.ID, amount), api.createPayment, 201)
+		w = call(cashier, "POST", "", fmt.Sprintf(`{"orderId":%q,"method":"card","amount":%d,"reference":"3567237%02d","createdByName":"Luis Mozo"}`, created.ID, amount, amount), api.createPayment, 201)
 		var payment paymentView
 		if err := json.Unmarshal(w.Body.Bytes(), &payment); err != nil {
 			t.Fatal(err)
@@ -149,6 +149,12 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 	}
 	if historical.WaiterID != owner.UserID || !reflect.DeepEqual(historical.CollectedByNames, []string{cashier.Name}) {
 		t.Fatalf("lost historical attribution: %#v", historical)
+	}
+	if len(historical.PaymentReferences) != 2 || historical.PaymentReferences[0].Reference != "356723710" || historical.PaymentReferences[1].Reference != "356723715" || historical.PaymentReferences[0].MethodName == "" {
+		t.Fatalf("paid order must retain each operation number with its payment method: %#v", historical.PaymentReferences)
+	}
+	for _, s := range []scope{otherTenant, otherLocation} {
+		call(s, "GET", created.ID, "", api.getOrder, 404)
 	}
 	_, err = pool.Exec(ctx, `UPDATE orders SET waiter_id=$1 WHERE id=$2`, otherTenant.UserID, next.ID)
 	if err == nil {

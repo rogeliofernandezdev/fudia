@@ -7,6 +7,9 @@ type ServiceType string
 const (
 	ServiceTypeTable   ServiceType = "table"
 	ServiceTypeCounter ServiceType = "counter"
+	// ServiceTypeDelivery identifica el enlace/QR de delivery de un local
+	// (location_delivery_links). No es una mesa: nunca se guarda en tables.
+	ServiceTypeDelivery ServiceType = "delivery"
 )
 
 // Valid acepta solo los tipos persistidos en tables.service_type.
@@ -62,6 +65,9 @@ type TableBatchItem struct {
 	ServiceType ServiceType `json:"serviceType"`
 }
 type TableQR struct {
+	CountryCode      string      `json:"countryCode"`
+	OrganizationID   string      `json:"organizationId"`
+	LocationID       string      `json:"locationId"`
 	Name             string      `json:"name"`
 	Seats            int         `json:"seats"`
 	Zone             string      `json:"zone"`

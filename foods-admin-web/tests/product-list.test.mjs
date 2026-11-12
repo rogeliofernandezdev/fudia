@@ -30,7 +30,7 @@ function mount({items=[base],loading=false,locationId="local-a",canManage=true,t
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
   if(name==="@/shared/i18n/regional-format")return regional;
   if(name==="../domain/category-filters")return categoryFilters;
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Icon","Dialog","ConfirmDialog","RemoteModalSkeleton","Tabs","TabsBar"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Icon","Dialog","ConfirmDialog","RemoteModalSkeleton","Tabs","TabsBar"].map(key=>[key,key]));
   if(name.startsWith("../"))return{};
   return require(name);
  });
@@ -98,9 +98,9 @@ test("Administrar carta y productos habilita alta, edición y estado en ambos ta
 test("solo lectura: estados vacíos y skeleton no ofrecen crear ni columna de acciones",()=>{
  for(const tab of ["products","categories"]){
   const {view}=mount({canManage:false,tab,items:[]});
-  const empty=view.find(node=>typeof node.type==="function"&&node.props.title);
+  const empty=view.find(node=>node.type==="EmptyState");
   assert.ok(empty);assert.equal(empty.props.action,undefined);
-  assert.equal(nodes(empty.type(empty.props)).some(node=>node.type==="button"),false);
+  assert.match(empty.props.title,/^Aún no hay /);
  }
  const {view}=mount({canManage:false,loading:true});
  assert.ok(view.find(node=>typeof node.type==="function"&&node.props.columns===6));
@@ -139,7 +139,9 @@ test("categorías: los filtros combinados se aplican antes de paginar y conserva
 
 test("categorías: sin coincidencias ofrece ajustar filtros, no afirma que el catálogo esté vacío",()=>{
  const {view}=mount({tab:"categories",categories:[category],states:{11:"no existe"}});
- const empty=view.find(node=>typeof node.type==="function"&&node.props.title);
- assert.equal(empty.props.title,"No encontramos categorías");
- assert.equal(empty.props.text,"Ajusta los filtros para ver otros resultados.");
+ const empty=view.find(node=>node.type==="EmptyState");
+ assert.equal(empty.props.icon,"search");
+ assert.equal(empty.props.title,"Sin coincidencias");
+ assert.equal(empty.props.text,"Ninguna categoría coincide con la búsqueda o el estado.");
+ assert.equal(empty.props.action,undefined);
 });

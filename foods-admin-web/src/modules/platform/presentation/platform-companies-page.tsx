@@ -82,7 +82,7 @@ function CompaniesDirectory(){
    </div>
    {list.isLoading?<CompaniesTableSkeleton/>
     :list.isError?<ErrorState title="No pudimos cargar las empresas" text={list.error.message} retrying={list.isFetching} onRetry={()=>void list.refetch()}/>
-    :!data?.items.length?<EmptyState icon="building" title={filtered?"Sin coincidencias":"Aún no hay empresas"} text={filtered?"Ninguna empresa coincide con la búsqueda o los filtros aplicados.":"Las empresas registradas desde «Registrar empresa» aparecerán aquí con su plan."}/>
+    :!data?.items.length?<EmptyState icon={filtered?"search":"building"} title={filtered?"Sin coincidencias":"Aún no hay empresas"} text={filtered?"Ninguna empresa coincide con la búsqueda o los filtros aplicados.":"Las empresas registradas desde «Registrar empresa» aparecerán aquí con su plan."}/>
     :<CompaniesTable data={data} busy={list.isFetching} conciergeUsage={conciergeUsage}/>}
    {data&&data.total>0&&<Pagination page={page} size={pageSize} total={data.total} onPage={setPage} onSize={value=>{setPageSize(value);setPage(1)}}/>}
   </section>
@@ -145,7 +145,7 @@ function CompaniesTable({data,busy,conciergeUsage}:{data:PlatformOrganizationPag
   <dl><div><dt>IGV</dt><dd>{tax(company)}</dd></div><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div><div><dt>Concierge del mes</dt><dd><ConciergeUsageCell organizationId={company.id} usage={conciergeUsage}/></dd></div></dl>
   <footer>{actions(company)}</footer>
  </article>)}</div>
- {detailId&&<CompanyDetailDialog organizationId={detailId} standingOptions={data.standingOptions} close={()=>setDetailId(null)}/>}
+ {detailId&&<CompanyDetailDialog organizationId={detailId} previewName={data.items.find(company=>company.id===detailId)?.tradeName} standingOptions={data.standingOptions} close={()=>setDetailId(null)}/>}
  </>;
 }
 

@@ -13,7 +13,7 @@ function useServiceMutation(){
  const qc=useQueryClient();const{notify}=useFeedback();
  return useMutation({mutationFn:({orderId}:{orderId:string})=>closeOrderAccount(orderId),onSuccess:order=>{
   qc.setQueryData(["order",order.id],order);
-  for(const key of ["order","orders","salon-floor","pos-orders","pos-order","kitchen-tickets","dashboard","sales"])void qc.invalidateQueries({queryKey:[key]});
+  for(const key of ["order","orders","salon-floor","pos-orders","pos-order","kitchen-tickets","dashboard","sales","staff-notices"])void qc.invalidateQueries({queryKey:[key]});
  },onError:error=>notify({tone:"danger",title:"No se pudo actualizar",message:error.message})});
 }
 

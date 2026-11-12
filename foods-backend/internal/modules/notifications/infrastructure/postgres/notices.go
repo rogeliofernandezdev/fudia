@@ -30,10 +30,10 @@ const visible = `n.organization_id=$1 AND n.location_id=$2 AND n.audience=ANY($3
 //   - comanda lista: el pedido ya va en camino o se entregó;
 //   - cuenta pedida: el pedido ya se completó (pagado);
 //   - pedido nuevo (QR de mesa o mostrador, delivery, recojo): la cocina ya marcó
-//     lista esa comanda (hay un aviso «listo» posterior del mismo pedido) o el pedido
-//     se completó. No se usa el estado: los pedidos por QR llegan ya confirmados y
-//     cada ronda nueva avisa sobre el mismo pedido;
+//     lista esa comanda (hay un aviso «listo» posterior del mismo pedido), el pedido
+//     ya se entregó o se completó;
 //   - cuenta anterior sin cerrar: se cobró (completada) o el personal agregó productos;
+//   - ninguna central aceptó el delivery: se reintentó, se pasó a delivery propio, se entregó o se completó;
 //   - cualquier pedido cancelado.
 //
 // Los llamados al mozo y los avisos sin pedido siguen visibles sus 24 horas. Marcar
@@ -44,10 +44,15 @@ const pending = visible + ` AND NOT EXISTS (
 	  AND (o.status='cancelado' OR CASE
 	    WHEN n.kind='order_ready' THEN o.status IN ('en_camino','entregado')
 	    WHEN n.kind='bill_requested' THEN o.completed_at IS NOT NULL
+	    WHEN n.kind='delivery_unassigned' THEN o.completed_at IS NOT NULL OR o.status IN ('en_camino','entregado') OR NOT EXISTS (
+	      SELECT 1 FROM delivery_dispatches d
+	      WHERE d.organization_id=n.organization_id AND d.order_id=n.order_id AND d.status='unassigned')
 	    WHEN n.kind='stale_account' THEN o.completed_at IS NOT NULL OR EXISTS (
 	      SELECT 1 FROM order_kitchen_rounds k
 	      WHERE k.organization_id=n.organization_id AND k.location_id=n.location_id AND k.order_id=n.order_id AND k.created_at>=n.created_at)
-	    WHEN n.kind IN ('table_order','counter_order','delivery_order','pickup_order') THEN o.completed_at IS NOT NULL OR EXISTS (
+	    WHEN n.kind IN ('table_order','counter_order','delivery_order','pickup_order') THEN o.completed_at IS NOT NULL OR (o.status='entregado' AND NOT EXISTS (
+	      SELECT 1 FROM order_service_items si
+	      WHERE si.organization_id=n.organization_id AND si.order_id=n.order_id AND si.status='nuevo')) OR EXISTS (
 	      SELECT 1 FROM staff_notices ready
 	      WHERE ready.organization_id=n.organization_id AND ready.order_id=n.order_id
 	        AND ready.kind='order_ready' AND ready.created_at>=n.created_at AND ready.id<>n.id)

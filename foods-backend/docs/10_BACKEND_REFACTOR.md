@@ -40,7 +40,7 @@ archivos, credenciales y diagnóstico también se inyectan desde composición.
 | `concierge` | Autenticación del servicio en HTTP, resolución de QR, coordinación con Menu/Orders, solicitud de cuenta y avisos al personal |
 | `reporting` | Dashboard y proyecciones operativas con snapshot coherente |
 | `audit` | Puerto y adaptador de auditoría compartida |
-| `delivery` | Validación pura de contacto utilizada por Orders |
+| `delivery` | Validación de contacto y tarifas; Delivery Fudia: centrales en orden global, activación por empresa, enlace por local, despacho con cascada, bandeja de mensajes a centrales y acciones de sus botones |
 | `notifications` | Avisos al personal (campana): publicación por contrato, audiencias por permisos y lectura por usuario |
 
 Cocina pertenece al cumplimiento de pedidos en `orders`. La configuración de

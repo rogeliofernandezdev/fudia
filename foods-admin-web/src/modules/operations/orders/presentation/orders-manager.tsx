@@ -32,7 +32,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  const[adding,setAdding]=useState<{order:Order;draft:Draft;requestKey:string}|null>(null);
  const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId),refetchInterval:query=>query.state.data?.completedAt?false:10000});
- const invalidate=()=>Promise.all(["orders","order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability","products","sales"].map(key=>qc.invalidateQueries({queryKey:[key]})));
+ const invalidate=()=>Promise.all(["orders","order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability","products","sales","staff-notices"].map(key=>qc.invalidateQueries({queryKey:[key]})));
  const create=useMutation({mutationFn:(draft:ManualOrderDraft)=>createManualOrder(draft),onSuccess:order=>{setCreating(false);setChannel(order.channel);setStatus("abiertos");setQ("");setPage(1);invalidate();notify({tone:"success",title:"Pedido registrado",message:"El pedido fue enviado a Cocina. Puedes seguir su avance en Pedidos y registrar el cobro en Punto de venta."})},onError:error=>{void qc.invalidateQueries({queryKey:["order-catalog"]});void qc.invalidateQueries({queryKey:["order-combo"]});notify({tone:"danger",title:"No se pudo registrar el pedido",message:error.message})}});
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>v.status==="confirmado"?sendOrder(v.id):updateOrderStatus(v.id,v.status),onSuccess:order=>{const refresh=invalidate();if(order.channel!=="salon"||order.status!=="entregado")notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."});return refresh},onError:e=>notify({tone:"danger",title:"No se pudo actualizar el pedido",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>updateOrderStatus(o.id,"cancelado"),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar el pedido",message:e.message})});
@@ -61,7 +61,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
   </div>
   {list.isPending?<TableSkeleton columns={columns} label="Cargando pedidos"/>
   :list.isError?<ErrorState title="No pudimos cargar los pedidos" text={list.error.message} onRetry={()=>list.refetch()} retrying={list.isFetching}/>
-  :!items.length?<EmptyState icon="receipt" title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos abiertos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
+  :!items.length?<EmptyState icon={hasActiveFilters?"search":"receipt"} title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos abiertos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
   :<DataTable label="Listado de pedidos" containerClassName="hover-scroll" className="orders-table">
      <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
      <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const service=serviceChannel(o.channel);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={`orders-row${index%2?" alternate":""}`} key={o.id} onClick={event=>{if(!(event.target as HTMLElement).closest("button,a"))setDetailId(o.id)}}>
@@ -87,7 +87,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  {adding&&<ComandaView mode="append" initial={adding.draft} allTables={[{id:adding.order.tableId,name:adding.order.tableName,zone:"",seats:0,order:null}]} busy={append.isPending} close={()=>setAdding(null)} save={draft=>append.mutateAsync(draft).then(()=>{}).catch(()=>{})} notify={notify}/>}
  {detailId&&<div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={closeDetail} className="crud-modal order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={orderDetailTitleId} aria-busy={loading}>
-   {loading?<OrderDetailSkeleton variant="order" close={closeDetail}/>
+   {loading?<OrderDetailSkeleton variant="order" close={closeDetail} preview={list.data?.items.find(item=>item.id===detailId)}/>
    :<OrderDetailContent variant="order" order={detail.data} error={detail.error?.message} retry={()=>detail.refetch()} retrying={detail.isFetching} canManage={canManage} busy={advance.isPending} close={closeDetail} advance={st=>advance.mutate({id:detailId,status:st})} add={addProducts} cancel={o=>setCancelTarget(o)}/>}
   </Dialog>
  </div>}

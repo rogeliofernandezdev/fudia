@@ -68,7 +68,7 @@ Cuerpo `{latitude, longitude}` (la ubicación nunca viaja en la URL). Devuelve `
 
 POST /v1/integrations/concierge/{token}/delivery-orders
 
-Cuerpo `{fulfillment: delivery|pickup, customerName, customerPhone, conversationId, requestId, items, address?, reference?, latitude?, longitude?, quotedFee?}`. foods-backend recalcula precios, distancia y tarifa: `409 delivery_out_of_range` o `409 delivery_fee_changed` si la tarifa aceptada ya no es la vigente. `requestId` es idempotente: repetirlo devuelve el mismo pedido aunque las tarifas hayan cambiado. Crea un pedido `delivery` o `recojo` sin mesa, confirmado y enviado a cocina.
+Cuerpo `{fulfillment: delivery|pickup, customerName, customerPhone, conversationId, requestId, items, address?, reference?, latitude?, longitude?, quotedFee?}`. foods-backend recalcula precios, distancia y tarifa: `409 delivery_out_of_range` o `409 delivery_fee_changed` si la tarifa aceptada ya no es la vigente. `requestId` es idempotente: repetirlo devuelve el mismo pedido aunque las tarifas hayan cambiado. Crea un pedido `delivery` o `recojo` sin mesa en estado `nuevo`: queda guardado hasta que el personal pulsa «Enviar comanda» (migración 000107). En un local con Delivery Fudia, al confirmarse se ofrece a sus centrales (`09_DELIVERY_PARTNERS.md`).
 
 ## Cuenta
 
@@ -103,7 +103,7 @@ foods-backend registra un aviso en su bandeja de salida. Estas rutas
 son globales (sin `{token}`) y usan la misma clave `X-Fudia-Concierge-Key`:
 
 - `GET /v1/integrations/concierge/notices/pending?limit=20` reserva hasta 50
-  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready"|"order_sent", orderId,
+  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready"|"order_sent"|"order_on_the_way", orderId,
   orderCode, fulfillment:"counter"|"pickup"|"table"|"delivery", customerPhone, conversationId,
   organizationName, locationName, createdAt}]}`. Un reclamo no confirmado vence
   y el aviso vuelve (máximo 5 intentos, avisos de las últimas 2 horas, pedidos no
@@ -113,7 +113,26 @@ son globales (sin `{token}`) y usan la misma clave `X-Fudia-Concierge-Key`:
 
 foods-backend solo entrega hechos; Concierge redacta el mensaje. Los pedidos de
 mesa (los entrega el mozo), los de delivery y los registrados por el personal no
-generan aviso.
+generan aviso de «listo». Un delivery pedido por WhatsApp sí avisa
+`order_on_the_way` («va en camino», una vez) cuando sale del local. Un tipo de
+aviso que esta versión no conoce se omite sin bloquear los demás.
+
+## Centrales de Delivery Fudia
+
+- `GET /v1/integrations/concierge/delivery-messages/pending?limit=20` avanza la
+  cascada de centrales y reserva hasta 50 mensajes por 60 s:
+  `{items:[{id, kind:"offer"|"ready"|"cancelled", partnerName, partnerPhone,
+  actionToken, expiresInSeconds, orderCode, organizationName, locationName,
+  locationAddress, customerName, customerPhone, address, reference, latitude,
+  longitude, distanceKm, notes, items:[{quantity,name,note}], currencySymbol,
+  subtotal, deliveryFee, total, createdAt}]}`.
+- `POST /v1/integrations/concierge/delivery-messages/{id}/dispatched` confirma el
+  envío (`204`, idempotente); para una oferta inicia sus 3 minutos.
+- `POST /v1/integrations/concierge/delivery-actions` con
+  `{action:"accept"|"reject"|"pickup", token, phone}` devuelve `{outcome,
+  orderCode, organizationName, locationName}`; repetirlo no duplica el efecto.
+
+Detalle, botones y plantillas de Meta en `09_DELIVERY_PARTNERS.md`.
 
 ## Cliente y consentimiento promocional
 

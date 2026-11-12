@@ -46,7 +46,13 @@ páginas no agregan márgenes laterales propios.
    horizontal controlado; nunca desaparece el contenido.
 5. Estados: `TableSkeleton` con las columnas reales, `ErrorState` con
    «Reintentar», `EmptyState` con dos textos: vacío («Aún no hay…» + acción) y
-   sin coincidencias («Sin coincidencias» + «Limpiar filtros»).
+   sin coincidencias («Sin coincidencias» + «Limpiar filtros»). Toda tabla o
+   listado vacío usa el patrón de Reservas (aprobado 2026-11-06): icono del
+   dominio en su tile, título «Aún no hay {registros}», una línea que explica
+   cómo se llenan y, si el rol puede crear, el mismo `Button icon="plus"` del
+   encabezado («Nueva reserva»). Con búsqueda o filtros activos el icono pasa a
+   `search`, el título a «Sin coincidencias» y no se ofrece crear. Prohibido el
+   marcado propio (`div.catalog-state`, `combo-empty`) o un `EmptyState` local.
 6. `Pagination` del servidor, oculta durante la carga y el error.
 7. Acciones por fila: `table-actions` con `RowActionButton` únicamente.
 

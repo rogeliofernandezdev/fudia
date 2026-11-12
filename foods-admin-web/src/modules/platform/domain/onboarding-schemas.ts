@@ -25,6 +25,7 @@ export const fiscalSchema=z.object({
 });
 
 export const locationSchema=z.object({
+  districtCode:z.string().regex(/^$|^[0-9]{6}$/,"Selecciona un distrito válido.").optional(),
   tipSettings:z.object({mode:z.enum(["disabled","suggest","collect"]),percentage:z.number().finite().min(0).max(100).refine(value=>Math.abs(value*100-Math.round(value*100))<.00001,"Usa hasta dos decimales"),showSuggestion:z.boolean(),allowFixed:z.boolean(),channels:z.array(z.string()).min(1,"Selecciona al menos un tipo de atención")}).optional(),
   timezone:z.string().trim().min(1,"Selecciona la zona horaria"),
   locationName:z.string().trim().min(2,"Ingresa el nombre del local"),
@@ -40,7 +41,7 @@ export const adminSchema=z.object({
   adminPassword:z.string().min(8,"Mínimo 8 caracteres"),
 });
 
-const onboardingSchema=companySchema.extend(planSchema.shape).extend(fiscalSchema.shape).extend(locationSchema.shape).extend(adminSchema.shape);
+const onboardingSchema=companySchema.extend(planSchema.shape).extend(fiscalSchema.shape).extend(locationSchema.shape).extend(adminSchema.shape).superRefine((value,ctx)=>{if(value.country==="PE"&&!value.districtCode)ctx.addIssue({code:"custom",path:["districtCode"],message:"Selecciona el distrito del local."});});
 
 /** Campos que valida cada paso del wizard, en el mismo orden de los pasos. */
 export const onboardingStepFields:Array<Array<keyof PlatformOnboardingDraft>>=[

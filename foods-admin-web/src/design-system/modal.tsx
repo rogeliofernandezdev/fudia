@@ -19,8 +19,6 @@ export const useModal=()=>useContext(ModalContext);
 type ModalProps={
   /** Acción concreta del modal: «Nuevo gasto», «Editar zona», «Pedido 0042». */
   title:ReactNode;
-  /** Contexto opcional fuera del header. La cabecera nunca muestra subtítulos. */
-  subtitle?:ReactNode;
   /** Contexto adicional fuera de la cabecera, nunca junto al cierre. */
   meta?:ReactNode;
   /** Datos de lectura relacionados con la identidad, sin otra cabecera. */
@@ -45,15 +43,15 @@ type ModalProps={
  * Modal homologado sobre `Dialog`: fondo, panel por tamaño, cabecera (icono, título, X),
  * cuerpo desplazable y pie fijo. No cierra con Escape ni con el fondo.
  */
-export function Modal({title,subtitle,meta,details,icon,tone="primary",size="md",onClose,dirty=false,busy=false,closeLabel="Cerrar",onResponseClose,className="",children}:ModalProps){
+export function Modal({title,meta,details,icon,tone="primary",size="md",onClose,dirty=false,busy=false,closeLabel="Cerrar",onResponseClose,className="",children}:ModalProps){
   const id=useId();
   const [confirmDiscard,setConfirmDiscard]=useState(false);
   const requestClose=useCallback(()=>{if(busy)return;if(dirty){setConfirmDiscard(true);return}onClose()},[busy,dirty,onClose]);
   return <ModalContext.Provider value={{requestClose,busy}}>
     <div className="modal-backdrop modal-overlay-in">
-      <Dialog onResponseClose={onResponseClose??onClose} className={`crud-modal ds-modal size-${size} ${className}`.trim()} aria-labelledby={`${id}-title`} aria-describedby={subtitle?`${id}-subtitle`:undefined} aria-busy={busy||undefined}>
+      <Dialog onResponseClose={onResponseClose??onClose} className={`crud-modal ds-modal size-${size} ${className}`.trim()} aria-labelledby={`${id}-title`} aria-busy={busy||undefined}>
 
-        <ModalHeader title={title} titleId={`${id}-title`} subtitle={subtitle} subtitleId={`${id}-subtitle`} meta={meta} details={details} icon={icon} tone={tone} onClose={requestClose} busy={busy} closeLabel={closeLabel}/>
+        <ModalHeader title={title} titleId={`${id}-title`} meta={meta} details={details} icon={icon} tone={tone} onClose={requestClose} busy={busy} closeLabel={closeLabel}/>
         {children}
       </Dialog>
     </div>
@@ -66,7 +64,7 @@ export function Modal({title,subtitle,meta,details,icon,tone="primary",size="md"
  * cubre el cuerpo con `ModalBusy`: todo modal que guarda lo bloquea sin marcado propio. El botón que originó la
  * acción es el único que dice «Guardando…». `busyOverlay={false}` solo para pantallas de tarea completa (Comanda).
  */
-export function ModalHeader({title,titleId,subtitle,subtitleId,meta,details,icon,tone="primary",onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",iconSlot,initialFocusClose=false}:{title:ReactNode;titleId?:string;subtitle?:ReactNode;subtitleId?:string;meta?:ReactNode;details?:ReactNode;icon?:IconName;tone?:ModalTone;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;iconSlot?:ReactNode;initialFocusClose?:boolean}){
+export function ModalHeader({title,titleId,meta,details,icon,tone="primary",onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",iconSlot,initialFocusClose=false}:{title:ReactNode;titleId?:string;meta?:ReactNode;details?:ReactNode;icon?:IconName;tone?:ModalTone;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;iconSlot?:ReactNode;initialFocusClose?:boolean}){
   const generatedId=useId();
   return <><header className={`modal-header${iconSlot||icon?" has-icon":""}`}>
     {(iconSlot||icon)&&<span className={`modal-title-icon ${tone==="primary"?"":tone}`.trim()}>{iconSlot??(icon&&<Icon name={icon} size={18}/>)}</span>}
@@ -75,7 +73,7 @@ export function ModalHeader({title,titleId,subtitle,subtitleId,meta,details,icon
     </div>
     <button type="button" className="modal-close" aria-label={closeLabel} onClick={onClose} disabled={busy} data-dialog-initial-focus={initialFocusClose||undefined}><Icon name="close" size={18}/></button>
   </header>
-    {(subtitle||meta||details)&&<div className="modal-context">{subtitle&&<p className="modal-context-description" id={subtitleId}>{subtitle}</p>}{meta&&<div className="modal-heading-meta">{meta}</div>}{details&&<div className="modal-header-details">{details}</div>}</div>}
+    {(meta||details)&&<div className="modal-context">{meta&&<div className="modal-heading-meta">{meta}</div>}{details&&<div className="modal-header-details">{details}</div>}</div>}
     {busy&&busyOverlay&&<ModalBusy/>}
   </>;
 }

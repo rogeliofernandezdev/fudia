@@ -54,9 +54,9 @@ export function KardexPage(){
 
    {movements.isLoading?<KardexSkeleton/>:movements.isError?
     <ErrorState title="No pudimos cargar el Kárdex" text={movements.error.message} onRetry={()=>void movements.refetch()}/>
-   :!items.length?<EmptyState icon="ledger" title="Sin movimientos" text={activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."} action={activeFilters>0?<Button kind="secondary" icon="close" onClick={resetFilters}>Limpiar filtros</Button>:undefined}/>
+   :!items.length?<EmptyState icon={activeFilters?"search":"ledger"} title={activeFilters?"Sin coincidencias":"Aún no hay movimientos"} text={activeFilters?"Ningún movimiento coincide con los filtros seleccionados.":"Los ingresos, salidas y ajustes del local aparecerán aquí."} action={activeFilters>0?<Button kind="secondary" icon="close" onClick={resetFilters}>Limpiar filtros</Button>:undefined}/>
    :<>
-    <DataTable label="Movimientos del Kárdex" containerClassName="hover-scroll inventory-table-wrap" className="kardex-table">
+    <DataTable label="Movimientos del Kárdex" containerClassName="inventory-table-wrap" className="kardex-table" scrollbarPosition="top">
       <thead><tr><th>Artículo</th><th>Fecha</th><th>Tipo</th><th>Motivo</th><th>Cantidad</th><th>Stock anterior</th><th>Stock resultante</th><th>Costo u.</th><th>Valor mov.</th><th>Valor saldo</th><th>Usuario</th></tr></thead>
       <tbody>{items.map((item,index)=>{const delta=Number(item.quantityDelta);return <tr className={index%2?"alternate":""} key={item.id}>
        <td className="inventory-product-cell"><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{item.itemName}</b></td>

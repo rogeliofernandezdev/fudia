@@ -9,6 +9,7 @@ NONE_AVAILABLE_CLOSING = "Si necesitas ayuda, puedo avisar al personal del local
 # A new diner at the counter is asked for the name the cashier calls out.
 COUNTER_NAME_CLOSING = "Para empezar, ¿a nombre de quién va el pedido?"
 COUNTER_NOTE = "Pide aquí, recoge en el mostrador y paga en caja."
+DELIVERY_NOTE = "Pide aquí para delivery o para recoger en el local."
 # WhatsApp cuts text messages at 4096 characters; keep room for the tail.
 MAX_REPLY_CHARS = 3500
 
@@ -27,6 +28,13 @@ def welcome_message(
         f"🍽️ Bienvenido a {table.organizationName}\n"
         f"📍 {service_label(table.name, table.serviceType)}"
     )
+    if table.serviceType == "delivery":
+        # Enlace de delivery del local: no hay mesa ni mostrador.
+        hello = f"Hola, {customer_name}. " if customer_name else ""
+        greeting = (
+            f"🍽️ Bienvenido a {table.organizationName}\n"
+            f"🛵 {table.locationName}\n\n{hello}{DELIVERY_NOTE}"
+        )
     if counter:
         hello = f"Hola, {customer_name}. " if customer_name else ""
         greeting = f"{greeting}\n\n{hello}{COUNTER_NOTE}"

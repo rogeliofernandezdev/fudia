@@ -23,11 +23,14 @@ from src.domain.models import (
     InboundMessage,
     ProcessingRecord,
     ReplyImage,
+    TableContext,
     VenueContext,
 )
+from src.domain.whatsapp import RestaurantOption, RestaurantSelection
 from src.graph.app import build_graph
 from src.metrics import (
     CUSTOMER_NOTICES,
+    DELIVERY_PARTNER_ACTIONS,
     LOCK_LOST,
     MESSAGES_SUPERSEDED,
     PROCESSING_RECOVERIES,
@@ -43,6 +46,7 @@ from src.services.consent import (
     consent_reply,
 )
 from src.services.customer_notices import CUSTOMER_WINDOW_SECONDS, notice_text
+from src.services.delivery_partners import action_reply
 from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
 from src.services.menu_tools import unavailable_carta_reply
@@ -64,6 +68,7 @@ from src.services.ports import (
     message_ref,
 )
 from src.services.processing import TurnJournal, recovery_reply
+from src.services.restaurants import RestaurantDirectory, option_number, selection_text
 from src.services.service_tools import bill_summary
 from src.services.start_codes import (
     looks_like_start_message,
@@ -74,6 +79,7 @@ from src.services.tool_registry import ToolRegistry
 from src.services.tooling import cart_payload
 from src.services.turn_cache import TurnScopedFudia
 from src.services.usage_meter import TokenMeter, current_meter, metering
+from src.services.web_chat import action_reply as web_action_reply
 from src.services.welcome import welcome_message
 
 logger = logging.getLogger(__name__)
@@ -83,29 +89,19 @@ ARITHMETIC_ONLY_PATTERN = re.compile(
     r"(?i)^\s*(?:cu[aá]nto\s+(?:es|da)\s+|calcula\s+|resuelve\s+)?"
     r"[0-9\s.,/()+\-*x×÷=]+\??\s*$"
 )
-MATH_TOPIC_PATTERN = re.compile(
-    r"(?i)\b(fracciones?|ecuaciones?|ra[ií]z cuadrada|derivadas?|integrales?)\b"
-)
+MATH_TOPIC_PATTERN = re.compile(r"(?i)\b(fracciones?|ecuaciones?|ra[ií]z cuadrada|derivadas?|integrales?)\b")
 OFF_SCOPE_REPLY = (
     "Puedo ayudarte únicamente con el pedido en este restaurante: consultar la "
     "carta, agregar o retirar productos, confirmar pedidos, delivery o recojo, "
     "pedir la cuenta o solicitar atención del personal."
 )
-SCAN_QR_REPLY = (
-    "Para atenderte en tu mesa, vuelve a escanear el QR y envía el mensaje "
-    "tal como aparece."
-)
+SCAN_QR_REPLY = "Para atenderte en tu mesa, vuelve a escanear el QR y envía el mensaje tal como aparece."
 EXPIRED_START_CODE_REPLY = (
-    "Ese código de mesa ya venció. Vuelve a escanear el QR de tu mesa y envía "
-    "el mensaje tal como aparece."
+    "Ese código de mesa ya venció. Vuelve a escanear el QR de tu mesa y envía el mensaje tal como aparece."
 )
-TOO_LONG_REPLY = (
-    "Tu mensaje es demasiado largo. "
-    "Envíame solo lo necesario para gestionar tu pedido."
-)
+TOO_LONG_REPLY = "Tu mensaje es demasiado largo. Envíame solo lo necesario para gestionar tu pedido."
 RATE_LIMITED_REPLY = (
-    "Has enviado muchos mensajes en poco tiempo. "
-    "Continúa con tu pedido dentro de un momento."
+    "Has enviado muchos mensajes en poco tiempo. Continúa con tu pedido dentro de un momento."
 )
 # foods-backend did not open a new conversation this month. The diner is
 # invited to order in person; caps and plans are never mentioned.
@@ -118,9 +114,15 @@ CONVERSATION_LIMIT_TABLE_REPLY = (
     "Por favor, pide directamente al personal del restaurante en tu mesa."
 )
 CONVERSATION_LIMIT_DELIVERY_REPLY = (
-    "En este momento no podemos tomar pedidos por WhatsApp. "
-    "Te esperamos en el local para atenderte en mesa."
+    "En este momento no podemos tomar pedidos por WhatsApp. Te esperamos en el local para atenderte en mesa."
 )
+
+
+def conversation_limit_reply(provider: str, kind: Literal["table", "delivery"]) -> str:
+    """Same refusal in the words of the channel the diner is using."""
+    reply = CONVERSATION_LIMIT_DELIVERY_REPLY if kind == "delivery" else CONVERSATION_LIMIT_TABLE_REPLY
+    return reply.replace("por WhatsApp", "por este chat") if provider == "FUDIA_WEB" else reply
+
 
 # How a reply relates to the session: untouched, changed, or changed and
 # recorded in the transcript the agents read.
@@ -161,10 +163,7 @@ def obviously_out_of_scope(text: str) -> bool:
     value = text.strip().strip("¿?¡!").strip()
     if not value:
         return False
-    return bool(
-        ARITHMETIC_ONLY_PATTERN.fullmatch(value)
-        or MATH_TOPIC_PATTERN.search(value)
-    )
+    return bool(ARITHMETIC_ONLY_PATTERN.fullmatch(value) or MATH_TOPIC_PATTERN.search(value))
 
 
 def _cart_state(session: ConversationSession) -> list[str]:
@@ -178,16 +177,13 @@ def _cart_state(session: ConversationSession) -> list[str]:
         quantity = item["quantity"]
         if isinstance(quantity, float) and quantity.is_integer():
             quantity = int(quantity)
-        details = [
-            f"{selection['groupName']}: {selection['name']}"
-            for selection in item["selections"]
-        ] + [modifier["name"] for modifier in item["modifiers"]]
+        details = [f"{selection['groupName']}: {selection['name']}" for selection in item["selections"]] + [
+            modifier["name"] for modifier in item["modifiers"]
+        ]
         if item["note"]:
             details.append(f"nota: {item['note']}")
         extra = f" ({'; '.join(details)})" if details else ""
-        lines.append(
-            f"- {quantity} × {item['name']}{extra}: {item['lineTotal']}"
-        )
+        lines.append(f"- {quantity} × {item['name']}{extra}: {item['lineTotal']}")
     lines.append(f"Total del carrito: {cart['total']}")
     return lines
 
@@ -207,17 +203,13 @@ def _round_state(session: ConversationSession) -> list[str]:
     return lines
 
 
-def agent_message(session: ConversationSession, user_message: str) -> str:
+def _attention_message(session: ConversationSession, user_message: str) -> str:
     """Every turn carries the current state of the attention (table or
     delivery, cart, pending confirmation) so the agent reads each message in
     context instead of in isolation."""
     if session.mode == "counter":
         table = session.table
-        place = (
-            f" en {table.organizationName} - {table.locationName}"
-            if table
-            else ""
-        )
+        place = f" en {table.organizationName} - {table.locationName}" if table else ""
         name = session.delivery.customer_name
         lines = [
             "[Estado de la atención (no lo copies textual)]",
@@ -257,10 +249,7 @@ def agent_message(session: ConversationSession, user_message: str) -> str:
             f"compartida, a {summary['distanceKm']} km; envío "
             f"{summary['currencySymbol']} {summary['deliveryFee']}"
             if summary.get("covered")
-            else (
-                f"fuera de cobertura ({summary['distanceKm']} km; máximo "
-                f"{summary['maxDistanceKm']} km)"
-            )
+            else (f"fuera de cobertura ({summary['distanceKm']} km; máximo {summary['maxDistanceKm']} km)")
         )
     lines = [
         "[Estado de la atención (no lo copies textual)]",
@@ -282,6 +271,19 @@ def agent_message(session: ConversationSession, user_message: str) -> str:
     lines += _round_state(session)
     lines += ["", "Mensaje del cliente:", user_message]
     return "\n".join(lines)
+
+
+def agent_message(session: ConversationSession, user_message: str) -> str:
+    state = _attention_message(session, user_message)
+    if session.provider == "FUDIA_WEB":
+        return (
+            "[Canal: chat web del restaurante en el navegador, no la aplicación WhatsApp. "
+            "Tiene Carta y Mi pedido; para delivery puede usar Compartir ubicación. "
+            "No indiques menús de la aplicación WhatsApp. "
+            "En mesa y mostrador no se exige teléfono; para recojo o delivery solicita "
+            "un teléfono de contacto con código de país si la herramienta lo requiere.]\n" + state
+        )
+    return state
 
 
 class ConciergeService:
@@ -308,14 +310,14 @@ class ConciergeService:
         clock: Callable[[], float] = time.time,
         table_idle_seconds: float = 10_800.0,
         customer_window_seconds: float = CUSTOMER_WINDOW_SECONDS,
+        directory: RestaurantDirectory | None = None,
     ) -> None:
+        self.directory = directory
         self.store = store
         self.customer_window_seconds = customer_window_seconds
         self.table_idle_seconds = table_idle_seconds
         self.fudia = fudia
-        self.conversation_lock = (
-            conversation_lock or LocalConversationLock()
-        )
+        self.conversation_lock = conversation_lock or LocalConversationLock()
         self.rate_limiter = rate_limiter or AllowAllRateLimiter()
         self.start_codes = start_codes or LocalTableStartCodes()
         self.max_message_chars = max_message_chars
@@ -350,10 +352,7 @@ class ConciergeService:
                 [ConversationSession, str, Any],
                 Awaitable[str],
             ],
-        ] = {
-            intent: self._processor(intent)
-            for intent in ("menu", "order", "service")
-        }
+        ] = {intent: self._processor(intent) for intent in ("menu", "order", "service")}
         self.graph = build_graph(
             self.router.route,
             processors,
@@ -441,33 +440,35 @@ class ConciergeService:
         )
         return record.reply
 
+    async def _inbound_record(self, message: InboundMessage) -> ProcessingRecord | None:
+        record = await self.store.get_record(message.message_id)
+        if record is None and message.legacy_message_id:
+            record = await self.store.get_record(message.legacy_message_id)
+        return record
+
     async def process_inbound(
         self,
         message: InboundMessage,
     ) -> ProcessingRecord:
         if not message.received_at:
-            message = message.model_copy(
-                update={"received_at": self.clock()}
-            )
-        record = await self.store.get_record(message.message_id)
+            message = message.model_copy(update={"received_at": self.clock()})
+        record = await self._inbound_record(message)
         if record is not None and record.prepared:
             return record
 
         channel_key = message.sender_phone_id.strip() or "default"
         identity = conversation_identity(message.phone, channel_key)
+        if message.partner_action is not None:
+            return await self._process_partner_action(message, identity, record)
         if message.notice is not None:
             return await self._process_notice(message, channel_key, identity)
         if len(message.text) > self.max_message_chars:
-            return await self._prepare_unlocked(
-                message, identity, record, TOO_LONG_REPLY
-            )
+            return await self._prepare_unlocked(message, identity, record, TOO_LONG_REPLY)
         # Only the first attempt counts against the limit: a retry of the
         # same message is not new traffic from the diner.
         if record is None and not await self.rate_limiter.allow(identity):
             RATE_LIMITED.inc()
-            return await self._prepare_unlocked(
-                message, identity, record, RATE_LIMITED_REPLY
-            )
+            return await self._prepare_unlocked(message, identity, record, RATE_LIMITED_REPLY)
 
         with metering() as meter:
             lease = ConversationLease(
@@ -485,6 +486,34 @@ class ConciergeService:
         await self._report_usage(meter, message, record)
         return record
 
+    async def _process_partner_action(
+        self,
+        message: InboundMessage,
+        identity: str,
+        record: ProcessingRecord | None,
+    ) -> ProcessingRecord:
+        """Botón de una central de Delivery Fudia: sin modelo ni sesión de
+        comensal. foods-backend aplica la acción (repetirla no duplica nada) y
+        la respuesta se envía como cualquier otra. Un fallo del backend se
+        propaga para que la cola reintente el mensaje."""
+        action = message.partner_action
+        assert action is not None
+        verified = message.identity().verifiedPhone
+        if not verified:
+            return await self._prepare_unlocked(
+                message, identity, record, "No pudimos verificar la identidad de la central de delivery."
+            )
+        result = await self.fudia.apply_delivery_action(action.action, action.token, verified)
+        DELIVERY_PARTNER_ACTIONS.labels(action=action.action, outcome=result.outcome).inc()
+        log_event(
+            logger,
+            "concierge.delivery_partner.action",
+            message=fingerprint(message.message_id),
+            action=action.action,
+            outcome=result.outcome,
+        )
+        return await self._prepare_unlocked(message, identity, record, action_reply(result))
+
     async def _process_notice(
         self,
         message: InboundMessage,
@@ -499,9 +528,7 @@ class ConciergeService:
             await self.conversation_lock.acquire(identity),
         )
         try:
-            return await self._guarded(
-                lease, self._notice_locked(message, channel_key, lease)
-            )
+            return await self._guarded(lease, self._notice_locked(message, channel_key, lease))
         finally:
             await self.conversation_lock.release(identity, lease.token)
 
@@ -511,7 +538,7 @@ class ConciergeService:
         channel_key: str,
         lease: ConversationLease,
     ) -> ProcessingRecord:
-        record = await self.store.get_record(message.message_id)
+        record = await self._inbound_record(message)
         if record is not None and record.prepared:
             return record
         record = record or ProcessingRecord(message_id=message.message_id)
@@ -522,8 +549,14 @@ class ConciergeService:
         if (
             notice is None
             or session is None
-            or not session.last_activity_at
-            or self.clock() - session.last_activity_at > self.customer_window_seconds
+            or (
+                session.provider == "META_CLOUD_API"
+                and (
+                    not (session.last_customer_message_at or session.last_activity_at)
+                    or self.clock() - (session.last_customer_message_at or session.last_activity_at)
+                    > self.customer_window_seconds
+                )
+            )
         ):
             # Fuera de la ventana de 24 h de WhatsApp no se envía texto libre;
             # el personal ya ve el pedido en el panel.
@@ -562,9 +595,7 @@ class ConciergeService:
             return
         request_id = f"{message_ref(message.message_id)[:32]}:{record.attempts}"
         try:
-            await self.fudia.report_usage(
-                meter.qr_token, meter.conversation_id, request_id, tiers
-            )
+            await self.fudia.report_usage(meter.qr_token, meter.conversation_id, request_id, tiers)
         except Exception as exc:
             log_event(
                 logger,
@@ -579,6 +610,7 @@ class ConciergeService:
         token: str,
         conversation_id: str,
         kind: Literal["table", "delivery"],
+        message: InboundMessage | None = None,
     ) -> Literal["open", "limit", "stale_account"]:
         """Count a new attention. foods-backend refuses it when the company
         reached its monthly cap ("limit") or, for a table, when the table has
@@ -586,7 +618,19 @@ class ConciergeService:
         staff is already notified). Any other failure keeps serving the diner
         (the conversation is still counted by its first usage report)."""
         try:
-            await self.fudia.open_conversation(token, conversation_id, kind)
+            if self.directory is not None and message is not None:
+                await self.fudia.open_conversation(
+                    token,
+                    conversation_id,
+                    kind,
+                    origin={
+                        "channelKey": message.sender_phone_id,
+                        "recipient": message.phone,
+                        "identity": message.identity().model_dump(),
+                    },
+                )
+            else:
+                await self.fudia.open_conversation(token, conversation_id, kind)
         except FudiaError as exc:
             if exc.code == CONVERSATION_LIMIT_CODE:
                 log_event(
@@ -610,6 +654,8 @@ class ConciergeService:
                 kind=kind,
                 code=exc.code,
             )
+            if self.directory is not None and message is not None:
+                return "limit"
         return "open"
 
     async def _prepare_unlocked(
@@ -640,9 +686,7 @@ class ConciergeService:
         except asyncio.CancelledError:
             current = asyncio.current_task()
             if lease.lost and not (current and current.cancelling()):
-                raise LockLostError(
-                    "La conversación pasó a otro proceso."
-                ) from None
+                raise LockLostError("La conversación pasó a otro proceso.") from None
             raise
         finally:
             heartbeat.cancel()
@@ -700,17 +744,22 @@ class ConciergeService:
         lease: ConversationLease,
     ) -> ProcessingRecord:
         # Re-read under the lock: another worker may have finished it.
-        record = await self.store.get_record(message.message_id)
+        record = await self._inbound_record(message)
         if record is not None and record.prepared:
             return record
         record = record or ProcessingRecord(message_id=message.message_id)
         record.conversation = lease.identity
         record.attempts += 1
-        session = await self.store.get(
-            message.phone, channel_key
-        ) or ConversationSession(
+        session = await self.store.get(message.phone, channel_key) or ConversationSession(
             phone=message.phone,
             channel_key=channel_key,
+        )
+        session.provider = message.provider
+        session.country_code = message.country_code or session.country_code
+        session.customer_identity = message.identity()
+        session.last_customer_message_at = max(
+            session.last_customer_message_at,
+            message.sent_at or message.received_at,
         )
         journal = TurnJournal(self.store, lease, session, record)
 
@@ -719,13 +768,21 @@ class ConciergeService:
 
         token = extract_qr_token(message.text)
         stale_code = False
-        if token is None:
+        if message.provider == "FUDIA_WEB":
+            if not message.bound_qr or (token and token != message.bound_qr):
+                return await self._finish(
+                    journal, message.text,
+                    "Este chat corresponde al QR que escaneaste. Abre el QR del otro local para cambiar.",
+                    "none",
+                )
+        elif token is None:
             token, stale_code = await self._token_from_start_code(message.text)
-        if (
-            message.sequence
-            and session.context_sequence
-            and message.sequence < session.context_sequence
-        ):
+        if message.sent_at and session.context_sent_at and message.sent_at < session.context_sent_at:
+            record.stage = "superseded"
+            record.conversation_id = session.conversation_id
+            await journal.checkpoint(with_session=False)
+            return record
+        if message.sequence and session.context_sequence and message.sequence < session.context_sequence:
             # Written to a table the diner already left by scanning a newer
             # QR: it must not touch the new table's cart or confirmation.
             record.stage = "superseded"
@@ -738,13 +795,168 @@ class ConciergeService:
                 message=fingerprint(message.message_id),
             )
             return record
+        if message.provider == "FUDIA_WEB" and token and await self._web_attention_live(session, token):
+            # Opening the same QR again (new scan or reload) keeps a live
+            # attention: no new context, no second welcome, nothing to send.
+            record.stage = "superseded"
+            record.conversation_id = session.conversation_id
+            await journal.checkpoint(with_session=False)
+            return record
 
         record.stage = "processing"
         await journal.checkpoint(with_session=False)
-        reply, change = await self._respond(
-            message, token, journal, stale_code=stale_code
-        )
+        reply, change = await self._respond(message, token, journal, stale_code=stale_code)
         return await self._finish(journal, message.text, reply, change)
+
+    async def _choose_restaurant(
+        self,
+        message: InboundMessage,
+        journal: TurnJournal,
+        *,
+        force: bool = False,
+        only_visited: bool = True,
+        offset: int = 0,
+    ) -> tuple[str, SessionChange]:
+        session = journal.session
+        if self.directory is None:
+            return SCAN_QR_REPLY, "none"
+        if session.awaiting_confirmation or session.pending_order_request_id or session.handoff_pending:
+            return (
+                "Tienes una confirmación o atención pendiente. Termínala antes de cambiar. "
+                "Si solo deseas vaciar el carrito, escribe «descartar carrito».",
+                "none",
+            )
+        try:
+            page = await self.directory.restaurants(
+                message.sender_phone_id,
+                message.identity(),
+                only_visited,
+                offset,
+            )
+            if not page.items and only_visited and not force and message.provider == "META_CLOUD_API":
+                # Bridge the authenticated Redis memory created before visits
+                # existed. Revalidate its QR and real IDs; entering records the
+                # first persistent visit. Never infer a tenant from its name.
+                memory = await self.store.get_memory(message.phone, session.channel_key)
+                if memory is not None:
+                    try:
+                        known = await self.fudia.resolve_table(memory.qr_token)
+                    except FudiaError:
+                        known = None
+                    if (
+                        known is not None
+                        and known.conciergeEnabled
+                        and known.organizationId
+                        and known.locationId
+                        and known.countryCode == message.country_code
+                    ):
+                        return await self._enter_restaurant(
+                            message,
+                            journal,
+                            RestaurantOption(
+                                organizationId=known.organizationId,
+                                locationId=known.locationId,
+                                organizationName=known.organizationName,
+                                locationName=known.locationName,
+                                visitCount=1,
+                            ),
+                        )
+            if not page.items and only_visited:
+                only_visited, offset = False, 0
+                page = await self.directory.restaurants(message.sender_phone_id, message.identity(), False, 0)
+        except FudiaError:
+            return "No pudimos consultar los restaurantes. Inténtalo nuevamente en un momento.", "none"
+        if not page.items:
+            return (
+                "No hay restaurantes disponibles por este canal en este momento. Inténtalo más tarde.",
+                "none",
+            )
+        if only_visited and len(page.items) == 1 and not page.hasMore and not force:
+            return await self._enter_restaurant(message, journal, page.items[0])
+        session.selection = RestaurantSelection(
+            options=page.items,
+            only_visited=only_visited,
+            offset=offset,
+            has_more=page.hasMore,
+        )
+        session.conversation_id = conversation_id_for(message.message_id)
+        session.context_sequence = message.sequence
+        session.context_sent_at = message.sent_at
+        session.qr_token = None
+        session.table = None
+        session.venue = None
+        session.mode = "delivery"
+        session.cart = []
+        session.delivery = DeliveryDetails()
+        session.awaiting_confirmation = False
+        session.pending_order_request_id = None
+        session.last_order_id = None
+        session.consent_prompt_pending = False
+        session.consent_checked = False
+        session.messages = []
+        return selection_text(session.selection), "session"
+
+    async def _restaurant_choice(
+        self,
+        message: InboundMessage,
+        journal: TurnJournal,
+    ) -> tuple[str, SessionChange]:
+        selection = journal.session.selection
+        if selection is None:
+            return await self._choose_restaurant(message, journal)
+        text = message.text.strip().casefold()
+        if text in {"más", "mas"} and selection.has_more:
+            return await self._choose_restaurant(
+                message,
+                journal,
+                force=True,
+                only_visited=selection.only_visited,
+                offset=selection.offset + 10,
+            )
+        if text in {"anterior", "anteriores"} and selection.offset:
+            return await self._choose_restaurant(
+                message,
+                journal,
+                force=True,
+                only_visited=selection.only_visited,
+                offset=max(0, selection.offset - 10),
+            )
+        if text in {"restaurantes", "cambiar restaurante"}:
+            return await self._choose_restaurant(message, journal, force=True)
+        choice = option_number(message.text, len(selection.options))
+        if choice is None:
+            return f"Elige un número de la lista.\n\n{selection_text(selection)}", "session"
+        return await self._enter_restaurant(message, journal, selection.options[choice])
+
+    async def _enter_restaurant(
+        self,
+        message: InboundMessage,
+        journal: TurnJournal,
+        selected: RestaurantOption,
+    ) -> tuple[str, SessionChange]:
+        if self.directory is None:
+            return SCAN_QR_REPLY, "none"
+        try:
+            context = await self.directory.restaurant_context(message.sender_phone_id, selected.locationId)
+            if context.organizationId != selected.organizationId or not context.qrToken:
+                raise FudiaError(404, "restaurant_unavailable", "El restaurante ya no está disponible.")
+            table = await self.fudia.resolve_table(context.qrToken)
+            if (
+                not table.conciergeEnabled
+                or table.serviceType != "delivery"
+                or table.organizationId != context.organizationId
+                or table.locationId != context.locationId
+            ):
+                raise FudiaError(404, "restaurant_unavailable", "El restaurante ya no está disponible.")
+        except FudiaError:
+            return (
+                "Ese restaurante ya no está disponible. Escribe «restaurantes» para consultar la lista.",
+                "none",
+            )
+        reply, change = await self._start_delivery_link(message, context.qrToken, table, journal)
+        if change != "none" and selected.visitCount:
+            reply = f"Hola de nuevo.\n\n{reply}"
+        return reply, change
 
     async def _token_from_start_code(self, text: str) -> tuple[str | None, bool]:
         """QR token behind a short start code ("Mesa 7 · K7P2").
@@ -800,6 +1012,13 @@ class ConciergeService:
         text = message.text
 
         if token:
+            if (
+                session.pending_order_request_id and session.order_submission_started is not False
+            ) or session.handoff_pending:
+                return (
+                    "Tienes una operación pendiente. Espera su confirmación antes de abrir otro QR.",
+                    "none",
+                )
             try:
                 table = await self.fudia.resolve_table(token)
             except FudiaError:
@@ -814,33 +1033,59 @@ class ConciergeService:
                     "en este momento. Pide ayuda al personal.",
                     "none",
                 )
+            if (
+                self.directory is not None
+                and session.mode == "table"
+                and session.table is not None
+                and session.qr_token
+                and session.qr_token != token
+            ):
+                same_venue = (
+                    bool(table.organizationId)
+                    and bool(session.table.organizationId)
+                    and table.organizationId == session.table.organizationId
+                    and table.locationId == session.table.locationId
+                )
+                if not same_venue and not await self._table_service_ended(session):
+                    return (
+                        "Tu atención en el restaurante anterior sigue vigente. "
+                        "Solicita su cierre al personal antes de cambiar.",
+                        "none",
+                    )
+            if table.serviceType == "delivery":
+                return await self._start_delivery_link(message, token, table, journal)
             conversation_id = conversation_id_for(message.message_id)
-            opened = await self._open_conversation(
-                token, conversation_id, "table"
-            )
-            # The current session, if any, stays as it was: a conversation in
-            # progress is never cut, and nobody is seated at a stale account.
-            if opened == "limit":
-                return CONVERSATION_LIMIT_TABLE_REPLY, "none"
-            if opened == "stale_account":
-                return STALE_TABLE_ACCOUNT_REPLY, "none"
+            # Web chat: the page opens the welcome by itself, so the
+            # conversation is counted with the diner's first interaction.
+            deferred = message.provider == "FUDIA_WEB"
+            if not deferred:
+                opened = await self._open_conversation(token, conversation_id, "table", message=message)
+                # The current session, if any, stays as it was: a conversation in
+                # progress is never cut, and nobody is seated at a stale account.
+                if opened == "limit":
+                    return CONVERSATION_LIMIT_TABLE_REPLY, "none"
+                if opened == "stale_account":
+                    return STALE_TABLE_ACCOUNT_REPLY, "none"
             # A new QR opens a new context: the previous table's cart,
             # pending confirmation and handoff no longer apply.
             session.qr_token = token
+            session.selection = None
             session.conversation_id = conversation_id
+            session.conversation_counted = not deferred
             session.context_sequence = message.sequence
+            session.context_sent_at = message.sent_at
             session.table = table
             counter = table.serviceType == "counter"
             # foods-backend decides the order flow from the QR; the session
             # only mirrors it to guide the conversation.
             session.mode = "counter" if counter else "table"
             session.venue = VenueContext(
+                organizationId=table.organizationId,
+                locationId=table.locationId,
                 organizationName=table.organizationName,
                 locationName=table.locationName,
             )
-            session.delivery = DeliveryDetails(
-                customer_name=session.delivery.customer_name
-            )
+            session.delivery = DeliveryDetails(customer_name=session.delivery.customer_name)
             session.last_order_id = None
             session.last_activity_at = self.clock()
             session.cart = []
@@ -852,17 +1097,14 @@ class ConciergeService:
             if counter:
                 # The cashier calls the order by name: a returning diner is
                 # greeted by it, a new one is asked for it.
-                profile = await self._customer_profile(token, message.phone)
-                session.delivery = DeliveryDetails(
-                    customer_name=profile_name(profile)
-                )
-                session.consent_checked = bool(
-                    profile and profile.marketingConsent != "pending"
-                )
+                profile = await self._customer_profile(token, session.profile_phone)
+                session.delivery = DeliveryDetails(customer_name=profile_name(profile))
+                session.consent_checked = bool(profile and profile.marketingConsent != "pending")
             try:
                 menu = await self.fudia.search_menu(token)
+                session.currency_symbol = menu.currencySymbol
                 journal.record.media = [
-                    ReplyImage(url=url, caption=f"Carta virtual · página {index+1}")
+                    ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
                     for index, url in enumerate(menu.virtualMenuUrls)
                 ]
                 if menu.restaurantLogoUrl:
@@ -874,9 +1116,7 @@ class ConciergeService:
                 # The carta is a courtesy: the table is already open, so the
                 # greeting goes out and the diner can still ask for it.
                 carta = None
-            reply = welcome_message(
-                table, carta, customer_name=session.delivery.customer_name
-            )
+            reply = welcome_message(table, carta, customer_name=session.delivery.customer_name)
             session.messages = [
                 ChatMessage(
                     role="user",
@@ -894,25 +1134,61 @@ class ConciergeService:
             # An old start message must not reopen a venue or seat the diner.
             return EXPIRED_START_CODE_REPLY, "none"
 
+        if self.directory is not None and session.provider != "FUDIA_WEB":
+            if text.strip().casefold() == "descartar carrito":
+                if (
+                    session.pending_order_request_id and session.order_submission_started is not False
+                ) or session.handoff_pending:
+                    return "Tienes una operación pendiente. Espera su confirmación antes de cambiar.", "none"
+                if (
+                    session.mode == "table"
+                    and session.table is not None
+                    and not await self._table_service_ended(session)
+                ):
+                    session.cart = []
+                    session.awaiting_confirmation = False
+                    session.pending_order_request_id = None
+                    return "El carrito está vacío. Tu atención en esta mesa continúa.", "session"
+                session.cart = []
+                session.awaiting_confirmation = False
+                session.pending_order_request_id = None
+                return await self._choose_restaurant(message, journal, force=True)
+            if session.selection is not None:
+                return await self._restaurant_choice(message, journal)
+            changing = text.strip().casefold() in {"cambiar restaurante", "otro restaurante", "restaurantes"}
+            ended = (
+                session.mode == "table"
+                and session.table is not None
+                and await self._table_service_ended(session)
+            )
+            if changing and session.mode == "table" and session.table is not None and not ended:
+                return (
+                    "Tu atención en mesa sigue vigente. "
+                    "Solicita su cierre al personal antes de cambiar de restaurante.",
+                    "none",
+                )
+            if changing or ended or not session.qr_token:
+                return await self._choose_restaurant(message, journal, force=changing)
+
         notice = ""
         if not session.qr_token:
             # No live session: the venue of the last QR still takes delivery
             # or pickup orders; without one the diner must scan a QR.
-            memory = await self.store.get_memory(
-                message.phone, session.channel_key
-            )
+            memory = await self.store.get_memory(message.phone, session.channel_key)
             if memory is None:
                 return SCAN_QR_REPLY, "none"
-            if await self._open_conversation(
-                memory.qr_token,
-                conversation_id_for(message.message_id),
-                "delivery",
-            ) != "open":
+            if (
+                await self._open_conversation(
+                    memory.qr_token,
+                    conversation_id_for(message.message_id),
+                    "delivery",
+                    message=message,
+                )
+                != "open"
+            ):
                 return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
             session.qr_token = memory.qr_token
-            self._open_delivery(
-                session, message, memory.venue, memory.customer_name
-            )
+            self._open_delivery(session, message, memory.venue, memory.customer_name)
             notice = (
                 f"Hola de nuevo. Puedo tomar tu pedido de "
                 f"{memory.venue.organizationName} para recojo en el local "
@@ -922,30 +1198,43 @@ class ConciergeService:
             if session.table is None:
                 return SCAN_QR_REPLY, "none"
             if await self._table_service_ended(session):
-                if await self._open_conversation(
-                    session.qr_token or "",
-                    conversation_id_for(message.message_id),
-                    "delivery",
-                ) != "open":
-                    return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
+                if (
+                    await self._open_conversation(
+                        session.qr_token or "",
+                        conversation_id_for(message.message_id),
+                        "delivery",
+                        message=message,
+                    )
+                    != "open"
+                ):
+                    return conversation_limit_reply(session.provider, "delivery"), "none"
                 venue = session.venue or VenueContext(
                     organizationName=session.table.organizationName,
                     locationName=session.table.locationName,
                 )
-                self._open_delivery(
-                    session, message, venue, session.delivery.customer_name
-                )
+                self._open_delivery(session, message, venue, session.delivery.customer_name)
                 notice = (
                     "Tu atención en mesa ya terminó. Ahora puedo tomar tu "
                     f"pedido de {venue.organizationName} para recojo en el "
                     "local o delivery."
                 )
+        if not session.conversation_counted:
+            # First interaction after a web welcome: only now the attention
+            # counts as a conversation. A refusal leaves the session as it was,
+            # so the next message asks foods-backend again.
+            kind: Literal["table", "delivery"] = "delivery" if session.mode == "delivery" else "table"
+            opened = await self._open_conversation(
+                session.qr_token or "", session.conversation_id, kind, message=message
+            )
+            if opened == "limit":
+                return conversation_limit_reply(session.provider, kind), "none"
+            if opened == "stale_account":
+                return STALE_TABLE_ACCOUNT_REPLY, "none"
+            session.conversation_counted = True
         session.last_activity_at = self.clock()
 
         if message.location is not None:
-            reply, change = await self._location_reply(
-                session, message.location
-            )
+            reply, change = await self._location_reply(session, message.location)
             if notice:
                 return f"{notice}\n\n{reply}", "transcript"
             return reply, change
@@ -958,18 +1247,49 @@ class ConciergeService:
                 )
             except FudiaError:
                 return (
-                    "Ya solicitaste atención del personal. "
-                    "No pude verificar todavía si fue atendida.",
+                    "Ya solicitaste atención del personal. No pude verificar todavía si fue atendida.",
                     "none",
                 )
             if str(handoff.get("status", "")) == "pending":
                 return (
-                    "El personal del local ya fue avisado. "
-                    "Espera un momento mientras se acercan a tu mesa.",
+                    "El personal del local ya fue avisado. Espera un momento mientras se acercan a tu mesa.",
                     "none",
                 )
             session.handoff_pending = False
             await journal.checkpoint()
+
+        if message.web_action is not None and session.provider == "FUDIA_WEB":
+            action = message.web_action
+            tools = ToolRegistry(TurnScopedFudia(self.fudia), session, message.text, journal)
+
+            def cart_name() -> str:
+                product_id = str(action.args.get("productId", ""))
+                return next((line.name for line in session.cart if line.product_id == product_id), "")
+
+            # Read before the tool runs: a removed dish is no longer in the cart.
+            item = cart_name()
+            if action.name == "confirm_order" and (
+                not action.confirmation_ref
+                or action.confirmation_ref != session.pending_order_request_id
+                or not session.awaiting_confirmation
+            ):
+                result = {"ok": False, "code": "stale_confirmation"}
+            else:
+                result = await tools.execute_any(action.name, action.args)
+            symbol = session.currency_symbol
+            if not symbol:
+                symbol = (await self.fudia.search_menu(session.qr_token or "")).currencySymbol
+            quantity = action.args.get("quantity", 1)
+            reply = web_action_reply(
+                action.name,
+                result,
+                symbol,
+                dish=item or cart_name(),
+                quantity=quantity if isinstance(quantity, (int, float)) else 1,
+            )
+            # A button pressed after the table attention ended must still say
+            # that the chat now takes delivery or pickup orders.
+            return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
 
         if session.consent_prompt_pending:
             # The promotional question is answered once, without the model;
@@ -984,12 +1304,19 @@ class ConciergeService:
             return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
 
         if obviously_out_of_scope(text):
-            SCOPE_DECISIONS.labels(
-                decision="out_of_scope"
-            ).inc()
+            SCOPE_DECISIONS.labels(decision="out_of_scope").inc()
             if notice:
                 return f"{notice}\n\n{OFF_SCOPE_REPLY}", "transcript"
             return OFF_SCOPE_REPLY, "none"
+
+        if session.provider in {"WHATSMEOW", "FUDIA_WEB"} and not session.contact_phone:
+            if re.fullmatch(r"\+[1-9][0-9 ()-]{7,20}", text.strip()):
+                contact = re.sub(r"\D", "", text)
+                if 8 <= len(contact) <= 15:
+                    session.customer_contact_phone = contact
+                    session.awaiting_confirmation = False
+                    session.pending_order_request_id = None
+                    return "Usaré ese número de contacto para tu pedido. ¿Qué deseas pedir?", "transcript"
 
         result = await self.graph.ainvoke(
             {
@@ -1006,10 +1333,10 @@ class ConciergeService:
             reply = f"{reply}\n\n{question}"
         return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
 
-    async def _customer_profile(
-        self, token: str, phone: str
-    ) -> CustomerProfile | None:
+    async def _customer_profile(self, token: str, phone: str) -> CustomerProfile | None:
         """Best effort: without it the diner is simply asked for a name."""
+        if not phone:
+            return None
         try:
             return await self.fudia.get_customer(token, phone)
         except Exception as exc:
@@ -1031,19 +1358,13 @@ class ConciergeService:
         delivery conversations keep their current flow; withdrawal works in
         every mode."""
         created = any(
-            effect.kind == "create_order" and effect.status == "done"
-            for effect in journal.record.effects
+            effect.kind == "create_order" and effect.status == "done" for effect in journal.record.effects
         )
-        if (
-            not created
-            or session.mode != "counter"
-            or session.consent_checked
-            or not session.qr_token
-        ):
+        if not created or session.mode != "counter" or session.consent_checked or not session.qr_token:
             return ""
         session.consent_checked = True
         token = session.qr_token
-        profile = await self._customer_profile(token, session.phone)
+        profile = await self._customer_profile(token, session.profile_phone)
         if profile is None or profile.marketingConsent != "pending":
             return ""
         venue = session.venue
@@ -1051,7 +1372,7 @@ class ConciergeService:
         request_id = f"consent-ask-{session.conversation_id}"
         payload = {
             "token": token,
-            "phone": session.phone,
+            "phone": session.profile_phone,
             "conversationId": session.conversation_id,
             "decision": "asked",
             "evidence": question,
@@ -1059,8 +1380,12 @@ class ConciergeService:
         await journal.before_effect("marketing_consent", request_id, payload)
         try:
             await self.fudia.record_marketing_consent(
-                token, session.phone, session.conversation_id, request_id,
-                "asked", question,
+                token,
+                session.profile_phone,
+                session.conversation_id,
+                request_id,
+                "asked",
+                question,
             )
         except FudiaError as exc:
             # Without a recorded question it is not asked: it would be asked
@@ -1079,6 +1404,8 @@ class ConciergeService:
         evidence: str,
     ) -> str:
         """Store the diner's answer (or withdrawal) with their literal words."""
+        if not session.profile_phone:
+            return "Necesitamos verificar tu identidad de WhatsApp para actualizar preferencias."
         venue = session.venue
         reply = consent_reply(decision, venue.organizationName if venue else "")
         token = session.qr_token or ""
@@ -1088,7 +1415,7 @@ class ConciergeService:
             request_id,
             {
                 "token": token,
-                "phone": session.phone,
+                "phone": session.profile_phone,
                 "conversationId": session.conversation_id,
                 "decision": decision,
                 "evidence": evidence[:500],
@@ -1096,17 +1423,18 @@ class ConciergeService:
         )
         try:
             await self.fudia.record_marketing_consent(
-                token, session.phone, session.conversation_id, request_id,
-                decision, evidence[:500],
+                token,
+                session.profile_phone,
+                session.conversation_id,
+                request_id,
+                decision,
+                evidence[:500],
             )
         except FudiaError as exc:
             await journal.effect_failed(exc.code, 400 <= exc.status_code < 500)
             if exc.code == "customer_not_found":
                 return "Todavía no tienes promociones activas con nosotros."
-            return (
-                "No pude guardar tu preferencia en este momento. "
-                "Escríbemela de nuevo en unos minutos."
-            )
+            return "No pude guardar tu preferencia en este momento. Escríbemela de nuevo en unos minutos."
         await journal.after_effect({"decision": decision, "reply": reply})
         return reply
 
@@ -1134,10 +1462,82 @@ class ConciergeService:
         # may have left, even leaving the account open. The account itself is
         # protected by foods-backend (a new QR does not join a stale account).
         return bool(
-            session.last_activity_at
-            and self.clock() - session.last_activity_at
-            > self.table_idle_seconds
+            session.last_activity_at and self.clock() - session.last_activity_at > self.table_idle_seconds
         )
+
+    async def _web_attention_live(self, session: ConversationSession, token: str) -> bool:
+        """Web chat: a scan cannot be told apart from reopening the page, so
+        the QR opens a new context only when its own attention is over (the
+        table account ended or the chat moved on to delivery). Otherwise the
+        cart, the confirmation and the counted conversation are kept."""
+        if session.qr_token != token:
+            return False
+        try:
+            table = await self.fudia.resolve_table(token)
+        except FudiaError:
+            return False
+        if not table.conciergeEnabled or session.mode != table.serviceType:
+            return False
+        if session.mode != "table":
+            return True
+        return session.table is not None and not await self._table_service_ended(session)
+
+    async def _start_delivery_link(
+        self,
+        message: InboundMessage,
+        token: str,
+        table: TableContext,
+        journal: TurnJournal,
+    ) -> tuple[str, SessionChange]:
+        """Enlace/QR de delivery del local: abre directamente el pedido de
+        delivery o recojo, sin haber pasado antes por una mesa."""
+        session = journal.session
+        # Web chat: counted with the diner's first interaction (see _respond).
+        deferred = message.provider == "FUDIA_WEB"
+        if (
+            not deferred
+            and await self._open_conversation(
+                token, conversation_id_for(message.message_id), "delivery", message=message
+            )
+            != "open"
+        ):
+            return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
+        venue = VenueContext(
+            organizationId=table.organizationId,
+            locationId=table.locationId,
+            organizationName=table.organizationName,
+            locationName=table.locationName,
+        )
+        profile = await self._customer_profile(token, session.profile_phone)
+        session.qr_token = token
+        self._open_delivery(session, message, venue, profile_name(profile))
+        session.conversation_counted = not deferred
+        session.consent_checked = bool(profile and profile.marketingConsent != "pending")
+        session.consent_prompt_pending = False
+        session.last_activity_at = self.clock()
+        try:
+            menu = await self.fudia.search_menu(token)
+            session.currency_symbol = menu.currencySymbol
+            journal.record.media = [
+                ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
+                for index, url in enumerate(menu.virtualMenuUrls)
+            ]
+            if menu.restaurantLogoUrl:
+                journal.record.media.insert(
+                    0, ReplyImage(url=menu.restaurantLogoUrl, caption=table.organizationName)
+                )
+            carta: Carta | None = await build_carta(self.fudia, token, menu)
+        except (FudiaError, ValueError):
+            carta = None
+        reply = welcome_message(table, carta, customer_name=session.delivery.customer_name)
+        session.messages = [
+            ChatMessage(
+                role="user",
+                content="Inicié mi pedido desde el enlace de delivery del local.",
+            ),
+            ChatMessage(role="assistant", content=reply),
+        ]
+        return reply, "session"
 
     def _open_delivery(
         self,
@@ -1149,7 +1549,10 @@ class ConciergeService:
         """New context without a table: nothing from the table carries over
         (cart, confirmation, handoff or transcript)."""
         session.conversation_id = conversation_id_for(message.message_id)
+        session.conversation_counted = True
         session.context_sequence = message.sequence
+        session.context_sent_at = message.sent_at
+        session.selection = None
         session.mode = "delivery"
         session.table = None
         session.venue = venue
@@ -1160,6 +1563,8 @@ class ConciergeService:
         session.last_order_id = None
         session.handoff_pending = False
         session.messages = []
+        session.consent_checked = False
+        session.consent_prompt_pending = False
 
     async def _location_reply(
         self,
@@ -1169,8 +1574,7 @@ class ConciergeService:
         """A shared pin is quoted by foods-backend without the model."""
         if session.mode == "counter":
             return (
-                "Recibí tu ubicación. Este pedido es para recoger en el "
-                "mostrador del local.",
+                "Recibí tu ubicación. Este pedido es para recoger en el mostrador del local.",
                 "none",
             )
         if session.mode != "delivery" or not session.qr_token:
@@ -1180,14 +1584,11 @@ class ConciergeService:
                 "none",
             )
         try:
-            quote = await self.fudia.quote_delivery(
-                session.qr_token, point.latitude, point.longitude
-            )
+            quote = await self.fudia.quote_delivery(session.qr_token, point.latitude, point.longitude)
         except FudiaError as exc:
             if exc.code == "delivery_unavailable":
                 return (
-                    "Por ahora este local no tiene delivery. Puedes pedir "
-                    "para recoger en el local.",
+                    "Por ahora este local no tiene delivery. Puedes pedir para recoger en el local.",
                     "transcript",
                 )
             return (
@@ -1211,15 +1612,10 @@ class ConciergeService:
             )
         lines = [
             f"Tu ubicación está a {distance} km del local. El delivery "
-            f"cuesta {symbol} {quote.fee.quantize(Decimal('0.01'))}.".replace(
-                "  ", " "
-            )
+            f"cuesta {symbol} {quote.fee.quantize(Decimal('0.01'))}.".replace("  ", " ")
         ]
         if not session.delivery.address:
-            lines.append(
-                "Escríbeme la dirección exacta y una referencia para el "
-                "repartidor."
-            )
+            lines.append("Escríbeme la dirección exacta y una referencia para el repartidor.")
         if not session.delivery.customer_name:
             lines.append("¿A nombre de quién va el pedido?")
         if not session.cart:
@@ -1278,9 +1674,7 @@ class ConciergeService:
         try:
             if effect.kind == "create_order":
                 if payload.get("mode") == "delivery":
-                    order = await self.fudia.create_delivery_order(
-                        token, dict(payload.get("order", {}))
-                    )
+                    order = await self.fudia.create_delivery_order(token, dict(payload.get("order", {})))
                 else:
                     order = await self.fudia.create_order(
                         token,
@@ -1290,10 +1684,7 @@ class ConciergeService:
                         request_id=effect.request_id,
                         customer_name=str(payload.get("customerName", "")),
                     )
-                if (
-                    same_context
-                    and session.pending_order_request_id == effect.request_id
-                ):
+                if same_context and session.pending_order_request_id == effect.request_id:
                     session.cart = []
                     session.awaiting_confirmation = False
                     session.pending_order_request_id = None
@@ -1317,9 +1708,7 @@ class ConciergeService:
                 )
                 if same_context:
                     session.handoff_pending = True
-                await journal.after_effect(
-                    {"status": str(handoff.get("status", "pending"))}
-                )
+                await journal.after_effect({"status": str(handoff.get("status", "pending"))})
             elif effect.kind == "marketing_consent":
                 decision = str(payload.get("decision", ""))
                 evidence = str(payload.get("evidence", ""))
@@ -1338,14 +1727,10 @@ class ConciergeService:
                         session.consent_prompt_pending = True
                 else:
                     venue = session.venue
-                    result["reply"] = consent_reply(
-                        decision, venue.organizationName if venue else ""
-                    )
+                    result["reply"] = consent_reply(decision, venue.organizationName if venue else "")
                 await journal.after_effect(result)
             elif effect.kind == "request_bill":
-                bill = await self.fudia.request_bill(
-                    token, phone, conversation_id, effect.request_id
-                )
+                bill = await self.fudia.request_bill(token, phone, conversation_id, effect.request_id)
                 await journal.after_effect(bill_summary(bill))
         except FudiaError as exc:
             if 400 <= exc.status_code < 500:

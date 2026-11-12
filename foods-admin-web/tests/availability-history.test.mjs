@@ -13,7 +13,7 @@ function compile(path,resolve=require){
 }
 function nodes(tree){const out=[];function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){out.push(node);visit(node.props?.children)}}visit(tree);return out;}
 function words(tree){if(Array.isArray(tree))return tree.map(words).join("");if(tree&&typeof tree==="object")return words(tree.props?.children);return typeof tree==="boolean"?"":String(tree??"");}
-const ds=Object.fromEntries(["Button","Dialog","FormField","Icon","IconButton","Input","Textarea","PageHeader","Pagination","SearchField","Select","Status","Modal","ModalBody"].map(name=>[name,name]));
+const ds=Object.fromEntries(["Button","EmptyState","ErrorState","Dialog","FormField","Icon","IconButton","Input","Textarea","PageHeader","Pagination","SearchField","Select","Status","Modal","ModalBody"].map(name=>[name,name]));
 const resolver=compile("shared/forms/zod-resolver.ts");
 const schema=compile("modules/menu/availability/domain/availability-reason-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
 const regional=compile("shared/i18n/regional-format.ts");
@@ -180,15 +180,15 @@ test("historial muestra skeleton, error con reintento, vacío y valores reales s
  });
  const render=()=>nodes(historyModule.AvailabilityHistoryDialog({item,close(){}}));
  assert.ok(render().some(n=>n.props["aria-label"]==="Cargando historial"));
- result={isError:true,error:{message:"Error remoto"}};render().find(n=>n.type==="Button").props.onClick();assert.equal(retried,1);
- result={data:{items:[],total:0}};assert.ok(render().some(n=>words(n)==="Aún no hay cambios registrados"));
+ result={isError:true,error:{message:"Error remoto"}};render().find(n=>n.type==="ErrorState").props.onRetry();assert.equal(retried,1);
+ result={data:{items:[],total:0}};assert.ok(render().some(n=>n.type==="EmptyState"&&n.props.title==="Aún no hay cambios registrados"));
  const entry={id:"event",createdAt:"2026-10-09T01:00:00Z",businessDate:"2026-10-08",reason:"Nueva producción",userName:"Daniel",previousPortionQuantity:15,portionQuantity:20,soldQuantity:5,previousManualStatus:"available",manualStatus:"available"};
  result={data:{items:[entry],total:1}};const all=render();assert.ok(all.some(n=>n.type==="Pagination"&&n.props.total===1));assert.ok(all.some(n=>n.type==="time"&&/8:00|20:00/.test(words(n))));
  assert.deepEqual(JSON.parse(JSON.stringify(keys[0])),["availability-history","org","local","aji",1,10]);
  assert.deepEqual(all.filter(n=>n.type==="th").map(n=>n.props.children),["Fecha y hora","Cambio","Cantidad","Motivo","Usuario"]);
  assert.equal(all.find(n=>n.type==="Modal").props.size,"xl");
- assert.equal(all.find(n=>n.type==="Modal").props.title,"Historial de disponibilidad");
- assert.equal(all.find(n=>n.type==="Modal").props.subtitle,item.name);
+ assert.equal(words(all.find(n=>n.type==="Modal").props.title),`Historial de disponibilidad · ${item.name}`);
+ assert.equal(all.find(n=>n.type==="Modal").props.subtitle,undefined);
  assert.equal(all.find(n=>n.type==="time").props.dateTime,entry.createdAt);
  assert.equal(all.some(n=>n.props.className==="availability-history-day"),false,"No duplica la fecha cuando el día operativo coincide");
  result={data:{items:[{...entry,businessDate:"2026-10-07"}],total:1}};

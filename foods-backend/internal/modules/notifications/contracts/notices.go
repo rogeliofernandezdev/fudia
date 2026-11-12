@@ -30,9 +30,12 @@ var (
 	AssistanceRequested = domain.AssistanceRequested
 	StaleAccount        = domain.StaleAccount
 	OrderReady          = domain.OrderReady
+	DeliveryUnassigned  = domain.DeliveryUnassigned
 	Money               = domain.Money
 	// OrderReadyForCustomer devuelve false si el pedido no avisa al cliente.
 	OrderReadyForCustomer = domain.OrderReadyForCustomer
 	// OrderSentForCustomer devuelve false si falta el WhatsApp de la ronda.
 	OrderSentForCustomer = domain.OrderSentForCustomer
+	// OrderOnTheWayForCustomer devuelve false si el pedido no es delivery de WhatsApp.
+	OrderOnTheWayForCustomer = domain.OrderOnTheWayForCustomer
 )

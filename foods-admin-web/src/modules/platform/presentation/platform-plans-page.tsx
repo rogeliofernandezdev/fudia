@@ -93,7 +93,7 @@ export function PlatformPlansPage(){
 function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:SubscriptionPlanDraft;modules:PlatformModule[];currencies:{code:string;name:string}[];busy:boolean;close:()=>void;save:(value:SubscriptionPlanDraft)=>void}){
  const{register,control,handleSubmit,setValue,formState:{errors}}=useForm<SubscriptionPlanDraft>({defaultValues:initial,resolver:planResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const groups=useMemo(()=>Array.from(new Set(modules.map(module=>module.category))),[modules]);
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><ModalHeader title="Configuración comercial" titleId="plan-dialog-title" icon="payment" subtitle={initial.id?"Editar plan":"Nuevo plan"} onClose={close} busy={busy} closeLabel="Cerrar"/>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><ModalHeader title={initial.id?"Editar plan":"Nuevo plan"} titleId="plan-dialog-title" icon="payment" onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={handleSubmit(value=>save({...value,trialDays:Number(value.trialDays)}))} noValidate>
    <div className="plan-form">
     <FormSection icon="layers" title="Identificación del plan" bare><div className="form-grid">

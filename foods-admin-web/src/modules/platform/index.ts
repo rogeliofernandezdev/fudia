@@ -3,6 +3,7 @@ export {PlatformCompanyDetailPage} from "./presentation/platform-company-detail-
 export {PlatformOnboardingPage} from "./presentation/platform-onboarding-page";
 export {PlatformGlobalSettingsPage} from "./presentation/platform-global-settings-page";
 export {PlatformTaxesPage} from "./presentation/platform-taxes-page";
+export {PlatformDeliveryPartnersPage} from "./presentation/platform-delivery-partners-page";
 export {PlatformPlansPage} from "./presentation/platform-plans-page";
 export {PlatformSubscriptionPage} from "./presentation/platform-subscription-page";
 export {PlatformShell} from "./presentation/platform-shell";

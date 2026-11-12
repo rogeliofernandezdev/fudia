@@ -133,6 +133,16 @@ dead-letter avanzan ese valor.
 - Cada respuesta guarda su `conversation_id`; si al enviarla el contexto ya es
   otro, se marca `superseded` y no se envía.
 
+## Mensajes a centrales de Delivery Fudia
+
+`PartnerMessageRelay` corre dentro de cada worker (`DELIVERY_PARTNER_POLL_SECONDS`,
+5 s por defecto). No pasa por la cola de conversaciones: envía directo al
+WhatsApp de la central (plantilla o mensaje interactivo) y confirma `/dispatched`.
+Un envío rechazado con certeza no se confirma y vuelve a los 60 s; uno incierto
+se confirma para no repetir una oferta con reloj. Los botones que pulsa la
+central sí entran a la cola (deduplicados por `message_id`) y se procesan sin
+modelo; ver `09_DELIVERY_PARTNERS.md`.
+
 ## Avisos de foods-backend («pedido listo»)
 
 `NoticeRelay` corre dentro de cada worker (`CUSTOMER_NOTICE_POLL_SECONDS`, 10 s

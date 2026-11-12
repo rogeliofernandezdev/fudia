@@ -19,10 +19,10 @@ export function AvailabilityReasonDialog({change,options,busy,close,save}:{chang
   submitting.current=true;
   try{await handleSubmit(async value=>{await save({reasonCode:value.reasonCode,reason:value.reasonCode==="other"?value.reason.trim():""});})();}finally{submitting.current=false;}
  }
- const title=change.kind==="quota"?"AJUSTAR CUPO":"AGOTAR HOY";
+ const title=change.kind==="quota"?"Ajustar cupo":"Agotar hoy";
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="availability-reason-title" aria-busy={locked}>
 
-  <ModalHeader title={change.item.name} titleId="availability-reason-title" icon="availability" subtitle={title} onClose={close} busy={locked} closeLabel="Cerrar"/>
+  <ModalHeader title={<>{change.item.name} · {title}</>} titleId="availability-reason-title" icon="availability" onClose={close} busy={locked} closeLabel="Cerrar"/>
   <form onSubmit={event=>event.preventDefault()} noValidate>
    <div className="form-grid">
     {change.kind==="quota"&&<><FormField label="Cupo actual"><Input value={change.item.portionQuantity??"Sin registrar"} readOnly disabled/></FormField><FormField label="Nuevo cupo"><Input value={change.portionQuantity??""} readOnly disabled/></FormField></>}

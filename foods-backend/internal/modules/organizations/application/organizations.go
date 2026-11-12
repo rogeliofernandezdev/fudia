@@ -87,6 +87,7 @@ type ProfilesPage struct {
 	SpecialTaxRegimeOptions []domain.SpecialTaxRegime `json:"specialTaxRegimeOptions"`
 }
 type OrganizationRepository interface {
+	GeographicAreas(ctx context.Context, parent string) ([]domain.GeographicArea, error)
 	Currencies(ctx context.Context) ([]domain.CurrencyOption, error)
 	Countries(ctx context.Context) ([]domain.CountryOption, error)
 	SpecialTaxRegimes(ctx context.Context) ([]domain.SpecialTaxRegime, error)

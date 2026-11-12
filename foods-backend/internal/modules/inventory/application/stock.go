@@ -37,6 +37,8 @@ func stockFailure(kind apperror.Kind, code, message string) error {
 }
 
 type StockRepository interface {
+	// CatalogNameTaken serializes new article creation within the company until commit.
+	CatalogNameTaken(context.Context, scope, string) (bool, error)
 	OrderBusinessDate(ctx context.Context, s scope, orderID string) (string, error)
 	// LockQuantityProducts bloquea en una consulta, en orden de id, los productos
 	// del pedido; los inexistentes no aparecen en el resultado.
@@ -190,6 +192,21 @@ func (a *Stock) CreateCatalogItem(ctx context.Context, s scope, in domain.Invent
 	result := domain.InventoryCatalogCreateResult{Unit: in.Unit}
 	if invalid := a.validateUnit(ctx, s, in.Unit); invalid != nil {
 		return result, invalid
+	}
+	name := ""
+	if in.NewProduct != nil {
+		name = in.NewProduct.Name
+	} else if in.NewIngredient != nil {
+		name = in.NewIngredient.Name
+	}
+	if name != "" {
+		taken, err := a.repo.CatalogNameTaken(ctx, s, name)
+		if err != nil {
+			return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos comprobar el nombre del artículo. Inténtalo nuevamente.")
+		}
+		if taken {
+			return result, stockFailure(apperror.Conflict, "inventory_item_name_taken", "Ya existe un artículo o producto con ese nombre. Búscalo y selecciónalo en lugar de crear uno nuevo.")
+		}
 	}
 	switch {
 	case in.NewProduct != nil:

@@ -1,4 +1,5 @@
-"""Avisos de foods-backend para el cliente («en preparación» y «pedido listo»).
+"""Avisos de foods-backend para el cliente («en preparación», «pedido listo» y
+«va en camino»).
 
 foods-backend deja el aviso en su bandeja de salida cuando el personal envía a
 cocina lo que el cliente pidió por WhatsApp (los pedidos del bot esperan
@@ -67,9 +68,17 @@ def order_sent_text(notice: CustomerNotice) -> str:
     return f"{first}\nTe avisaremos cuando esté listo en el mostrador."
 
 
+def order_on_the_way_text(notice: CustomerNotice) -> str:
+    """El delivery salió del local (lo despachó el personal o lo recogió la central)."""
+    order = f"Tu pedido {notice.orderCode}" if notice.orderCode.strip() else "Tu pedido"
+    return f"🛵 {order} va en camino.\nPaga al recibirlo."
+
+
 def notice_text(notice: CustomerNotice) -> str:
     if notice.kind == "order_sent":
         return order_sent_text(notice)
+    if notice.kind == "order_on_the_way":
+        return order_on_the_way_text(notice)
     return order_ready_text(notice)
 
 
@@ -82,7 +91,9 @@ class NoticeRelay:
         queue: NoticeQueue,
         channel_id: str = "",
         batch_size: int = 20,
+        require_origin: bool = False,
     ) -> None:
+        self.require_origin = require_origin
         self.source = source
         self.queue = queue
         self.channel_id = channel_id
@@ -96,7 +107,11 @@ class NoticeRelay:
         """
         relayed = 0
         for notice in await self.source.pending_customer_notices(self.batch_size):
-            phone = re.sub(r"\D", "", notice.customerPhone)
+            phone = notice.recipient or re.sub(r"\D", "", notice.customerPhone)
+            channel_id = notice.channelKey or self.channel_id
+            if self.require_origin and not channel_id:
+                CUSTOMER_NOTICES.labels(result="route_missing").inc()
+                continue
             try:
                 if phone:
                     await self.queue.enqueue(
@@ -104,7 +119,7 @@ class NoticeRelay:
                             message_id=NOTICE_MESSAGE_PREFIX + notice.id,
                             phone=phone,
                             text="",
-                            sender_phone_id=self.channel_id,
+                            sender_phone_id=channel_id,
                             notice=notice,
                         )
                     )

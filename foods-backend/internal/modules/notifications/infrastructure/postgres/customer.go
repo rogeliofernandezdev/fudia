@@ -11,7 +11,10 @@ import (
 func (r *Notices) InsertCustomer(ctx context.Context, s scope, in domain.CustomerInput) error {
 	_, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO customer_notices(organization_id,location_id,order_id,kind,customer_phone,conversation_id,dedupe_key)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)
+		SELECT $1,$2,$3,$4,$5,$6,$7
+        WHERE $5<>'' OR EXISTS (SELECT 1 FROM concierge_conversation_origins c
+          JOIN platform_whatsapp_routes r ON r.routing_key=c.routing_key AND r.provider='FUDIA_WEB'
+          WHERE c.conversation_id=$6 AND c.organization_id=$1 AND c.location_id=$2)
 		ON CONFLICT (order_id,kind,dedupe_key) DO NOTHING`,
 		s.OrganizationID, s.LocationID, in.OrderID, in.Kind, in.CustomerPhone, in.ConversationID, in.DedupeKey)
 	return err
@@ -36,11 +39,15 @@ func (r *Notices) ClaimCustomer(ctx context.Context, limit int) ([]domain.Custom
 		  RETURNING n.*
 		)
 		SELECT c.id::text,c.kind,c.order_id::text,o.code,o.channel,c.customer_phone,c.conversation_id,
-		       COALESCE(NULLIF(btrim(org.trade_name),''),org.legal_name),l.name,c.created_at
+		       COALESCE(NULLIF(btrim(org.trade_name),''),org.legal_name),l.name,c.created_at,
+ COALESCE(NULLIF(c.routing_key,''),origin.routing_key,legacy.routing_key,''),COALESCE(NULLIF(c.recipient,''),origin.recipient,c.customer_phone)
 		FROM claimed c
 		JOIN orders o ON o.id=c.order_id AND o.organization_id=c.organization_id
 		JOIN organizations org ON org.id=c.organization_id
 		JOIN locations l ON l.id=c.location_id AND l.organization_id=c.organization_id
+ LEFT JOIN concierge_conversation_origins origin ON origin.conversation_id=c.conversation_id AND origin.organization_id=c.organization_id AND origin.location_id=c.location_id
+ LEFT JOIN organization_fiscal_profiles fp ON fp.id=l.fiscal_profile_id AND fp.organization_id=l.organization_id
+ LEFT JOIN LATERAL (SELECT r.routing_key FROM platform_whatsapp_routes r WHERE r.country_code=fp.country_code AND r.legacy ORDER BY r.created_at,r.id LIMIT 1) legacy ON true
 		ORDER BY c.created_at,c.id`, limit)
 	if err != nil {
 		return nil, err
@@ -52,11 +59,11 @@ func (r *Notices) ClaimCustomer(ctx context.Context, limit int) ([]domain.Custom
 		var channel string
 		var created time.Time
 		if err := rows.Scan(&item.ID, &item.Kind, &item.OrderID, &item.OrderCode, &channel, &item.CustomerPhone, &item.ConversationID,
-			&item.OrganizationName, &item.LocationName, &created); err != nil {
+			&item.OrganizationName, &item.LocationName, &created, &item.RoutingKey, &item.Recipient); err != nil {
 			return nil, err
 		}
 		item.Fulfillment = domain.FulfillmentFor(channel)
-		if item.Kind == domain.CustomerOrderSent {
+		if item.Kind == domain.CustomerOrderSent || item.Kind == domain.CustomerOrderOnTheWay {
 			item.Fulfillment = domain.ChannelFulfillment(channel)
 		}
 		item.CreatedAt = created.UTC().Format(time.RFC3339)

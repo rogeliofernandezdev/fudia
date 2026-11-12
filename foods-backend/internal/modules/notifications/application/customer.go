@@ -14,8 +14,8 @@ const CustomerClaimLimit = 50
 // PublishCustomer implementa contracts.Publisher: un aviso inválido se descarta
 // y el mismo pedido avisa una sola vez por tipo.
 func (a *Notices) PublishCustomer(ctx context.Context, s scope, in domain.CustomerInput) error {
-	if s.OrganizationID == "" || s.LocationID == "" || (in.Kind != domain.CustomerOrderReady && in.Kind != domain.CustomerOrderSent) ||
-		in.OrderID == "" || in.CustomerPhone == "" || in.ConversationID == "" {
+	if s.OrganizationID == "" || s.LocationID == "" || (in.Kind != domain.CustomerOrderReady && in.Kind != domain.CustomerOrderSent && in.Kind != domain.CustomerOrderOnTheWay) ||
+		in.OrderID == "" || in.ConversationID == "" {
 		return nil
 	}
 	return a.repo.InsertCustomer(ctx, s, in)

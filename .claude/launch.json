@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "foods-admin-web", "run", "dev"],
       "port": 5175
+    },
+    {
+      "name": "web-chat-review-concierge",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd fudia-concierge && .venv\\Scripts\\python.exe -m uvicorn web_chat_preview_alt:app --host 127.0.0.1 --port 8019 --app-dir C:\\Users\\ROGELI~1.FER\\AppData\\Local\\Temp\\claude\\a413327a55d8d4f2\\52beb1bb-25b8-491e-941e-a6286004914b\\scratchpad\\preview"],
+      "port": 8019
+    },
+    {
+      "name": "web-chat-review-web",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "C:\\Users\\ROGELI~1.FER\\AppData\\Local\\Temp\\claude\\a413327a55d8d4f2\\52beb1bb-25b8-491e-941e-a6286004914b\\scratchpad\\preview\\web-prod.cmd"],
+      "port": 5196
     }
   ]
 }

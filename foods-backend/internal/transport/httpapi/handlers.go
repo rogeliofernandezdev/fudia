@@ -48,6 +48,23 @@ type Handlers struct {
 		ClaimCustomer(http.ResponseWriter, *http.Request)
 		MarkCustomerDispatched(http.ResponseWriter, *http.Request)
 	}
+	// Delivery Fudia: centrales y activación por empresa (plataforma), enlace por local, despacho y Concierge.
+	Delivery interface {
+		ListPartners(http.ResponseWriter, *http.Request)
+		CreatePartner(http.ResponseWriter, *http.Request)
+		UpdatePartner(http.ResponseWriter, *http.Request)
+		ReorderPartners(http.ResponseWriter, *http.Request)
+		OrganizationDelivery(http.ResponseWriter, *http.Request)
+		SetOrganizationDelivery(http.ResponseWriter, *http.Request)
+		DeliveryLink(http.ResponseWriter, *http.Request)
+		RotateDeliveryLink(http.ResponseWriter, *http.Request)
+		OrderDispatch(http.ResponseWriter, *http.Request)
+		RetryDispatch(http.ResponseWriter, *http.Request)
+		UseOwnDelivery(http.ResponseWriter, *http.Request)
+		ClaimMessages(http.ResponseWriter, *http.Request)
+		MarkMessageDispatched(http.ResponseWriter, *http.Request)
+		PartnerAction(http.ResponseWriter, *http.Request)
+	}
 	Concierge              ConciergeHandler
 	ConciergeUsage         ConciergeUsageHandler
 	Platform               PlatformHandler
@@ -188,6 +205,7 @@ type CashHandler interface {
 	UnassignCashShiftUser(http.ResponseWriter, *http.Request)
 }
 type OrganizationsHandler interface {
+	GeographicAreas(http.ResponseWriter, *http.Request)
 	UpdateOrganization(http.ResponseWriter, *http.Request)
 	CreateLocation(http.ResponseWriter, *http.Request)
 	UpdateLocation(http.ResponseWriter, *http.Request)
@@ -218,6 +236,10 @@ type SubscriptionsHandler interface {
 	GetOrganizationSubscription(http.ResponseWriter, *http.Request)
 }
 type PlatformHandler interface {
+	LinkWhatsApp(http.ResponseWriter, *http.Request)
+	WhatsAppHistory(http.ResponseWriter, *http.Request)
+	WhatsAppRoutes(http.ResponseWriter, *http.Request)
+	RegisterLegacyRoute(http.ResponseWriter, *http.Request)
 	Authorize(context.Context, string) error
 	OnboardTenant(http.ResponseWriter, *http.Request)
 	ListPlatformOrganizations(http.ResponseWriter, *http.Request)
@@ -236,6 +258,8 @@ type ConciergeUsageHandler interface {
 	UpdateOrganizationConciergeLimit(http.ResponseWriter, *http.Request)
 }
 type ConciergeHandler interface {
+	Restaurants(http.ResponseWriter, *http.Request)
+	RestaurantContext(http.ResponseWriter, *http.Request)
 	ServiceAuth(http.Handler) http.Handler
 	CreateConciergeOrder(http.ResponseWriter, *http.Request)
 	RequestConciergeBill(http.ResponseWriter, *http.Request)

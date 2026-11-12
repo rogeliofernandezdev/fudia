@@ -64,6 +64,8 @@ class RedisInboundQueue:
     # XADD: the order is the order in which the webhook accepted messages.
     _ENQUEUE_SCRIPT = """
     local status = redis.call('GET', KEYS[1])
+    local legacy = redis.call('GET', KEYS[5])
+    if legacy and legacy ~= 'failed' and string.sub(legacy, 1, 6) ~= 'alias:' then return 0 end
     if status and status ~= 'failed' then
       return 0
     end
@@ -79,6 +81,9 @@ class RedisInboundQueue:
       'conversation', ARGV[4]
     )
     redis.call('SET', KEYS[1], 'queued', 'EX', ARGV[2])
+    if KEYS[5] ~= KEYS[1] then
+      redis.call('SET', KEYS[5], 'alias:' .. KEYS[1], 'EX', ARGV[2])
+    end
     return seq
     """
 
@@ -190,10 +195,7 @@ class RedisInboundQueue:
         self.stream = stream
         self.dead_stream = f"{stream}:dead"
         self.group = group
-        self.consumer = (
-            consumer.strip()
-            or f"{socket.gethostname()}-{id(self)}"
-        )
+        self.consumer = consumer.strip() or f"{socket.gethostname()}-{id(self)}"
         self.dedup_ttl_seconds = dedup_ttl_seconds
         self.max_attempts = max_attempts
         self.visibility_timeout_ms = visibility_timeout_ms
@@ -204,9 +206,7 @@ class RedisInboundQueue:
         self._started = False
 
     def _dedup_key(self, message_id: str) -> str:
-        digest = hashlib.sha256(
-            message_id.encode("utf-8")
-        ).hexdigest()
+        digest = hashlib.sha256(message_id.encode("utf-8")).hexdigest()
         return f"fudia:concierge:message:{digest}"
 
     def _sequence_key(self, conversation: str) -> str:
@@ -238,17 +238,16 @@ class RedisInboundQueue:
             return False
         await self.start()
         if not message.received_at:
-            message = message.model_copy(
-                update={"received_at": time.time()}
-            )
+            message = message.model_copy(update={"received_at": time.time()})
         conversation = _conversation(message)
         result = await self.client.eval(
             self._ENQUEUE_SCRIPT,
-            4,
+            5,
             self._dedup_key(message.message_id),
             self.stream,
             self._sequence_key(conversation),
             self._done_key(conversation),
+            self._dedup_key(message.legacy_message_id or message.message_id),
             message.model_dump_json(),
             self.dedup_ttl_seconds,
             self.order_ttl_seconds,
@@ -277,21 +276,13 @@ class RedisInboundQueue:
             return []
         deliveries: list[QueueDelivery] = []
         for raw_entry in raw_entries:
-            if (
-                not isinstance(raw_entry, (list, tuple))
-                or len(raw_entry) != 2
-            ):
+            if not isinstance(raw_entry, (list, tuple)) or len(raw_entry) != 2:
                 continue
             raw_values: Any = raw_entry[1]
             if not isinstance(raw_values, dict):
                 continue
-            values = {
-                str(key): str(value)
-                for key, value in raw_values.items()
-            }
-            deliveries.append(
-                self._delivery(str(raw_entry[0]), values)
-            )
+            values = {str(key): str(value) for key, value in raw_values.items()}
+            deliveries.append(self._delivery(str(raw_entry[0]), values))
         return deliveries
 
     async def _claim_stale(
@@ -306,10 +297,7 @@ class RedisInboundQueue:
             start_id="0-0",
             count=count,
         )
-        if (
-            not isinstance(claimed, (list, tuple))
-            or len(claimed) < 2
-        ):
+        if not isinstance(claimed, (list, tuple)) or len(claimed) < 2:
             return []
         return self._deliveries(claimed[1])
 
@@ -336,10 +324,7 @@ class RedisInboundQueue:
 
         deliveries: list[QueueDelivery] = []
         for raw_batch in batches:
-            if (
-                not isinstance(raw_batch, (list, tuple))
-                or len(raw_batch) != 2
-            ):
+            if not isinstance(raw_batch, (list, tuple)) or len(raw_batch) != 2:
                 continue
             deliveries.extend(self._deliveries(raw_batch[1]))
         return deliveries
@@ -360,9 +345,7 @@ class RedisInboundQueue:
             done = int(await self.client.get(key) or 0)
             if done >= delivery.sequence - 1:
                 return True
-            if _order_wait_exceeded(
-                delivery, self.order_max_wait_seconds
-            ):
+            if _order_wait_exceeded(delivery, self.order_max_wait_seconds):
                 return True
             if loop.time() >= deadline:
                 return False
@@ -446,31 +429,20 @@ class RedisInboundQueue:
         for group in groups if isinstance(groups, list) else []:
             if str(group.get("name")) == self.group:
                 last_delivered = str(group.get("last-delivered-id", "0-0"))
-        pending: Any = await self.client.xpending(
-            self.stream, self.group
-        )
+        pending: Any = await self.client.xpending(self.stream, self.group)
         oldest_pending = (
-            str(pending.get("min"))
-            if isinstance(pending, dict) and int(pending.get("pending", 0))
-            else None
+            str(pending.get("min")) if isinstance(pending, dict) and int(pending.get("pending", 0)) else None
         )
         min_id = retention_floor(
             now_ms - self.retention_seconds * 1000,
             last_delivered,
             oldest_pending,
         )
-        trimmed = int(
-            await self.client.xtrim(
-                self.stream, minid=min_id, approximate=False
-            )
-            or 0
-        )
+        trimmed = int(await self.client.xtrim(self.stream, minid=min_id, approximate=False) or 0)
         dead_trimmed = int(
             await self.client.xtrim(
                 self.dead_stream,
-                minid=(
-                    f"{now_ms - self.dead_letter_retention_seconds * 1000}-0"
-                ),
+                minid=(f"{now_ms - self.dead_letter_retention_seconds * 1000}-0"),
                 approximate=False,
             )
             or 0
@@ -483,15 +455,9 @@ class RedisInboundQueue:
 
     async def stats(self) -> QueueStats:
         await self.start()
-        pending: Any = await self.client.xpending(
-            self.stream, self.group
-        )
+        pending: Any = await self.client.xpending(self.stream, self.group)
         return QueueStats(
-            pending=(
-                int(pending.get("pending", 0))
-                if isinstance(pending, dict)
-                else 0
-            ),
+            pending=(int(pending.get("pending", 0)) if isinstance(pending, dict) else 0),
             dead_letter=int(await self.client.xlen(self.dead_stream)),
             stream_length=int(await self.client.xlen(self.stream)),
         )
@@ -500,17 +466,13 @@ class RedisInboundQueue:
         self,
         count: int = 50,
     ) -> list[DeadLetter]:
-        entries: Any = await self.client.xrange(
-            self.dead_stream, count=count
-        )
+        entries: Any = await self.client.xrange(self.dead_stream, count=count)
         letters: list[DeadLetter] = []
         for entry_id, values in entries or []:
             letters.append(
                 DeadLetter(
                     entry_id=str(entry_id),
-                    message=InboundMessage.model_validate_json(
-                        str(values.get("payload", "{}"))
-                    ),
+                    message=InboundMessage.model_validate_json(str(values.get("payload", "{}"))),
                     attempt=int(values.get("attempt", "0")),
                     sequence=int(values.get("seq", "0") or 0),
                     failed_at_ms=int(values.get("failed_at", "0") or 0),
@@ -523,14 +485,10 @@ class RedisInboundQueue:
         """Move one dead letter back to the stream with its original message
         id. Persisted processing records keep the replay from repeating
         effects that already happened."""
-        entries: Any = await self.client.xrange(
-            self.dead_stream, min=entry_id, max=entry_id
-        )
+        entries: Any = await self.client.xrange(self.dead_stream, min=entry_id, max=entry_id)
         if not entries:
             return False
-        message = InboundMessage.model_validate_json(
-            str(entries[0][1].get("payload", "{}"))
-        )
+        message = InboundMessage.model_validate_json(str(entries[0][1].get("payload", "{}")))
         moved = await self.client.eval(
             self._REQUEUE_SCRIPT,
             3,
@@ -595,32 +553,29 @@ class MemoryInboundQueue:
         self,
         message: InboundMessage,
     ) -> bool:
-        status = self.status.get(
-            message.message_id
-        )
+        status = self.status.get(message.message_id)
+        legacy_status = self.status.get(message.legacy_message_id) if message.legacy_message_id else None
+        if legacy_status and legacy_status != "failed" and not legacy_status.startswith("alias:"):
+            return False
         if status and status != "failed":
             return False
         if not message.received_at:
-            message = message.model_copy(
-                update={"received_at": time.time()}
-            )
+            message = message.model_copy(update={"received_at": time.time()})
         conversation = _conversation(message)
-        self.sequences[conversation] = (
-            self.sequences.get(conversation, 0) + 1
-        )
+        self.sequences[conversation] = self.sequences.get(conversation, 0) + 1
         self.sequence += 1
         self.pending.append(
             QueueDelivery(
                 entry_id=str(self.sequence),
-                message=message.model_copy(
-                    update={"sequence": self.sequences[conversation]}
-                ),
+                message=message.model_copy(update={"sequence": self.sequences[conversation]}),
                 attempt=0,
                 sequence=self.sequences[conversation],
                 conversation=conversation,
             )
         )
         self.status[message.message_id] = "queued"
+        if message.legacy_message_id:
+            self.status[message.legacy_message_id] = "alias:" + message.message_id
         return True
 
     async def read(
@@ -646,27 +601,21 @@ class MemoryInboundQueue:
             done = self.done.get(delivery.conversation, 0)
             if done >= delivery.sequence - 1:
                 return True
-            if _order_wait_exceeded(
-                delivery, self.order_max_wait_seconds
-            ):
+            if _order_wait_exceeded(delivery, self.order_max_wait_seconds):
                 return True
             if loop.time() >= deadline:
                 return False
             await asyncio.sleep(0.005)
 
     def _release_turn(self, delivery: QueueDelivery) -> None:
-        if delivery.conversation and delivery.sequence > self.done.get(
-            delivery.conversation, 0
-        ):
+        if delivery.conversation and delivery.sequence > self.done.get(delivery.conversation, 0):
             self.done[delivery.conversation] = delivery.sequence
 
     async def ack(
         self,
         delivery: QueueDelivery,
     ) -> None:
-        self.status[
-            delivery.message.message_id
-        ] = "completed"
+        self.status[delivery.message.message_id] = "completed"
         self._release_turn(delivery)
 
     async def defer(
@@ -683,12 +632,7 @@ class MemoryInboundQueue:
         self,
         delivery: QueueDelivery,
     ) -> bool:
-        return (
-            self.status.get(
-                delivery.message.message_id
-            )
-            == "queued"
-        )
+        return self.status.get(delivery.message.message_id) == "queued"
 
     async def retry(
         self,
@@ -697,9 +641,7 @@ class MemoryInboundQueue:
     ) -> bool:
         next_attempt = delivery.attempt + 1
         if next_attempt >= self.max_attempts:
-            self.status[
-                delivery.message.message_id
-            ] = "failed"
+            self.status[delivery.message.message_id] = "failed"
             self.dead.append(delivery)
             self._release_turn(delivery)
             return False
@@ -713,9 +655,7 @@ class MemoryInboundQueue:
                 conversation=delivery.conversation,
             )
         )
-        self.status[
-            delivery.message.message_id
-        ] = "queued"
+        self.status[delivery.message.message_id] = "queued"
         return True
 
     async def trim(self) -> int:

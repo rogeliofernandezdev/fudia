@@ -146,7 +146,7 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityBy
               {comboItems.map(combo=><ComboItem key={combo.id} combo={combo} qty={qtyByProduct[combo.id]??0} money={money} disabled={disabled} onConfigure={()=>onConfigureCombo?.(combo.id)}/>)}
             </ul>
           ):(
-            <EmptyState icon="combo" title={searching?"Sin coincidencias":"Aún no hay menús ni combos"} text={searching?"Ningún menú coincide con la búsqueda.":"Cuando la carta tenga menús o combos activos aparecerán aquí."}/>
+            <EmptyState icon={searching?"search":"combo"} title={searching?"Sin coincidencias":"Aún no hay menús ni combos"} text={searching?"Ningún menú coincide con la búsqueda.":"Cuando la carta tenga menús o combos activos aparecerán aquí."}/>
           )
         ):salonCatalog.isError?(
           <ErrorState title="No pudimos cargar la carta" text={salonCatalog.error.message} onRetry={()=>salonCatalog.refetch()} retrying={salonCatalog.isFetching}/>
@@ -252,8 +252,9 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
   const finalPrice=Number(data?.price??0)+selections.reduce((sum,sel)=>sum+sel.surcharge,0);
 
   return(
-    <Modal title={data?.name??"Elige las opciones"} subtitle={plainText(data?.description)||undefined} icon="combo" size="md" onClose={onClose} closeLabel="Cerrar selección de opciones" className="cmd-combo">
+    <Modal title={data?.name??"Elige las opciones"} icon="combo" size="md" onClose={onClose} closeLabel="Cerrar selección de opciones" className="cmd-combo">
       <ModalBody className="cmd-combo-body">
+        {plainText(data?.description)&&<p className="modal-description">{plainText(data?.description)}</p>}
         {combo.isLoading?(
           <ComboConfiguratorSkeleton/>
         ):combo.isError?(
@@ -346,8 +347,9 @@ export function ProductOptionsConfigurator({product,initialModifiers=[],editing=
     onConfirm({productId:product.id,name:product.name,unitPrice,modifiers,imageUrl:product.imageUrl});
   };
   return(
-    <Modal title={product.name} subtitle={plainText(product.description)||undefined} icon="dish" size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
+    <Modal title={product.name} icon="dish" size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
       <ModalBody className="cmd-combo-body">
+        {plainText(product.description)&&<p className="modal-description">{plainText(product.description)}</p>}
         {config.isLoading?(
           <ComboConfiguratorSkeleton/>
         ):config.isError?(

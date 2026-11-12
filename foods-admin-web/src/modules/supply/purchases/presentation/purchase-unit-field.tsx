@@ -8,7 +8,7 @@ import {useSession} from "@/providers/session-context";
 import {createInventoryUnit,listInventoryUnits} from "../infrastructure/inventory-units-api";
 import type {InventoryUnit,InventoryUnitDraft} from "../domain/inventory-unit";
 
-export function PurchaseUnitField({value,onChange,error,disabled,onBusyChange}:{value:string;onChange:(value:string)=>void;error?:string;disabled:boolean;onBusyChange:(busy:boolean)=>void}){
+export function PurchaseUnitField({value,onChange,error,help,disabled,onBusyChange}:{value:string;onChange:(value:string)=>void;error?:string;help?:string;disabled:boolean;onBusyChange:(busy:boolean)=>void}){
  const{organization,can}=useSession();
  const qc=useQueryClient();
  const queryKey=["inventory-units",organization?.id];
@@ -19,9 +19,9 @@ export function PurchaseUnitField({value,onChange,error,disabled,onBusyChange}:{
  const options=selected&&!units.some(unit=>unit.code===selected.code)?[...units,selected]:units;
  function close(){setCreating(false);onBusyChange(false)}
  return <>
-  <FormField label="Unidad de inventario" as="div" error={query.isError?query.error.message:error}>
+  <FormField label="Unidad de inventario" as="div" help={help} error={query.isError?query.error.message:error}>
    {query.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando unidades"><Skeleton width="70%"/></div>:<div className="purchase-reference-controls">
-    <Select aria-label="Unidad de inventario" value={value} disabled={disabled||creating||query.isError||options.length===0} aria-invalid={Boolean(error)||query.isError} onChange={event=>onChange(event.target.value)}>
+    <Select aria-label="Unidad de inventario" aria-description={query.isError?query.error.message:error||help} value={value} disabled={disabled||creating||query.isError||options.length===0} aria-invalid={Boolean(error)||query.isError} onChange={event=>onChange(event.target.value)}>
      <option value="">{query.isError?"No pudimos cargar las unidades":options.length?"Selecciona una unidad":"No hay unidades registradas"}</option>
      {options.map(unit=><option key={unit.id} value={unit.code}>{unit.name}</option>)}
     </Select>
@@ -45,7 +45,7 @@ export function InventoryUnitDialog({close,save}:{close:()=>void;save:(unit:Inve
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="inventory-unit-title" aria-busy={mutation.isPending}>
 
-  <ModalHeader title="Unidad de inventario" titleId="inventory-unit-title" icon="box" subtitle="Nueva unidad" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
+  <ModalHeader title="Nueva unidad" titleId="inventory-unit-title" icon="box" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre"><Input data-dialog-initial-focus value={draft.name} maxLength={80} disabled={mutation.isPending} onChange={event=>setDraft({...draft,name:event.target.value})}/></FormField>
    <FormField label="Código"><Input value={draft.code} maxLength={32} disabled={mutation.isPending} onChange={event=>setDraft({...draft,code:event.target.value})}/></FormField>

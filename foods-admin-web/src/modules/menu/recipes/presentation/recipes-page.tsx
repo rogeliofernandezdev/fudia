@@ -7,7 +7,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Skeleton} from "@/design-system/skeleton";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {isPermissionError,missingPermissionLabel} from "@/shared/api/client";
 import {
@@ -176,30 +176,30 @@ export function RecipesPage(){
  return <>
   <PageHeader
    title="Recetas"
-   description="Define el consumo de insumos de los productos preparados. Inventario y Kárdex continúan operando aunque una receta esté desactivada."
+   description="Define el consumo de insumos de los platos preparados. Inventario y Kárdex continúan operando aunque una receta esté desactivada."
    action={canManage?<Button icon="plus" onClick={openNew}>Nueva receta</Button>:undefined}
   />
 
   <section className="panel standardized-management">
    <div className="toolbar">
-    <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar producto con receta..."/></label>
+    <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar plato con receta..."/></label>
    </div>
    {recipes.isLoading?<RecipeListSkeleton/>:recipes.isError?
-    <div className="catalog-state error"><Icon name="alert" size={24}/><b>{missingPermissionLabel(recipes.error)?`Falta el permiso «${missingPermissionLabel(recipes.error)}»`:isPermissionError(recipes.error)?"Falta un permiso para ver las recetas":"No pudimos cargar las recetas"}</b><p>{recipes.error.message}</p>{!isPermissionError(recipes.error)&&<Button kind="secondary" icon="refresh" onClick={()=>recipes.refetch()}>Reintentar</Button>}</div>
+    <ErrorState title={missingPermissionLabel(recipes.error)?`Falta el permiso «${missingPermissionLabel(recipes.error)}»`:isPermissionError(recipes.error)?"Falta un permiso para ver las recetas":"No pudimos cargar las recetas"} text={recipes.error.message} onRetry={isPermissionError(recipes.error)?undefined:()=>void recipes.refetch()} retrying={recipes.isFetching}/>
    :!items.length?
-    <div className="catalog-state"><Icon name="cookingPot" size={24}/><b>Aún no hay recetas configuradas</b><p>Configura una receta cuando quieras descontar insumos automáticamente al vender un producto preparado.</p>{canManage&&<Button icon="plus" onClick={openNew}>Nueva receta</Button>}</div>
-   :<DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable>}
+    <EmptyState icon="cookingPot" title="Aún no hay recetas" text="Configura una receta para descontar insumos automáticamente al vender un plato preparado." action={canManage?<Button icon="plus" onClick={openNew}>Nueva receta</Button>:undefined}/>
+   :<DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>Producto</th><th>Porciones</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable>}
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
    <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
-    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" icon="cookingPot" subtitle={editingProductId?"Editar receta":"Nueva receta"} onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
+    <ModalHeader title={<>{editingProductId?"Editar receta":"Configurar receta"} · {editingProductId?"Editar receta":"Nueva receta"}</>} titleId="recipe-modal-title" icon="cookingPot" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
 
     <ModalForm className="recipe-form" onSubmit={submit} noValidate>
      <div className="recipe-form-body">
       <section className="recipe-main-fields" aria-label="Datos de la receta">
        <label className="recipe-product-field">
-        <span>Producto preparado</span>
+        <span>Plato preparado</span>
         <AsyncSelect<RecipeLookupOption,false>
          cacheOptions
          defaultOptions
@@ -210,11 +210,11 @@ export function RecipesPage(){
          isDisabled={Boolean(editingProductId)||save.isPending}
          isClearable={!editingProductId}
          isSearchable
-         aria-label="Producto preparado"
+         aria-label="Plato preparado"
          aria-invalid={attempted&&!draft.productId}
-         placeholder="Buscar producto preparado..."
-         loadingMessage={()=>"Buscando productos..."}
-         noOptionsMessage={({inputValue})=>inputValue.trim().length>0&&inputValue.trim().length<3?"Escribe al menos 3 caracteres":inputValue.trim()?"No hay coincidencias":"No hay productos preparados disponibles"}
+         placeholder="Buscar plato preparado..."
+         loadingMessage={()=>"Buscando platos..."}
+         noOptionsMessage={({inputValue})=>inputValue.trim().length>0&&inputValue.trim().length<3?"Escribe al menos 3 caracteres":inputValue.trim()?"No hay coincidencias":"No hay platos preparados disponibles"}
          onChange={option=>{setProductOption(option);setDraft({...draft,productId:option?.value??""})}}
          styles={recipeLookupSelectStyles}
          className={`react-select-container recipe-product-autocomplete${attempted&&!draft.productId?" invalid":""}`}
@@ -222,11 +222,11 @@ export function RecipesPage(){
          menuPortalTarget={typeof document==="undefined"?undefined:document.body}
          menuPosition="fixed"
         />
-        {attempted&&!draft.productId&&<small className="field-error">Busca y selecciona el producto de la receta.</small>}
+        {attempted&&!draft.productId&&<small className="field-error">Busca y selecciona el plato de la receta.</small>}
        </label>
 
        <label className="recipe-yield-field">
-        <FieldLabel hint="Cantidad de producto final que obtienes con los insumos indicados.">Rendimiento</FieldLabel>
+        <FieldLabel hint="Cantidad de porciones o platos que obtienes con los insumos indicados.">Porciones</FieldLabel>
         <Input type="number" min="0.001" step="0.001" inputMode="decimal" value={draft.yieldQuantity} aria-invalid={attempted&&Number(draft.yieldQuantity)<=0} onChange={e=>setDraft({...draft,yieldQuantity:e.target.value})}/>
         {attempted&&Number(draft.yieldQuantity)<=0&&<small className="field-error">Debe ser mayor que cero.</small>}
        </label>
@@ -241,7 +241,7 @@ export function RecipesPage(){
        <header className="recipe-ingredients-toolbar">
         <div>
          <span className="recipe-section-icon"><Icon name="stock" size={18}/></span>
-         <span><b>Insumos de la receta</b><small>Indica la cantidad consumida para el rendimiento definido arriba.</small></span>
+         <span><b>Insumos de la receta</b><small>Indica la cantidad consumida para las porciones definidas arriba.</small></span>
         </div>
         <Button type="button" kind="secondary" icon="plus" disabled={save.isPending||ingredientsForbidden||draft.items.some(item=>!item.inventoryItemId)} onClick={addIngredient}>Agregar insumo</Button>
        </header>
@@ -327,7 +327,7 @@ export function RecipesPage(){
 function RecipeListSkeleton(){
  return <div className="table-wrap recipe-skeleton-wrap" aria-label="Cargando recetas" aria-busy="true">
   <table className="recipe-skeleton-table">
-   <thead><tr><th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead>
+   <thead><tr><th>Producto</th><th>Porciones</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead>
    <tbody>
     {Array.from({length:5},(_,row)=><tr className={row%2?"alternate":""} key={row}>
      <td><span className="recipe-skeleton-product"><i/><small/></span></td>

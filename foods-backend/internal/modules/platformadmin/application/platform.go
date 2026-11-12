@@ -41,6 +41,7 @@ type Platform struct {
 	flow          FlowObserver
 	repo          Repository
 	work          unitofwork.Manager
+	whatsapp      WhatsAppProvider
 }
 
 func (a *Platform) WithTips(tips billingcontracts.InitialTipConfigurator) *Platform {
@@ -70,6 +71,10 @@ type Repository interface {
 	Channels(context.Context) ([]domain.PlatformWhatsAppChannel, error)
 	CreateChannel(ctx context.Context, s scope, in domain.PlatformWhatsAppChannelInput) (domain.PlatformWhatsAppChannel, error)
 	UpdateChannel(ctx context.Context, s scope, id string, in domain.PlatformWhatsAppChannelInput) (domain.PlatformWhatsAppChannel, error)
+	Channel(context.Context, string) (domain.PlatformWhatsAppChannel, error)
+	WhatsAppRoutes(context.Context) ([]domain.WhatsAppRoute, error)
+	RegisterLegacyRoute(context.Context, domain.WhatsAppRoute) error
+	ChannelHistory(context.Context, string) ([]map[string]any, error)
 	CountryExists(context.Context, string) (bool, error)
 	PlatformAdmin(context.Context, string) (bool, error)
 }
@@ -113,50 +118,24 @@ func (a *Platform) Channels(ctx context.Context) ([]domain.PlatformWhatsAppChann
 	if err != nil {
 		return nil, platformFailure(apperror.Unavailable, "channels_unavailable", "No pudimos cargar los canales de WhatsApp.")
 	}
+	for i := range out {
+		out[i].ConnectionState = "unconfigured"
+		if a.whatsapp != nil {
+			status, statusErr := a.whatsapp.Verify(ctx, domain.PlatformWhatsAppChannelInput{CountryCode: out[i].CountryCode, PhoneNumber: out[i].PhoneNumber, Provider: out[i].Provider, SessionRef: out[i].ProviderKey})
+			if statusErr == nil {
+				out[i].ConnectionState = status.State
+			} else {
+				out[i].ConnectionState = "unavailable"
+			}
+		}
+	}
 	return out, nil
 }
 func (a *Platform) CreateChannel(ctx context.Context, s scope, in domain.PlatformWhatsAppChannelInput) (domain.PlatformWhatsAppChannel, error) {
-	var result domain.PlatformWhatsAppChannel
-	if code, msg := domain.ValidatePlatformWhatsAppChannel(&in); code != "" {
-		return result, platformFailure(apperror.Invalid, code, msg)
-	}
-	countryExists, err := a.repo.CountryExists(ctx, in.CountryCode)
-	if err != nil {
-		return result, platformFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos validar el país seleccionado.")
-	}
-	if !countryExists {
-		return result, platformFailure(apperror.Invalid, "invalid_country", "El país no existe o está deshabilitado.")
-	}
-	var item domain.PlatformWhatsAppChannel
-	err = func() error { var err error; item, err = a.repo.CreateChannel(ctx, s, in); return err }()
-	if err != nil {
-		return result, channelError(err)
-	}
-	return item, nil
-
+	return a.saveWhatsAppChannel(ctx, s, "", in)
 }
 func (a *Platform) UpdateChannel(ctx context.Context, s scope, id string, in domain.PlatformWhatsAppChannelInput) (domain.PlatformWhatsAppChannel, error) {
-	var result domain.PlatformWhatsAppChannel
-	if code, msg := domain.ValidatePlatformWhatsAppChannel(&in); code != "" {
-		return result, platformFailure(apperror.Invalid, code, msg)
-	}
-	countryExists, err := a.repo.CountryExists(ctx, in.CountryCode)
-	if err != nil {
-		return result, platformFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos validar el país seleccionado.")
-	}
-	if !countryExists {
-		return result, platformFailure(apperror.Invalid, "invalid_country", "El país no existe o está deshabilitado.")
-	}
-	var item domain.PlatformWhatsAppChannel
-	err = func() error { var err error; item, err = a.repo.UpdateChannel(ctx, s, id, in); return err }()
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return result, platformFailure(apperror.NotFound, "channel_not_found", "El canal de WhatsApp no existe.")
-		}
-		return result, channelError(err)
-	}
-	return item, nil
-
+	return a.saveWhatsAppChannel(ctx, s, id, in)
 }
 func (a *Platform) Authorize(ctx context.Context, id string) error {
 	allowed, err := a.repo.PlatformAdmin(ctx, id)
@@ -167,7 +146,7 @@ func (a *Platform) Authorize(ctx context.Context, id string) error {
 }
 func channelError(err error) error {
 	if errors.Is(err, ErrConflict) {
-		return platformFailure(apperror.Conflict, "channel_already_exists", "El número ya está registrado en otro canal.")
+		return platformFailure(apperror.Conflict, "channel_already_exists", "El país o el número ya tienen una configuración. Edita el registro existente.")
 	}
 	return platformFailure(apperror.Internal, "channel_save_failed", "No pudimos guardar el canal de WhatsApp.")
 }

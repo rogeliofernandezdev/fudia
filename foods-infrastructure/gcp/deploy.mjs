@@ -91,7 +91,7 @@ export function configuration(target, env) {
     if (config.mapProvider !== "mapbox") throw new Error("El frontend actual solo implementa mapbox.");
     config.mapToken = env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "";
     if (config.mapToken && !config.mapToken.startsWith("pk.")) throw new Error("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN debe ser un token público pk.; nunca publicar un token secreto sk.");
-    config.secrets = secretReferences(env.GCP_FRONTEND_SECRETS, ["MAPBOX_ACCESS_TOKEN"]);
+    config.secrets = secretReferences(env.GCP_FRONTEND_SECRETS, ["MAPBOX_ACCESS_TOKEN", "FUDIA_CONCIERGE_API_KEY"]);
     if (config.mapToken && !config.secrets.has("MAPBOX_ACCESS_TOKEN")) {
       throw new Error("Mapbox requiere MAPBOX_ACCESS_TOKEN en GCP_FRONTEND_SECRETS para geocodificación.");
     }

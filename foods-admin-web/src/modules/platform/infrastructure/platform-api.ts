@@ -1,7 +1,7 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
 import type {SpecialTaxRegime,SpecialTaxStatus} from "@/shared/fiscal/special-tax";
-import type {ConciergeLimitOverride,ConciergeUsageDetail,ConciergeUsagePage,ConciergeUsageSettings,ConciergeUsageSettingsInput,Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,PlatformSubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
+import type {ConciergeLimitOverride,ConciergeUsageDetail,ConciergeUsagePage,ConciergeUsageSettings,ConciergeUsageSettingsInput,Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,PlatformSubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft,WhatsAppProviderOption,WhatsAppConnection,WhatsAppChannelHistory,DeliveryPartner,DeliveryPartnerDraft,OrganizationDelivery} from "../domain/types";
 import {optionalLimit} from "../domain/concierge-usage";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
@@ -75,6 +75,7 @@ export async function saveSubscriptionPlan(draft:SubscriptionPlanDraft):Promise<
 export async function createPlatformOrganization(draft:PlatformOnboardingDraft){
  const payload={
   ...draft,
+  districtCode:draft.country==="PE"?draft.districtCode:"",
   locationCode:draft.locationCode||draft.locationName.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8).padStart(3,"L"),
   taxRate:String(Number(draft.taxRate)/100),
   specialTaxRegime:draft.specialTaxRegime||null,
@@ -118,7 +119,12 @@ export async function recordSubscriptionPayment(input:{amount:string;currency:st
  return platformFetch<{id:string}>(`${subscriptionPath(organizationId)}/payments`,{method:"POST",body:JSON.stringify(input)});
 }
 
-export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[]}>("whatsapp-channels");}
+export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[];providerOptions:WhatsAppProviderOption[]}>("whatsapp-channels",{cache:"no-store"});}
+export async function listDeliveryPartners(){return platformFetch<{items:DeliveryPartner[]}>("delivery-partners");}
+export async function saveDeliveryPartner(draft:DeliveryPartnerDraft,id?:string){return platformFetch<DeliveryPartner>(id?`delivery-partners/${encodeURIComponent(id)}`:"delivery-partners",{method:id?"PATCH":"POST",body:JSON.stringify({name:draft.name,whatsappPhone:draft.whatsappPhone,active:draft.active,coverageCodes:draft.coverageCodes})});}
+export async function reorderDeliveryPartners(partnerIds:string[]){return platformFetch<{items:DeliveryPartner[]}>("delivery-partners/order",{method:"PUT",body:JSON.stringify({partnerIds})});}
+export async function getOrganizationDelivery(organizationId:string){return platformFetch<OrganizationDelivery>(`organizations/${encodeURIComponent(organizationId)}/delivery`);}
+export async function setOrganizationDelivery(organizationId:string,enabled:boolean){return platformFetch<OrganizationDelivery>(`organizations/${encodeURIComponent(organizationId)}/delivery`,{method:"PUT",body:JSON.stringify({enabled})});}
 export async function savePlatformWhatsAppChannel(draft:PlatformWhatsAppChannelDraft,id?:string){return platformFetch<PlatformWhatsAppChannel>(id?`whatsapp-channels/${id}`:"whatsapp-channels",{method:id?"PATCH":"POST",body:JSON.stringify(draft)});}
 
 /** Uso de Fudia Concierge: solo Plataforma. Las empresas nunca consultan su tope ni su consumo. */
@@ -141,3 +147,6 @@ export type SpecialTaxRateInput={validFrom:string;validTo:string|null;rate:strin
 export async function listSpecialTaxRegimes(){return platformFetch<SpecialTaxRegimesView>("special-tax-regimes");}
 export async function saveSpecialTaxRate(regime:string,input:SpecialTaxRateInput,id?:string){return platformFetch<void>(id?`special-tax-rates/${encodeURIComponent(id)}`:`special-tax-regimes/${encodeURIComponent(regime)}/rates`,{method:id?"PATCH":"POST",body:JSON.stringify(input)});}
 export async function deleteSpecialTaxRate(id:string){return platformFetch<void>(`special-tax-rates/${encodeURIComponent(id)}`,{method:"DELETE"});}
+
+export async function linkPlatformWhatsApp(countryCode:string,sessionRef?:string){return platformFetch<WhatsAppConnection>("whatsapp-channels/link",{method:"POST",cache:"no-store",body:JSON.stringify({countryCode,sessionRef})});}
+export async function listWhatsAppChannelHistory(id:string){return platformFetch<{items:WhatsAppChannelHistory[]}>(`whatsapp-channels/${encodeURIComponent(id)}/history`,{cache:"no-store"});}

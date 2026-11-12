@@ -121,9 +121,9 @@ export function CombosPage(){
         <Select chip value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}} aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></Select>
       </div>
       {combos.isLoading?<ComboSkeleton/>
-      :combos.isError?<div className="combo-empty"><Icon name="alert" size={24}/><b>No pudimos cargar los menús y combos</b><p>{combos.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>combos.refetch()}>Reintentar</Button></div>
+      :combos.isError?<ErrorState title="No pudimos cargar los menús y combos" text={combos.error.message} onRetry={()=>void combos.refetch()} retrying={combos.isFetching}/>
       :!combos.data?.items.length?
-        <div className="combo-empty"><Icon name="menu" size={24}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":canManage?"Usa la plantilla Menú del día para comenzar rápidamente.":"Los menús registrados aparecerán aquí."}</p>{canManage&&!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
+        (search||status?<EmptyState icon="search" title="Sin coincidencias" text="Ningún menú o combo coincide con la búsqueda o el estado."/>:<EmptyState icon="menu" title="Aún no hay menús ni combos" text={canManage?"Usa la plantilla Menú del día para comenzar rápidamente.":"Los menús registrados aparecerán aquí."} action={canManage?<Button icon="plus" onClick={open}>Nuevo menú o combo</Button>:undefined}/>)
       :<>
         <DataTable label="Listado de menús y combos" containerClassName="hover-scroll"><thead><tr><th>Menú o combo</th><th>Precio</th><th title="Entrada, plato principal, bebida o postre">Partes del menú</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
           {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
@@ -137,9 +137,9 @@ export function CombosPage(){
       </>}
       {!combos.isLoading&&!combos.isError&&<Pagination page={page} size={size} total={combos.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
-    {selected&&<ComboDetailDialog query={detail} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
+    {selected&&<ComboDetailDialog query={detail} previewName={combos.data?.items.find(item=>item.id===selected)?.name} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
     <ConfirmDialog open={canManage&&Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>canManage&&statusTarget&&changeStatus.mutate(statusTarget)}/>
-    {canManage&&!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-editor" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
+    {canManage&&!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-editor" label="Cargando menú o combo" rows={8} title="Actualiza tu menú o combo" icon="chefHat" close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
     {canManage&&draft&&<ComboEditor draft={draft} setDraft={setDraft} products={pickerProducts} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} currencyPosition={settings.currencyPosition} money={money} busy={save.isPending} editing={Boolean(editingId)} close={closeEditor} finish={()=>{if(canManage)save.mutate(draft)}}/>}
   </>
 }
@@ -149,7 +149,7 @@ export function CombosPage(){
  * arriba, partes como lista con su icono y un resumen fijo con el precio como importe principal.
  * Es de lectura: sin pie de acciones; la X es el único cierre.
  */
-function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof useQuery<ComboDetail,Error>>;currencySymbol:string;close:()=>void}){
+function ComboDetailDialog({query,previewName,currencySymbol,close}:{query:ReturnType<typeof useQuery<ComboDetail,Error>>;previewName?:string;currencySymbol:string;close:()=>void}){
   const{location}=useSession();
   const value=query.data;
   const localFrom=isoToZonedInput(value?.availableFrom,location?.timezone).slice(0,10);
@@ -163,8 +163,8 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
   const optionCount=value?.groups.reduce((total,group)=>total+group.options.length,0)??0;
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal size-md combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
-      {query.isLoading?<ComboDetailSkeleton close={close}/>:<>
-        <ModalHeader title={value?.name??"Menú o combo"} titleId="combo-detail-title" icon="combo" onClose={close} closeLabel="Cerrar"/>
+      {query.isLoading?<ComboDetailSkeleton close={close} name={previewName}/>:<>
+        <ModalHeader title={value?.name??previewName??"Menú o combo"} titleId="combo-detail-title" icon="combo" onClose={close} closeLabel="Cerrar"/>
         {query.isError?<ModalError title="No pudimos cargar el menú" text={query.error.message} onRetry={()=>query.refetch()} retrying={query.isFetching}/>:value&&<ModalWorkspace summary={<section className="modal-summary" aria-labelledby="combo-detail-summary-title">
           <div className="modal-summary-heading"><h3 id="combo-detail-summary-title" className="modal-section-title">Resumen del menú</h3></div>
           <div className="modal-summary-lines">
@@ -192,10 +192,13 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
   </div>
 }
 
-/** Skeleton con la geometría final: cabecera, estado y venta, partes y resumen. */
-function ComboDetailSkeleton({close}:{close:()=>void}){
+/**
+ * Skeleton con la geometría final: estado y venta, partes y resumen. Con `name` (fila del listado) la cabecera
+ * ya es la real; solo sin él se dibuja su skeleton.
+ */
+function ComboDetailSkeleton({close,name}:{close:()=>void;name?:string}){
  return <>
-  <ModalHeader title={<><span className="sr-only">Cargando detalle del menú</span><Skeleton width="var(--size-168)" height="var(--size-16)"/></>} titleId="combo-detail-title" icon="combo" onClose={close} initialFocusClose/>
+  <ModalHeader title={name??<><span className="sr-only">Cargando detalle del menú</span><Skeleton width="var(--size-168)" height="var(--size-16)"/></>} titleId="combo-detail-title" icon="combo" onClose={close} initialFocusClose/>
   <ModalWorkspace summary={<section className="modal-summary" aria-hidden="true">
    <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/></div>
    <div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><Skeleton width="var(--size-72)" height="var(--size-9)"/><Skeleton width="var(--size-36)" height="var(--size-16)"/></div>)}</div>

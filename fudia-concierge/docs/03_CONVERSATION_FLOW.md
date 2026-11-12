@@ -142,8 +142,17 @@ abre, de modo que reprocesar ese mensaje no cuenta dos veces.
   Nunca menciona topes ni planes.
 - Una conversación en curso nunca se corta: sus mensajes no vuelven a pasar
   por el tope; solo se evalúa al abrir una nueva.
-- Cualquier otro fallo al registrar la conversación no interrumpe la atención:
-  el primer reporte de tokens la registra y la cuenta.
+- Cualquier otro fallo al registrar la conversación (foods-backend caído o con
+  error): en producción, con el directorio multiproveedor activo, tampoco abre
+  la atención y responde el mismo texto, porque sin ese registro no quedan
+  guardados el canal y el destinatario de origen; el siguiente QR o mensaje lo
+  vuelve a intentar. Sin el directorio (pruebas y modo anterior) la atención
+  continúa y el primer reporte de tokens la registra y la cuenta.
+- En el chat web (`FUDIA_WEB`) la página abre la bienvenida por sí sola, así
+  que la conversación no se registra al abrirla sino con la primera interacción
+  del comensal (`conversation_counted` en la sesión). El rechazo usa el mismo
+  texto con «por este chat». Reabrir el mismo QR con la atención vigente no abre
+  otro contexto ni cuenta otra conversación (ver `docs/11_WEB_CHAT.md`).
 - Después de cada turno con llamadas al modelo, Concierge reporta los tokens por
   nivel (`lite`/`flash`) en `POST .../conversations/{conversationId}/usage`
   (best effort, un intento, no retrasa la respuesta si falla).
@@ -170,6 +179,17 @@ No hay cuenta (`request_bill` → `counter_has_no_bill`), delivery
 (`set_fulfillment` → `counter_pickup_only`) ni fin de atención por pedido: la
 sesión sigue en mostrador hasta otro QR o hasta que expire. El bloque «[Estado
 de la atención]» indica «Modo: venta por mostrador» y si falta el nombre.
+
+## Enlace de delivery del local
+
+El enlace/QR de delivery de un local (`serviceType=delivery`) usa el mismo inicio
+por `/start` («¡Hola! 👋 Quiero pedir delivery.» + «Delivery · K7P2»). Abre
+directamente `mode="delivery"` ligado a ese local, sin haber pasado por una mesa,
+y cuenta una conversación de tipo `delivery`. La bienvenida es la carta con
+«🛵 <local>» y la línea «Pide aquí para delivery o para recoger en el local.»;
+saluda por su nombre al cliente conocido. Desde ahí sigue el flujo de delivery y
+recojo de siempre. La memoria del último local queda en ese enlace, así que un
+chat posterior sin QR vuelve a tomar delivery de ese local.
 
 ## Aviso «en preparación»
 
@@ -302,3 +322,26 @@ elimina los emojis informales.
 - El modelo nunca inventa IDs, precios ni disponibilidad.
 - La distancia y el costo de envío los calcula foods-backend; el modelo nunca los estima.
 - Una conversación cuya atención en mesa terminó nunca vuelve a agregar rondas a esa mesa sin escanear el QR de nuevo.
+
+
+## Selección multirrestaurante
+
+En producción, antes de IA, Concierge consulta el directorio privado de
+foods-backend usando el canal y la identidad autenticada. Una mesa vigente se
+conserva. Después del cierre o tres horas de inactividad, un único restaurante
+visitado elegible abre delivery/recojo; varios muestran opciones numeradas y
+estado Redis `AWAITING_RESTAURANT_SELECTION`. Sin historial se ofrece descubrimiento
+paginado del país del canal. Una respuesta numérica se valida contra las opciones
+reales guardadas y el restaurante se revalida en backend antes de entrar.
+
+Cambiar de local abre otro contexto, limpia carrito temporal, confirmaciones e
+historial del contexto, sin cancelar ni mover pedidos. Una atención de mesa
+vigente, un envío comercial incierto o un handoff impiden cambiar. Los números de
+contacto escritos por el cliente no vinculan identidades ni permiten consultar
+perfiles de terceros. Se mantienen fencing, deduplicación y secuencias existentes.
+
+Cada QR conserva su token y redirección pública; el número se resuelve al escanear.
+Los mensajes, avisos y recibos conservan el transporte de origen, incluso después
+de editar el país. Meta mantiene su ventana de mensajería, distinta de las tres
+horas de mesa. El gateway aplica una espera aleatoria de 2,5–5 segundos antes de
+enviar cada respuesta nueva preparada por Gemini, sin ejecutar IA en Go.

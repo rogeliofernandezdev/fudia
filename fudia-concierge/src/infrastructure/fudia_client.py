@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
+from pydantic import ValidationError
 
 from src.domain.models import (
     BillSummary,
@@ -13,7 +14,9 @@ from src.domain.models import (
     ConsentDecision,
     CustomerNotice,
     CustomerProfile,
+    DeliveryActionResult,
     DeliveryOptions,
+    DeliveryPartnerMessage,
     DeliveryQuote,
     MenuItem,
     MenuResponse,
@@ -22,6 +25,7 @@ from src.domain.models import (
     OrderStatus,
     TableContext,
 )
+from src.domain.whatsapp import ChannelRoute, RestaurantOption, RestaurantPage, VerifiedCustomer
 from src.metrics import BACKEND_DURATION, BACKEND_REQUESTS
 from src.observability import current_trace_id
 from src.services.ports import FudiaError as FudiaError
@@ -32,6 +36,8 @@ def _endpoint_label(path: str) -> str:
         return "usage"
     if "/concierge/notices/" in path:
         return "notices"
+    if "/concierge/delivery-messages/" in path or path.endswith("/delivery-actions"):
+        return "delivery_partners"
     if path.endswith("/conversations"):
         return "conversations"
     if "/menu" in path:
@@ -450,6 +456,7 @@ class FudiaClient:
         token: str,
         conversation_id: str,
         kind: str,
+        origin: dict[str, Any] | None = None,
     ) -> None:
         # Idempotent by conversationId: a retry never counts twice.
         await self._json(
@@ -459,7 +466,7 @@ class FudiaClient:
                 f"{quote(token, safe='')}/conversations"
             ),
             retryable=True,
-            json={"conversationId": conversation_id, "kind": kind},
+            json={"conversationId": conversation_id, "kind": kind, **(origin or {})},
         )
 
     async def pending_customer_notices(self, limit: int = 20) -> list[CustomerNotice]:
@@ -469,7 +476,15 @@ class FudiaClient:
             "/v1/integrations/concierge/notices/pending",
             params={"limit": limit},
         )
-        return [CustomerNotice.model_validate(item) for item in data.get("items", [])]
+        notices: list[CustomerNotice] = []
+        for item in data.get("items", []):
+            try:
+                notices.append(CustomerNotice.model_validate(item))
+            except ValidationError:
+                # Un tipo de aviso nuevo que esta versión no conoce no bloquea
+                # los demás; su reclamo vence y vuelve cuando se despliegue.
+                continue
+        return notices
 
     async def mark_customer_notice_dispatched(self, notice_id: str) -> None:
         # Idempotente en foods-backend: se puede reintentar sin riesgo.
@@ -478,6 +493,44 @@ class FudiaClient:
             f"/v1/integrations/concierge/notices/{quote(notice_id, safe='')}/dispatched",
             retryable=True,
         )
+
+    async def pending_delivery_messages(self, limit: int = 20) -> list[DeliveryPartnerMessage]:
+        """Reclama mensajes para centrales de Delivery Fudia (reservados 60 s).
+
+        foods-backend avanza antes la cascada de centrales (ofertas vencidas,
+        pedidos listos o cancelados).
+        """
+        data = await self._json(
+            "GET",
+            "/v1/integrations/concierge/delivery-messages/pending",
+            params={"limit": limit},
+        )
+        messages: list[DeliveryPartnerMessage] = []
+        for item in data.get("items", []):
+            try:
+                messages.append(DeliveryPartnerMessage.model_validate(item))
+            except ValidationError:
+                continue
+        return messages
+
+    async def mark_delivery_message_dispatched(self, message_id: str) -> None:
+        # Idempotente en foods-backend; para una oferta inicia sus 3 minutos.
+        await self._json(
+            "POST",
+            f"/v1/integrations/concierge/delivery-messages/{quote(message_id, safe='')}/dispatched",
+            retryable=True,
+        )
+
+    async def apply_delivery_action(self, action: str, token: str, phone: str) -> DeliveryActionResult:
+        """Aplica el botón de una central. Repetirlo no duplica el efecto
+        (accept devuelve already_accepted y pickup vuelve a picked_up)."""
+        data = await self._json(
+            "POST",
+            "/v1/integrations/concierge/delivery-actions",
+            json={"action": action, "token": token, "phone": phone},
+            retryable=True,
+        )
+        return DeliveryActionResult.model_validate(data)
 
     async def report_usage(
         self,
@@ -555,3 +608,24 @@ class FudiaClient:
             },
         )
         return CustomerProfile.model_validate(body)
+
+    async def whatsapp_routes(self) -> list[ChannelRoute]:
+        data = await self._json("GET", "/v1/integrations/concierge/whatsapp/routes")
+        return [ChannelRoute.model_validate(item) for item in data.get("items", [])]
+
+    async def register_legacy_whatsapp_route(self, route: ChannelRoute) -> None:
+        await self._json("POST", "/v1/integrations/concierge/whatsapp/legacy-route",
+                         retryable=True, json=route.model_dump())
+
+    async def restaurants(
+        self, channel_key: str, identity: VerifiedCustomer, only_visited: bool = True, offset: int = 0,
+    ) -> RestaurantPage:
+        data = await self._json("POST", "/v1/integrations/concierge/restaurants/search", retryable=True,
+                                json={"channelKey": channel_key, "identity": identity.model_dump(),
+                                      "onlyVisited": only_visited, "offset": offset})
+        return RestaurantPage.model_validate(data)
+
+    async def restaurant_context(self, channel_key: str, location_id: str) -> RestaurantOption:
+        data = await self._json("POST", "/v1/integrations/concierge/restaurants/context", retryable=True,
+                                json={"channelKey": channel_key, "locationId": location_id})
+        return RestaurantOption.model_validate(data)

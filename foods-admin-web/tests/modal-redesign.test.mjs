@@ -13,6 +13,12 @@ test("los paneles del pedido quedan remetidos bajo las pestañas sin cambiar su 
  const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width<=600px)");
  assert.ok(mobile.nodes.some(node=>node.selector===".order-detail-panel"&&node.nodes.some(decl=>decl.prop==="padding-inline"&&decl.value==="var(--space-3)")),"12 px de sangría en móvil");
  assert.equal((renderDetail().match(/class="order-detail-panel"/g)??[]).length,2,"Productos y Seguimiento comparten la sangría; no hay pestaña Detalles");
+ const dialog=read("modules/operations/orders/presentation/order-detail-dialog.tsx");
+ assert.ok(dialog.includes('label:"Productos",icon:"dish",tone:"primary"'),"Productos en azul, como en venta y cobro");
+ assert.ok(dialog.includes('label:"Seguimiento",icon:"route",tone:"indigo"'),"Seguimiento conserva el índigo");
+ assert.match(dialog,/`modal-summary order-detail-totals is-band\$\{pending\?"":" is-paid"\}`/,"el importe principal es una franja a todo el ancho");
+ assert.match(dialog,/\{breakdown&&<div className="modal-summary-lines">/,"sin delivery ni saldo no hay desglose que repita el total");
+ assert.match(dialog,/<div className="order-detail-meta">/,"fecha y responsables en una línea");
  assert.equal(css.nodes.some(node=>node.selector===".order-detail-tabs"),false,"los tabs heredan radio y quedan a 12 px del contenido, sin margen extra");
  assert.doesNotMatch(read("modules/operations/orders/presentation/order-detail-dialog.tsx"),/<header className="order-detail-section-head"><h3 id="order-detail-products-title"/,"el título accesible no añade otra fila al panel");
 });
@@ -20,7 +26,7 @@ test("los paneles del pedido quedan remetidos bajo las pestañas sin cambiar su 
 test("Modal y detalle remoto comparten cabecera y workspace, sin implementación alternativa",()=>{
  const modal=read("design-system/modal.tsx"),detail=read("modules/operations/orders/presentation/order-detail-dialog.tsx");
  assert.match(modal,/<ModalHeader title=\{title\}/);
- assert.equal((detail.match(/<ModalHeader /g)??[]).length,2);
+ assert.equal((detail.match(/<ModalHeader /g)??[]).length,3,"detalle, skeleton con cabecera real y skeleton sin datos previos");
  assert.equal((detail.match(/<ModalWorkspace /g)??[]).length,2);
  assert.doesNotMatch(detail,/<header>\s*<span className="modal-title-icon"/);
  assert.doesNotMatch(read("modules/operations/orders/presentation/order-detail.css"),/\.order-detail-(workspace|heading|grand|subtotal)\{/);
@@ -48,7 +54,14 @@ test("cabecera breve, responsables en el cuerpo y estados junto a su informació
  assert.ok(html.indexOf('class="order-attribution"')<html.indexOf('id="order-detail-products-title"'));
  assert.match(html,/status sky emphasized[^>]*><svg[^>]*class="[^"]*status-icon"/);
  assert.match(html,/<\/svg>Cuenta abierta/);
- assert.match(renderDetail({skeleton:true}),/order-detail-information/);
+ const loading=renderDetail({skeleton:true});
+ assert.match(loading,/order-detail-hero/,"el skeleton reproduce la identidad del detalle");
+ assert.match(loading,/class="modal-summary is-band"/,"y el resumen en franja");
+ assert.match(loading,/Cargando detalle del pedido/,"sin datos previos (enlace directo) la cabecera también carga");
+ const immediate=renderDetail({skeleton:true,preview:{tableName:"04",customerName:"",channel:"salon"}});
+ assert.match(immediate.slice(0,immediate.indexOf("</header>")),/>Mesa 04<\/h2>/,"con la fila del listado, título e icono se muestran sin esperar al API");
+ assert.doesNotMatch(immediate.slice(0,immediate.indexOf("</header>")),/ds-skeleton/);
+ assert.match(renderDetail({skeleton:true,preview:{tableName:"",customerName:"Ana",channel:"delivery"}}),/>Ana<\/h2>/);
  const delivery=renderDetail({order:{...exampleOrder,channel:"delivery",customerPhone:"999 123 456",address:"Av. Los Olivos 124"}});
  assert.match(delivery,/aria-label="Entrega"/);
  assert.match(delivery,/class="order-detail-contact"/);

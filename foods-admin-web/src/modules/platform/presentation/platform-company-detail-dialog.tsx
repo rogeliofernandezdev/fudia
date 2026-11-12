@@ -12,13 +12,14 @@ import type {Option,PlatformOrganizationDetail} from "../domain/types";
 import {paymentStandingTone,subscriptionStatusLabel,subscriptionStatusTone} from "../domain/subscription-status";
 import {ConciergeUsageDialogSection} from "./platform-concierge-usage";
 
-export function CompanyDetailDialog({organizationId,standingOptions,close}:{organizationId:string;standingOptions:Option[];close:()=>void}){
+/** `previewName` (nombre de la fila del listado) muestra la cabecera real mientras carga el detalle. */
+export function CompanyDetailDialog({organizationId,previewName,standingOptions,close}:{organizationId:string;previewName?:string;standingOptions:Option[];close:()=>void}){
  const detail=useQuery({queryKey:["platform-organization",organizationId],queryFn:()=>getPlatformOrganization(organizationId)});
  const company=detail.data;
  return <div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={close} className="crud-modal company-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={detail.isLoading} aria-labelledby="company-detail-title">
 
-   <ModalHeader title={company?.tradeName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" icon="building" subtitle="Detalle de la empresa" onClose={close} closeLabel="Cerrar detalle"/>
+   <ModalHeader title={company?.tradeName??previewName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" icon="building" onClose={close} closeLabel="Cerrar detalle"/>
    {detail.isLoading?<CompanyDetailSkeleton/>
     :detail.isError||!company?<div className="company-detail-body"><ErrorState title="No pudimos cargar el detalle" text={detail.error?.message} retrying={detail.isFetching} onRetry={()=>void detail.refetch()}/></div>
     :<CompanyDetailContent company={company} standingOptions={standingOptions}/>}

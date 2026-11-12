@@ -75,6 +75,12 @@ test("HTTP and worker share verified TLS, private-only egress and provider confi
   assert.ok(args[args.indexOf("--set-secrets") + 1].includes(`${CA_PATH}=redis-ca-fudia-dev:1`));
   assert.ok(args.includes("private-ranges-only"));
   assert.ok(runtimeArgs(c, apiURL, true).join(" ").includes("WORKER_ENABLED=true"));
+  // Sin plantillas de Delivery Fudia no se fijan nombres, solo el idioma.
+  assert.ok(!vars.includes("WHATSAPP_DELIVERY_OFFER_TEMPLATE") && vars.includes("WHATSAPP_TEMPLATE_LANGUAGE=es"));
+  const withTemplates = conciergeConfiguration({...env, WHATSAPP_DELIVERY_OFFER_TEMPLATE: "fudia_delivery_oferta", WHATSAPP_TEMPLATE_LANGUAGE: "es_PE"});
+  const templateVars = runtimeArgs(withTemplates, apiURL, true);
+  assert.match(templateVars[templateVars.indexOf("--set-env-vars") + 1], /WHATSAPP_DELIVERY_OFFER_TEMPLATE=fudia_delivery_oferta,WHATSAPP_TEMPLATE_LANGUAGE=es_PE/);
+  assert.throws(() => conciergeConfiguration({...env, WHATSAPP_DELIVERY_READY_TEMPLATE: "Plantilla, con coma"}));
   assert.throws(() => runtimeArgs(c, "http://localhost:8080"));
   assert.ok(httpArgs(c, digest, apiURL, true).includes("--no-traffic"));
   assert.ok(!httpArgs(c, digest, apiURL, false).includes("--no-traffic"));
@@ -158,4 +164,18 @@ test("Concierge release does not force backend/migrations and blocks deployment 
   assert.equal(condition(needs, {...input, deploy_backend: true}, () => false), false);
   assert.equal(condition(needs, input, () => true), false);
   assert.equal(condition({...needs, backend: {result: "success"}}, {...input, deploy_backend: true, database_ready: true}, () => false), true);
+});
+
+
+test("WhatsApp gateway requires both private references and HTTPS without changing Meta defaults",()=>{
+ const refs=env.GCP_CONCIERGE_SECRETS+",WHATSAPP_GATEWAY_KEY=gateway-api:1,WHATSAPP_GATEWAY_INGRESS_KEY=gateway-ingress:2,WHATSAPP_META_ACCOUNTS=meta-assets:3";
+ const config=conciergeConfiguration({...env,GCP_CONCIERGE_SECRETS:refs,WHATSAPP_GATEWAY_URL:"https://gateway.example.test",WHATSAPP_COUNTRY_CODE:"PE"});
+ const runtime=runtimeArgs(config,apiURL).join(" ");
+ assert.ok(runtime.includes("WHATSAPP_GATEWAY_URL=https://gateway.example.test"));
+ assert.ok(runtime.includes("WHATSAPP_GATEWAY_KEY=gateway-api:1"));
+ assert.ok(runtime.includes("WHATSAPP_META_ACCOUNTS=meta-assets:3"));
+ assert.ok(runtime.includes("WHATSAPP_PHONE_ID=123456"));
+ assert.throws(()=>conciergeConfiguration({...env,WHATSAPP_GATEWAY_URL:"https://gateway.example.test"}));
+ assert.throws(()=>conciergeConfiguration({...env,GCP_CONCIERGE_SECRETS:refs}));
+ assert.throws(()=>conciergeConfiguration({...env,GCP_CONCIERGE_SECRETS:refs,WHATSAPP_GATEWAY_URL:"http://gateway.example.test"}));
 });

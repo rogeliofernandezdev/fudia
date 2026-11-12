@@ -23,7 +23,6 @@
 .crud-modal>header .modal-heading,.modal-header .modal-heading{display:grid;flex:1 1 0;min-width:0}
 .modal-heading h2{min-width:0;text-wrap:pretty}
 .modal-context{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3) var(--space-5);padding:var(--space-3) var(--space-6);border-bottom:var(--stroke-1) solid var(--line)}
-.modal-context-description{margin:0;color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-snug);overflow-wrap:anywhere}
 .modal-heading-meta{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-1-5)}
 .modal-header-details{min-width:0}
 
@@ -122,14 +121,18 @@
 .modal-summary-total{width:max-content;max-width:100%;min-width:min(100%,var(--modal-summary-action-width));justify-self:end;align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;text-align:right;gap:var(--space-1);padding:var(--space-3) var(--space-4);border-radius:var(--radius-card);background:var(--primary-100)}
 .modal-summary-total span{color:var(--primary-700);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 .modal-summary.is-paid .modal-summary-total{background:var(--brand-50)}
+/* Detalles de venta, cobro y pedido: el desglose (si lo hay) arriba y el importe principal como franja a todo el
+   ancho debajo, etiqueta a la izquierda e importe a la derecha; así la etiqueta nunca se parte en móvil. */
+.modal-summary.is-band{grid-template-columns:minmax(0,1fr)}
+.modal-summary.is-band .modal-summary-total{width:auto;justify-self:stretch;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;text-align:left}
 .modal-summary-total strong{color:var(--primary-700);font-size:var(--font-size-2xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;letter-spacing:var(--letter-spacing-tight);line-height:var(--line-height-tight);overflow-wrap:anywhere}
 
 /* Cuerpo desplazable: tanto el patrón nuevo (.modal-body) como los formularios heredados. */
 .crud-modal>:is(form,.modal-form){display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
 /* Modales: barra fina siempre visible cuando hay más contenido; no usar hover-scroll en el cuerpo (oculta la barra hasta el hover). */
-.modal-body{flex:1 1 auto;min-height:0;padding:var(--space-6);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
-.crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
-.crud-modal>form.modal-form-compact:not(.modal-form){padding-top:var(--space-3)}
+.modal-body{flex:1 1 auto;min-height:0;padding:var(--space-2) var(--space-6) var(--space-6);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+.modal-description{margin:0;color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal);overflow-wrap:anywhere}
+.crud-modal>form:not(.modal-form){padding:var(--space-2) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
 
 .modal-footer,.crud-modal>footer,.crud-modal>form>footer{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--space-2-5);padding:var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom));border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
@@ -217,7 +220,6 @@
   .crud-modal>header,.modal-header{min-height:var(--size-48);padding-block:var(--space-0-5)}
   .crud-modal>header h2,.modal-header h2{font-size:var(--font-size-md)}
   .modal-context{display:none}
-  .modal-body,.crud-modal>form:not(.modal-form){padding-top:var(--space-4)}
   .modal-footer,.crud-modal>footer,.crud-modal>form>footer{padding-block:var(--space-2) calc(var(--space-2) + var(--safe-area-bottom))}
   .modal-busy{inset:var(--size-52) 0 var(--size-56)}
 }

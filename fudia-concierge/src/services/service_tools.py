@@ -68,7 +68,7 @@ class ServiceTools:
                 session.conversation_id,
                 {
                     "token": self.context.token(),
-                    "phone": session.phone,
+                    "phone": session.contact_phone,
                     "conversationId": session.conversation_id,
                     "reason": reason,
                 },
@@ -76,7 +76,7 @@ class ServiceTools:
             handoff = await self._effect(
                 self.context.fudia.request_handoff(
                     self.context.token(),
-                    session.phone,
+                    session.contact_phone,
                     session.conversation_id,
                     reason,
                 )
@@ -112,14 +112,14 @@ class ServiceTools:
                 request_id,
                 {
                     "token": self.context.token(),
-                    "phone": session.phone,
+                    "phone": session.contact_phone,
                     "conversationId": session.conversation_id,
                 },
             )
             bill = await self._effect(
                 self.context.fudia.request_bill(
                     self.context.token(),
-                    session.phone,
+                    session.contact_phone,
                     session.conversation_id,
                     request_id,
                 )

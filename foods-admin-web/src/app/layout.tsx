@@ -12,6 +12,7 @@ import "@/design-system/styles/pagination.css";
 import "@/design-system/styles/table-actions.css";
 import "@/design-system/styles/skeleton.css";
 import "@/design-system/styles/tabs.css";
+import "@/design-system/styles/filter-pill.css";
 import "@/design-system/styles/confirm-dialog.css";
 import "@/design-system/styles/form-controls.css";
 import "@/design-system/styles/form-field.css";

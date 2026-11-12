@@ -215,3 +215,20 @@ async def test_worker_on_redis_resends_the_persisted_reply_after_a_send_failure(
     finally:
         await store.close()
         await lock.close()
+
+
+@pytest.mark.asyncio
+async def test_namespaced_meta_dedup_and_legacy_upgrade_alias(queues) -> None:
+    queue,_ = queues
+    suffix = uuid4().hex
+    old = inbound("legacy-"+suffix)
+    assert await queue.enqueue(old)
+    upgraded = old.model_copy(update={"message_id":"META_CLOUD_API:1:"+old.message_id,
+                                     "legacy_message_id":old.message_id})
+    assert not await queue.enqueue(upgraded)
+    for asset in ("1","2"):
+        message = inbound(f"META_CLOUD_API:{asset}:shared-{suffix}").model_copy(update={
+            "legacy_message_id":"shared-"+suffix,"sender_phone_id":asset})
+        assert await queue.enqueue(message)
+        assert not await queue.enqueue(message)
+    assert len(await queue.read(limit=10)) == 3

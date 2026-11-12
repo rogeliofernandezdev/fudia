@@ -5,7 +5,7 @@
 .form-section-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
 .form-section-grid>.span-2,.form-section-grid>.choice-group,.form-section-grid>.form-section-hint{grid-column:1/-1}
 .form-section-hint{margin:calc(var(--space-2) * -1) 0 0;color:var(--ink-500);font-size:var(--font-size-label)}
-.form-sections{display:grid;gap:var(--space-5);padding:var(--space-5) var(--space-6)}
+.form-sections{display:grid;gap:var(--space-5);padding:0 var(--space-6) var(--space-5)}
 /* ChoiceGroup: radios nativos presentados como botones de la altura de control. */
 .choice-group{display:flex;flex-wrap:wrap;gap:var(--space-2)}
 .choice-option{position:relative;display:inline-flex;align-items:center;gap:var(--space-2);min-height:var(--control-height);padding:0 var(--space-3-5);border:var(--stroke-1) solid var(--line-strong);border-radius:var(--radius-control);color:var(--ink-700);background:var(--surface);font-size:var(--font-size-control);font-weight:var(--weight-semibold);cursor:pointer;transition:var(--transition-surface)}
@@ -17,7 +17,7 @@
 .choice-option:has(input:disabled){cursor:not-allowed;opacity:var(--opacity-disabled)}
 @media (hover:hover) and (pointer:fine){.choice-option:hover:not(:has(input:checked,input:disabled)){border-color:var(--primary-200);background:var(--primary-25)}}
 @media (width<=600px){
-  .form-sections{padding:var(--space-4)}
+  .form-sections{padding:0 var(--space-4) var(--space-4)}
   .form-section-grid{grid-template-columns:minmax(0,1fr)}
   .choice-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .choice-option{justify-content:center;border-radius:var(--radius-pill)}

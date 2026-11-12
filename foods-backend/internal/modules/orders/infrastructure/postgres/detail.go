@@ -43,6 +43,16 @@ const orderNetPaidSQL = `
 
 var serviceStatusLabels = map[string]string{"nuevo": "Sin enviar", "confirmado": "Pendiente", "preparando": "Preparando", "listo": "Por entregar", "entregado": "Entregado"}
 
+// Read-only payment projection, scoped to the same company, location and order as the detail.
+const orderPaymentReferencesSQL = `
+	SELECT COALESCE(jsonb_agg(jsonb_build_object(
+	  'methodName',pm.name,'reference',btrim(p.reference)
+	) ORDER BY p.created_at,p.id),'[]'::jsonb)
+	FROM payments p
+	JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
+	WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	  AND btrim(p.reference)<>''`
+
 func queueItems(batch *pgx.Batch, s scope, orderID, roundID string) {
 	batch.Queue(itemsSQL, orderID, s.OrganizationID, roundID)
 	batch.Queue(itemSelectionsSQL, orderID, s.OrganizationID, roundID)
@@ -180,6 +190,7 @@ func (r *Orders) Detail(ctx context.Context, s scope, id string) (domain.Order, 
 	batch.Queue(serviceItemsSQL, s.OrganizationID, id)
 	queueItems(batch, s, id, "")
 	batch.Queue(orderNetPaidSQL, id, s.OrganizationID, s.LocationID)
+	batch.Queue(orderPaymentReferencesSQL, id, s.OrganizationID, s.LocationID)
 	results := r.db(ctx).SendBatch(ctx, batch)
 	var paid float64
 	o, err := scanOrder(results.QueryRow())
@@ -191,6 +202,9 @@ func (r *Orders) Detail(ctx context.Context, s scope, id string) (domain.Order, 
 	}
 	if err == nil {
 		err = results.QueryRow().Scan(&paid)
+	}
+	if err == nil {
+		err = results.QueryRow().Scan(&o.PaymentReferences)
 	}
 	if err = closeBatch(results, err); err != nil {
 		return domain.Order{}, 0, orderError(err)

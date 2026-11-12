@@ -6,17 +6,25 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from src.domain.web_chat import WebAction
+from src.domain.whatsapp import RestaurantSelection, VerifiedCustomer, WhatsAppProvider
+
 
 class ChatMessage(BaseModel):
     role: str
     content: str
 
 
-# Tipo de atención del QR: mesa con cuenta abierta o venta por mostrador.
-ServiceType = Literal["table", "counter"]
+# Tipo de atención del QR: mesa con cuenta abierta, venta por mostrador o
+# enlace de delivery del local (pide delivery o recojo sin mesa).
+ServiceType = Literal["table", "counter", "delivery"]
 
 
 class TableContext(BaseModel):
+    currencySymbol: str = ""
+    countryCode: str = ""
+    organizationId: str = ""
+    locationId: str = ""
     name: str
     seats: int
     zone: str = ""
@@ -171,6 +179,8 @@ class DeliveryDetails(BaseModel):
 
 
 class VenueContext(BaseModel):
+    organizationId: str = ""
+    locationId: str = ""
     organizationName: str
     locationName: str
 
@@ -221,9 +231,35 @@ class OrderStatus(BaseModel):
 
 
 class ConversationSession(BaseModel):
+    currency_symbol: str = ""
+    provider: WhatsAppProvider = "META_CLOUD_API"
+    country_code: str = ""
+    customer_identity: VerifiedCustomer | None = None
+    customer_contact_phone: str = ""
+    selection: RestaurantSelection | None = None
+    context_sent_at: float = 0.0
+    last_customer_message_at: float = 0.0
+
+    @property
+    def profile_phone(self) -> str:
+        if self.customer_identity is not None:
+            return self.customer_identity.verifiedPhone
+        return self.phone if self.provider == "META_CLOUD_API" and self.phone.isdigit() else ""
+
+    @property
+    def contact_phone(self) -> str:
+        if self.customer_contact_phone:
+            return self.customer_contact_phone
+        if self.customer_identity is not None and self.customer_identity.verifiedPhone:
+            return self.customer_identity.verifiedPhone
+        return self.phone if self.provider == "META_CLOUD_API" and self.phone.isdigit() else ""
+
     phone: str
     channel_key: str = "default"
     conversation_id: str = Field(default_factory=lambda: uuid4().hex)
+    # False only in the web chat between the welcome and the diner's first
+    # interaction: opening the page must not count a conversation.
+    conversation_counted: bool = True
     qr_token: str | None = None
     table: TableContext | None = None
     # "table": atención en mesa abierta por QR. "delivery": la atención en
@@ -237,6 +273,7 @@ class ConversationSession(BaseModel):
     cart: list[CartLine] = Field(default_factory=list)
     awaiting_confirmation: bool = False
     pending_order_request_id: str | None = None
+    order_submission_started: bool | None = None
     last_order_id: str | None = None
     handoff_pending: bool = False
     # Consentimiento promocional: foods-backend recuerda si ya se preguntó en
@@ -292,14 +329,17 @@ class OrderResult(BaseModel):
 
 
 class CustomerNotice(BaseModel):
+    channelKey: str = ""
+    recipient: str = ""
     """Aviso de foods-backend para el cliente de una conversación.
 
     Solo trae hechos del pedido; Concierge redacta el mensaje.
     """
 
     id: str
-    # order_sent: el personal envió a cocina lo que pidió; order_ready: está listo.
-    kind: Literal["order_ready", "order_sent"] = "order_ready"
+    # order_sent: el personal envió a cocina lo que pidió; order_ready: está
+    # listo; order_on_the_way: el delivery salió del local.
+    kind: Literal["order_ready", "order_sent", "order_on_the_way"] = "order_ready"
     orderId: str = ""
     orderCode: str = ""
     # counter: venta por mostrador; pickup: recojo; table: mesa; delivery: envío.
@@ -310,7 +350,81 @@ class CustomerNotice(BaseModel):
     locationName: str = ""
 
 
+# Delivery Fudia: botones de WhatsApp de las centrales de reparto.
+PartnerActionKind = Literal["accept", "reject", "pickup"]
+
+
+class PartnerAction(BaseModel):
+    """Botón que pulsó una central (Aceptar, Rechazar o Recoger)."""
+
+    action: PartnerActionKind
+    token: str
+
+
+class DeliveryMessageItem(BaseModel):
+    quantity: float = 0
+    name: str = ""
+    note: str = ""
+
+
+class DeliveryPartnerMessage(BaseModel):
+    channelKey: str = ""
+    """Mensaje de foods-backend para una central de delivery.
+
+    offer: Aceptar/Rechazar; ready: Recoger; cancelled: sin botones. Solo trae
+    hechos del pedido; Concierge redacta el texto.
+    """
+
+    id: str
+    kind: Literal["offer", "ready", "cancelled"]
+    partnerName: str = ""
+    partnerPhone: str
+    actionToken: str
+    expiresInSeconds: int = 0
+    orderCode: str = ""
+    organizationName: str = ""
+    locationName: str = ""
+    locationAddress: str = ""
+    customerName: str = ""
+    customerPhone: str = ""
+    address: str = ""
+    reference: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+    distanceKm: float | None = None
+    notes: str = ""
+    items: list[DeliveryMessageItem] = Field(default_factory=list)
+    currencySymbol: str = ""
+    subtotal: str = "0"
+    deliveryFee: str = "0"
+    total: str = "0"
+
+
+class DeliveryActionResult(BaseModel):
+    outcome: str
+    orderCode: str = ""
+    organizationName: str = ""
+    locationName: str = ""
+
+
 class InboundMessage(BaseModel):
+    bound_qr: str = ""
+    web_action: WebAction | None = None
+    provider: WhatsAppProvider = "META_CLOUD_API"
+    country_code: str = ""
+    subject: str = ""
+    verified_phone: str = ""
+    sent_at: float = 0.0
+    legacy_message_id: str = ""
+
+    def identity(self) -> VerifiedCustomer:
+        verified = self.verified_phone
+        if not verified and self.provider == "META_CLOUD_API" and self.phone.isdigit():
+            verified = self.phone
+        return VerifiedCustomer(
+            provider=self.provider, subject=self.subject or self.phone, verifiedPhone=verified
+        )
+
     message_id: str
     phone: str
     text: str
@@ -325,6 +439,8 @@ class InboundMessage(BaseModel):
     sequence: int = 0
     # Aviso de foods-backend encolado por NoticeRelay: no es texto del cliente.
     notice: CustomerNotice | None = None
+    # Botón de una central de Delivery Fudia: no es una conversación de comensal.
+    partner_action: PartnerAction | None = None
 
 
 EffectKind = Literal[

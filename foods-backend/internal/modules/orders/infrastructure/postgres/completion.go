@@ -42,3 +42,24 @@ func (r *Orders) CompletePaidOrder(ctx context.Context, s scope, id string) (int
 	`, id, s.OrganizationID, s.LocationID)
 	return tag.RowsAffected(), orderError(err)
 }
+
+// ReleaseDeliveryFee deja el pedido de delivery en su costo (sin envío) si
+// sigue abierto y lo cobrado no supera ese costo.
+func (r *Orders) ReleaseDeliveryFee(ctx context.Context, s scope, orderID string) (int64, error) {
+	tag, err := r.db(ctx).Exec(ctx, `
+		UPDATE orders o SET total=o.total-o.delivery_fee,delivery_fee=0,updated_at=now()
+		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
+		  AND o.channel='delivery' AND o.delivery_fee>0 AND o.completed_at IS NULL AND o.status<>'cancelado'
+		  AND `+netPaidSQL+` <= o.total-o.delivery_fee+0.00001`, orderID, s.OrganizationID, s.LocationID)
+	return tag.RowsAffected(), err
+}
+
+// RestoreDeliveryFee vuelve a sumar el envío a un pedido abierto que lo había cedido.
+func (r *Orders) RestoreDeliveryFee(ctx context.Context, s scope, orderID string, fee float64) (int64, error) {
+	tag, err := r.db(ctx).Exec(ctx, `
+		UPDATE orders o SET delivery_fee=$4,total=o.total+$4,updated_at=now()
+		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
+		  AND o.channel='delivery' AND o.delivery_fee=0 AND o.completed_at IS NULL AND o.status<>'cancelado'`,
+		orderID, s.OrganizationID, s.LocationID, fee)
+	return tag.RowsAffected(), err
+}

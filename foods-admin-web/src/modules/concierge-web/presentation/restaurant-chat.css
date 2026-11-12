@@ -1,0 +1,78 @@
+.restaurant-chat-stage{height:100dvh;min-height:0;background:var(--chat-canvas);color:var(--chat-ink);display:flex;justify-content:center;overflow:hidden;color-scheme:light}
+.restaurant-chat{width:100%;max-width:var(--size-1120);height:100%;min-height:0;display:flex;flex-direction:column;position:relative;background:var(--chat-canvas);font-size:var(--font-size-base)}
+.restaurant-chat button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;cursor:pointer}
+.restaurant-chat button:disabled{opacity:.45;cursor:default}
+.restaurant-chat :focus-visible{outline:var(--stroke-2) solid var(--chat-focus);outline-offset:var(--space-1)}
+.restaurant-chat ::selection{background:var(--chat-outgoing);color:var(--chat-ink)}
+.restaurant-chat-header{display:flex;align-items:center;gap:var(--space-3);padding:calc(var(--space-3) + env(safe-area-inset-top)) max(var(--space-3),env(safe-area-inset-right)) var(--space-3) max(var(--space-3),env(safe-area-inset-left));background:var(--chat-panel);border-bottom:var(--stroke-1) solid var(--chat-line);flex-shrink:0}
+.restaurant-chat-avatar{width:var(--size-44);height:var(--size-44);border-radius:50%;background:var(--chat-incoming);display:grid;place-items:center;flex-shrink:0;overflow:hidden}
+.restaurant-chat-avatar img{width:100%;height:100%;object-fit:cover}
+.restaurant-chat-heading{flex:1;min-width:0}
+.restaurant-chat-heading h1{margin:0;font-size:var(--font-size-md);font-weight:var(--weight-bold);overflow-wrap:anywhere;line-height:var(--line-height-tight)}
+.restaurant-chat-heading p{margin:var(--space-1) 0 0;color:var(--chat-muted);font-size:var(--font-size-xs);overflow-wrap:anywhere}
+.restaurant-chat-icon{display:inline-flex;align-items:center;justify-content:center;min-width:var(--size-44);min-height:var(--size-44);padding:var(--space-2);border:0;background:transparent;border-radius:50%;color:inherit;flex-shrink:0}
+.restaurant-chat-feed{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-color:var(--chat-line) transparent;padding:var(--space-5) clamp(var(--space-3),5vw,var(--space-12));display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-2)}
+.restaurant-chat-date{align-self:center;font-size:var(--font-size-xs);color:var(--chat-muted);padding:var(--space-1) var(--space-3);border-radius:var(--radius-control);background:var(--chat-panel);margin-bottom:var(--space-4)}
+.restaurant-chat-message{max-width:min(82%,65ch);padding:var(--space-2) var(--space-3);border-radius:var(--radius-tile);background:var(--chat-incoming);overflow-wrap:anywhere;box-shadow:var(--elevation-1)}
+.restaurant-chat-message.is-outgoing{align-self:flex-end;background:var(--chat-outgoing);border-top-right-radius:0}
+.restaurant-chat-message.is-incoming{border-top-left-radius:0}
+.restaurant-chat-message p{white-space:pre-wrap;margin:0;line-height:var(--line-height-relaxed)}
+.restaurant-chat-message footer{display:flex;align-items:center;justify-content:flex-end;gap:var(--space-1);font-size:var(--font-size-xs);color:var(--chat-muted);margin-top:var(--space-1)}
+.restaurant-chat-message-image{width:100%;max-width:var(--size-320);height:auto;border-radius:var(--radius-control);object-fit:contain}
+.restaurant-chat-typing{background:var(--chat-incoming);color:var(--chat-muted);border-radius:var(--radius-tile);padding:var(--space-3);font-size:var(--font-size-sm)}
+.restaurant-chat-menu{width:100%;min-width:0;margin:var(--space-3) 0 var(--space-5)}
+.restaurant-chat-section-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.restaurant-chat-section-heading h2{font-size:var(--font-size-md);margin:0;font-weight:var(--weight-bold)}
+.restaurant-chat-menu input,.restaurant-chat-composer input{font-size:var(--font-size-md);background:var(--chat-incoming);color:var(--chat-ink);border-color:var(--chat-line);min-height:var(--size-44);caret-color:var(--chat-focus)}
+.restaurant-chat-menu input::placeholder,.restaurant-chat-composer input::placeholder{color:var(--chat-muted);opacity:1}
+.restaurant-chat-foods{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-220),var(--size-260));gap:var(--space-3);overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:var(--space-4) 0;scrollbar-color:var(--chat-line) transparent}
+.restaurant-chat-food{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:var(--chat-incoming);border-radius:var(--radius-card);scroll-snap-align:start}
+.restaurant-chat-food>img{width:100%;height:var(--size-160);object-fit:cover}
+.restaurant-chat-food-placeholder{height:var(--size-160);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:var(--space-2);color:var(--chat-muted);background:var(--chat-panel)}
+.restaurant-chat-food-copy{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-3);flex:1}
+.restaurant-chat-food-copy>span{font-size:var(--font-size-xs);color:var(--chat-muted)}
+.restaurant-chat-food-copy h3{font-size:var(--font-size-md);font-weight:var(--weight-bold);margin:0;overflow-wrap:anywhere}
+.restaurant-chat-food-copy p{font-size:var(--font-size-sm);color:var(--chat-muted);line-height:var(--line-height-normal);margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.restaurant-chat-food-copy strong{font-size:var(--font-size-md);margin-top:auto;font-variant-numeric:tabular-nums}
+.restaurant-chat-add{display:flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:var(--size-44);background:var(--chat-outgoing);color:var(--chat-ink);border:0;font-weight:var(--weight-semibold);border-radius:0}
+.restaurant-chat-primary{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:var(--size-44);padding:var(--space-2) var(--space-5);background:var(--chat-action);color:var(--chat-action-ink);border:0;border-radius:var(--radius-pill);font-size:var(--font-size-base);font-weight:var(--weight-semibold);white-space:nowrap;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.restaurant-chat-primary:disabled{opacity:.45;cursor:default}
+.restaurant-chat-primary:focus-visible{outline:var(--stroke-2) solid var(--chat-focus);outline-offset:var(--space-1)}
+.restaurant-chat-system{font-size:var(--font-size-sm);color:var(--chat-muted);line-height:var(--line-height-normal);padding:var(--space-3);margin:0}
+.restaurant-chat-system button,.restaurant-chat-alert button,.restaurant-chat-info button{min-height:var(--size-44);padding:var(--space-2);color:var(--chat-ink);text-decoration:underline;text-underline-offset:.2em;background:transparent;border:0}
+.restaurant-chat-shortcuts{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--chat-panel);border-top:var(--stroke-1) solid var(--chat-line);flex-shrink:0;overflow-x:auto}
+.restaurant-chat-shortcuts button{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:var(--size-44);white-space:nowrap;padding:var(--space-2) var(--space-3);background:var(--chat-incoming);border:var(--stroke-1) solid var(--chat-line);border-radius:var(--radius-pill);color:var(--chat-ink);font-size:var(--font-size-sm)}
+.restaurant-chat-shortcuts button[aria-expanded=true]{background:var(--chat-outgoing);border-color:var(--chat-outgoing)}
+.restaurant-chat-shortcuts button>span{font-variant-numeric:tabular-nums}
+.restaurant-chat-composer{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) max(var(--space-3),env(safe-area-inset-right)) calc(var(--space-3) + env(safe-area-inset-bottom)) max(var(--space-3),env(safe-area-inset-left));background:var(--chat-panel);flex-shrink:0}
+.restaurant-chat-composer input{flex:1;min-width:0;border-radius:var(--radius-pill);padding-inline:var(--space-4);border:0}
+.restaurant-chat-send{width:var(--size-44);height:var(--size-44);display:grid;place-items:center;background:var(--chat-action);border:0;border-radius:50%;color:var(--chat-action-ink);flex-shrink:0}
+.restaurant-chat-cart{width:min(100%,var(--size-520));background:var(--chat-incoming);padding:var(--space-4);border-radius:var(--radius-card);margin-block:var(--space-3)}
+.restaurant-chat-cart ul{padding:0;margin:var(--space-3) 0;list-style:none}
+.restaurant-chat-cart li{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding-block:var(--space-3);border-bottom:var(--stroke-1) solid var(--chat-line)}
+.restaurant-chat-cart li>div{display:flex;flex-direction:column;gap:var(--space-1);min-width:0;overflow-wrap:anywhere}
+.restaurant-chat-cart small,.restaurant-chat-cart>p{font-size:var(--font-size-sm);color:var(--chat-muted)}
+.restaurant-chat-cart>.restaurant-chat-primary{width:100%;margin-top:var(--space-3)}
+.restaurant-chat-total{display:flex;justify-content:space-between;gap:var(--space-3);font-size:var(--font-size-md);font-variant-numeric:tabular-nums}
+.restaurant-chat-confirm{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);background:var(--chat-incoming);flex-shrink:0}
+.restaurant-chat-confirm p{margin:0;font-size:var(--font-size-sm)}
+.restaurant-chat-alert{margin:0;padding:var(--space-2) var(--space-3);background:var(--chat-incoming);font-size:var(--font-size-sm);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap}
+.restaurant-chat-info{background:var(--chat-incoming);padding:var(--space-4);font-size:var(--font-size-sm);line-height:var(--line-height-normal);max-height:35dvh;overflow-y:auto;flex-shrink:0}
+.restaurant-chat-info p{color:var(--chat-muted);margin-block:var(--space-2)}
+.restaurant-chat-loading{width:min(100%,var(--size-440));align-self:center;padding:var(--space-6);text-align:center;display:grid;justify-items:center;gap:var(--space-4)}
+.restaurant-chat-loading h1{font-size:var(--font-size-lg);margin:0}
+.restaurant-chat-loading p{color:var(--chat-muted);margin:0;line-height:var(--line-height-normal)}
+.ds-skeleton.restaurant-chat-skeleton{background:linear-gradient(90deg,var(--chat-incoming) 20%,var(--chat-line) 42%,var(--chat-incoming) 64%);background-size:220% 100%}
+.restaurant-chat-loading-line{height:var(--size-44);width:100%}
+.restaurant-chat-food-skeleton{height:var(--size-280)}
+.restaurant-chat-options-skeleton{height:var(--size-220)}
+.restaurant-chat-option-group{border:0;padding:0;margin:0 0 var(--space-5)}
+.restaurant-chat-option-group legend{font-weight:var(--weight-bold);font-size:var(--font-size-md)}
+.restaurant-chat-option-group p{font-size:var(--font-size-xs);color:var(--ink-500);margin:var(--space-1) 0}
+.restaurant-chat-option-group label{display:flex;align-items:center;gap:var(--space-3);min-height:var(--size-44);font-size:var(--font-size-base)}
+.restaurant-chat-option-group input{width:var(--size-20);height:var(--size-20);accent-color:var(--primary-600);flex-shrink:0}
+.restaurant-chat-option-group label>span:last-child{margin-left:auto}
+.restaurant-chat-note{display:grid;gap:var(--space-2);font-size:var(--font-size-base)}
+@media(hover:hover) and (pointer:fine){.restaurant-chat-icon:hover{background:var(--chat-incoming)}.restaurant-chat-shortcuts button:hover{border-color:var(--chat-action)}.restaurant-chat-add:hover{filter:brightness(.96)}.restaurant-chat-send:hover,.restaurant-chat-primary:hover{filter:brightness(1.12)}}
+@media(width<=600px){.restaurant-chat-confirm{align-items:stretch;flex-direction:column}.restaurant-chat-message{max-width:90%}.restaurant-chat-header{gap:var(--space-2)}}
+@media(prefers-reduced-motion:no-preference){.restaurant-chat-typing span{animation:chat-thinking var(--duration-slow) var(--easing-out) infinite alternate}@keyframes chat-thinking{to{opacity:.4}}}

@@ -4,6 +4,20 @@
  * Tailwind utilities read these same tokens through the @theme inline block at the end.
  * Component selectors stay in their owning sheets. */
 :root {
+  /* Chat público: conversación clara familiar (2026-11-09; reemplaza la dirección oscura inicial).
+   * Fondo cálido, barras gris claro, mensajes recibidos en blanco y enviados en verde claro. */
+  --chat-canvas: #efe9e0;
+  --chat-panel: var(--cloud-100);
+  --chat-incoming: var(--surface);
+  --chat-outgoing: #d7f8d4;
+  --chat-ink: var(--ink-950);
+  --chat-muted: var(--ink-500);
+  --chat-line: var(--line-strong);
+  --chat-focus: var(--brand-700);
+  /* Acción principal del chat (enviar, revisar y confirmar el pedido): verde del restaurante con texto blanco. */
+  --chat-action: var(--brand-700);
+  --chat-action-ink: var(--surface);
+
 
   /* Neutros: superficie, fondos y líneas */
   --surface: #ffffff;

@@ -273,48 +273,13 @@ func (r *Platform) Organization(ctx context.Context, id string) (domain.Platform
 	return out, locationRows.Err()
 }
 func (r *Platform) Channels(ctx context.Context) ([]domain.PlatformWhatsAppChannel, error) {
-	rows, err := r.db(ctx).Query(ctx, `
-		SELECT w.id,c.code,c.name,w.phone_number,COALESCE(w.display_name,''),w.active
-		FROM platform_whatsapp_channels w
-		JOIN platform_countries c ON c.code=w.country_code
-		ORDER BY c.name,w.created_at,w.id`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []domain.PlatformWhatsAppChannel{}
-	for rows.Next() {
-		var item domain.PlatformWhatsAppChannel
-		if err := rows.Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.DisplayName, &item.Active); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, rows.Err()
+	return r.whatsAppChannels(ctx)
 }
 func (r *Platform) CreateChannel(ctx context.Context, s scope, in domain.PlatformWhatsAppChannelInput) (domain.PlatformWhatsAppChannel, error) {
-	var item domain.PlatformWhatsAppChannel
-	err := r.db(ctx).QueryRow(ctx, `
-		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active)
-		VALUES($1,$2,$3,$4)
-		RETURNING id,country_code,(SELECT name FROM platform_countries WHERE code=$1),phone_number,COALESCE(display_name,''),active`,
-		in.CountryCode, in.PhoneNumber, in.DisplayName, in.Active).
-		Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.DisplayName, &item.Active)
-	return item, platformError(err)
+	return r.saveWhatsAppChannel(ctx, s, "", in)
 }
 func (r *Platform) UpdateChannel(ctx context.Context, s scope, id string, in domain.PlatformWhatsAppChannelInput) (domain.PlatformWhatsAppChannel, error) {
-	var item domain.PlatformWhatsAppChannel
-	err := r.db(ctx).QueryRow(ctx, `
-		UPDATE platform_whatsapp_channels w SET
-		  country_code=$2,phone_number=$3,display_name=$4,active=$5,updated_at=now()
-		WHERE w.id=$1
-		RETURNING w.id,w.country_code,(SELECT name FROM platform_countries WHERE code=w.country_code),w.phone_number,COALESCE(w.display_name,''),w.active`,
-		id, in.CountryCode, in.PhoneNumber, in.DisplayName, in.Active).
-		Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.DisplayName, &item.Active)
-	return item, platformError(err)
+	return r.saveWhatsAppChannel(ctx, s, id, in)
 }
 func (r *Platform) CountryExists(ctx context.Context, code string) (bool, error) {
 	var exists bool

@@ -1,5 +1,20 @@
 # API
 
+La creación de artículos desde Compras y las altas de catálogo desde entradas
+de Inventario rechazan nombres ya registrados en productos o insumos de la
+empresa, incluidos inactivos. Se ignoran mayúsculas y espacios repetidos;
+distintas empresas mantienen catálogos independientes. Responde
+`409 inventory_item_name_taken`. La validación se realiza dentro de la
+transacción con bloqueo por empresa y nombre, para impedir altas simultáneas
+duplicadas. Vincular un producto existente sigue reutilizando su ficha.
+
+`GET /v1/admin/orders/{id}` y su equivalente operativo incluyen
+`paymentReferences` en el detalle: números de operación ingresados al cobrar,
+con el nombre del medio de pago y en orden de registro. La proyección omite
+referencias vacías y conserva las de cobros luego devueltos como historial.
+Se lee en el mismo batch del pedido, con su empresa y local de sesión; no
+modifica los permisos de Caja ni expone identificadores de pagos en pantalla.
+
 POS acepta `cash.manage` o una asignación activa en `cash_shift_users` para
 registrar cobros individuales/divididos. Mantiene un turno abierto obligatorio,
 alcance empresa/local y bloqueo del pedido. `GET pos/access` (Admin y Operación)
@@ -174,8 +189,9 @@ no negativo y no puede asociarse una mesa. `sendToKitchen=true` registra el esta
 Confirmado para la cola existente de Cocina. Precios, composición y disponibilidad
 se revalidan en backend; el cliente no necesita enviar precios ni nombres comerciales.
 No se requieren tablas ni migraciones nuevas para esta capacidad. Despacho y cobro
-conservan sus endpoints, permisos y transacciones actuales; la logística avanzada
-de repartidores, zonas o seguimiento geográfico sigue fuera de este alcance.
+conservan sus endpoints, permisos y transacciones actuales. En un local con
+Delivery Fudia, el pedido confirmado se ofrece a sus centrales (sección siguiente);
+zonas por polígono y seguimiento geográfico siguen fuera de este alcance.
 
 ## Lookups de catálogo
 
@@ -271,9 +287,53 @@ La descripción permanece en el contrato para editar sin perder información.
 - Pagos individual/dividido, cierre y entrega bloquean la misma fila. Liberación automática exige cierre + pago completo + todos entregados. Una cuenta pagada no se amplía ni reabre.
 - `POST /v1/integrations/concierge/{token}/bill` acepta `requestId`: repetirlo devuelve la cuenta vigente y no registra otra solicitud (`audit_log_concierge_bill_request_uq`). Sin `requestId` cada llamada se registra, por compatibilidad.
 - Concierge conserva idempotencia por solicitud/ronda y puede ampliar la cuenta de Salón solo mientras Abierta, sin reenviar consumos anteriores. Después del cierre devuelve `409 order_bill_closed`, igual que el flujo del mozo.
-- Delivery y recojo de Concierge (migración 000083): `GET .../{token}/delivery-options`, `POST .../{token}/delivery-quote` (ubicación en el cuerpo, nunca en la URL), `POST .../{token}/delivery-orders` y `GET .../{token}/orders/{orderId}?conversationId=`. La distancia es en línea recta (haversine, redondeada a 0.01 km) entre `locations.latitude/longitude` y el pin del cliente; se aplica el primer rango de `delivery_fee_tiers` cuyo límite la cubre. El pedido se crea sin mesa con canal `delivery` o `recojo`, `status=confirmado` y enviado a cocina; guarda `delivery_latitude`, `delivery_longitude` y `delivery_distance_km`. La tarifa aceptada (`quotedFee`) debe coincidir con la vigente (`409 delivery_fee_changed`); `requestId` es idempotente en `concierge_delivery_requests` y su reintento devuelve el mismo pedido aunque cambien las tarifas.
+- Delivery y recojo de Concierge (migración 000083): `GET .../{token}/delivery-options`, `POST .../{token}/delivery-quote` (ubicación en el cuerpo, nunca en la URL), `POST .../{token}/delivery-orders` y `GET .../{token}/orders/{orderId}?conversationId=`. La distancia es en línea recta (haversine, redondeada a 0.01 km) entre `locations.latitude/longitude` y el pin del cliente; se aplica el primer rango de `delivery_fee_tiers` cuyo límite la cubre. El pedido se crea sin mesa con canal `delivery` o `recojo` y `status=nuevo` hasta que el personal pulsa «Enviar comanda» (migración 000107); guarda `delivery_latitude`, `delivery_longitude` y `delivery_distance_km`. La tarifa aceptada (`quotedFee`) debe coincidir con la vigente (`409 delivery_fee_changed`); `requestId` es idempotente en `concierge_delivery_requests` y su reintento devuelve el mismo pedido aunque cambien las tarifas.
 - Alta manual de delivery con mapa: `POST /v1/admin/orders` acepta `deliveryLatitude` y `deliveryLongitude` (ambos o ninguno, solo `delivery`; en otros canales se descartan). El servidor calcula `delivery_distance_km` desde el local activo y la deja en `null` si el local no tiene coordenadas. `POST /v1/admin/delivery-quote` (`orders.manage`, punto en el cuerpo) sugiere el costo con las mismas tarifas de Concierge; a diferencia de Concierge, el costo enviado en el alta es editable por el cajero y no se compara con la tarifa.
 - `GET|PUT /v1/admin/concierge-settings/delivery-fees` (`organizations.read` / `organizations.manage`) lee y reemplaza los rangos del local activo: hasta 10, límites distintos de 0.01 a 50 km y costos de 0 a 999 con dos decimales. Una lista vacía deja solo recojo. El cálculo puro vive en `delivery/domain` y se publica en `delivery/contracts`.
+
+## Delivery Fudia (migración 000113)
+
+La migración 000118 agrega `coverageCodes` y `coverageLabels` al catálogo de
+centrales y `districtCode` al alta/edición del local y onboarding. Solo Plataforma
+escribe las zonas; `GET /v1/admin/geographic-areas?parentCode=` entrega la jerarquía
+INEI de solo lectura para la sesión autenticada. Selección por cobertura,
+`payment_conflict`, permisos y atomicidad: [15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md).
+
+- Plataforma (`requirePlatformAdmin`), centrales:
+  - `GET|POST /v1/platform/delivery-partners` y `PATCH
+    /v1/platform/delivery-partners/{id}` registran, editan o desactivan centrales.
+  - El WhatsApp exige código de país y se guarda solo con dígitos. Un número
+    repetido responde 409 `delivery_partner_phone_taken`.
+  - `PUT /v1/platform/delivery-partners/order` fija el orden global con todas las
+    centrales. Si la lista cambió, responde 409 `delivery_partner_order_outdated`.
+- Plataforma, por empresa (migración 000117): `GET|PUT
+  /v1/platform/organizations/{id}/delivery` activa o desactiva Delivery Fudia
+  para todos los locales de la empresa. Los locales no configuran centrales.
+- Enlace/QR de delivery (migración 000115): `GET|POST /v1/admin/locations/{id}/delivery-link`
+  (`organizations.read` / `organizations.manage`) lee o genera/regenera el token
+  del local. Se resuelve como un QR con `serviceType=delivery`. Con él, Concierge
+  solo acepta `delivery-orders`; `orders`, `bill` y `handoffs` responden
+  `409 delivery_link_only`.
+- Caja: `GET /v1/admin/orders/{id}/delivery-dispatch` (`orders.read`) devuelve el
+  despacho con su historial de ofertas; `POST .../delivery-dispatch/retry` y
+  `POST .../delivery-dispatch/own` (`orders.manage`) vuelven a ofrecer el pedido
+  desde la 1.ª central o lo dejan para el delivery propio.
+- Concierge (clave de servicio): `GET /v1/integrations/concierge/delivery-messages/pending`
+  avanza la cascada y reclama los mensajes; `POST .../delivery-messages/{id}/dispatched`
+  confirma el envío (inicia los 3 minutos de la oferta); `POST
+  /v1/integrations/concierge/delivery-actions` aplica Aceptar, Rechazar o Recoger
+  con el `actionToken` del botón y el WhatsApp que lo pulsó, que debe ser el de la
+  central ofertada (si no, `outcome=not_found`). Los resultados (`accepted`,
+  `already_accepted`, `rejected`, `taken`, `expired`, `cancelled`, `not_ready`,
+  `picked_up`) permiten a Concierge responder; repetir un botón no duplica nada.
+- Al recoger, la central paga al restaurante solo el costo del pedido (`subtotal`,
+  sin envío); al entregar cobra al cliente el costo del pedido más su delivery
+  (`total`) y se queda con `deliveryFee`. Caja registra el pago de la central como
+  cualquier cobro; Fudia no gestiona el cobro al cliente. Fase 4: que
+  caja cobre y dé por pagado un pedido de Delivery Fudia por su `subtotal`
+  (resuelto en la migración 000116: al aceptar, el envío sale del total del
+  pedido y vuelve si el local usa su delivery propio; `deliveryPartnerFee` en la
+  lectura del pedido).
 
 ## Venta por mostrador y consentimiento promocional
 

@@ -36,6 +36,11 @@ export type Order={
   deliveryLatitude?:number|null;
   deliveryLongitude?:number|null;
   deliveryDistanceKm?:number|null;
+  /** Despacho a las centrales de Delivery Fudia; ausente si el pedido no usa centrales. */
+  deliveryDispatchStatus?:string;
+  deliveryPartnerName?:string;
+  /** Envío que cobra la central al cliente; ya no forma parte del total del local. */
+  deliveryPartnerFee?:string;
   tableId:string;
   tableName:string;
   waiterId?:string;
@@ -51,6 +56,8 @@ export type Order={
   paidAmount?:string;
   remainingAmount?:string;
   paymentStatus?:"pending"|"partial"|"paid";
+  /** User-entered operation numbers of recorded payments; detail only. */
+  paymentReferences?:{methodName:string;reference:string}[];
 };
 
 export type OrdersResponse={

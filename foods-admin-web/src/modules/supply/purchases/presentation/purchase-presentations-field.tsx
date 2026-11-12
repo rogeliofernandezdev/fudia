@@ -52,6 +52,8 @@ export function PurchasePresentationsField({unit,value,onChange,error,disabled,o
   }
  },[unit,query.data,value,onChange]);
  const selected=options.find(option=>option.code===row.presentationType);
+ const contentLabel=selected&&selected.code!=="unit"?`Contenido por ${selected.name.toLowerCase()}`:"Contenido";
+ const contentDisabled=disabled||creating||!row.presentationType||row.presentationType==="unit";
  function close(){setCreating(false);onBusyChange(false)}
  function update(next:PurchasePresentationDraft){onChange([{...next,isDefault:true}])}
  return <div className="purchase-presentations">
@@ -66,7 +68,7 @@ export function PurchasePresentationsField({unit,value,onChange,error,disabled,o
       </Select>
       {can("purchases.manage")&&<IconButton icon="plus" label="Nueva presentación" disabled={disabled||creating} onClick={()=>{setCreating(true);onBusyChange(true)}}/>}
      </div></FormField>
-     <FormField label={`Contenido en ${unitName.toLowerCase()}`}><Input type="number" min={unitRule.countable?"1":"0.001"} step={unitRule.countable?"1":"0.001"} inputMode="decimal" aria-invalid={Boolean(contentError)} value={row.unitsPerPresentation} disabled={disabled||creating||!row.presentationType||row.presentationType==="unit"} placeholder="Ej. 10" aria-label="Contenido de la presentación" onChange={event=>update({...row,unitsPerPresentation:event.target.value})}/></FormField>
+     <FormField label={contentLabel}><span className={`money-input suffix${contentError?" invalid":""}${contentDisabled?" disabled":""}`}><Input type="number" min={unitRule.countable?"1":"0.001"} step={unitRule.countable?"1":"0.001"} inputMode="decimal" aria-invalid={Boolean(contentError)} value={row.unitsPerPresentation} disabled={contentDisabled} placeholder="Ej. 25" aria-label={`${contentLabel} en ${unitName.toLowerCase()}`} onChange={event=>update({...row,unitsPerPresentation:event.target.value})}/><span title={unitName} aria-hidden="true">{unit}</span></span></FormField>
      {!error&&contentError&&<small className="field-error" role="alert">{contentError}</small>}
      {selected&&selected.code!=="unit"&&Number(row.unitsPerPresentation)>0&&!contentError&&<small className="purchase-presentation-equivalence">1 {selected.name.toLowerCase()} = {row.unitsPerPresentation} {unitName.toLowerCase()}</small>}
     </div>}
@@ -103,7 +105,7 @@ export function PurchaseCombinationDialog({unit,unitName,close,save}:{unit:strin
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-combination-title" aria-busy={mutation.isPending}>
 
-  <ModalHeader title="Nueva presentación" titleId="purchase-combination-title" icon="box" subtitle={unitName} onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
+  <ModalHeader title={<>{"Nueva presentación"} · {unitName}</>} titleId="purchase-combination-title" icon="box" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre" className="span-2"><Input data-dialog-initial-focus maxLength={80} value={name} disabled={mutation.isPending} onChange={event=>{setName(event.target.value);setValidation("")}}/></FormField>
    {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><Skeleton width="70%"/></div>}

@@ -42,6 +42,15 @@ tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon
 .data-table{width:100%;min-width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
 .data-table :is(th,td){vertical-align:middle}
 .data-table-hint{display:none}
+/* Explicit native track: scrollbar-width:thin lets Chromium use auto-hiding overlays. */
+.data-table-scrollbar-top{max-width:100%;overflow-x:scroll;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:auto;scrollbar-color:auto}
+.data-table-scrollbar-top::-webkit-scrollbar{height:var(--size-10);background:var(--cloud-50)}
+.data-table-scrollbar-top::-webkit-scrollbar-track{background:var(--cloud-50)}
+.data-table-scrollbar-top::-webkit-scrollbar-thumb{border-radius:var(--radius-pill);background:var(--ink-400-alpha-40)}
+.data-table-scrollbar-top:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--space-0-5) * -1)}
+.data-table-scrollbar-content{height:var(--size-6)}
+.table-wrap.data-table-viewport--top{scrollbar-width:none}
+.table-wrap.data-table-viewport--top::-webkit-scrollbar{height:0;width:0}
 
 @media (width<=700px){
   /* Compatibilidad: todas las tablas informativas en paneles comparten el mismo

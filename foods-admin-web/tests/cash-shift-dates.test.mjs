@@ -68,10 +68,11 @@ test("la tarjeta de caja muestra fecha y hora de apertura del local, no el día 
  const {all}=mountPage();
  const time=all.find(node=>node.type==="time");
  assert.equal(time.props.dateTime,shift.openedAt);
- assert.equal(time.props.children.join(""),"Apertura: "+expected(shift.openedAt));
- assert.notEqual(time.props.children.at(-1),"—");
- assert.match(time.props.children.at(-1),/21:15|9:15/);
- assert.ok(all.some(node=>node.type==="em"&&node.props.children.join("").includes("2 oct. 2026")));
+ assert.equal(time.props.children,expected(shift.openedAt));
+ assert.notEqual(time.props.children,"—");
+ assert.match(time.props.children,/21:15|9:15/);
+ assert.ok(all.some(node=>node.type==="dt"&&node.props.children==="Apertura"));
+ assert.ok(all.some(node=>node.type==="dd"&&node.props.children==="2 oct. 2026"));
 });
 
 test("Caja admite timestamps RFC3339 y offsets históricos conservando el mismo instante",()=>{

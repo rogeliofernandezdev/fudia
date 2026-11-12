@@ -64,10 +64,12 @@ async def start_whatsapp(
                 errorType=type(exc).__name__,
             )
     try:
-        url = await request.app.state.whatsapp.start_url(
-            token,
-            text,
-        )
+        whatsapp = request.app.state.whatsapp
+        country_start = getattr(whatsapp, "start_url_for_country", None)
+        if country_start is not None:
+            url = await country_start(table.countryCode, token, text)
+        else:
+            url = await whatsapp.start_url(token, text)
     except (httpx.HTTPError, RuntimeError) as exc:
         raise HTTPException(
             status_code=503,

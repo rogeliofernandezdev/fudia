@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	platformcontracts "github.com/foods-platform/foods-backend/internal/modules/platformadmin/contracts"
 	"regexp"
 	"strings"
 
@@ -51,6 +52,8 @@ type UsageRepository interface {
 
 // Usage measures Concierge conversations and applies the monthly cap.
 type Usage struct {
+	origins  OriginRecorder
+	channels platformcontracts.WhatsAppRoutes
 	repo     UsageRepository
 	resolver QRResolver
 	work     unitofwork.Manager
@@ -110,6 +113,19 @@ func (u *Usage) OpenConversation(ctx context.Context, token string, in domain.Co
 			return domain.ConversationView{}, false, err
 		}
 	}
+	if in.ChannelKey != "" {
+		if !in.Identity.Valid() || in.Recipient == "" || len(in.Recipient) > 160 || u.origins == nil {
+			return domain.ConversationView{}, false, conciergeFailure(apperror.Invalid, "invalid_conversation_origin", "Revisa el origen de la conversación.")
+		}
+		route, routeErr := currentChannel(ctx, u.channels, in.ChannelKey)
+		if routeErr != nil {
+			return domain.ConversationView{}, false, routeErr
+		}
+		if route.Provider != in.Identity.Provider || route.CountryCode != qr.CountryCode {
+			return domain.ConversationView{}, false, conciergeFailure(apperror.Invalid, "identity_provider_mismatch", "La conversación no corresponde al canal o país.")
+		}
+		in.ProviderKey = route.ProviderKey
+	}
 	org := qr.Scope.OrganizationID
 	failed := func(err error) error {
 		return apperror.Wrap(apperror.Unavailable, "conversation_unavailable", "No pudimos registrar la conversación.", err)
@@ -124,6 +140,14 @@ func (u *Usage) OpenConversation(ctx context.Context, token string, in domain.Co
 		return domain.ConversationView{}, false, failed(err)
 	}
 	if _, existing, err := u.repo.Conversation(tx.Context(), org, in.ConversationID); err == nil {
+		if in.ChannelKey != "" {
+			if err = u.origins.RecordConversationOrigin(tx.Context(), qr, in); err != nil {
+				return domain.ConversationView{}, false, failed(err)
+			}
+			if err = tx.Commit(ctx); err != nil {
+				return domain.ConversationView{}, false, failed(err)
+			}
+		}
 		return existing, false, nil
 	} else if !errors.Is(err, ErrNotFound) {
 		return domain.ConversationView{}, false, failed(err)
@@ -143,6 +167,11 @@ func (u *Usage) OpenConversation(ctx context.Context, token string, in domain.Co
 	}
 	if _, err = u.repo.InsertConversation(tx.Context(), qr, in, month); err != nil {
 		return domain.ConversationView{}, false, failed(err)
+	}
+	if in.ChannelKey != "" {
+		if err = u.origins.RecordConversationOrigin(tx.Context(), qr, in); err != nil {
+			return domain.ConversationView{}, false, failed(err)
+		}
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return domain.ConversationView{}, false, failed(err)

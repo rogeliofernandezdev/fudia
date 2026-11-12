@@ -27,6 +27,7 @@ export function PlatformShell({children}:{children:React.ReactNode}){
         <Link title="Suscripción actual" className={path===pageRoutes.platformSubscription?"active":""} href={pageRoutes.platformSubscription} aria-current={path===pageRoutes.platformSubscription?"page":undefined}><Icon name="receipt" size={16}/><span>Suscripción actual</span></Link>
         <Link title="Países y WhatsApp" className={path===pageRoutes.platformGlobalSettings?"active":""} href={pageRoutes.platformGlobalSettings} aria-current={path===pageRoutes.platformGlobalSettings?"page":undefined}><Icon name="whatsapp" size={16}/><span>Países y WhatsApp</span></Link>
         <Link title="Impuestos" className={path===pageRoutes.platformTaxes?"active":""} href={pageRoutes.platformTaxes} aria-current={path===pageRoutes.platformTaxes?"page":undefined}><Icon name="tax" size={16}/><span>Impuestos</span></Link>
+        <Link title="Centrales de delivery" className={path===pageRoutes.platformDeliveryPartners?"active":""} href={pageRoutes.platformDeliveryPartners} aria-current={path===pageRoutes.platformDeliveryPartners?"page":undefined}><Icon name="motorbike" size={16}/><span>Centrales de delivery</span></Link>
       </nav>
       <Link href={pageRoutes.home} className="button secondary platform-exit" aria-label="Volver al admin"><Icon name="chevronLeft" size={16}/>Volver al admin</Link>
     </header>

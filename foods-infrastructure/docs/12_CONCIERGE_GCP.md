@@ -136,6 +136,8 @@ como servicio sin cambios.
 | `GCP_CONCIERGE_REDIS_CA_SECRET` | `redis-ca-fudia-dev:1` **si la versión habilitada es 1** |
 | `WHATSAPP_PHONE_ID` | ID real del número de Meta, no el teléfono ni WABA ID |
 | `WHATSAPP_GRAPH_VERSION` | Versión soportada seleccionada en Meta; el operador eligió `v26.0`. Solo versión, sin URL |
+| `WHATSAPP_DELIVERY_OFFER_TEMPLATE` / `_READY_TEMPLATE` / `_CANCELLED_TEMPLATE` | Opcionales. Nombres de las plantillas aprobadas en Meta para Delivery Fudia (`fudia-concierge/docs/09_DELIVERY_PARTNERS.md`); vacías, Concierge usa mensajes interactivos que solo llegan dentro de la ventana de 24 h |
+| `WHATSAPP_TEMPLATE_LANGUAGE` | Opcional, `es` por defecto; debe coincidir con el idioma con que se aprobaron las plantillas (por ejemplo `es_PE`) |
 
 `GCP_CONCIERGE_SECRETS`: una sola variable que contiene **referencias**, no
 valores. Sustituir cada `:1` por la versión numérica habilitada que realmente

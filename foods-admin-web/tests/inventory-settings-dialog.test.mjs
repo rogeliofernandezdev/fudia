@@ -58,7 +58,7 @@ test("la estructura activa márgenes, acciones contiguas y una columna a 390 px 
  const rules=parse("styles/globals.css"),modal=parse("design-system/styles/modal.css");
  const value=(rule,prop)=>rule.nodes.find(node=>node.prop===prop)?.value;
  const desktop=(list,selector)=>list.find(rule=>rule.selector===selector&&rule.parent.type==="root");
-  assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-6) var(--space-6) 0");
+  assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-2) var(--space-6) 0");
  const footer=desktop(modal,".modal-footer,.crud-modal>footer,.crud-modal>form>footer");
  assert.equal(value(footer,"justify-content"),"flex-end");
  assert.equal(value(footer,"gap"),"var(--space-2-5)");

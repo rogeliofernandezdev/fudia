@@ -99,6 +99,7 @@ test("campana: consulta periódica y endpoints del contrato",()=>{
  const hook=read("src/modules/notifications/application/use-notices.ts");
  assert.match(hook,/NOTICES_REFRESH_MS=15000/);
  assert.match(hook,/can\("tables\.read"\)\|\|can\("cash\.manage"\)/);
+ for(const file of ["src/modules/operations/pos/presentation/pos-page.tsx","src/modules/operations/orders/presentation/orders-manager.tsx","src/modules/operations/salon/presentation/salon-manager.tsx","src/modules/operations/kitchen/presentation/kitchen-board.tsx"])assert.match(read(file),/"staff-notices"/,file);
  const api=read("src/modules/notifications/infrastructure/notices-api.ts");
  assert.match(api,/apiFetch<NoticeFeed>\("notices"\)/);
  assert.match(api,/`notices\/\$\{encodeURIComponent\(id\)\}\/read`,\{method:"POST"\}/);

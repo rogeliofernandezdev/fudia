@@ -11,6 +11,8 @@ import {PlatformSubscriptionSkeleton} from "./platform-skeletons";
 import {SubscriptionWorkspace} from "./platform-subscription-page";
 import {RestrictedCompanies} from "./platform-companies-page";
 import {ConciergeUsagePanel} from "./platform-concierge-usage";
+import {DeliveryCompanyPanel} from "./platform-delivery-company-panel";
+import "./platform-delivery-partners.css";
 
 export function PlatformCompanyDetailPage({organizationId}:{organizationId:string}){
  const{user}=useSession();
@@ -37,5 +39,5 @@ function CompanySubscription({organizationId}:{organizationId:string}){
 
  const data=subscription.data;
  const key=[data.id,data.plan.id,data.billingCycle,data.status,data.autoRenew,data.renewsAt].join(":");
- return <>{header}<SubscriptionWorkspace key={key} organizationId={organizationId} current={data} plans={plans.data?.items??[]} country={location?.country} timeZone={location?.timezone}/><ConciergeUsagePanel organizationId={organizationId}/></>;
+ return <>{header}<SubscriptionWorkspace key={key} organizationId={organizationId} current={data} plans={plans.data?.items??[]} country={location?.country} timeZone={location?.timezone}/><ConciergeUsagePanel organizationId={organizationId}/><DeliveryCompanyPanel organizationId={organizationId}/></>;
 }

@@ -21,6 +21,7 @@ from src.observability import (
     log_event,
 )
 from src.services.customer_notices import NoticeRelay
+from src.services.delivery_partners import PartnerMessageRelay
 from src.services.outbox import DeliveryOutcome, ReplyDispatcher, WhatsAppSender
 from src.services.ports import (
     ConversationBusyError,
@@ -71,6 +72,8 @@ class QueueWorker:
         max_resends: int = 1,
         notices: NoticeRelay | None = None,
         notice_poll_seconds: float = 10.0,
+        partner_messages: PartnerMessageRelay | None = None,
+        partner_poll_seconds: float = 5.0,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError(
@@ -97,6 +100,8 @@ class QueueWorker:
         self.maintenance_interval_seconds = maintenance_interval_seconds
         self.notices = notices
         self.notice_poll_seconds = notice_poll_seconds
+        self.partner_messages = partner_messages
+        self.partner_poll_seconds = partner_poll_seconds
         self._stop = asyncio.Event()
         self._in_flight: set[
             asyncio.Future[None]
@@ -108,6 +113,11 @@ class QueueWorker:
         relay = (
             asyncio.create_task(self._relay_notices())
             if self.notices is not None
+            else None
+        )
+        partners = (
+            asyncio.create_task(self._relay_partner_messages())
+            if self.partner_messages is not None
             else None
         )
         try:
@@ -133,7 +143,7 @@ class QueueWorker:
             await self._cancel_in_flight()
             raise
         finally:
-            for background in (maintenance, relay):
+            for background in (maintenance, relay, partners):
                 if background is None:
                     continue
                 background.cancel()
@@ -259,7 +269,7 @@ class QueueWorker:
                 fingerprint(message.message_id),
             )
             if not will_retry:
-                await self._notify_failure(message.phone, message.message_id)
+                await self._notify_failure(message.phone, message.message_id, message.sender_phone_id)
         finally:
             visibility_heartbeat.cancel()
             try:
@@ -284,9 +294,17 @@ class QueueWorker:
             reason=reason,
         )
 
-    async def _notify_failure(self, phone: str, message_id: str) -> None:
+    async def _notify_failure(self, phone: str, message_id: str, channel_key: str = "") -> None:
         try:
-            await self.whatsapp.send_text(phone, FAILURE_REPLY)
+            sender = self.whatsapp
+            resolver = getattr(self.whatsapp, "for_channel", None)
+            if resolver is not None:
+                sender = await resolver(channel_key)
+            notify = getattr(sender, "notify_failure", None)
+            if notify is not None:
+                await notify(phone, message_id, FAILURE_REPLY)
+            else:
+                await sender.send_text(phone, FAILURE_REPLY)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -360,6 +378,23 @@ class QueueWorker:
                     errorType=type(exc).__name__,
                 )
             await asyncio.sleep(self.notice_poll_seconds)
+
+    async def _relay_partner_messages(self) -> None:
+        """Envía los mensajes a centrales de Delivery Fudia. foods-backend
+        reserva cada mensaje y, al consultarlo, avanza la cascada de ofertas."""
+        assert self.partner_messages is not None
+        while True:
+            try:
+                await self.partner_messages.poll_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                log_event(
+                    logger,
+                    "concierge.delivery_partner.poll_failed",
+                    errorType=type(exc).__name__,
+                )
+            await asyncio.sleep(self.partner_poll_seconds)
 
     async def stop(self) -> None:
         self._stop.set()

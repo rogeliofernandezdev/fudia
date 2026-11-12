@@ -30,7 +30,7 @@ export function InventorySettingsDialog({item,busy,close,save}:{item:InventoryIt
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-settings-title" aria-busy={locked}>
 
-  <ModalHeader title={item.name} titleId="inventory-settings-title" icon="settings" subtitle="Inventario · local activo" onClose={close} busy={locked} closeLabel="Cerrar"/>
+  <ModalHeader title={item.name} titleId="inventory-settings-title" icon="settings" onClose={close} busy={locked} closeLabel="Cerrar"/>
   <form className="modal-form-compact" onSubmit={event=>event.preventDefault()} noValidate>
    <FormSection icon="gauge" tone="digital" title="Niveles de stock" className="inventory-settings-section" bare><div className="form-grid">
     <FormField label="Stock mínimo" icon="box" className="numeric-value" error={errors.minimumStock?.message}><Input type="number" min="0" {...quantityInput} disabled={locked} {...register("minimumStock")}/></FormField>

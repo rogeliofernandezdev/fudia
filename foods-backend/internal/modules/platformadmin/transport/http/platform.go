@@ -40,7 +40,7 @@ func (h *Handler) GetPlatformOrganization(w http.ResponseWriter, r *http.Request
 }
 func (h *Handler) ListPlatformWhatsAppChannels(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.Channels(r.Context())
-	respond(w, 200, map[string]any{"items": out}, err)
+	respond(w, 200, map[string]any{"items": out, "providerOptions": domain.WhatsAppProviderOptions}, err)
 }
 func (h *Handler) OnboardTenant(w http.ResponseWriter, r *http.Request) {
 	id := w.Header().Get("X-Request-ID")

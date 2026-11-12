@@ -10,7 +10,9 @@ from fastapi import FastAPI
 from config.settings import Settings, settings
 from src.api.health import router as health_router
 from src.api.start import router as start_router
+from src.api.web_chat import router as web_chat_router
 from src.api.webhook import router as webhook_router
+from src.api.whatsapp_providers import router as provider_router
 from src.infrastructure.ai_factory import build_ai
 from src.infrastructure.concurrency import RedisConversationLock
 from src.infrastructure.fudia_client import FudiaClient
@@ -18,9 +20,10 @@ from src.infrastructure.queue import RedisInboundQueue
 from src.infrastructure.rate_limit import RedisRateLimiter
 from src.infrastructure.start_codes import RedisTableStartCodes
 from src.infrastructure.state_store import RedisConversationStore
-from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
+from src.infrastructure.whatsapp_providers import WhatsAppProviders
 from src.services.concierge_service import ConciergeService
 from src.services.customer_notices import NoticeRelay
+from src.services.delivery_partners import DeliveryTemplates, PartnerMessageRelay
 from src.services.queue_worker import QueueWorker
 
 
@@ -73,6 +76,11 @@ def create_app(
         cfg.rate_limit_messages,
         cfg.rate_limit_window_seconds,
     )
+    web_session_limiter = RedisRateLimiter(
+        redis_url,
+        cfg.web_chat_session_limit,
+        cfg.web_chat_session_window_seconds,
+    )
     inbound_queue = RedisInboundQueue(
         redis_url,
         stream=cfg.queue_stream,
@@ -89,11 +97,7 @@ def create_app(
             cfg.queue_dead_letter_retention_seconds
         ),
     )
-    whatsapp = MetaWhatsAppAdapter(
-        cfg.whatsapp_token,
-        cfg.whatsapp_phone_id,
-        cfg.whatsapp_graph_version,
-    )
+    whatsapp = WhatsAppProviders(cfg, fudia)
 
     service = ConciergeService(
         store,
@@ -110,6 +114,7 @@ def create_app(
         ),
         lock_ttl_seconds=cfg.conversation_lock_ttl_seconds,
         table_idle_seconds=cfg.table_idle_seconds,
+        directory=fudia,
     )
     worker = QueueWorker(
         inbound_queue,
@@ -127,8 +132,19 @@ def create_app(
         maintenance_interval_seconds=(
             cfg.queue_maintenance_interval_seconds
         ),
-        notices=NoticeRelay(fudia, inbound_queue, cfg.whatsapp_phone_id),
+        notices=NoticeRelay(fudia, inbound_queue, require_origin=True),
         notice_poll_seconds=cfg.customer_notice_poll_seconds,
+        partner_messages=PartnerMessageRelay(
+            fudia,
+            whatsapp,
+            DeliveryTemplates(
+                offer=cfg.whatsapp_delivery_offer_template,
+                ready=cfg.whatsapp_delivery_ready_template,
+                cancelled=cfg.whatsapp_delivery_cancelled_template,
+                language=cfg.whatsapp_template_language,
+            ),
+        ),
+        partner_poll_seconds=cfg.delivery_partner_poll_seconds,
     )
 
     app.state.settings = cfg
@@ -139,6 +155,7 @@ def create_app(
     app.state.inbound_queue = inbound_queue
     app.state.fudia = fudia
     app.state.start_codes = start_codes
+    app.state.web_session_limiter = web_session_limiter
     app.state.conversation_store = store
     app.state.queue_worker = worker
     app.state.queue_worker_task = None
@@ -146,10 +163,15 @@ def create_app(
     app.include_router(health_router)
     app.include_router(start_router)
     app.include_router(webhook_router)
+    app.include_router(provider_router)
+    app.include_router(web_chat_router)
 
     @app.on_event("startup")
     async def startup() -> None:
         await inbound_queue.start()
+        initializer = getattr(app.state.whatsapp, "initialize", None)
+        if initializer is not None:
+            await initializer()
         if cfg.worker_enabled:
             app.state.queue_worker_task = (
                 asyncio.create_task(worker.run())
@@ -175,6 +197,7 @@ def create_app(
         await inbound_queue.close()
         await conversation_lock.close()
         await rate_limiter.close()
+        await web_session_limiter.close()
         await start_codes.close()
         await fudia.close()
         await store.close()

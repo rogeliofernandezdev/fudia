@@ -8,22 +8,29 @@ type OrderItemSelection struct {
 	Surcharge string `json:"surcharge"`
 }
 type OrderItem struct {
-	ID         string               `json:"id"`
-	ProductID  string               `json:"productId"`
-	Name       string               `json:"name"`
-	Qty        string               `json:"qty"`
-	UnitPrice  string               `json:"unitPrice"`
-	Note       string               `json:"note"`
-	ItemType   string               `json:"itemType"`
+	ID        string `json:"id"`
+	ProductID string `json:"productId"`
+	Name      string `json:"name"`
+	Qty       string `json:"qty"`
+	UnitPrice string `json:"unitPrice"`
+	Note      string `json:"note"`
+	ItemType  string `json:"itemType"`
 	// Status es el estado del plato en su estación; solo lo llenan las comandas de Cocina y Barra.
 	Status     string               `json:"status,omitempty"`
 	Selections []OrderItemSelection `json:"selections,omitempty"`
 	Modifiers  []OrderItemModifier  `json:"modifiers,omitempty"`
 }
+
+// OrderPaymentReference is the user-entered operation number of a recorded payment.
+type OrderPaymentReference struct {
+	MethodName string `json:"methodName"`
+	Reference  string `json:"reference"`
+}
+
 type Order struct {
-	ID            string             `json:"id"`
-	Code          string             `json:"code"`
-	Channel       string             `json:"channel"`
+	ID      string `json:"id"`
+	Code    string `json:"code"`
+	Channel string `json:"channel"`
 	// Origin es "counter" para la venta por mostrador y "standard" en otro caso.
 	Origin        string             `json:"origin"`
 	Status        string             `json:"status"`
@@ -37,25 +44,33 @@ type Order struct {
 	Address       string             `json:"address"`
 	Reference     string             `json:"reference"`
 	// Punto de entrega fijado por WhatsApp (Concierge); nil si no hay pin.
-	DeliveryLatitude   *float64    `json:"deliveryLatitude"`
-	DeliveryLongitude  *float64    `json:"deliveryLongitude"`
-	DeliveryDistanceKm *float64    `json:"deliveryDistanceKm"`
-	TableID            string      `json:"tableId"`
-	TableName          string      `json:"tableName"`
-	WaiterID           string      `json:"waiterId"`
-	WaiterName         string      `json:"waiterName"`
-	CollectedByNames   []string    `json:"collectedByNames"`
-	Notes              string      `json:"notes"`
-	Subtotal           string      `json:"subtotal"`
-	DeliveryFee        string      `json:"deliveryFee"`
-	Total              string      `json:"total"`
-	CreatedAt          string      `json:"createdAt"`
-	UpdatedAt          string      `json:"updatedAt"`
-	ItemCount          int         `json:"itemCount"`
-	Items              []OrderItem `json:"items,omitempty"`
-	PaidAmount         string      `json:"paidAmount,omitempty"`
-	RemainingAmount    string      `json:"remainingAmount,omitempty"`
-	PaymentStatus      string      `json:"paymentStatus,omitempty"`
+	DeliveryLatitude   *float64 `json:"deliveryLatitude"`
+	DeliveryLongitude  *float64 `json:"deliveryLongitude"`
+	DeliveryDistanceKm *float64 `json:"deliveryDistanceKm"`
+	// Despacho a las centrales de Delivery Fudia: estado y central que aceptó
+	// (o a la que se ofrece ahora). Vacío si el pedido no usa centrales.
+	DeliveryDispatchStatus string `json:"deliveryDispatchStatus,omitempty"`
+	DeliveryPartnerName    string `json:"deliveryPartnerName,omitempty"`
+	// DeliveryPartnerFee es el envío que cobra la central al cliente; ya no
+	// forma parte del total del restaurante. Vacío si no se cedió.
+	DeliveryPartnerFee string                  `json:"deliveryPartnerFee,omitempty"`
+	TableID            string                  `json:"tableId"`
+	TableName          string                  `json:"tableName"`
+	WaiterID           string                  `json:"waiterId"`
+	WaiterName         string                  `json:"waiterName"`
+	CollectedByNames   []string                `json:"collectedByNames"`
+	Notes              string                  `json:"notes"`
+	Subtotal           string                  `json:"subtotal"`
+	DeliveryFee        string                  `json:"deliveryFee"`
+	Total              string                  `json:"total"`
+	CreatedAt          string                  `json:"createdAt"`
+	UpdatedAt          string                  `json:"updatedAt"`
+	ItemCount          int                     `json:"itemCount"`
+	Items              []OrderItem             `json:"items,omitempty"`
+	PaidAmount         string                  `json:"paidAmount,omitempty"`
+	RemainingAmount    string                  `json:"remainingAmount,omitempty"`
+	PaymentStatus      string                  `json:"paymentStatus,omitempty"`
+	PaymentReferences  []OrderPaymentReference `json:"paymentReferences,omitempty"`
 }
 type OrderItemSelectionInput struct {
 	GroupID   string `json:"groupId"`
@@ -150,6 +165,7 @@ type OrderServiceItem struct {
 	Destination      string `json:"destination"`
 	Status           string `json:"status"`
 }
+
 // TicketRef identifica una comanda de Cocina: el pedido y, si existe, su ronda.
 type TicketRef struct {
 	OrderID string
@@ -202,6 +218,7 @@ func CanManageOrderService(userID, channel, waiterID string) bool {
 type SendRecipient struct {
 	ConversationID, Phone, Key string
 }
+
 func ValidOrderChannel(ch string) bool {
 	return ch == "salon" || ch == "mostrador" || ch == "recojo" || ch == "delivery" || ch == "whatsapp"
 }
@@ -257,6 +274,7 @@ type ModifierOption struct {
 	Name      string
 	Surcharge float64
 }
+
 // OrderProductSnapshot es la vista de catálogo de un producto al preparar el
 // pedido; se lee para todos los productos en una sola consulta.
 type OrderProductSnapshot struct {

@@ -310,7 +310,7 @@ export function PurchasesPage(){
         {orders.isLoading?<TableSkeleton columns={orderColumns} label="Cargando órdenes de compra"/>
         :orders.isError?<ErrorState title="No pudimos cargar las órdenes" text={orders.error.message} onRetry={()=>void orders.refetch()}/>
         :!orderItems.length?<EmptyState
-          icon="receipt"
+          icon={q||status?"search":"receipt"}
           title={q||status?"Sin coincidencias":"Aún no hay órdenes de compra"}
           text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Crea una orden y agrega los artículos que necesitas abastecer.":"No hay órdenes registradas para este local."}
           action={canManage&&!q&&!status?<Button icon="plus" onClick={()=>setOrderDraft({...emptyOrder})}>Nueva orden</Button>:undefined}
@@ -341,7 +341,7 @@ export function PurchasesPage(){
         {receipts.isLoading?<TableSkeleton columns={receiptColumns} label="Cargando recepciones pendientes"/>
         :receipts.isError?<ErrorState title="No pudimos cargar las recepciones pendientes" text={receipts.error.message} onRetry={()=>void receipts.refetch()}/>
         :!receiptItems.length?<EmptyState
-          icon="check"
+          icon={q||status?"search":"check"}
           title={q||status?"Sin coincidencias":"No hay mercadería pendiente de recibir"}
           text={q||status?"Ajusta la búsqueda o el filtro.":"Solo aparecen órdenes aprobadas con cantidades pendientes."}
         />:<>
@@ -370,7 +370,7 @@ export function PurchasesPage(){
         {suppliers.isLoading?<TableSkeleton columns={supplierColumns} label="Cargando proveedores"/>
         :suppliers.isError?<ErrorState title="No pudimos cargar los proveedores" text={suppliers.error.message} onRetry={()=>void suppliers.refetch()}/>
         :!supplierItems.length?<EmptyState
-          icon="truck"
+          icon={q||status?"search":"truck"}
           title={q||status?"Sin coincidencias":"Aún no hay proveedores"}
           text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Registra el primer proveedor para empezar a crear órdenes.":"No hay proveedores registrados."}
           action={canManage&&!q&&!status?<Button icon="plus" onClick={()=>setSupplierDraft({...emptySupplier})}>Nuevo proveedor</Button>:undefined}
@@ -400,7 +400,7 @@ export function PurchasesPage(){
     </section>
 
     {orderDraft&&(orderDraftLoading||activeSuppliers.isLoading||inventory.isLoading
-      ?<RemoteModalSkeleton className="purchase-order-modal" label="Cargando datos de compra" rows={7} close={()=>{setOrderDraft(null);setOrderDraftLoading(false)}}/>
+      ?<RemoteModalSkeleton className="purchase-order-modal" label="Cargando datos de compra" rows={7} title={orderDraft.id?"Editar orden":"Nueva orden de compra"} icon="receipt" close={()=>{setOrderDraft(null);setOrderDraftLoading(false)}}/>
       :activeSuppliers.isError||inventory.isError
         ?<PurchaseEditorError message={(activeSuppliers.error??inventory.error)?.message??"No pudimos cargar los datos necesarios."} close={()=>setOrderDraft(null)} retry={()=>{void activeSuppliers.refetch();void inventory.refetch()}}/>
         :<PurchaseOrderDialog initial={orderDraft} suppliers={activeSuppliers.data?.items??[]} inventory={inventory.data?.items??[]} currencySymbol={settings.currencySymbol} busy={saveOrder.isPending} close={()=>setOrderDraft(null)} save={draft=>saveOrder.mutate(draft)}/>
@@ -409,7 +409,7 @@ export function PurchasesPage(){
     {supplierDraft&&<SupplierDialog initial={supplierDraft} busy={supplierSave.isPending} close={()=>setSupplierDraft(null)} save={draft=>supplierSave.mutate(draft)}/>}
 
     {detailId&&(detail.isLoading
-      ?<RemoteModalSkeleton className="purchase-detail-modal" label="Cargando orden de compra" rows={6} close={()=>setDetailId(null)}/>
+      ?<RemoteModalSkeleton className="purchase-detail-modal" label="Cargando orden de compra" rows={6} title={detailMode==="view"?"Detalle de orden":"Revisar orden"} icon="receipt" close={()=>setDetailId(null)}/>
       :detail.isError
         ?<PurchaseDetailError message={detail.error.message} close={()=>setDetailId(null)}/>
         :detail.data&&<PurchaseDetail
@@ -519,7 +519,10 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
         ?{tone:"success",title:"Producto vinculado",message:item.name+" ahora controla su stock con Inventario y quedó agregado a la orden."}
         :{tone:"success",title:"Artículo creado",message:item.name+" quedó con stock 0 y agregado a la orden."});
     },
-    onError:error=>notify({tone:"danger",title:"No se pudo crear el artículo",message:error.message}),
+    onError:error=>{
+      if("code" in error&&error.code==="inventory_item_name_taken")return;
+      notify({tone:"danger",title:"No se pudo crear el artículo",message:error.message});
+    },
   });
 
   return <>
@@ -582,7 +585,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
       choose={item=>applyItem(itemTarget,item)}
       save={async draft=>{
         try{await createItem.mutateAsync({target:itemTarget,draft})}
-        catch{/* The mutation reports the API error and keeps the article draft open. */}
+        catch(error){if(error&&typeof error==="object"&&"code" in error&&error.code==="inventory_item_name_taken")throw error;}
       }}
     />}
   </>;
@@ -590,7 +593,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
 
 function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:boolean;close:()=>void;save:(draft:SupplierDraft)=>void}){
   const{register,handleSubmit,formState:{errors}}=useForm<SupplierDraft>({defaultValues:initial,resolver:supplierResolver,mode:"onSubmit",reValidateMode:"onChange"});
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="supplier-title" aria-busy={busy}><ModalHeader title="Datos del proveedor" titleId="supplier-title" icon="truck" subtitle={initial.id?"Editar proveedor":"Nuevo proveedor"} onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={handleSubmit(save)} noValidate><div className="form-sections">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="supplier-title" aria-busy={busy}><ModalHeader title={initial.id?"Editar proveedor":"Nuevo proveedor"} titleId="supplier-title" icon="truck" onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={handleSubmit(save)} noValidate><div className="form-sections">
     <FormSection icon="truck" title="Datos del proveedor">
     <FormField className="span-2" label="Nombre o razón social" error={errors.name?.message}><Input autoFocus {...register("name")} placeholder="Ej. Distribuidora Andina"/></FormField>
     <FormField label="RUC" optional error={errors.taxId?.message}><Input icon="badge" inputMode="numeric" maxLength={11} {...register("taxId")} placeholder="20123456789"/></FormField>
@@ -608,7 +611,7 @@ function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,pending
   const receivable=order.status==="approved"||order.status==="partially_received";
   const cancellable=order.status==="draft"||order.status==="pending_approval"||order.status==="approved";
   const history=order.history??[];
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><ModalHeader title="Orden de compra" titleId="purchase-detail-title" icon="receipt" subtitle={mode==="view"?"Detalle de orden":"Revisar orden"} onClose={close} busy={busy} closeLabel="Cerrar"/><div className="purchase-detail-body">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><ModalHeader title={mode==="view"?"Detalle de orden":"Revisar orden"} titleId="purchase-detail-title" icon="receipt" onClose={close} busy={busy} closeLabel="Cerrar"/><div className="purchase-detail-body">
     <section className="purchase-detail-summary"><div><small>Proveedor</small><b>{order.supplierName}</b></div><div><small>Total</small><b>{currency}</b></div><div><small>Artículos</small><b>{order.itemCount}</b></div></section>
     <section className="purchase-detail-meta"><div><small>Creada</small><b>{formatRegionalDateTime(order.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>Entrega esperada</small><b>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,country,{dateStyle:"medium"}):"Sin fecha"}</b></div><div><small>Notas</small><b>{order.notes||"Sin notas"}</b></div></section>
     <section className="purchase-detail-lines"><header><div><small>Detalle</small><h3>Artículos de la orden</h3></div></header><DataTable label="Estado de recepción por artículo" containerClassName="hover-scroll" className="purchase-receipt-progress-table"><thead><tr><th>Artículo</th><th>Presentación de compra</th><th>Solicitado</th><th>Recibido</th><th>Pendiente</th><th>Costo</th><th>Subtotal</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{money(item.lineTotal)}</b></td></tr>)}</tbody></DataTable></section>
@@ -632,7 +635,7 @@ function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:Pur
  const quantity=(value:string)=>formatRegionalNumber(Number(value),location?.country,{maximumFractionDigits:3});
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="receipt-history-title">
 
-  <ModalHeader title="Recepción de compra" titleId="receipt-history-title" icon="receipt" subtitle="Detalle de recepción" onClose={close} closeLabel="Cerrar"/>
+  <ModalHeader title="Recepción de compra" titleId="receipt-history-title" icon="receipt" onClose={close} closeLabel="Cerrar"/>
   <div className="purchase-detail-body"><section className="purchase-detail-summary"><div><small>Recibida</small><b>{formatRegionalDateTime(receipt.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>Proveedor</small><b>{receipt.supplierName}</b></div><div><small>Usuario</small><b>{receipt.createdByName}</b></div></section>
    <section className="purchase-detail-lines"><header><div><small>Detalle</small><h3>Artículos recibidos</h3></div></header><DataTable label="Artículos de la recepción" containerClassName="hover-scroll"><thead><tr><th>Artículo</th><th>Recibido</th><th>Devuelto/corregido</th><th>Disponible</th><th>Costo</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}><td><b>{i.itemName}</b></td><td>{quantity(i.quantity)}</td><td>{quantity(i.returnedQuantity)}</td><td><b>{quantity(i.returnableQuantity)}</b></td><td>{formatRegionalNumber(Number(i.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>)}</tbody></DataTable></section>
    {receipt.notes&&<section className="purchase-detail-meta purchase-receipt-history-notes"><div><small>Notas</small><b>{receipt.notes}</b></div></section>}
@@ -641,9 +644,9 @@ function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:Pur
  </Dialog></div>
 }
 
-function PurchaseDetailError({message,close}:{message:string;close:()=>void}){return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-error-title"><ModalHeader title="No pudimos cargar el detalle" titleId="purchase-detail-error-title" icon="alert" subtitle="Orden de compra" onClose={close} closeLabel="Cerrar"/><ErrorState title="Detalle no disponible" text={message}/></Dialog></div>}
+function PurchaseDetailError({message,close}:{message:string;close:()=>void}){return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-error-title"><ModalHeader title="No pudimos cargar el detalle" titleId="purchase-detail-error-title" icon="alert" onClose={close} closeLabel="Cerrar"/><ErrorState title="Detalle no disponible" text={message}/></Dialog></div>}
 
-function PurchaseEditorError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-editor-error-title"><ModalHeader title="No pudimos preparar el formulario" titleId="purchase-editor-error-title" icon="alert" subtitle="Orden de compra" onClose={close} closeLabel="Cerrar"/><ErrorState title="Catálogos no disponibles" text={message} onRetry={retry}/></Dialog></div>}
+function PurchaseEditorError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-editor-error-title"><ModalHeader title="No pudimos preparar el formulario" titleId="purchase-editor-error-title" icon="alert" onClose={close} closeLabel="Cerrar"/><ErrorState title="Catálogos no disponibles" text={message} onRetry={retry}/></Dialog></div>}
 
 function presentationName(type:string,factor:string,unit?:string,name?:string){if(type==="unit")return unit??name??type;return `${name??type} × ${formatRegionalNumber(Number(factor),undefined,{maximumFractionDigits:3})} ${unit??""}`}
 function nextStepLabel(status:PurchaseStatus){if(status==="draft")return"Completa la orden y envíala para aprobación.";if(status==="pending_approval")return"Revisa el total y aprueba antes de recibir.";if(status==="approved")return"Registra lo que realmente llegó; la orden no movió stock.";if(status==="partially_received")return"Completa las cantidades que aún están pendientes.";return"Sin acciones pendientes."}

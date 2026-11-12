@@ -12,7 +12,8 @@ const declarations=rule=>Object.fromEntries(rule.nodes.filter(node=>node.type===
 
 test("el detalle de menú usa la anatomía compartida de los modales de detalle",()=>{
  assert.match(dialog,/className="crud-modal size-md combo-detail modal-panel-in"/);
- assert.match(dialog,/<ModalHeader title=\{value\?\.name\?\?"Menú o combo"\} titleId="combo-detail-title" icon="combo" onClose=\{close\} closeLabel="Cerrar"\/>/);
+ assert.match(dialog,/<ModalHeader title=\{value\?\.name\?\?previewName\?\?"Menú o combo"\} titleId="combo-detail-title" icon="combo" onClose=\{close\} closeLabel="Cerrar"\/>/);
+ assert.match(dialog,/<ComboDetailSkeleton close=\{close\} name=\{previewName\}\/>/,"mientras carga, la cabecera ya muestra el nombre de la fila");
  assert.doesNotMatch(dialog,/subtitle=|DETALLE DEL MENÚ|PARTES DEL MENÚ|QUÉ INCLUYE/,"sin franja ni datos redundantes bajo el título");
  assert.match(dialog,/className="modal-body combo-detail-body"/,"un solo cuerpo desplazable del design system");
  assert.match(dialog,/className="combo-detail-hero"/,"estado y venta encabezan el cuerpo, como el pedido");

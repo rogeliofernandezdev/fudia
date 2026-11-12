@@ -117,8 +117,8 @@ test("todo modal que guarda muestra ModalBusy desde la cabecera compartida",()=>
  const manual=files("src/modules",".tsx").filter(file=>read(file).includes("<ModalBusy"));
  assert.deepEqual(manual,[],"Los módulos no repiten el bloqueo: lo aporta ModalHeader");
  assert.match(read("src/modules/operations/orders/presentation/comanda-view.tsx"),/busy=\{busy\} busyOverlay=\{false\}/,"La Comanda es pantalla de tarea: solo el botón muestra el estado");
- for(const [file,title] of [["customers/presentation/customers-manager.tsx","Información del cliente"],["identity/presentation/users-roles-manager.tsx","Datos y accesos"],["configuration/presentation/payment-methods-page.tsx","Configuración del medio de pago"],["organizations/presentation/organization-admin.tsx","Datos del local"],["organizations/presentation/organization-admin.tsx","Jurisdicción fiscal"],["organizations/presentation/organization-admin.tsx","Tipo de cambio"]]){
-  const source=read(`src/modules/${file}`),start=source.indexOf(`<ModalHeader title="${title}"`);
+ for(const [file,title] of [["customers/presentation/customers-manager.tsx",'title={initial.id?"Editar cliente":"Nuevo cliente"}'],["identity/presentation/users-roles-manager.tsx",'title={initial.id?"Editar usuario":"Nuevo usuario"}'],["configuration/presentation/payment-methods-page.tsx",'title={editing?"Editar medio de pago":"Nuevo medio de pago"}'],["organizations/presentation/organization-admin.tsx",'title={initial.id?"Editar local":"Nuevo local"}'],["organizations/presentation/organization-admin.tsx",'title={initial.id?"Editar perfil":"Nuevo perfil"}'],["organizations/presentation/organization-admin.tsx",'title="Nueva tasa"']]){
+  const source=read(`src/modules/${file}`),start=source.indexOf(`<ModalHeader ${title}`);
   assert.ok(start>=0,title);
   assert.match(source.slice(start,source.indexOf("/>",start)),/busy=\{busy\}/,title);
  }

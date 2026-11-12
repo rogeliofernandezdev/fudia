@@ -17,9 +17,10 @@ func seedOperationalWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, s
 	t.Helper()
 	phone := "+999" + suffix
 	if _, err := pool.Exec(context.Background(), `
-		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active)
-		VALUES($1,$2,'Integration Test',true)
-		ON CONFLICT(phone_number) DO UPDATE SET
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active,provider_key,routing_key)
+		VALUES($1,$2,'Integration Test',true,$2,$2)
+		ON CONFLICT(country_code) WHERE superseded_by IS NULL DO UPDATE SET
+            phone_number=EXCLUDED.phone_number,provider_key=EXCLUDED.provider_key,routing_key=EXCLUDED.routing_key,needs_reconciliation=false,
 			country_code=EXCLUDED.country_code,
 			active=true,
 			updated_at=now()
@@ -32,9 +33,10 @@ func seedInactiveWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suff
 	t.Helper()
 	phone := "+998" + suffix
 	if _, err := pool.Exec(context.Background(), `
-		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active)
-		VALUES($1,$2,'Inactive Integration Test',false)
-		ON CONFLICT(phone_number) DO UPDATE SET
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active,provider_key,routing_key)
+		VALUES($1,$2,'Inactive Integration Test',false,'','')
+		ON CONFLICT(country_code) WHERE superseded_by IS NULL DO UPDATE SET
+            phone_number=EXCLUDED.phone_number,provider_key=EXCLUDED.provider_key,routing_key=EXCLUDED.routing_key,needs_reconciliation=false,
 			country_code=EXCLUDED.country_code,
 			active=false,
 			updated_at=now()

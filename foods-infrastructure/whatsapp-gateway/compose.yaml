@@ -1,0 +1,30 @@
+# Always-on host. Supply the digest and a root-only runtime file on tmpfs
+# populated by the host's managed identity from Secret Manager.
+services:
+  gateway:
+    image: ${GATEWAY_IMAGE:?Use an immutable image digest}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 15s
+    env_file:
+      - /run/fudia-whatsapp-gateway/runtime.env
+    ports:
+      - "127.0.0.1:8020:8020"
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1"
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"

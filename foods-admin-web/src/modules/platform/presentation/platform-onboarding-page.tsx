@@ -5,6 +5,7 @@ import {useEffect,useState} from "react";
 import {Controller,useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
+import {GeographicFields} from "@/modules/organizations";
 import {LocationMap} from "@/design-system/location-map";
 import {ApiClientError} from "@/shared/api/client";
 import {Button,EmptyState,ErrorState,FormSection,FormField as Field,Input,PageHeader,Select} from "@/design-system";
@@ -26,7 +27,7 @@ const blank:PlatformOnboardingDraft={
  legalName:"",tradeName:"",taxId:"",timezone:"",
  planId:"",billingCycle:"monthly",termsAccepted:false,
  country:"",currency:"",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,specialTaxRegime:"",
- locationName:"",locationCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",
+ locationName:"",locationCode:"",districtCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",
  adminName:"",adminEmail:"",adminPassword:"",
 };
 
@@ -53,7 +54,7 @@ export function PlatformOnboardingPage(){
   const{register,control,setValue,getValues,trigger,reset,handleSubmit,formState:{errors}}=useForm<PlatformOnboardingDraft>({
     defaultValues:blank,resolver:onboardingResolver,mode:"onSubmit",reValidateMode:"onChange",
   });
-  const[planId,billingCycle,address,latitude,longitude]=useWatch({control,name:["planId","billingCycle","address","latitude","longitude"]});
+  const[planId,billingCycle,address,latitude,longitude,districtCode]=useWatch({control,name:["planId","billingCycle","address","latitude","longitude","districtCode"]});
   const country=useWatch({control,name:"country"});
   const[enrolled,taxName,taxRate]=useWatch({control,name:["specialTaxRegime","taxName","taxRate"]});
   const selectedPlan=ctx?.plans.find(plan=>plan.id===planId)??null;
@@ -111,6 +112,7 @@ export function PlatformOnboardingPage(){
     const current=getValues();
     const defaults=countryLocationDefaults(country,current);
     setValue("country",code,{shouldDirty:true,shouldValidate:Boolean(errors.country)});
+    setValue("districtCode","");
     setValue("specialTaxRegime","");
     setValue("timezone",defaults.timezone,{shouldDirty:true,shouldValidate:Boolean(errors.timezone)});
     if(ctx?.currencyOptions.some(currency=>currency.code===country.defaultCurrency))setValue("currency",country.defaultCurrency);
@@ -179,6 +181,7 @@ export function PlatformOnboardingPage(){
           <Field label="Teléfono"><Input icon="phone" type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
           <Field label="Fecha de apertura" optional><Input type="date" {...register("locationOpenedOn")}/></Field><Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>
           <div className={"form-field span-2"+(errors.address?" has-error":"")}>
+            {country==="PE"&&<GeographicFields key={country} value={districtCode??""} error={err("districtCode")} onChange={code=>setValue("districtCode",code,{shouldValidate:true})}/>}
             <LocationMap latitude={latitude?Number(latitude):null} longitude={longitude?Number(longitude):null} address={address} onAddressChange={a=>setValue("address",a,{shouldValidate:Boolean(errors.address)})} onChange={c=>{setValue("latitude",c.lat.toFixed(7));setValue("longitude",c.lng.toFixed(7))}}/>
             {err("address")&&<small className="field-error" role="alert">{err("address")}</small>}
           </div>

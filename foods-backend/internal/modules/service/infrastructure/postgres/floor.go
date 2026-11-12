@@ -198,19 +198,31 @@ func (r *Floor) TableQR(ctx context.Context, token string) (domain.TableQR, erro
 	var v domain.TableQR
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
-		       COALESCE(om.active,false),t.service_type
+		       COALESCE(om.active,false),t.service_type,COALESCE(fp.country_code::text,''),o.id::text,l.id::text
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l
 		  ON l.id=t.location_id
 		 AND l.organization_id=t.organization_id
 		 AND l.active
-		LEFT JOIN organization_modules om
+		LEFT JOIN organization_fiscal_profiles fp ON fp.id=l.fiscal_profile_id AND fp.organization_id=l.organization_id
+ LEFT JOIN organization_modules om
 		  ON om.organization_id=t.organization_id
 		 AND om.module_key='whatsapp_bot'
 		WHERE t.qr_token=$1 AND t.active=true AND t.qr_enabled=true
+		UNION ALL
+		-- Enlace de delivery del local: no es una mesa.
+		SELECT 'Delivery',0,'',o.trade_name,l.name,COALESCE(om.active,false),'delivery',COALESCE(fp.country_code::text,''),o.id::text,l.id::text
+		FROM location_delivery_links d
+		JOIN organizations o ON o.id=d.organization_id AND o.active
+		JOIN locations l ON l.id=d.location_id AND l.organization_id=d.organization_id AND l.active
+		LEFT JOIN organization_fiscal_profiles fp ON fp.id=l.fiscal_profile_id AND fp.organization_id=l.organization_id
+ LEFT JOIN organization_modules om
+		  ON om.organization_id=d.organization_id
+		 AND om.module_key='whatsapp_bot'
+		WHERE d.qr_token=$1 AND d.active
 		LIMIT 1
-	`, token).Scan(&v.Name, &v.Seats, &v.Zone, &v.OrgName, &v.LocName, &v.ConciergeEnabled, &v.ServiceType)
+	`, token).Scan(&v.Name, &v.Seats, &v.Zone, &v.OrgName, &v.LocName, &v.ConciergeEnabled, &v.ServiceType, &v.CountryCode, &v.OrganizationID, &v.LocationID)
 	return v, serviceError(err)
 }
 

@@ -233,6 +233,8 @@ con icono y `money-input`) solo el contenedor dibuja borde y anillo mediante
 `:focus-within`; el input/select interno no repite sombra ni contorno rectangular,
 incluso dentro de `form-grid`. En error, el mismo contenedor usa `ring-danger`.
 Los campos independientes conservan su propio foco visible.
+El autocompletado nativo de los campos compuestos conserva la superficie del
+contenedor y el color del texto del control, sin un rectángulo de fondo interior.
 
 ## Movimiento
 
@@ -273,8 +275,9 @@ El movimiento comunica un cambio de estado, nunca adorna.
   la activa un borde tenue de ese color con etiqueta `ink-950` en negrita, nunca
   texto de color vivo. Usos: carriles de Cocina (índigo, naranja, verde) y canales
   de Pedidos y del pedido manual (`channelTone`: Todos azul, Salón índigo, Recojo
-  naranja, Delivery verde, WhatsApp violeta) y pestañas de los detalles de pedido,
-  venta y cobro (Productos naranja, Seguimiento índigo, Pagos azul). El diseño de
+  naranja, Delivery verde, WhatsApp violeta) y pestañas de los detalles de pedido
+  y cobro (Productos y Pagos en azul `primary`, Seguimiento índigo; aprobado
+  2026-11-06) y de venta (Productos y Pagos en azul). El diseño de
   `Tabs` no cambia: solo el color de icono, contador y borde activo.
   `TabsBar` mantiene las acciones de la vista alineadas a la derecha en escritorio.
   En móvil, tabs a ancho completo y acciones en una fila debajo, nunca encima en
@@ -415,8 +418,14 @@ de página en `03_LAYOUTS.md`. Resumen:
   No cambia de color con hover; conserva foco blanco visible para teclado.
   El título nombra la acción. La cabecera solo contiene icono, título y X:
   nunca subtítulos, fechas, responsables ni estados debajo del título.
-  `subtitle`, `meta` y `details`, si existen, se presentan fuera de la cabecera. Cuerpo
-  desplazable; pie fijo. En móvil, hoja inferior (`sm`/`md`) o pantalla
+  No hay franja de subtítulo ni padding reservado entre cabecera y cuerpo. El
+  título identifica la acción («Nueva reserva», «Editar cliente»); el nombre
+  de la caja, proveedor o artículo se integra en ese título cuando es necesario.
+  Las descripciones útiles pertenecen al cuerpo desplazable. `meta` y `details`
+  se reservan para datos y controles reales, nunca etiquetas genéricas.
+  No repetir el título de la cabecera como primera sección del formulario.
+  Cuerpo desplazable con solo 8 px de separación superior, sangrías laterales y separación
+  inferior; pie fijo. En móvil, hoja inferior (`sm`/`md`) o pantalla
   completa (`lg`/`xl`). Con el teclado abierto (alto útil ≤560 px) la hoja ocupa
   todo el alto, la cabecera baja a 52 px con título de 16 px, el pie compacta su
   relleno y se oculta la franja de contexto, para que el formulario muestre más
@@ -543,7 +552,7 @@ de página en `03_LAYOUTS.md`. Resumen:
   de pago (datos y dónde se usa), menús y combos (datos, qué incluye, cuándo se
   vende) e inventario (niveles de stock, ajuste con entrada/salida en
   `ChoiceGroup`, transferencia).
-- Subtítulos de modal y etiquetas se escriben en caja normal («Nuevo gasto»,
+- Títulos de modal y etiquetas se escriben en caja normal («Nuevo gasto»,
   «Fondo inicial»); solo las siglas van en mayúsculas.
 
 ### Jerarquía de acciones y botones móviles
@@ -630,8 +639,9 @@ Reglas de aplicación:
   reservado a lo operativo; una fila de catálogo no lleva más de un color suave.
 - Equilibrio por pantalla (crítica 2026-11-05, referencia Zillo): en Salón el
   escenario de la mesa es blanco y el único color de la mesa ocupada es el plato; en
-  Caja los flujos (fondo, ingresos, egresos) usan icono neutro y un solo fondo
-  `cloud-25`, con el color solo en el importe; en Cocina la cabecera y las cantidades
+  Caja los flujos (fondo, ingresos, egresos) usan `IconTile vivid` azul, verde y
+  rojo, con fondos tenues menta y rosado para ingresos y egresos (reforzado por
+  solicitud del usuario el 2026-11-06); los estados siguen suaves. En Cocina la cabecera y las cantidades
   del ticket son blancas y grises, el color vive en la cabecera del carril, «Por
   vencer» es contorno rojo y «Con demora» rojo sólido, y el aviso dice «N con demora
   · M por vencer»; en Pedidos toda la fila abre el detalle (el ojo se conserva para
@@ -750,7 +760,10 @@ Sin ventas se omite el promedio; la carga usa un skeleton y un error oculta
 la franja para no mostrar cifras ficticias.
 
 El historial usa `DataTable`.
-Conserva las ocho columnas, cabecera marino, importes alineados a la derecha y
+Conserva las ocho columnas, cabecera marino, importes alineados a la derecha,
+la columna Pedido con el tile estándar `row-icon` (34 px, `primary-100`/
+`primary-700`, icono `receipt` de 18 px) delante del código, como la primera
+columna de las demás tablas (el skeleton reproduce el mismo tile), y
 `Status` suave verde «Pagada». Toda fila abre el detalle; `RowActionButton` sigue
 siendo la entrada de teclado. En móvil se conserva la tabla nativa con columna
 de pedido fija y scroll horizontal accesible. Solo los periodos permanecen fijos
@@ -765,18 +778,27 @@ sección), con la misma geometría de modal y hoja inferior móvil:
 1. **Cabecera**: icono del canal (`utensils` si hay mesa) y como título la mesa
    («Mesa 03», sin repetir «Mesa»), el cliente o «Venta directa». El código
    `PED-…` no se repite en el detalle: ya identifica la fila del listado.
-2. **Identidad**: estado de pago (`Status`, sin énfasis); debajo, reloj y fecha
-   de registro, y una segunda línea con el icono del canal, «Salón · Atendido por
-   …» (mozo solo en salón).
+2. **Identidad**: estado de pago (`Status`, sin énfasis); debajo, en una sola
+   línea (`sales-detail-meta`), reloj y fecha de registro seguidos del icono del
+   canal y «Salón · Atendido por …» (mozo solo en salón); si no caben, el canal
+   baja a la siguiente línea.
 3. **Tarjeta de cliente** (`DetailContact`): solo si hay cliente.
 4. **Pestañas** (`Tabs` compartidas, sin pista ni superficie local):
    «Productos» (líneas de `modal.css` y «Notas generales») y «Pagos»
-   (`DetailTimeline`). No hay pestaña «Detalles»: mesa, cliente, fecha, canal y
+   (`DetailTimeline`), ambas con tono `primary` (azul). No hay pestaña «Detalles»: mesa, cliente, fecha, canal y
    mozo ya se ven arriba y no se repiten en ningún otro bloque. Paneles con
-   sangría horizontal de 16 px (12 px a ≤600 px).
-5. **Resumen de venta** fijo al pie, como «Resumen de cuenta»: subtotal,
-   delivery si aplica y «Pagado neto» (`amount-paid` si hay pagos); el importe
+   sangría horizontal de 16 px (12 px a ≤600 px): productos y pagos quedan
+   dentro de la sección de las pestañas, no en el borde del estado
+   (confirmado 2026-11-06).
+5. **Resumen de venta** fijo al pie, como «Resumen de cuenta», sin repetir el
+   importe principal: Subtotal y Delivery solo si hay delivery; con saldo, Total
+   y «Pagado neto» (`amount-paid` si hay pagos) explican el pendiente. El importe
    principal es «Saldo pendiente» o, saldada, «Total pagado» en `amount-paid`.
+   El importe principal es siempre una franja a todo el ancho debajo del
+   desglose (`modal-summary is-band` de `modal.css`, compartida con cobro y
+   pedido: etiqueta a la izquierda, importe a la derecha), así «Saldo pendiente»
+   nunca se parte en dos líneas en móvil. Saldada y sin delivery, la franja es lo
+   único del resumen.
    Por decisión explícita de producto, `amount-paid` resuelve al verde exacto
    `brand-600` (`#03C056`): Pedidos, Ventas y POS comparten el mismo color de cifra.
    Las etiquetas auxiliares usan `brand-700` y el estado Pagada conserva su tono.
@@ -789,10 +811,16 @@ sección), con la misma geometría de modal y hoja inferior móvil:
 ### Detalle de cobro en POS (organización)
 
 Igual que «Detalle de venta»: cabecera con mesa, cliente o «Venta directa» e
-icono del canal; identidad con estado de pago, fecha y «Canal · Atendido por»;
-tarjeta de cliente solo si existe; pestañas «Productos» y «Pagos» (con
-«Devolver» en cada pago cuando corresponde) y «Resumen de cobro» fijo («Saldo
-pendiente» o «Total pagado»). Excepción: el código `PED-…` se muestra como texto
+icono del canal; identidad con estado de pago («Pagada», «Pago parcial» o «Sin
+pagos», el mismo nombre que en Ventas) y, en una línea (`pos-detail-meta`),
+fecha y «Canal · Atendido por»; tarjeta de cliente solo si existe; pestañas
+«Productos» y «Pagos» en azul `primary` (con «Devolver» en cada pago cuando
+corresponde), paneles con la misma sangría de 16 px (12 px en móvil), y «Resumen de cobro» fijo que no
+repite el importe principal: Total y «Pagado neto» solo con saldo; con propina,
+su línea (y Total si la propina se cobró, para explicar «Total pagado con
+propina»); el importe principal es la franja `is-band`, que saldado y sin
+propina queda sola con «Total pagado».
+Excepción: el código `PED-…` se muestra como texto
 secundario junto al estado para relacionar el detalle con el pedido del listado. Mismo
 tamaño que el pedido y hoja inferior en móvil; el modal de registrar cobro
 conserva su pantalla completa.
@@ -802,19 +830,24 @@ conserva su pantalla completa.
 Inspirado en la referencia de plataforma logística aprobada: información limpia
 y por capas, sin franjas de metadatos.
 
-1. **Identidad**: estado del pedido (`Status`, sin énfasis), hora de registro
-   con icono `clock` y, debajo, `OrderAttribution` en una línea con icono
-   `users`: «Atendido por …» (salón) · «Cobrado por …». El código del pedido no
-   se repite en el detalle.
+1. **Identidad**: estado del pedido (`Status`, sin énfasis); debajo, en una
+   sola línea (`order-detail-meta`), hora de registro con icono `clock` y
+   `OrderAttribution` con icono `users`: «Atendido por …» (salón) · «Cobrado por
+   …»; si no caben, los responsables bajan a la siguiente línea. El código del
+   pedido no se repite en el detalle.
 2. **Tarjeta de contacto** (`order-detail-contact`): `IconTile` `user` en tono
    `teal`, cliente o mesa en 14 px / 700, teléfono debajo y botón secundario
    «Llamar» (`tel:`). Solo si hay cliente o teléfono.
-3. **Pestañas** (`Tabs`): «Productos» (con contador, por defecto) y
-   «Seguimiento». No hay pestaña «Detalles»: mesa, cliente, teléfono y fecha ya
-   están en cabecera, tarjeta e identidad. Los paneles inactivos usan `hidden`.
-   Los paneles llevan sangría horizontal de 16 px en escritorio y 12 px
-   a ≤600 px para que el contenido se lea dentro de la sección de la pestaña.
-   No se añade otra tarjeta ni se cambian los radios, colores, tabs o pie.
+3. **Pestañas** (`Tabs`): «Productos» (azul `primary`, con contador, por
+   defecto) y «Seguimiento» (índigo). No hay pestaña «Detalles»: mesa, cliente,
+   teléfono y fecha ya están en cabecera, tarjeta e identidad. Los paneles
+   inactivos usan `hidden`. Los paneles llevan sangría horizontal de 16 px en
+   escritorio y 12 px a ≤600 px para que el contenido se lea dentro de la
+   sección de la pestaña (confirmado 2026-11-06). No se añade otra tarjeta ni se
+   cambian los radios.
+   El «Resumen de cuenta» sigue la regla de Venta: Subtotal y Delivery solo con
+   delivery, Total y «Pagado neto» solo con saldo, y el importe principal en la
+   franja `is-band` a todo el ancho (sola cuando no hay nada que desglosar).
 4. **Entrega** (`order-detail-context`): dirección, referencia y «Ver
    ubicación» bajo la tarjeta de contacto, solo en pedidos con entrega.
 5. **Seguimiento** («Progreso del pedido», `OrderTimeline`): hitos con círculo
@@ -1273,10 +1306,12 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   etiqueta: **Estación** (qué pantalla se opera) en la cabecera, junto al título,
   con las `Tabs` compartidas «Cocina | Barra» (solo si el API ofrece más de una;
   cambia la cola y el título), y **Origen del pedido** (canal) como filtro sobre
-  los carriles (`kitchen-filters`, como los controles del Salón) con los chips de
-  la Comanda: «Todos» primero, un chip por tipo de atención de `channelOptions`
+  los carriles (`kitchen-filters`, como los controles del Salón) con la misma
+  píldora de filtro que los periodos de Ventas (`filter-pill`, 2026-11-06): sin
+  fondo, contorno `primary-300`, la elegida con anillo `primary-600` y check
+  sólido; «Todos» primero, una píldora por tipo de atención de `channelOptions`
   (Salón `utensils`, Recojo `box`, Delivery `truck`; los pedidos QR por WhatsApp
-  van en Salón) y check en el activo. «N con demora» acompaña a la estación.
+  van en Salón). «N con demora» acompaña a la estación.
   Hasta 1024 px la estación baja bajo el título; en ≤760 px ocupa todo el ancho y
   los chips se deslizan conservando su alto de 44 px (`flex:none` en columna);
   nunca hay scroll horizontal de página. **Excepción a las pestañas móviles de dos
@@ -1313,8 +1348,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
 - El formulario de Recetas usa un modal de edición compacto y estructurado en dos
   zonas: datos de la receta e insumos. La cabecera sigue el patrón compartido:
   título de 18 px, icono de 18 px en superficie de 44 px y cierre con
-  `--control-height`. El producto y el rendimiento son los datos principales;
-  «Producto preparado» usa el autocomplete asíncrono compartido basado en
+  `--control-height`. El plato y el rendimiento son los datos principales;
+  «Plato preparado» usa el autocomplete asíncrono compartido basado en
   `react-select/async`, con selección única, `cacheOptions` y el mismo patrón visual
   `react-select-container` usado en los demás formularios. Las opciones muestran solo
   el nombre del producto, sin SKU. Al abrir muestra como máximo 10 productos; con 1 o
@@ -1651,9 +1686,14 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   El recuadro usa `navigation-950` con «—» mientras no hay efectivo; Vuelto
   `brand-100` / `brand-800` y Falta `warning-100` / `warning-800`. A la derecha,
   en este orden: caja (si hay varias), «Medio de pago», «Efectivo recibido» con
-  montos rápidos (o «Referencia» si no es efectivo), «Propina» y «Cobrar solo una
+  montos rápidos (o «Número de operación» si no es efectivo, con placeholder
+  «Ej. 356723774»), «Propina» y «Cobrar solo una
   parte» plegados con `FormDisclosure`, y al final el comprobante. Solo la columna
-  derecha se desplaza. Los medios de pago son botones de 72 px con `IconTile` encima del
+  derecha se desplaza. Los números ingresados se consultan en el detalle de
+  Pedidos y Salón bajo «Número de operación», con su medio de pago, antes de las
+  pestañas; se muestran todos los cobros con número, también en pagos parciales.
+  Los pagos sin número no añaden campos vacíos. Ventas usa la misma etiqueta
+  dentro de su historial de pagos. Los medios de pago son botones de 72 px con `IconTile` encima del
   nombre y marca de check al elegirlos; el efectivo es verde (`brand`) y los demás
   toman `peach`, `digital`, `sky`, `teal` y `rose` según su orden en el catálogo
   (`paymentMethodTones`), nunca por nombre. Los montos rápidos son «Exacto» y los
@@ -1896,6 +1936,11 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
   `src/design-system/styles/data-table.css`, y Tailwind compone el wrapper.
   El CSS compartido se registra una vez desde el layout para mantener las tablas
   heredadas durante la migración. La paginación móvil es compacta.
+- Kárdex activa `DataTable scrollbarPosition="top"`: la barra horizontal aparece
+  sobre la cabecera cuando las columnas exceden el ancho disponible, sincronizada
+  con el desplazamiento por teclado o toque de la tabla, sin duplicarse al pie.
+  La pista y el control permanecen visibles sin hover; no usa `hover-scroll` ni
+  el modo fino de barras superpuestas del navegador.
 - Todos los formularios usan los mismos labels, inputs, selects, áreas de texto,
   foco azul operativo y estados ocupado/deshabilitado.
 - **Altura única de control.** Todo control interactivo de una misma barra o
@@ -2354,6 +2399,15 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
   con barras cortas y filas de cuerpo con celdas alineadas, incluyendo icono,
   título y subtítulo en la primera columna. Nunca se renderiza como un bloque
   o barra única sin estructura.
+- **La cabecera de un modal no espera al API** (2026-11-06). Icono y título
+  se conocen por la acción («Nuevo producto», «Detalle del turno») o
+  por la fila que lo abrió (mesa, cliente, canal, nombre del menú o de la
+  empresa), así que se muestran reales desde el primer cuadro; solo el cuerpo y
+  el resumen usan skeleton. `RemoteModalSkeleton` recibe `title` e `icon`
+  iguales a los del modal final, sin una franja secundaria, y los detalles de Venta, Cobro POS,
+  Pedido/Salón, Menú y Empresa reciben la fila como `preview`. La cabecera en
+  carga queda solo para el enlace directo, sin datos previos. El skeleton del
+  resumen de esos detalles dibuja la franja `is-band` del importe principal.
 - Toda mutación muestra estado ocupado en la acción que la originó, evita envíos
   duplicados y conserva visible el contexto de la pantalla.
 - Después de cargar se presenta contenido, vacío accionable o error recuperable.
@@ -2473,9 +2527,15 @@ Bajo 1180 px la columna «Ahora mismo» pasa debajo del análisis; en 390 px tod
 y el gráfico conserva el eje X sin desbordar.
 
 Ventas ofrece periodos rápidos de un toque (Hoy, Esta semana, Este mes,
-Mes anterior, Personalizado; `radiogroup` en píldoras con la selección de las
-pestañas, fila deslizable de 44 px en móvil), búsqueda y «Desde»/«Hasta» con
-controles homologados. Los periodos son la primera fila del panel; en móvil quedan
+Mes anterior, Personalizado; `radiogroup` con la píldora de filtro compartida
+`filter-pill` de `design-system/styles/filter-pill.css`, la misma del origen en
+Cocina: sin fondo, contorno
+`primary-300` y texto `primary-700`; el elegido se ve igual que el hover
+(contorno `primary-600` de 2 px, también sin fondo) y suma un check sólido
+`primary-600` de 18 px; fila deslizable de 44 px en móvil), búsqueda y «Desde»/«Hasta» con controles
+homologados. El buscador no lleva etiqueta visible «Buscar»: el placeholder
+«Buscar pedido, cliente o mesa…» lo nombra, como en los demás listados; en
+Personalizado se alinea con los campos de fecha. Los periodos son la primera fila del panel; en móvil quedan
 fijos bajo la barra superior mientras se recorre la lista, con fondo `surface` y
 una línea inferior `cloud-100` que los separa de las filas (el panel usa
 `overflow:clip` para no anular el `sticky`); búsqueda, fechas y total siguen el scroll. Abre en **Hoy**. Los periodos se calculan con la fecha y
@@ -2689,6 +2749,78 @@ El cierre exige descarte cuando hay cambios y se
 bloquea durante la petición. El formulario usa una columna en móvil desde 390 px;
 la comanda conserva su resumen móvil y sus estilos compartidos.
 
+### Delivery Fudia (centrales de reparto)
+
+La vertical `src/modules/delivery` reúne las pantallas de Delivery Fudia, que
+se gestiona globalmente (decisión del 2026-11-06):
+
+- La plataforma registra las centrales y su orden, igual para todos.
+- La plataforma activa Delivery Fudia por empresa, y todos sus locales lo usan.
+- El local solo tiene su enlace/QR.
+- Caja sigue el despacho del pedido.
+
+- **Plataforma › Centrales de delivery** (`/platform/delivery-partners`, menú
+  de plataforma con icono `motorbike`). Usa el mismo patrón que Países y
+  WhatsApp:
+  - Tabla «ORDEN | CENTRAL | WHATSAPP | ESTADO | ACCIONES» y tarjetas en móvil.
+  - La columna Orden muestra la posición en cifras tabulares, con «Subir en el
+    orden» y «Bajar en el orden» (`IconButton` chevron rotado). Cada cambio
+    guarda al instante el orden completo. Una central nueva queda al final.
+    En móvil, el orden va en el pie de la tarjeta, junto a las acciones.
+  - Estado binario `Status active` («Activa/Inactiva»).
+  - Acciones de fila editar y activar/desactivar, con `ConfirmDialog`.
+  - Modal compacto con Nombre y WhatsApp (ayuda: «Con código de país…»).
+  - El número se muestra agrupado (+51 987 654 321).
+  - Vacío según el patrón de Reservas: «Aún no hay centrales» con «Nueva central».
+- **Plataforma › Empresa › Delivery Fudia** (`DeliveryCompanyPanel`, debajo de
+  Concierge, con la misma cabecera «DELIVERY FUDIA / Centrales de reparto»):
+  - `Status active` («Activo/Inactivo») y una línea que explica el efecto.
+  - «Activar Delivery Fudia» (primario) o «Desactivar Delivery Fudia»
+    (secundario), con `ConfirmDialog`. Los pedidos ya ofrecidos siguen su curso.
+- **Locales › Editar local › Delivery** (`FormSection` teal, icono `motorbike`).
+  Solo aparece al editar, porque necesita el id del local. No tiene modo ni
+  centrales, porque son globales.
+  - Bloque «QR para pedir por WhatsApp»:
+    - Sin QR: «Generar QR» (secundario, icono `qr`).
+    - Con QR: imagen centrada de 200 px, con margen de seguridad para escanear,
+      skeleton mientras se prepara y error explícito con reintento.
+      Acciones en un solo grupo de igual ancho junto a la imagen en escritorio:
+      «Descargar QR» y «Copiar enlace» (azul secundario), seguidas de «Regenerar QR»
+      (rojo tenue `danger-outline`, con `ConfirmDialog`: el QR y el enlace
+      anteriores dejan de abrir). La descarga usa la misma imagen con el nombre
+      del local y espera a que esté lista. No añade otra acción primaria junto a
+      «Guardar». La URL pública (`publicConciergePath`) está codificada en la imagen
+      y no se muestra como campo en el formulario.
+    - Generar y regenerar actúan al instante, no esperan a «Guardar».
+  - En ≤600 px la imagen va arriba y el grupo de acciones debajo; cada botón
+    ocupa la fila y conserva su color semántico.
+- **Detalle del pedido › Entrega**: `OrderDispatchBlock` bajo la dirección
+  (línea fina superior). Solo aparece si el pedido tiene despacho. Muestra:
+  - El estado con `Status` suave (no `solid`; es un registro, no el estado
+    operativo del pedido) y el nombre de la central en 14 px semibold.
+  - Si la central cobra el envío: «Envío S/ 5.00: lo cobra la central al cliente.»
+    en `ink-600`.
+  - Con `orders.manage`: «Reintentar centrales» (secundario, sin central o con
+    delivery propio) y «Usar delivery propio» (ghost, mientras no se recoja).
+- **Matriz del despacho** (`dispatchStatusMeta`, sin rojo porque nada es un error):
+
+  | Estado | Etiqueta | Tono |
+  | --- | --- | --- |
+  | searching | Buscando central | violet (proceso digital por WhatsApp) |
+  | accepted | Central asignada | blue |
+  | picked_up | Recogido por la central | green |
+  | unassigned | Sin central | orange (requiere acción de caja) |
+  | own | Delivery propio | gray |
+  | cancelled | Despacho cancelado | gray |
+
+- **Cobro:** al aceptar una central, el envío sale del total del pedido del
+  restaurante. Caja cobra a la central solo el pedido, y el resumen de cuenta y
+  POS ya muestran ese importe. Si el local vuelve a su delivery propio, el envío
+  regresa al pedido.
+- **Campana:** el aviso `delivery_unassigned` («Ninguna central aceptó el
+  delivery») usa icono `motorbike`, tono `peach` (atención) y abre el detalle en
+  Pedidos (`?orderId=`).
+
 ### Tarifas de delivery de Fudia Concierge
 
 La pantalla Fudia Concierge agrega un panel «Delivery y recojo por WhatsApp»
@@ -2757,6 +2889,11 @@ el estado vacío ofrece esa misma acción. En esta vista el pie solo tiene Cance
   la nota «Stock inicial: 0»; con Recetas añade «Todo artículo puede usarse como
   ingrediente en Recetas». El interruptor nace activo sin Recetas y apagado con
   Recetas. No hay tarjetas de tipo, imagen ni descripción: se completan en Productos.
+  Con Recetas activo, Unidad de inventario muestra la ayuda «Elige la unidad
+  que usas para medir este insumo en tus recetas» debajo del selector.
+  Si el backend informa un nombre duplicado (`inventory_item_name_taken`), se
+  marca Nombre y se devuelve el foco a ese campo, conservando los demás datos.
+  El mensaje invita a buscar y seleccionar el artículo ya registrado.
 - **Controlar con inventario**: resumen del producto (nombre, control actual y
   categoría), la nota «Conserva nombre, precio, categoría e historial» que avisa
   que empieza en 0 y aparecerá «Agotado» hasta una recepción o una entrada, y los
@@ -2800,23 +2937,47 @@ operativo, el encabezado y la grilla comparten un solo margen interno: 20 px en
 escritorio y 12 px en móvil (≤760 px). El encabezado de la grilla es un `h2`
 «Cajas del local» de 16 px / 700 con «Actualización automática» a la derecha; no
 lleva etiqueta en mayúsculas encima. Cada tarjeta usa 16 px de margen interno.
-El nombre de la caja, «Sin turno activo» y los importes del flujo usan 14 px,
-por encima de sus etiquetas y metadatos de 12 px. La pantalla no muestra el
+El nombre de la caja usa 16 px / 700; «Sin turno activo» y los importes del flujo
+usan 14 px, por encima de sus etiquetas y metadatos de 12 px. La pantalla no muestra el
 código técnico del turno (`CAJ-…`): el turno se identifica por su caja, cajero y
 apertura, también en el aviso «Turno iniciado» y en los nombres accesibles.
 
-El resumen operativo usa marino `navigation-900` con texto secundario
-`navigation-text`. Los iconos de caja y los tres conceptos del flujo reutilizan
-`IconTile vivid`: Fondo inicial azul, Ingresos verde y Egresos rojo. Cada
-concepto mantiene etiqueta y cantidad con signo; los importes usan tinta oscura
-de su familia sobre azul, menta y rosado tenues. El saldo esperado es azul.
-En móvil de hasta 520 px, cada concepto ocupa una fila con icono/etiqueta a la
-izquierda e importe a la derecha. «Cerrar turno» es `danger-outline` al abrir
-el flujo; la confirmación conserva su acción destructiva. Cierre ciego,
-permisos, cifras, cálculos y estados no cambian.
-En hasta 760 px, las tres herramientas se agrupan en una fila, Ingreso y
-Egreso comparten la siguiente y Cerrar turno ocupa una fila completa; no quedan
-botones de texto aislados con media fila vacía.
+El resumen operativo usa superficie blanca, una línea inferior `line` e icono
+verde vivo cuando hay turnos abiertos (azul si no hay); el dato «N cajas operando» identifica la operación sin una etiqueta
+redundante encima. Las métricas se separan con líneas finas y el efectivo usa
+`primary-700`, mientras Turnos abiertos usa `brand-700`. La grilla ajusta sus columnas al ancho disponible, con mínimo de
+440 px por caja, limitado al 100 % en móvil. Usa `auto-fill` para reservar las
+columnas disponibles: una sola caja conserva el mismo ancho que tendría al
+agregar más cajas, sin expandirse a todo el panel. No hay layout especial por
+ser la única caja. Las nuevas cajas ocupan las columnas libres y luego otra fila.
+Las tarjetas se alinean al inicio, sin estirar cajas disponibles hasta la altura
+de las abiertas. Cada caja abierta conserva saldo y datos en dos columnas
+internas y su propio flujo y acciones; en móvil se apilan. La tarjeta tiene
+borde neutro, sin sombra ni contorno azul de selección. Su icono es verde vivo
+con turno abierto, azul vivo si está disponible y neutro si está inactiva.
+
+El saldo esperado usa 28 px / 700 en azul; Cajero, Equipo actual, Apertura y Día
+operativo se organizan como etiquetas y valores alineados, conservando la fecha
+y hora de apertura. Los flujos mantienen etiqueta a la izquierda e importe a la
+derecha con cifras tabulares. Fondo inicial usa azul, Ingresos verde y Egresos
+rojo, con `IconTile vivid` y fondos menta `brand-50` y rosado `danger-50` en los
+dos últimos; los importes usan la tinta oscura de cada familia y conservan los
+signos. «Turno abierto», «Disponible» e «Inactiva» siguen usando
+`Status` suave, sin cambiar sus tonos.
+
+El pie conserva el ancho natural de cada botón, incluido Ver turno: sin
+`flex:1` ni ancho completo en esa consulta. Herramientas y movimientos forman
+dos grupos que comparten una fila cuando caben; si falta espacio, el grupo de
+movimientos baja completo y alineado a la izquierda, sin dejar Cerrar turno
+aislado. No se fuerza una fila nueva por número de cajas ni por ancho de
+página. En móvil (≤600 px), herramientas y movimientos se apilan; Ingreso y
+Egreso comparten la fila y Cerrar turno ocupa la siguiente. «Ver turno» es
+un botón secundario con etiqueta visible; Equipo y Operaciones conservan sus
+iconos y nombres accesibles. «Cerrar turno» es `danger-outline` al abrir el
+flujo; la confirmación conserva su acción destructiva. En hasta 600 px, las
+herramientas ocupan una fila, Ingreso y Egreso comparten la siguiente y Cerrar
+turno ocupa una fila completa; sin permiso de cierre, las dos acciones mantienen
+anchos iguales. Cierre ciego, permisos, cifras, cálculos y estados no cambian.
 
 El historial de Turnos tiene diez columnas: Caja, Día operativo, Cajero / cierre,
 Apertura, Cierre, Efectivo esperado, Efectivo contado, Resultado, Estado y Acciones.
@@ -3031,3 +3192,34 @@ plegable lleva la banda tenue de su rampa—, el mismo conteo «x de y» en chip
 en tinta `ink-950` semibold. El check de cada opción es circular, como la marca
 del medio de pago del POS: aro `line-strong` de 20 px sin marcar y círculo
 `primary-600` con check blanco al marcar (requerido: `primary-300`).
+
+
+## Chat público del comensal
+
+`/chat/{qr}` usa una conversación clara familiar, independiente del shell
+administrativo. El usuario pidió el estilo claro habitual el 2026-11-09; reemplaza
+la dirección oscura del 2026-11-08, que no era la intención de su referencia.
+Consume los tokens `chat-*` centrales de `variables.css`: fondo cálido
+(`chat-canvas`), cabecera y barras en gris claro (`chat-panel`), mensajes
+recibidos, tarjetas y campos en blanco (`chat-incoming`) y mensajes enviados en
+verde claro (`chat-outgoing`); texto `ink-950` y secundario `ink-500`, ambos con
+contraste AA sobre esas superficies. Conserva tipografía, escala y componentes
+compartidos. No cambia los colores semánticos de pedidos ni cuentas.
+No copia logotipos ni ilustraciones de WhatsApp. Las acciones disponibles son
+reales: carta, pedido, confirmación, escritura y atención del local.
+
+Altura `100dvh`, safe areas, entrada de 16 px y controles de al menos 44 px;
+solo la conversación y la carta horizontal se desplazan. La cabecera y la
+escritura permanecen visibles, también desde 390 px. El usuario puede ampliar
+la página. Los mensajes conservan selección de texto y tienen horas legibles.
+
+Acciones dentro de la conversación (2026-11-09): revisar y confirmar el pedido
+usan `restaurant-chat-primary`, píldora de 44 px con fondo `chat-action`
+(`brand-700`) y texto `chat-action-ink` (blanco, contraste 5,4:1); el botón de
+enviar usa los mismos dos tokens. «Agregar» y el atajo activo usan
+`chat-outgoing` con texto oscuro. El `Button` azul del panel no se usa en la
+conversación; sí dentro del modal de opciones, que conserva los componentes
+compartidos. Los bloques de carga usan `Skeleton` con `restaurant-chat-skeleton`
+(brillo entre `chat-incoming` y `chat-line`). Los atajos inferiores son píldoras
+blancas sobre la barra gris y caben en una fila desde 375 px: etiquetas de una o
+dos palabras («Carta», «Mi pedido», «Pedir cuenta», «Ubicación»).

@@ -175,6 +175,8 @@ p{text-wrap:pretty}
 :is(.ds-input,.ds-select,.ds-textarea)[aria-invalid=true]:focus:not(:where(.ds-input-shell *,.money-input *)){border-color:var(--danger);box-shadow:var(--ring-danger)}
 .ds-input-shell{display:flex;align-items:center;gap:var(--space-2);height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);color:var(--ink-400);background:var(--surface);transition:border-color var(--duration-fast),box-shadow var(--duration-fast)}
 .ds-input-shell .ds-input{height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding:0;border:0;border-radius:0;background:transparent;outline:0;box-shadow:none}
+/* El autocompletado conserva la superficie del campo compuesto, sin un parche detrás del texto. */
+.ds-input-shell .ds-input:is(:autofill,:-webkit-autofill){background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:currentColor}
 .ds-input-shell:focus-within{border-color:var(--primary-600);box-shadow:var(--ring-focus)}
 .ds-input-shell.has-leading-icon{width:100%;color:var(--ink-400)}
 .ds-input-shell.has-leading-icon>svg{flex:none}

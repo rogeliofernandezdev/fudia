@@ -111,6 +111,7 @@ func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (dom
 	_ = a.audit.Record(ctx, s, "created", "order", o.ID)
 	if in.SendToKitchen {
 		_ = a.audit.Record(ctx, s, "kitchen.submitted", "order", o.ID)
+		a.dispatchChanged(ctx, s, o.ID)
 	}
 	_ = a.paymentSummary(ctx, s, &o)
 	return o, nil
@@ -403,6 +404,10 @@ func (a *Orders) SetStatus(ctx context.Context, s scope, id string, in OrderStat
 		}
 	}
 	_ = a.audit.Record(ctx, s, action, "order", id)
+	if in.Status == "en_camino" {
+		a.noticeOnTheWay(ctx, s, o)
+	}
+	a.dispatchChanged(ctx, s, id)
 	return o, nil
 
 }

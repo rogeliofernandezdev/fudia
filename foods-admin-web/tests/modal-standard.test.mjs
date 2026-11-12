@@ -14,12 +14,26 @@ const {ModalHeader,ModalFooter}=detailComponents();
 const h=React.createElement;
 
 test("cabecera solo con icono, título y cierre; contexto siempre fuera",()=>{
- const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva orden",icon:"receipt",subtitle:"Orden de compra",details:"Proveedor seleccionado",onClose:()=>{}}));
+ const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva orden",icon:"receipt",details:"Proveedor seleccionado",onClose:()=>{}}));
  const header=html.match(/<header\b[\s\S]*?<\/header>/)[0];
  assert.match(header,/<h2[^>]*>Nueva orden<\/h2>/);
  assert.doesNotMatch(header,/<(?:small|p)\b|Orden de compra|Proveedor seleccionado/);
  assert.match(html,/<\/header><div class="modal-context">/);
  assert.match(html,/aria-label="Cerrar"/);
+});
+
+test("formularios empiezan bajo la cabecera sin franja ni título repetidos",()=>{
+ const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva reserva",icon:"clock",onClose:()=>{}}));
+ assert.doesNotMatch(html,/modal-context|modal-context-description/);
+ const reservation=read("modules/operations/reservations/presentation/reservations-page.tsx");
+ assert.match(reservation,/<ModalHeader title=\{initial.id\?"Editar reserva":"Nueva reserva"\}/);
+ assert.doesNotMatch(reservation,/<FormSection|title="Datos de la reserva"/);
+ const violations=[];
+ function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
+  const file=resolve(dir,entry.name);if(entry.isDirectory()){scan(file);continue}if(!file.endsWith(".tsx"))continue;
+  const source=ts.createSourceFile(file,readFileSync(file,"utf8"),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  function visit(node){if((ts.isJsxOpeningElement(node)||ts.isJsxSelfClosingElement(node))&&["Modal","ModalHeader","RemoteModalSkeleton"].includes(node.tagName.getText(source))&&node.attributes.properties.some(attr=>attr.name?.getText(source)==="subtitle"))violations.push(file);ts.forEachChild(node,visit)}visit(source);
+ }}scan(resolve(root,"modules"));assert.deepEqual(violations,[]);
 });
 
 test("pie admite el estado real y no lo inventa para formularios",()=>{

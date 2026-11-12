@@ -80,12 +80,21 @@ export type PlatformOnboardingDraft={foundedOn?:string;
  country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxRate:string;taxIncluded:boolean;
  // Code of the reduced IGV the company is enrolled in; "" = general rate.
  specialTaxRegime:string;
- locationName:string;locationCode:string;address:string;locationPhone:string;locationHours:string;locationOpenedOn?:string;latitude:string;longitude:string;
+ locationName:string;locationCode:string;districtCode?:string;address:string;locationPhone:string;locationHours:string;locationOpenedOn?:string;latitude:string;longitude:string;
  adminName:string;adminEmail:string;adminPassword:string;
 };
 
-export type PlatformWhatsAppChannel={id:string;countryCode:string;countryName:string;phoneNumber:string;displayName:string;active:boolean};
-export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;displayName:string;active:boolean};
+export type WhatsAppProvider="META_CLOUD_API"|"WHATSMEOW"|"FUDIA_WEB";
+export type WhatsAppProviderOption={value:WhatsAppProvider;label:string};
+export type PlatformWhatsAppChannel={id:string;countryCode:string;countryName:string;phoneNumber:string;displayName:string;active:boolean;provider:WhatsAppProvider;connectionState:string;revision:number;needsReconciliation:boolean};
+export type WhatsAppConnection={provider:WhatsAppProvider;countryCode:string;sessionRef?:string;state:string;phoneNumber:string;qrCode?:string;expiresAt?:string};
+export type WhatsAppChannelHistory={action:string;createdAt:string;before:Partial<PlatformWhatsAppChannel>|null;after:Partial<PlatformWhatsAppChannel>};
+export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;displayName:string;active:boolean;provider:WhatsAppProvider;sessionRef?:string;revision?:number};
+/** Central de Delivery Fudia (WhatsApp con código de país, solo dígitos). */
+export type DeliveryPartner={coverageCodes:string[];coverageLabels:string[];id:string;name:string;whatsappPhone:string;active:boolean;/** Orden global: la 1 recibe primero cada pedido. */priority:number;createdAt:string;updatedAt:string};
+/** Delivery Fudia activo para todos los locales de una empresa. */
+export type OrganizationDelivery={organizationId:string;enabled:boolean;updatedAt?:string};
+export type DeliveryPartnerDraft={coverageCodes:string[];coverageLabels?:string[];name:string;whatsappPhone:string;active?:boolean};
 
 export type Option={value:string;label:string};
 export type PaymentStanding="up_to_date"|"due_soon"|"overdue"|"trial"|"cancelled"|"none";

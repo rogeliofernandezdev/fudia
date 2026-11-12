@@ -199,9 +199,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
   const recipesApi=read("src/modules/menu/recipes/infrastructure/recipes-api.ts");
   assert.ok(recipes.includes('AsyncSelect=dynamic(()=>import("react-select/async")'),"Recetas reutiliza el autocomplete asíncrono existente, cargado al abrir el modal");
-  assert.ok(recipes.includes("loadOptions={loadRecipeProductOptions}"),"Producto preparado busca opciones de forma asíncrona");
+  assert.ok(recipes.includes("loadOptions={loadRecipeProductOptions}"),"Plato preparado busca opciones de forma asíncrona");
   assert.ok(recipes.includes("cacheOptions"),"El autocomplete reutiliza resultados recientes");
-  assert.equal(recipes.includes('<Select value={draft.productId}'),false,"Producto preparado no vuelve a un select nativo");
+  assert.equal(recipes.includes('<Select value={draft.productId}'),false,"Plato preparado no vuelve a un select nativo");
   assert.ok(recipesApi.includes('products?status=active&q='),"La búsqueda de productos se delega al backend");
   assert.ok(recipesApi.includes('products?status=active&page=1&pageSize=10'),"La apertura inicial carga solo 10 productos");
   assert.ok(recipesApi.includes("pageSize=100"),"Las búsquedas usan páginas amplias para reunir coincidencias");
@@ -219,7 +219,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(recipes.includes('inventoryItemId:""'),"Agregar insumo crea una fila vacía sin depender del catálogo cargado");
   assert.equal(recipes.includes("draft.items.length>=(inventory.data?.items.length??0)"),false,"No existe un máximo ligado al tamaño del catálogo cargado");
   assert.ok(recipes.includes('className="recipe-skeleton-table"'),"El skeleton de recetas usa la misma geometría de tabla");
-  assert.ok(recipes.includes("<th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th>"),"El skeleton conserva las columnas reales");
+  assert.ok(recipes.includes("<th>Producto</th><th>Porciones</th><th>Insumos</th><th>Estado</th><th>Acciones</th>"),"El skeleton conserva las columnas reales");
   assert.equal(recipes.includes("recipe-list-skeleton-head"),false,"El skeleton no usa barras genéricas como cabecera");
 });
 
@@ -328,7 +328,7 @@ test("caja separa cajas fisicas de sus turnos",()=>{
 
   assert.ok(dialogs.includes("CashRegisterDialog"),"Registrar caja tiene un formulario propio");
   assert.ok(dialogs.includes("Estás iniciando un turno en"),"El modal de turno deja clara la caja seleccionada");
-  assert.ok(dialogs.includes('subtitle={cashRegister.name}'),"El turno muestra el nombre de su caja");
+  assert.ok(dialogs.includes('title={<>{"Iniciar turno"} · {cashRegister.name}</>}'),"El turno muestra el nombre de su caja en el título");
   assert.ok(dialogs.includes("Efectivo esperado"),"El arqueo muestra el esperado antes de cerrar");
   assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
   assert.ok(dialogs.includes("Diferencia"),"El cierre calcula sobrante o faltante");
@@ -757,7 +757,7 @@ test("carta y producción usa iconos semánticos por función",()=>{
   assert.ok(navigation.includes('name:"Recetas",icon:"cookingPot"'),"Recetas usa cocción/producción, no un rol de chef");
   assert.ok(navigation.includes('name:"Disponibilidad",icon:"availability"'),"Disponibilidad usa un icono específico de plato disponible");
   assert.ok(icons.includes("availability:"),"El design system define el icono semántico de disponibilidad");
-  assert.ok(recipes.includes('name="cookingPot"'),"La página de Recetas conserva la misma semántica visual");
+  assert.ok(recipes.includes('icon="cookingPot"'),"La página de Recetas conserva la misma semántica visual");
   assert.ok(availability.includes('name="availability"'),"El estado vacío de disponibilidad usa su icono de dominio");
 });
 
@@ -770,7 +770,7 @@ test("abastecimiento diferencia inventario de kardex por icono",()=>{
   assert.ok(navigation.includes('name:"Inventario",icon:"stock"'),"Inventario conserva el icono de stock físico");
   assert.ok(navigation.includes('name:"Kardex",icon:"ledger"'),"Kárdex usa un icono propio de historial/ledger");
   assert.ok(icons.includes("ledger:"),"El design system define el icono de Kárdex");
-  assert.ok(kardex.includes('icon="ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
+  assert.ok(kardex.includes('"search":"ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
 });
 
 
@@ -799,7 +799,7 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   const routes=read("src/shared/routing/page-routes.ts");
   const navigation=read("src/shell/navigation.ts");
   const platformShell=read("src/modules/platform/presentation/platform-shell.tsx");
-  const page=read("src/modules/platform/presentation/platform-global-settings-page.tsx");
+  const page=read("src/modules/platform/presentation/platform-global-settings-page.tsx")+read("src/modules/platform/presentation/whatsapp-channel-editor.tsx");
   const route=read("src/app/platform/global-settings/page.tsx");
   const publicApi=read("src/modules/platform/index.ts");
 

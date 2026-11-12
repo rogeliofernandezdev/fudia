@@ -31,6 +31,12 @@ generales comienzan directamente; `LocationMap` aporta su propia etiqueta
 «Dirección del local» y recibe `addressError`, sin otro `FormField` que la
 repita. El bloque fiscal conserva un único rótulo visible «Perfil fiscal» y
 su sección mantiene el nombre accesible «Configuración fiscal».
+
+`GeographicFields` añade departamento, provincia y distrito del catálogo INEI
+remoto en Ubicación y Primer local. Sus tres columnas se apilan desde 600 px,
+con carga, error recuperable y vacío explícitos. Plataforma reutiliza el mismo
+catálogo en Distritos de atención: departamento y provincia filtran la lista y
+cada casilla marca un distrito. Los marcados se conservan al cambiar de provincia. El modal de central usa `ModalForm`, `ModalBody` y `ModalFooter`.
 Usa `ModalForm` + `ModalBody` + `ModalFooter`: el mapa y sus controles quedan
 dentro del cuerpo desplazable y recortado, separados del pie. El formulario
 no usa el footer sticky heredado que permitía superponer controles del mapa
@@ -175,8 +181,11 @@ responsable ni estado dentro de la cabecera.
 
 `ModalHeader` es la cabecera reutilizable tanto de `Modal` como de detalles
 remotos que necesitan `Dialog` directamente. La cabecera reserva una fila para
-icono, título y X. `subtitle`, `meta` y `details` se renderizan en `.modal-context`,
-fuera de la cabecera; no duplicar información ya presente en el cuerpo.
+icono, título y X. No acepta `subtitle` ni reserva una franja antes del cuerpo;
+solo 8 px separan el contenido de la cabecera. El título comunica crear/editar; el nombre del registro se
+integra en él cuando hace falta. `meta` y `details` se reservan para datos y
+controles útiles, fuera de la cabecera; las descripciones van en el cuerpo
+desplazable. Un título de sección que repite la cabecera se elimina.
 En detalles operativos, responsables y fecha se ubican en el cuerpo. Cabecera
 azul `primary-700`, título blanco, cuerpo blanco y pie fijo `cloud-50`,
 con los mismos márgenes horizontales de 24/16 px. Padding vertical de 8 px y altura
@@ -741,8 +750,10 @@ pastilla de estado ni formateador de dinero.
 
 - `EmptyState({icon,title,text,action})`: vacío accionable sobre `.catalog-state`.
   El texto distingue «Aún no hay …» de «Sin coincidencias» cuando hay filtros. La
-  acción, si existe, es un `Button` con etiqueta específica («Nuevo producto»),
-  nunca «Crear registro».
+  acción, si existe, es un `Button icon="plus"` con la misma etiqueta del
+  encabezado («Nuevo producto»), nunca «Crear registro». Con filtros activos el
+  icono es `search` y no hay acción de crear. Es el único vacío de tablas y
+  listados (patrón de Reservas, 2026-11-06; ver `03_LAYOUTS.md`).
 - `ErrorState({title,text,onRetry})`: error recuperable sobre
   `.catalog-state.error`; «Reintentar» es siempre `Button kind="secondary"` con
   icono `refresh`. No reemplaza datos por ceros.

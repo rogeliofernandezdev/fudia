@@ -8,6 +8,25 @@ const read=path=>readFileSync(new URL("../src/"+path,import.meta.url),"utf8");
 const ready={...exampleOrder,status:"listo",serviceItems:exampleOrder.serviceItems.map(i=>({...i,status:"listo"}))};
 const served={...exampleOrder,status:"entregado",serviceItems:exampleOrder.serviceItems.map(i=>({...i,status:"entregado"}))};
 
+test("el detalle muestra los números de operación de pagos completos y parciales",()=>{
+ for(const variant of ["order","table"]){
+  for(const remainingAmount of ["0","10"]){
+   const html=renderDetail({variant,order:{...served,paidAmount:remainingAmount==="0"?"30":"20",remainingAmount,paymentReferences:[{methodName:"Tarjeta",reference:"356723774"},{methodName:"Yape",reference:"000123456"}]}});
+   assert.match(html,/Número de operación/);
+   assert.match(html,/356723774/);
+   assert.match(html,/000123456/);
+   assert.match(html,/Tarjeta/);
+   assert.match(html,/Yape/);
+  }
+ }
+});
+
+test("sin número registrado el detalle no inventa información de operación",()=>{
+ for(const paymentReferences of [undefined,[],[{methodName:"Efectivo",reference:"   "}]]){
+  assert.doesNotMatch(renderDetail({order:{...served,paidAmount:"30",remainingAmount:"0",paymentReferences}}),/Número de operación/);
+ }
+});
+
 test("entrega no depende del pago ni requiere una segunda transición",()=>{
  for(const p of ["pending","partial","paid"]){
   assert.equal(nextOrderAction({...ready,paymentStatus:p}).status,"entregado");

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"net/mail"
+	"regexp"
 	"strings"
 )
 
@@ -20,21 +21,22 @@ type TenantOnboardingInput struct {
 	TaxIncluded      bool                `json:"taxIncluded"`
 	// SpecialTaxRegime enrolls the first fiscal profile in its country's
 	// reduced IGV (Peru: MYPE restaurants in the SUNAT padrón); nil = general.
-	SpecialTaxRegime *string             `json:"specialTaxRegime"`
-	LocationName     string              `json:"locationName"`
-	LocationCode     string              `json:"locationCode"`
-	Address          string              `json:"address"`
-	LocationPhone    string              `json:"locationPhone"`
-	LocationOpenedOn string              `json:"locationOpenedOn"`
-	LocationHours    string              `json:"locationHours"`
-	Latitude         *float64            `json:"latitude,omitempty"`
-	Longitude        *float64            `json:"longitude,omitempty"`
-	AdminName        string              `json:"adminName"`
-	AdminEmail       string              `json:"adminEmail"`
-	AdminPassword    string              `json:"adminPassword"`
-	PlanID           string              `json:"planId"`
-	BillingCycle     string              `json:"billingCycle"`
-	TermsAccepted    bool                `json:"termsAccepted"`
+	SpecialTaxRegime *string  `json:"specialTaxRegime"`
+	LocationName     string   `json:"locationName"`
+	LocationCode     string   `json:"locationCode"`
+	DistrictCode     string   `json:"districtCode"`
+	Address          string   `json:"address"`
+	LocationPhone    string   `json:"locationPhone"`
+	LocationOpenedOn string   `json:"locationOpenedOn"`
+	LocationHours    string   `json:"locationHours"`
+	Latitude         *float64 `json:"latitude,omitempty"`
+	Longitude        *float64 `json:"longitude,omitempty"`
+	AdminName        string   `json:"adminName"`
+	AdminEmail       string   `json:"adminEmail"`
+	AdminPassword    string   `json:"adminPassword"`
+	PlanID           string   `json:"planId"`
+	BillingCycle     string   `json:"billingCycle"`
+	TermsAccepted    bool     `json:"termsAccepted"`
 }
 
 // Onboarding owns its input. Billing validates and persists it through its port.
@@ -150,18 +152,28 @@ type PlatformOrganizationDetail struct {
 	Locations       []PlatformOrganizationLocation          `json:"locations"`
 }
 type PlatformWhatsAppChannel struct {
-	ID          string `json:"id"`
-	CountryCode string `json:"countryCode"`
-	CountryName string `json:"countryName"`
-	PhoneNumber string `json:"phoneNumber"`
-	DisplayName string `json:"displayName"`
-	Active      bool   `json:"active"`
+	ID                  string `json:"id"`
+	CountryCode         string `json:"countryCode"`
+	CountryName         string `json:"countryName"`
+	PhoneNumber         string `json:"phoneNumber"`
+	DisplayName         string `json:"displayName"`
+	Active              bool   `json:"active"`
+	Provider            string `json:"provider"`
+	ConnectionState     string `json:"connectionState"`
+	Revision            int64  `json:"revision"`
+	NeedsReconciliation bool   `json:"needsReconciliation"`
+	ProviderKey         string `json:"-"`
+	RoutingKey          string `json:"-"`
 }
 type PlatformWhatsAppChannelInput struct {
 	CountryCode string `json:"countryCode"`
 	PhoneNumber string `json:"phoneNumber"`
 	DisplayName string `json:"displayName"`
 	Active      bool   `json:"active"`
+	Provider    string `json:"provider"`
+	SessionRef  string `json:"sessionRef,omitempty"`
+	Revision    *int64 `json:"revision,omitempty"`
+	ProviderKey string `json:"-"`
 }
 
 var PaymentStandingOptions = []OptionView{
@@ -222,11 +234,27 @@ func ValidatePlatformWhatsAppChannel(in *PlatformWhatsAppChannelInput) (string, 
 	in.CountryCode = strings.ToUpper(strings.TrimSpace(in.CountryCode))
 	in.PhoneNumber = strings.TrimSpace(in.PhoneNumber)
 	in.DisplayName = strings.TrimSpace(in.DisplayName)
+	in.Provider = strings.ToUpper(strings.TrimSpace(in.Provider))
+	if in.Provider == "" {
+		in.Provider = MetaCloudAPI
+	}
+	if in.Provider != MetaCloudAPI && in.Provider != Whatsmeow && in.Provider != FudiaWeb {
+		return "invalid_provider", "Selecciona un proveedor de WhatsApp válido."
+	}
 	if len(in.CountryCode) != 2 {
 		return "invalid_country", "Selecciona un país válido."
 	}
-	if in.PhoneNumber == "" || len(in.PhoneNumber) > 40 {
-		return "invalid_phone", "Ingresa un número de WhatsApp válido."
+	if in.Provider == FudiaWeb {
+		in.PhoneNumber = ""
+	} else {
+		phone := WhatsAppDigits(in.PhoneNumber)
+		if !regexp.MustCompile(`^\+?[0-9 ()-]+$`).MatchString(in.PhoneNumber) || len(phone) < 8 || len(phone) > 15 || phone[0] == '0' || len(in.PhoneNumber) > 40 {
+			return "invalid_phone", "Ingresa un número de WhatsApp válido."
+		}
+		in.PhoneNumber = "+" + phone
+	}
+	if in.DisplayName == "" || len(in.DisplayName) > 120 {
+		return "invalid_name", "Ingresa un nombre de hasta 120 caracteres."
 	}
 	return "", ""
 }

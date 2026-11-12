@@ -53,6 +53,7 @@ export const pageRoutes={
   platformSubscription:"/platform/subscription",
   platformGlobalSettings:"/platform/global-settings",
   platformTaxes:"/platform/taxes",
+  platformDeliveryPartners:"/platform/delivery-partners",
   login:"/login",
 } as const;
 
