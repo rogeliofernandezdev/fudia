@@ -12,6 +12,7 @@ const env = {...base, ...concierge,
   GCP_CONCIERGE_DEPLOY_APPROVED: "true", GCP_IMAGE_BUILT: "true"};
 const digest = `${conciergeConfiguration(env).image.split(":")[0]}@sha256:${"b".repeat(64)}`;
 const apiURL = "https://api-example.run.app";
+const webURL = "https://web-example.run.app";
 
 function harness(options = {}) {
   const calls = [];
@@ -28,6 +29,7 @@ function harness(options = {}) {
     const command = args.slice(0, 3).join(" ");
     if (command === "run services describe") {
       if (args[3] === base.GCP_BACKEND_SERVICE) return JSON.stringify(backend);
+      if (args[3] === base.GCP_FRONTEND_SERVICE) return options.noFrontend ? null : JSON.stringify({status: {url: webURL}});
       return ++httpReads === 1 && options.newService ? null : JSON.stringify(candidate);
     }
     if (command === "run revisions describe") return JSON.stringify(active);
@@ -132,6 +134,27 @@ test("worker failure leaves existing HTTP traffic untouched; initial installatio
   const first = harness({newService: true});
   await deployConcierge(conciergeConfiguration(env), env, first.run, async () => {});
   assert.ok(!first.calls.find(call => call.slice(0, 4).join(" ") === "gcloud run worker-pools deploy").includes("--no-promote"));
+});
+
+test("web chat origin comes from the deployed frontend unless WEB_CHAT_URL is set", async () => {
+  const targets = calls => ["gcloud run jobs deploy", "gcloud run deploy", "gcloud run worker-pools deploy"]
+    .map(prefix => calls.find(call => call.join(" ").startsWith(prefix)))
+    .map(call => call[call.indexOf("--set-env-vars") + 1].split(","));
+  const derived = harness();
+  await deployConcierge(conciergeConfiguration(env), env, derived.run, async () => {});
+  for (const vars of targets(derived.calls)) assert.ok(vars.includes(`WEB_CHAT_URL=${webURL}`));
+
+  const explicit = harness();
+  const custom = {...env, WEB_CHAT_URL: "https://pedidos.example.test"};
+  await deployConcierge(conciergeConfiguration(custom), custom, explicit.run, async () => {});
+  for (const vars of targets(explicit.calls)) assert.ok(vars.includes("WEB_CHAT_URL=https://pedidos.example.test"));
+  assert.ok(!explicit.calls.some(call => call.includes(base.GCP_FRONTEND_SERVICE)));
+
+  // Frontend not deployed yet: Concierge still deploys, without a web chat origin.
+  const missing = harness({noFrontend: true});
+  await deployConcierge(conciergeConfiguration(env), env, missing.run, async () => {});
+  for (const vars of targets(missing.calls)) assert.ok(!vars.some(entry => entry.startsWith("WEB_CHAT_URL=")));
+  assert.throws(() => conciergeConfiguration({...env, GCP_FRONTEND_SERVICE: "web;echo"}));
 });
 
 test("release is reusable and manual, backend is optional, uses WIF without credential files", () => {

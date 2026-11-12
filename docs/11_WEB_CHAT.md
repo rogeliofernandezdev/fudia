@@ -82,6 +82,10 @@ mensaje, abrir la carta o las opciones siempre vuelve a validar el QR.
 1. Aplicar `000123_fudia_web_channel` y `000124_web_partner_transport`.
 2. En Concierge HTTP **y worker**, configurar `WEB_CHAT_URL` con el origen HTTPS
    público de foods-admin-web, sin ruta ni query. En desarrollo se admite localhost.
+   En GCP no hace falta registrarla: el despliegue de Concierge toma la URL del
+   servicio `GCP_FRONTEND_SERVICE` ya desplegado, igual que el frontend toma la
+   del backend. La variable `WEB_CHAT_URL` del Environment solo se define para
+   usar un dominio propio, y entonces prevalece.
    Opcional, solo en el HTTP: `WEB_CHAT_SESSION_LIMIT` y
    `WEB_CHAT_SESSION_WINDOW_SECONDS` si un enlace de delivery muy difundido
    necesita más de 60 sesiones nuevas cada 10 minutos. El proxy público debe
@@ -91,6 +95,8 @@ mensaje, abrir la carta o las opciones siempre vuelve a validar el QR.
 4. En GCP, agregar la referencia existente de esa clave a `GCP_FRONTEND_SECRETS`
    y permitir a la identidad del frontend leer ese secreto. El desplegador acepta
    esa referencia; el workflow de Concierge propaga `WEB_CHAT_URL` al HTTP y worker.
+   Si el frontend aún no existe al desplegar Concierge, este queda sin origen
+   web: desplegar el frontend y volver a desplegar Concierge.
 5. Seleccionar **Chat web de Fudia** y activar el canal del país. No pide número
    ni vinculación de dispositivo. El servicio verifica que el origen esté configurado.
 

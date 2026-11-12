@@ -66,6 +66,7 @@ export function conciergeConfiguration(env) {
   return {
     project, region, http, worker, job, httpIdentity, workerIdentity, backend, backendIdentity,
     secrets, ca, sha, suffix, gatewayURL,
+    frontend: optional(env, "GCP_FRONTEND_SERVICE", resource),
     webChatURL: env.WEB_CHAT_URL ? httpsURL(env.WEB_CHAT_URL, "WEB_CHAT_URL") : "",
     whatsappCountry: optional(env,"WHATSAPP_COUNTRY_CODE",/^[A-Z]{2}$/) || "PE",
     registry: `${region}-docker.pkg.dev`,
@@ -164,6 +165,12 @@ export async function deployConcierge(c, env, run = command, smoke = smokeConcie
   const expected = c.secrets.get("FUDIA_CONCIERGE_API_KEY");
   if (containers?.length !== 1 || !ref || `${ref.name}:${ref.key}` !== expected || revision.spec.serviceAccountName !== c.backendIdentity) {
     throw new Error("La revisión activa del backend no usa la identidad/versión del secreto de integración configurados. Despliega backend primero.");
+  }
+  // Like the frontend's FOODS_API_URL: an explicit WEB_CHAT_URL wins (custom
+  // domain); otherwise the web chat opens on the deployed frontend service.
+  if (!c.webChatURL && c.frontend) {
+    const frontend = describe("services", c.frontend, true);
+    if (frontend?.status?.url) c = {...c, webChatURL: httpsURL(frontend.status.url, "URL frontend")};
   }
   const previousHTTP = describe("services", c.http, true);
   const previousWorker = describe("worker-pools", c.worker, true);
