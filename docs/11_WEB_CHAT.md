@@ -9,8 +9,9 @@ los pedidos y las rutas históricas de conversaciones anteriores.
 
 El mismo enlace público del QR resuelve el país y abre `/chat/{qr}` directamente,
 sin lanzador flotante ni login. La referencia aprobada es una conversación clara
-familiar (2026-11-09; la primera versión era oscura): fondo cálido, cabecera del
-restaurante en gris claro, mensajes recibidos en blanco a la izquierda y enviados
+familiar (2026-11-09; la primera versión era oscura) con los verdes de WhatsApp
+(2026-11-12): fondo cálido, cabecera verde con texto blanco para el
+restaurante, mensajes recibidos en blanco a la izquierda y enviados
 en verde claro a la derecha, horas y escritura fija abajo. Identidad propia, sin
 logotipos ni fondos copiados de WhatsApp.
 Carta con imágenes reales del catálogo, búsqueda, Agregar, opciones de combos y

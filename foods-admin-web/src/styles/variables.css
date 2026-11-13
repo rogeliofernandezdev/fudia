@@ -5,17 +5,24 @@
  * Component selectors stay in their owning sheets. */
 :root {
   /* Chat público: conversación clara familiar (2026-11-09; reemplaza la dirección oscura inicial).
-   * Fondo cálido, barras gris claro, mensajes recibidos en blanco y enviados en verde claro. */
-  --chat-canvas: #efe9e0;
+   * Verdes de WhatsApp pedidos por el usuario (2026-11-12): cabecera y acciones en verde azulado con
+   * texto blanco (4,9:1), fondo cálido, mensajes recibidos en blanco y enviados en verde claro.
+   * `chat-panel` queda para marcadores sin foto y bloques de carga. */
+  --chat-canvas: #efeae2;
+  --chat-header: #008069;
+  --chat-header-ink: var(--surface);
+  --chat-header-hover: var(--surface-alpha-16);
   --chat-panel: var(--cloud-100);
   --chat-incoming: var(--surface);
-  --chat-outgoing: #d7f8d4;
+  --chat-outgoing: #d9fdd3;
+  /* Doble check de un mensaje ya procesado: azul legible (3,8:1) sobre el verde claro enviado. */
+  --chat-read: var(--primary-500);
   --chat-ink: var(--ink-950);
   --chat-muted: var(--ink-500);
   --chat-line: var(--line-strong);
-  --chat-focus: var(--brand-700);
-  /* Acción principal del chat (enviar, revisar y confirmar el pedido): verde del restaurante con texto blanco. */
-  --chat-action: var(--brand-700);
+  --chat-focus: var(--chat-header);
+  /* Acción principal del chat (enviar, revisar y confirmar el pedido): el mismo verde de la cabecera con texto blanco. */
+  --chat-action: var(--chat-header);
   --chat-action-ink: var(--surface);
 
 

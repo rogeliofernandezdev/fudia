@@ -3208,27 +3208,67 @@ del medio de pago del POS: aro `line-strong` de 20 px sin marcar y círculo
 `/chat/{qr}` usa una conversación clara familiar, independiente del shell
 administrativo. El usuario pidió el estilo claro habitual el 2026-11-09; reemplaza
 la dirección oscura del 2026-11-08, que no era la intención de su referencia.
-Consume los tokens `chat-*` centrales de `variables.css`: fondo cálido
-(`chat-canvas`), cabecera y barras en gris claro (`chat-panel`), mensajes
-recibidos, tarjetas y campos en blanco (`chat-incoming`) y mensajes enviados en
-verde claro (`chat-outgoing`); texto `ink-950` y secundario `ink-500`, ambos con
-contraste AA sobre esas superficies. Conserva tipografía, escala y componentes
-compartidos. No cambia los colores semánticos de pedidos ni cuentas.
-No copia logotipos ni ilustraciones de WhatsApp. Las acciones disponibles son
-reales: carta, pedido, confirmación, escritura y atención del local.
+El 2026-11-12 pidió además los verdes de WhatsApp en lugar del verde de marca.
+Consume los tokens `chat-*` centrales de `variables.css`:
+
+- Cabecera `chat-header` (`#008069`) con título, subtítulo e iconos en
+  `chat-header-ink` (blanco, contraste 4,9:1). El subtítulo no se atenúa: con
+  transparencia baja de AA. `themeColor` de la página repite ese verde.
+- Fondo cálido `chat-canvas` (`#efeae2`); la barra de atajos y la de escritura
+  son transparentes sobre ese fondo, sin franja gris ni línea superior.
+- Mensajes recibidos, tarjetas y campos en blanco (`chat-incoming`); enviados en
+  verde claro `chat-outgoing` (`#d9fdd3`); texto `ink-950` y secundario
+  `ink-500`, ambos con contraste AA sobre esas superficies.
+- `chat-panel` (gris claro) queda solo para el marcador «Sin foto» y la carga.
+
+Conserva tipografía, escala y componentes compartidos. No cambia los colores
+semánticos de pedidos ni cuentas. No copia logotipos ni ilustraciones de
+WhatsApp. Las acciones disponibles son reales: carta, pedido, confirmación,
+escritura y atención del local.
+
+Burbujas (2026-11-12): radio `radius-tile`, sombra `elevation-1` y ancho máximo
+de 86 % en móvil. Los mensajes seguidos del mismo emisor se agrupan: solo el
+primero (`is-first`) se separa del grupo anterior y lleva la punta y la esquina
+recta hacia su lado. La hora va en línea, flotando a la derecha de la última
+línea del texto (baja sola si no cabe); el doble check de un mensaje procesado
+usa `chat-read` (`primary-500`, 3,8:1). Mientras el local responde se muestra
+una burbuja con tres puntos animados y el texto solo para lectores de pantalla;
+con movimiento reducido los puntos quedan quietos. La fecha es una ficha blanca
+centrada.
 
 Altura `100dvh`, safe areas, entrada de 16 px y controles de al menos 44 px;
 solo la conversación y la carta horizontal se desplazan. La cabecera y la
 escritura permanecen visibles, también desde 390 px. El usuario puede ampliar
 la página. Los mensajes conservan selección de texto y tienen horas legibles.
 
-Acciones dentro de la conversación (2026-11-09): revisar y confirmar el pedido
-usan `restaurant-chat-primary`, píldora de 44 px con fondo `chat-action`
-(`brand-700`) y texto `chat-action-ink` (blanco, contraste 5,4:1); el botón de
-enviar usa los mismos dos tokens. «Agregar» y el atajo activo usan
-`chat-outgoing` con texto oscuro. El `Button` azul del panel no se usa en la
+Acciones dentro de la conversación: revisar y confirmar el pedido usan
+`restaurant-chat-primary`, píldora de 44 px con fondo `chat-action` (el mismo
+verde de la cabecera) y texto `chat-action-ink` (blanco). El botón de enviar es
+un círculo de 48 px con esos dos tokens; sin texto por enviar conserva el verde
+sólido y solo se atenúa su icono. «Agregar» usa `chat-outgoing` con texto
+oscuro. El campo de escritura es una píldora blanca de 48 px con sombra; su foco
+es una línea fina `chat-focus`, no el halo azul del panel. En la cabecera el
+foco de teclado es blanco. El `Button` azul del panel no se usa en la
 conversación; sí dentro del modal de opciones, que conserva los componentes
 compartidos. Los bloques de carga usan `Skeleton` con `restaurant-chat-skeleton`
-(brillo entre `chat-incoming` y `chat-line`). Los atajos inferiores son píldoras
-blancas sobre la barra gris y caben en una fila desde 375 px: etiquetas de una o
-dos palabras («Carta», «Mi pedido», «Pedir cuenta», «Ubicación»).
+(brillo entre `chat-incoming` y `chat-line`).
+
+Atajos inferiores: píldoras blancas con sombra, icono de 16 px en `chat-action`
+y texto `ink-950`; el atajo abierto se rellena con `chat-action` y texto blanco,
+y el contador de «Mi pedido» invierte sus colores. Los tres caben en una fila
+desde 375 px: etiquetas de una o dos palabras («Carta», «Mi pedido», «Pedir
+cuenta», «Ubicación»). La confirmación del pedido y los avisos son tarjetas
+blancas flotantes sobre el fondo, encima de los atajos.
+
+La cabecera solo lleva el logo, el nombre con local y mesa, y el menú de
+información: la lupa se retiró el 2026-11-12 porque abría la misma carta que el
+atajo «Carta», que ya incluye el buscador.
+
+«Tu pedido» (2026-11-12) es una tarjeta con el conteo de productos junto al
+título. Cada fila muestra la foto del plato tomada de la carta (o el marcador
+neutro) con la cantidad en una insignia `chat-action`, el nombre, sus opciones
+o componentes del combo como fichas `chat-panel`, la nota de cocina con icono,
+el precio unitario solo cuando la cantidad es mayor que uno, y a la derecha el
+importe de la línea en negrita con el botón de quitar de 44 px. El subtotal
+cierra la lista en 18 px / 700. Vacío: icono, «Tu pedido está vacío» y el botón
+«Ver la carta».

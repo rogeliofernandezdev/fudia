@@ -3,19 +3,20 @@
 import Image from "next/image";
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {IconCheck,IconChecks,IconChefHat,IconDotsVertical,IconMapPin,IconMenu2,IconPlus,IconSearch,IconSend2,IconShoppingBag,IconTrash,IconX} from "@tabler/icons-react";
+import {IconCheck,IconChecks,IconChefHat,IconDotsVertical,IconMapPin,IconMenu2,IconNote,IconPlus,IconReceipt,IconSend2,IconShoppingBag,IconTrash,IconX} from "@tabler/icons-react";
 import {Button,Input,ModalBody,ModalFooter,ModalHeader,Skeleton} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import type {ChatAction,ChatInput,ChatMessage,ChatProduct,ProductOptions} from "../domain/types";
 import {loadChat,loadChatMenu,loadProductOptions,newChatRequestId,openChat,sendChatInput} from "../infrastructure/chat-api";
 import "./restaurant-chat.css";
 
-function Message({message}:{message:ChatMessage}) {
+// `first` marca el primer mensaje de un grupo del mismo emisor: solo ese lleva la punta de la burbuja.
+function Message({message,first}:{message:ChatMessage;first:boolean}) {
   const outgoing=message.role==="user";
-  return <article className={`restaurant-chat-message ${outgoing?"is-outgoing":"is-incoming"}`} aria-label={outgoing?"Tu mensaje":"Mensaje del restaurante"}>
+  return <article className={`restaurant-chat-message ${outgoing?"is-outgoing":"is-incoming"}${first?" is-first":""}`} aria-label={outgoing?"Tu mensaje":"Mensaje del restaurante"}>
     {message.imageUrl&&<Image className="restaurant-chat-message-image" src={message.imageUrl} alt={message.text||"Imagen compartida por el restaurante"} width={480} height={320} unoptimized/>}
     {message.text&&<p>{message.text}</p>}
-    <footer><time dateTime={new Date(message.createdAt*1000).toISOString()}>{new Date(message.createdAt*1000).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}</time>{outgoing&&(message.status==="sent"?<IconChecks size={16} aria-label="Procesado"/>:<IconCheck size={16} aria-label="Recibido"/>)}</footer>
+    <footer><time dateTime={new Date(message.createdAt*1000).toISOString()}>{new Date(message.createdAt*1000).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}</time>{outgoing&&(message.status==="sent"?<IconChecks className="restaurant-chat-read" size={16} aria-label="Procesado"/>:<IconCheck size={16} aria-label="Recibido"/>)}</footer>
   </article>;
 }
 
@@ -76,6 +77,8 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   const currency=menu.data?.currencySymbol??"";
   const items=menu.data?.items.filter(item=>!search||`${item.name} ${item.categoryName??""}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))??[];
   const quantity=state?.cart.items.reduce((sum,item)=>sum+item.quantity,0)??0;
+  // La foto del plato sale de la carta ya cargada: el carrito solo trae nombres e importes.
+  const photos=new Map(menu.data?.items.map(item=>[item.productId,item.imageUrl]));
   useEffect(()=>{
     activeAt.current=Date.now();
     if (following.current) bottom.current?.scrollIntoView({block:"end"});
@@ -107,17 +110,16 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   </section></main>;
   return <main className="restaurant-chat-stage"><section className="restaurant-chat" aria-label={`Chat de ${state.context.organizationName}`}>
     <header className="restaurant-chat-header">
-      <div className="restaurant-chat-avatar">{menu.data?.restaurantLogoUrl?<Image src={menu.data.restaurantLogoUrl} alt="" width={44} height={44} unoptimized/>:<IconChefHat size={26}/>}</div>
+      <div className="restaurant-chat-avatar">{menu.data?.restaurantLogoUrl?<Image src={menu.data.restaurantLogoUrl} alt="" width={40} height={40} unoptimized/>:<IconChefHat size={24}/>}</div>
       <div className="restaurant-chat-heading"><h1>{state.context.organizationName}</h1><p>{state.context.locationName} · {state.mode==="table"?state.context.name:state.mode==="counter"?"Pedido en tienda":"Delivery y recojo"}</p></div>
-      <button className="restaurant-chat-icon" type="button" aria-label="Buscar en la carta" onClick={()=>{following.current=true;setShowMenu(true);setSearch("")}}><IconSearch size={22}/></button>
       <button className="restaurant-chat-icon" type="button" aria-label="Información del chat" aria-expanded={showInfo} onClick={()=>setShowInfo(!showInfo)}><IconDotsVertical size={22}/></button>
     </header>
     {showInfo&&<aside className="restaurant-chat-info"><strong>Asistente de {state.context.organizationName}</strong><p>Consulta la carta, arma tu pedido y confírmalo aquí. Tus mensajes se atienden con asistencia de inteligencia artificial. El personal del local revisa tu pedido.</p><p>Las actualizaciones aparecen mientras tengas este chat abierto.</p><button type="button" onClick={()=>{setShowInfo(false);act({name:"request_human"})}} disabled={disabled}>Solicitar atención del personal</button></aside>}
     <div ref={feed} className="restaurant-chat-feed" role="log" aria-label="Conversación" aria-live="polite" aria-relevant="additions" onScroll={()=>{const element=feed.current;if(element)following.current=element.scrollHeight-element.scrollTop-element.clientHeight<100}}>
       <div className="restaurant-chat-date">Hoy</div>
-      {messages.map(message=><Message key={message.id} message={message}/>)}
+      {messages.map((message,index)=><Message key={message.id} message={message} first={messages[index-1]?.role!==message.role}/>)}
       {!messages.length&&!state.pending&&<p className="restaurant-chat-system">Escríbenos o elige un plato de la carta para empezar.</p>}
-      {state.pending&&<div className="restaurant-chat-typing" role="status">El restaurante está respondiendo<span aria-hidden="true">…</span></div>}
+      {state.pending&&<div className="restaurant-chat-typing" role="status"><span className="sr-only">El restaurante está respondiendo</span><span className="restaurant-chat-dot" aria-hidden="true"/><span className="restaurant-chat-dot" aria-hidden="true"/><span className="restaurant-chat-dot" aria-hidden="true"/></div>}
       {state.failed&&<p className="restaurant-chat-system" role="alert">No pudimos procesar un mensaje. Revisa tu pedido antes de volver a enviarlo.</p>}
       {showMenu&&<section className="restaurant-chat-menu" aria-label="Carta del restaurante">
         <div className="restaurant-chat-section-heading"><h2>¿Qué te provoca hoy?</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar carta" onClick={()=>setShowMenu(false)}><IconX size={20}/></button></div>
@@ -128,7 +130,23 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
           <button type="button" className="restaurant-chat-add" disabled={disabled||!["available","low"].includes(item.status)||item.remaining==="0"} onClick={()=>add(item)}><IconPlus size={18}/>{!["available","low"].includes(item.status)||Number(item.remaining)===0&&item.remaining!==null?"No disponible":item.isCombo||item.hasModifiers?"Elegir opciones":"Agregar"}</button>
         </article>)}</div>}
       </section>}
-      {showCart&&<section className="restaurant-chat-cart" aria-label="Resumen de tu pedido"><div className="restaurant-chat-section-heading"><h2>Tu pedido</h2><button className="restaurant-chat-icon" aria-label="Ocultar pedido" onClick={()=>setShowCart(false)}><IconX size={20}/></button></div>{!state.cart.items.length?<p>Tu pedido está vacío. Elige algo de la carta.</p>:<><ul>{state.cart.items.map((item,index)=><li key={`${item.productId}-${index}`}><div><strong>{item.quantity} × {item.name}</strong>{[...item.modifiers,...item.selections].map((option,i)=><small key={i}>{option.name}</small>)}{item.note&&<small>{item.note}</small>}<span>{currency} {item.lineTotal}</span></div><button className="restaurant-chat-icon" type="button" disabled={disabled} aria-label={`Quitar ${item.name} y sus variantes`} onClick={()=>act({name:"remove_item",args:{productId:item.productId}},true)}><IconTrash size={20}/></button></li>)}</ul><div className="restaurant-chat-total"><span>Subtotal</span><strong>{currency} {state.cart.total}</strong></div><p>El pedido se enviará cuando lo confirmes.</p><button type="button" className="restaurant-chat-primary" disabled={disabled} onClick={()=>act({name:"prepare_confirmation"})}>Revisar para confirmar</button></>}</section>}
+      {showCart&&<section className="restaurant-chat-cart" aria-label="Resumen de tu pedido">
+        <div className="restaurant-chat-section-heading"><h2>Tu pedido{quantity>0&&<span className="restaurant-chat-cart-count">{quantity} {quantity===1?"producto":"productos"}</span>}</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar pedido" onClick={()=>setShowCart(false)}><IconX size={20}/></button></div>
+        {!state.cart.items.length?<div className="restaurant-chat-cart-empty"><IconShoppingBag size={32}/><strong>Tu pedido está vacío</strong><p>Elige algo de la carta para empezar.</p><button type="button" className="restaurant-chat-primary" onClick={()=>{following.current=true;setShowCart(false);setShowMenu(true)}}>Ver la carta</button></div>:<>
+          <ul>{state.cart.items.map((item,index)=>{
+            const photo=photos.get(item.productId);
+            const options=[...item.modifiers,...item.selections];
+            return <li key={`${item.productId}-${index}`} className="restaurant-chat-cart-item">
+              <div className="restaurant-chat-cart-thumb">{photo?<Image src={photo} alt="" width={56} height={56} unoptimized/>:<IconChefHat size={24}/>}<span className="restaurant-chat-cart-qty"><span className="sr-only">Cantidad: </span>{item.quantity}×</span></div>
+              <div className="restaurant-chat-cart-body"><strong>{item.name}</strong>{options.length>0&&<div className="restaurant-chat-cart-options">{options.map((option,i)=><span key={i}>{option.name}</span>)}</div>}{item.note&&<p className="restaurant-chat-cart-note"><IconNote size={14}/>{item.note}</p>}{item.quantity>1&&<small>{currency} {item.unitPrice} c/u</small>}</div>
+              <div className="restaurant-chat-cart-side"><span>{currency} {item.lineTotal}</span><button className="restaurant-chat-icon" type="button" disabled={disabled} aria-label={`Quitar ${item.name} y sus variantes`} onClick={()=>act({name:"remove_item",args:{productId:item.productId}},true)}><IconTrash size={20}/></button></div>
+            </li>;
+          })}</ul>
+          <div className="restaurant-chat-total"><span>Subtotal</span><strong>{currency} {state.cart.total}</strong></div>
+          <p className="restaurant-chat-cart-hint">El pedido se enviará cuando lo confirmes.</p>
+          <button type="button" className="restaurant-chat-primary" disabled={disabled} onClick={()=>act({name:"prepare_confirmation"})}>Revisar para confirmar</button>
+        </>}
+      </section>}
       <div ref={bottom}/>
     </div>
     {error&&<p className="restaurant-chat-alert" role="alert">{error.message} <button type="button" onClick={()=>void chat.refetch()}>Reintentar</button></p>}
@@ -136,7 +154,7 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
     {locationError&&<p className="restaurant-chat-alert" role="alert">{locationError}</p>}
     {failed&&<div className="restaurant-chat-alert" role="alert"><span>No se pudo enviar. Puedes reintentar el mismo mensaje sin duplicarlo.</span><button type="button" disabled={send.isPending} onClick={()=>send.mutate(failed)}>Reintentar envío</button></div>}
     {state.confirmationRef&&<div className="restaurant-chat-confirm"><p>¿Confirmas el pedido del resumen?</p><button type="button" className="restaurant-chat-primary" disabled={disabled} onClick={()=>act({name:"confirm_order",confirmation_ref:state.confirmationRef!})}>Confirmar pedido</button></div>}
-    <nav className="restaurant-chat-shortcuts" aria-label="Acciones del chat"><button type="button" aria-expanded={showMenu} onClick={()=>{following.current=true;setShowMenu(!showMenu);setShowCart(false)}}><IconMenu2 size={18}/>Carta</button><button type="button" aria-expanded={showCart} onClick={()=>{following.current=true;setShowCart(!showCart);setShowMenu(false)}}><IconShoppingBag size={18}/>Mi pedido{quantity>0&&<span>{quantity}</span>}</button>{state.mode==="table"&&<button type="button" disabled={disabled} onClick={()=>act({name:"request_bill"})}>Pedir cuenta</button>}{state.mode==="delivery"&&<button type="button" disabled={disabled} aria-label={locating?"Obteniendo tu ubicación":"Compartir ubicación"} onClick={shareLocation}><IconMapPin size={18}/>{locating?"Ubicando…":"Ubicación"}</button>}</nav>
+    <nav className="restaurant-chat-shortcuts" aria-label="Acciones del chat"><button type="button" aria-expanded={showMenu} onClick={()=>{following.current=true;setShowMenu(!showMenu);setShowCart(false)}}><IconMenu2 size={16}/>Carta</button><button type="button" aria-expanded={showCart} onClick={()=>{following.current=true;setShowCart(!showCart);setShowMenu(false)}}><IconShoppingBag size={16}/>Mi pedido{quantity>0&&<span>{quantity}</span>}</button>{state.mode==="table"&&<button type="button" disabled={disabled} onClick={()=>act({name:"request_bill"})}><IconReceipt size={16}/>Pedir cuenta</button>}{state.mode==="delivery"&&<button type="button" disabled={disabled} aria-label={locating?"Obteniendo tu ubicación":"Compartir ubicación"} onClick={shareLocation}><IconMapPin size={16}/>{locating?"Ubicando…":"Ubicación"}</button>}</nav>
     <form className="restaurant-chat-composer" onSubmit={event=>{event.preventDefault();sendText()}}>
       <Input ref={composer} aria-label="Escribe un mensaje" placeholder="Escribe un mensaje" value={text} onChange={event=>setText(event.target.value)} maxLength={2000} disabled={!state.active} autoComplete="off"/>
       <button type="submit" className="restaurant-chat-send" aria-label="Enviar mensaje" disabled={disabled||!text.trim()}><IconSend2 size={24}/></button>
