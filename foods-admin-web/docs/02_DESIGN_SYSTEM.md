@@ -3247,8 +3247,8 @@ verde de la cabecera) y texto `chat-action-ink` (blanco). El botón de enviar es
 un círculo de 48 px con esos dos tokens; sin texto por enviar conserva el verde
 sólido y solo se atenúa su icono. «Agregar» es una píldora `chat-action` con
 texto blanco dentro de la tarjeta del plato (ver «Tarjeta de plato»); ya no usa
-la franja `chat-outgoing` a todo el ancho. El campo de escritura es una píldora blanca de 48 px con sombra; su foco
-es una línea fina `chat-focus`, no el halo azul del panel. En la cabecera el
+la franja `chat-outgoing` a todo el ancho. El campo de escritura es una píldora blanca de 48 px con sombra y sin borde visible en reposo; su foco
+usa una línea neutra discreta de 1 px `chat-line` (2026-11-13), sin el contorno verde fuerte ni el halo azul del panel. La búsqueda de la carta conserva el foco `chat-focus`. En la cabecera el
 foco de teclado es blanco. El `Button` azul del panel no se usa en la
 conversación; sí dentro del modal de opciones, que conserva los componentes
 compartidos. Los bloques de carga usan `Skeleton` con `restaurant-chat-skeleton`

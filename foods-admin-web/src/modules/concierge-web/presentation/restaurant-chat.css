@@ -33,8 +33,9 @@
 .restaurant-chat-section-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
 .restaurant-chat-section-heading h2{font-size:var(--font-size-md);margin:0;font-weight:var(--weight-bold)}
 .restaurant-chat-menu .ds-input,.restaurant-chat-composer .ds-input{font-size:var(--font-size-md);font-weight:var(--weight-regular);background:var(--chat-incoming);color:var(--chat-ink);border-color:transparent;box-shadow:var(--elevation-1);caret-color:var(--chat-focus)}
-/* Foco propio del chat: línea verde fina en lugar del halo azul del panel administrativo. */
-.restaurant-chat-menu .ds-input:focus,.restaurant-chat-composer .ds-input:focus{border-color:transparent;outline:var(--stroke-1-5) solid var(--chat-focus);outline-offset:0;box-shadow:var(--elevation-1)}
+/* La búsqueda conserva su foco verde; escribir mantiene un contorno neutro discreto. */
+.restaurant-chat-menu .ds-input:focus{border-color:transparent;outline:var(--stroke-1-5) solid var(--chat-focus);outline-offset:0;box-shadow:var(--elevation-1)}
+.restaurant-chat-composer .ds-input:focus{border-color:transparent;outline:var(--stroke-1) solid var(--chat-line);outline-offset:0;box-shadow:var(--elevation-1)}
 .restaurant-chat-menu .ds-input{min-height:var(--size-44);border-radius:var(--radius-pill);padding-inline:var(--space-4)}
 .restaurant-chat-menu .ds-input::placeholder,.restaurant-chat-composer .ds-input::placeholder{color:var(--chat-muted);opacity:1}
 .restaurant-chat-foods{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-240),var(--size-260));gap:var(--space-3);overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding:var(--space-4) 0;scrollbar-color:var(--chat-line) transparent}
