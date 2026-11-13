@@ -5,6 +5,14 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+class WebOrderSummary(BaseModel):
+    subtotal: str
+    deliveryFee: str | None
+    total: str | None
+    currencySymbol: str
+    fulfillment: Literal["table", "counter", "pickup", "delivery"] | None
+
+
 class WebAction(BaseModel):
     name: Literal[
         "add_item",

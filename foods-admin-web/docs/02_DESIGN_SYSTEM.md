@@ -3299,6 +3299,16 @@ título. Cada fila muestra la foto del plato tomada de la carta (o el marcador
 neutro) con la cantidad en una insignia `chat-action`, el nombre, sus opciones
 o componentes del combo como fichas `chat-panel`, la nota de cocina con icono,
 el precio unitario solo cuando la cantidad es mayor que uno, y a la derecha el
-importe de la línea en negrita con el botón de quitar de 44 px. El subtotal
-cierra la lista en 18 px / 700. Vacío: icono, «Tu pedido está vacío» y el botón
+importe de la línea en negrita con el botón de quitar de 44 px. Para delivery,
+el pie muestra Subtotal, Delivery y Total, con los importes que devuelve el
+servidor; Total lleva 18 px / 700. Una tarifa aún no cotizada o fuera de cobertura
+se muestra como «Pendiente de cotizar» y su total como «Por calcular», nunca
+como envío gratis. Para recojo no aparece Delivery; en mesa y mostrador se muestra
+solo Total.
+Abrir «Mi pedido» prepara automáticamente el resumen sin enviar el pedido. Una
+confirmación nueva abre esta tarjeta con un único botón «Confirmar pedido» dentro;
+se elimina «Revisar para confirmar» y la tarjeta de confirmación separada
+(2026-11-13). Si faltan datos, la confirmación queda deshabilitada y el chat
+solicita completarlos. Cambiar el pedido vuelve a preparar su resumen con una
+referencia nueva. Vacío: icono, «Tu pedido está vacío» y el botón
 «Ver la carta».

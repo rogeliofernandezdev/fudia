@@ -55,7 +55,7 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   const [search,setSearch]=useState("");
   // La carta no se abre sola: el comensal la pide con el atajo «Carta».
   const [showMenu,setShowMenu]=useState(false);
-  const [showCart,setShowCart]=useState(false);
+  const [cartPanel,setCartPanel]=useState<{open:boolean;seenConfirmation:string|null}>({open:false,seenConfirmation:null});
   const [showInfo,setShowInfo]=useState(false);
   const [product,setProduct]=useState<ChatProduct|null>(null);
   const [failed,setFailed]=useState<ChatInput|null>(null);
@@ -66,16 +66,30 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   const following=useRef(true);
   const composer=useRef<HTMLInputElement>(null);
   const activeAt=useRef(0);
+  const reviewedCart=useRef("");
   const session=useQuery({queryKey:["web-chat-session",qr],queryFn:()=>openChat(qr,scan),retry:false,staleTime:Infinity,gcTime:0});
   // Sondeo según la conversación: rápido mientras el local responde, normal durante el minuto siguiente a la última actividad y espaciado cuando el chat está quieto.
   const chat=useQuery({queryKey:["web-chat",qr],queryFn:()=>loadChat(qr),enabled:session.isSuccess,retry:false,refetchInterval:query=>query.state.data?.pending?1200:Date.now()-activeAt.current<60_000?4000:12_000});
   const menu=useQuery({queryKey:["web-chat-menu",qr],queryFn:()=>loadChatMenu(qr),enabled:session.isSuccess,retry:false,refetchInterval:showMenu?30_000:false});
   const send=useMutation({mutationFn:(input:ChatInput)=>sendChatInput(qr,input),onSuccess:()=>{setFailed(null);void client.invalidateQueries({queryKey:["web-chat",qr]});void client.invalidateQueries({queryKey:["web-chat-menu",qr]})},onError:(_error,input)=>setFailed(input)});
   const state=chat.data;
+  // Una confirmación nueva abre el resumen completo; cerrar o ir a Carta la reconoce sin repetirla.
+  const showCart=cartPanel.open||Boolean(state?.confirmationRef&&state.confirmationRef!==cartPanel.seenConfirmation);
+  const setShowCart=(open:boolean)=>setCartPanel({open,seenConfirmation:state?.confirmationRef??null});
   const busy=send.isPending||Boolean(state?.pending)||Boolean(failed)||locating;
   const disabled=busy||!state?.active||Boolean(chat.isError);
   const messages=state?.messages??[];
-  const currency=menu.data?.currencySymbol??"";
+  const currency=state?.orderSummary?.currencySymbol||menu.data?.currencySymbol||"";
+  const orderSummary=state?.orderSummary;
+  const reviewKey=JSON.stringify([state?.cart,orderSummary,state?.customerName]);
+  const sendInput=send.mutate;
+  useEffect(()=>{
+    if (state?.confirmationRef) {reviewedCart.current="";return}
+    if (!showCart||disabled||!state?.cart.items.length||reviewedCart.current===reviewKey) return;
+    reviewedCart.current=reviewKey;
+    following.current=true;
+    sendInput({requestId:newChatRequestId(),action:{name:"prepare_confirmation"}});
+  },[showCart,disabled,state?.cart.items.length,state?.confirmationRef,reviewKey,sendInput]);
   const items=menu.data?.items.filter(item=>!search||`${item.name} ${item.categoryName??""}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))??[];
   const quantity=state?.cart.items.reduce((sum,item)=>sum+item.quantity,0)??0;
   // La foto del plato sale de la carta ya cargada: el carrito solo trae nombres e importes.
@@ -88,7 +102,7 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
     if (following.current) bottom.current?.scrollIntoView({block:"end"});
   },[messages.length,state?.pending,showMenu,showCart]);
   // Armar el pedido no cierra el panel abierto: se agregan varios platos seguidos desde la carta y se quitan desde «Mi pedido».
-  const submit=(input:ChatInput,keepPanel=false)=>{following.current=true;if(!keepPanel){setShowMenu(false);setShowCart(false)}send.mutate(input)};
+  const submit=(input:ChatInput,keepPanel=false)=>{following.current=true;if(!keepPanel){setShowMenu(false);setShowCart(false)}else if(showCart){setShowCart(true)}send.mutate(input)};
   const act=(action:ChatAction,keepPanel=false)=>submit({requestId:newChatRequestId(),action},keepPanel);
   const add=(item:ChatProduct)=>{
     if (item.isCombo||item.hasModifiers) setProduct(item);
@@ -125,7 +139,7 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
       {!messages.length&&!state.pending&&<p className="restaurant-chat-system">Escríbenos o elige un plato de la carta para empezar.</p>}
       {state.pending&&<div className="restaurant-chat-typing" role="status"><span className="sr-only">El restaurante está respondiendo</span><span className="restaurant-chat-dot" aria-hidden="true"/><span className="restaurant-chat-dot" aria-hidden="true"/><span className="restaurant-chat-dot" aria-hidden="true"/></div>}
       {state.failed&&<p className="restaurant-chat-system" role="alert">No pudimos procesar un mensaje. Revisa tu pedido antes de volver a enviarlo.</p>}
-      {showMenu&&<section className="restaurant-chat-menu" aria-label="Carta del restaurante">
+      {showMenu&&!showCart&&<section className="restaurant-chat-menu" aria-label="Carta del restaurante">
         <div className="restaurant-chat-section-heading"><h2>Carta</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar carta" onClick={()=>setShowMenu(false)}><IconX size={20}/></button></div>
         <Input aria-label="Buscar platos" placeholder="Buscar un plato o categoría" value={search} onChange={event=>setSearch(event.target.value)}/>
         {menu.isPending?<div className="restaurant-chat-foods"><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/></div>:menu.isError?<div className="restaurant-chat-system" role="alert"><p>{menu.error.message}</p><button type="button" onClick={()=>void menu.refetch()}>Volver a cargar la carta</button></div>:items.length===0?<p className="restaurant-chat-system">{search?"No encontramos platos con ese nombre.":"La carta de este local todavía no tiene platos disponibles."}</p>:<div className="restaurant-chat-foods">{items.map(item=>{
@@ -156,9 +170,15 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
               <div className="restaurant-chat-cart-side"><span>{currency} {item.lineTotal}</span><button className="restaurant-chat-icon" type="button" disabled={disabled} aria-label={`Quitar ${item.name} y sus variantes`} onClick={()=>act({name:"remove_item",args:{productId:item.productId}},true)}><IconTrash size={20}/></button></div>
             </li>;
           })}</ul>
-          <div className="restaurant-chat-total"><span>Subtotal</span><strong>{currency} {state.cart.total}</strong></div>
-          <p className="restaurant-chat-cart-hint">El pedido se enviará cuando lo confirmes.</p>
-          <button type="button" className="restaurant-chat-primary" disabled={disabled} onClick={()=>act({name:"prepare_confirmation"})}>Revisar para confirmar</button>
+          <div className="restaurant-chat-totals">
+            {state.mode==="delivery"?<>
+              <div className="restaurant-chat-amount"><span>Subtotal</span><span>{currency} {orderSummary?.subtotal??state.cart.total}</span></div>
+              {orderSummary?.fulfillment!=="pickup"&&<div className="restaurant-chat-amount"><span>Delivery</span><span>{orderSummary?.deliveryFee!=null?`${currency} ${orderSummary.deliveryFee}`:"Pendiente de cotizar"}</span></div>}
+              <div className="restaurant-chat-total"><span>Total</span><strong>{orderSummary?.total!=null?`${currency} ${orderSummary.total}`:"Por calcular"}</strong></div>
+            </>:<div className="restaurant-chat-total"><span>Total</span><strong>{currency} {state.cart.total}</strong></div>}
+          </div>
+          {!state.confirmationRef&&<p className="restaurant-chat-cart-hint" role="status">{busy?"Preparando tu pedido…":"Completa los datos solicitados en el chat para confirmar."}</p>}
+          <button type="button" className="restaurant-chat-primary" disabled={disabled||!state.confirmationRef||(state.mode==="delivery"&&orderSummary?.total==null)} onClick={()=>act({name:"confirm_order",confirmation_ref:state.confirmationRef!})}>Confirmar pedido</button>
         </>}
       </section>}
       <div ref={bottom}/>
@@ -167,8 +187,7 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
     {!state.active&&<p className="restaurant-chat-alert" role="alert">El canal cambió. Vuelve a escanear el QR para continuar.</p>}
     {locationError&&<p className="restaurant-chat-alert" role="alert">{locationError}</p>}
     {failed&&<div className="restaurant-chat-alert" role="alert"><span>No se pudo enviar. Puedes reintentar el mismo mensaje sin duplicarlo.</span><button type="button" disabled={send.isPending} onClick={()=>send.mutate(failed)}>Reintentar envío</button></div>}
-    {state.confirmationRef&&<div className="restaurant-chat-confirm"><p>¿Confirmas el pedido del resumen?</p><button type="button" className="restaurant-chat-primary" disabled={disabled} onClick={()=>act({name:"confirm_order",confirmation_ref:state.confirmationRef!})}>Confirmar pedido</button></div>}
-    <nav className="restaurant-chat-shortcuts" aria-label="Acciones del chat"><button type="button" aria-expanded={showMenu} onClick={()=>{following.current=true;setShowMenu(!showMenu);setShowCart(false)}}><IconMenu2 size={16}/>Carta</button><button type="button" aria-expanded={showCart} onClick={()=>{following.current=true;setShowCart(!showCart);setShowMenu(false)}}><IconShoppingBag size={16}/>Mi pedido{quantity>0&&<span>{quantity}</span>}</button>{state.mode==="table"&&<button type="button" disabled={disabled} onClick={()=>act({name:"request_bill"})}><IconReceipt size={16}/>Pedir cuenta</button>}{state.mode==="delivery"&&<button type="button" disabled={disabled} aria-label={locating?"Obteniendo tu ubicación":"Compartir ubicación"} onClick={shareLocation}><IconMapPin size={16}/>{locating?"Ubicando…":"Ubicación"}</button>}</nav>
+    <nav className="restaurant-chat-shortcuts" aria-label="Acciones del chat"><button type="button" aria-expanded={showMenu&&!showCart} onClick={()=>{following.current=true;setShowMenu(!showMenu||showCart);setShowCart(false)}}><IconMenu2 size={16}/>Carta</button><button type="button" aria-expanded={showCart} onClick={()=>{following.current=true;setShowCart(!showCart);setShowMenu(false)}}><IconShoppingBag size={16}/>Mi pedido{quantity>0&&<span>{quantity}</span>}</button>{state.mode==="table"&&<button type="button" disabled={disabled} onClick={()=>act({name:"request_bill"})}><IconReceipt size={16}/>Pedir cuenta</button>}{state.mode==="delivery"&&<button type="button" disabled={disabled} aria-label={locating?"Obteniendo tu ubicación":"Compartir ubicación"} onClick={shareLocation}><IconMapPin size={16}/>{locating?"Ubicando…":"Ubicación"}</button>}</nav>
     <form className="restaurant-chat-composer" onSubmit={event=>{event.preventDefault();sendText()}}>
       <Input ref={composer} aria-label="Escribe un mensaje" placeholder="Escribe un mensaje" value={text} onChange={event=>setText(event.target.value)} maxLength={2000} disabled={!state.active} autoComplete="off"/>
       <button type="submit" className="restaurant-chat-send" aria-label="Enviar mensaje" disabled={disabled||!text.trim()}><IconSend2 size={24}/></button>

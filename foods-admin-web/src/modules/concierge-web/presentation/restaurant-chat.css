@@ -98,13 +98,14 @@
 .restaurant-chat-cart-side>.restaurant-chat-icon{color:var(--chat-muted);margin:0 calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0}
 .restaurant-chat-cart-hint{margin:var(--space-1) 0 var(--space-3);font-size:var(--font-size-xs);color:var(--chat-muted)}
 .restaurant-chat-cart>.restaurant-chat-primary{width:100%}
+.restaurant-chat-totals{display:grid;gap:var(--space-2);padding-top:var(--space-3);margin-bottom:var(--space-3)}
+.restaurant-chat-amount{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);font-size:var(--font-size-base);font-variant-numeric:tabular-nums}
+.restaurant-chat-amount>span:last-child{flex-shrink:0;text-align:right}
 .restaurant-chat-cart-empty{display:grid;justify-items:center;gap:var(--space-2);padding:var(--space-4) 0 var(--space-2);text-align:center;color:var(--chat-muted)}
 .restaurant-chat-cart-empty>strong{color:var(--chat-ink);font-size:var(--font-size-md)}
 .restaurant-chat-cart-empty>p{margin:0 0 var(--space-2);font-size:var(--font-size-sm)}
 .restaurant-chat-total{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3);padding-top:var(--space-3);font-size:var(--font-size-base);font-variant-numeric:tabular-nums}
 .restaurant-chat-total>strong{font-size:var(--font-size-lg);font-weight:var(--weight-bold)}
-.restaurant-chat-confirm{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin:var(--space-2) var(--space-3) 0;padding:var(--space-3);background:var(--chat-incoming);border-radius:var(--radius-card);box-shadow:var(--elevation-2);flex-shrink:0}
-.restaurant-chat-confirm p{margin:0;font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
 .restaurant-chat-alert{margin:var(--space-2) var(--space-3) 0;padding:var(--space-2) var(--space-3);background:var(--chat-incoming);border-radius:var(--radius-tile);box-shadow:var(--elevation-1);font-size:var(--font-size-sm);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;flex-shrink:0}
 .restaurant-chat-info{background:var(--chat-incoming);padding:var(--space-4);font-size:var(--font-size-sm);line-height:var(--line-height-normal);max-height:35dvh;overflow-y:auto;box-shadow:var(--elevation-2);flex-shrink:0}
 .restaurant-chat-info p{color:var(--chat-muted);margin-block:var(--space-2)}
@@ -124,5 +125,5 @@
 .restaurant-chat-option-group label>span:last-child{margin-left:auto}
 .restaurant-chat-note{display:grid;gap:var(--space-2);font-size:var(--font-size-base)}
 @media(hover:hover) and (pointer:fine){.restaurant-chat-header .restaurant-chat-icon:hover{background:var(--chat-header-hover)}.restaurant-chat-feed .restaurant-chat-icon:hover{background:var(--chat-panel)}.restaurant-chat-shortcuts button:hover{box-shadow:var(--elevation-2)}.restaurant-chat-add:not(:disabled):hover,.restaurant-chat-send:not(:disabled):hover,.restaurant-chat-primary:hover{filter:brightness(1.12)}}
-@media(width<=600px){.restaurant-chat-confirm{align-items:stretch;flex-direction:column}.restaurant-chat-message{max-width:86%}}
+@media(width<=600px){.restaurant-chat-message{max-width:86%}}
 @media(prefers-reduced-motion:no-preference){.restaurant-chat-dot{animation:chat-typing var(--duration-ambient) ease-in-out infinite}.restaurant-chat-dot:nth-child(3){animation-delay:var(--duration-fast)}.restaurant-chat-dot:nth-child(4){animation-delay:calc(var(--duration-fast) * 2)}/* La insignia de cantidad rebota al aparecer y cada vez que cambia. */.restaurant-chat-food-qty{animation:chat-pop var(--duration-slow) var(--easing-spring)}@keyframes chat-pop{from{opacity:0;transform:scale(.6)}}@keyframes chat-typing{0%,60%,100%{opacity:.45;transform:translateY(0)}30%{opacity:1;transform:translateY(calc(var(--size-4) * -1))}}}

@@ -10,7 +10,7 @@ import hashlib
 import re
 import time
 from collections.abc import Callable, Coroutine
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import redis.exceptions
@@ -19,8 +19,9 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field, ValidationError
 
 from src.api.whatsapp_providers import manager, private_body
-from src.domain.models import TERMINAL_STAGES, GeoPoint, InboundMessage, TableContext
-from src.domain.web_chat import WebAction
+from src.domain.models import TERMINAL_STAGES, ConversationSession, GeoPoint, InboundMessage, TableContext
+from src.domain.web_chat import WebAction, WebOrderSummary
+from src.services.delivery_tools import delivery_summary
 from src.services.ports import FudiaError
 from src.services.tooling import cart_payload
 
@@ -78,6 +79,43 @@ def request_document() -> dict[str, Any]:
 
 
 WEB_REQUEST_DOC = request_document()
+
+
+class WebChatState(BaseModel):
+    context: TableContext
+    messages: list[dict[str, Any]]
+    cart: dict[str, Any]
+    orderSummary: WebOrderSummary
+    confirmationRef: str | None
+    mode: Literal["table", "counter", "delivery"]
+    customerName: str
+    pending: bool
+    failed: bool
+    active: bool
+
+
+def order_summary(session: ConversationSession | None, service_type: str) -> WebOrderSummary:
+    subtotal = cart_payload(session)["total"] if session else "0.00"
+    mode = session.mode if session else service_type
+    symbol = session.currency_symbol if session else ""
+    if mode != "delivery":
+        return WebOrderSummary(
+            subtotal=subtotal, deliveryFee="0.00", total=subtotal, currencySymbol=symbol,
+            fulfillment="counter" if mode == "counter" else "table",
+        )
+    delivery = session.delivery if session else None
+    fulfillment = delivery.fulfillment if delivery else None
+    # An unquoted/out-of-range delivery has no known price, never a free one.
+    quoted = bool(delivery and delivery.location and delivery.covered and delivery.fee is not None)
+    known = fulfillment == "pickup" or (fulfillment == "delivery" and quoted)
+    summary = delivery_summary(session) if session else {}
+    return WebOrderSummary(
+        subtotal=subtotal,
+        deliveryFee=str(summary["deliveryFee"]) if known else None,
+        total=str(summary["total"]) if known else None,
+        currencySymbol=symbol or (delivery.currency_symbol if delivery else ""),
+        fulfillment=fulfillment,
+    )
 
 
 async def body(request: Request) -> WebRequest:
@@ -190,7 +228,7 @@ async def open_chat(request: Request) -> dict[str, Any]:
     return {"capability": data.capability, "expiresIn": providers.web.ttl}
 
 
-@router.post("/state", openapi_extra=WEB_REQUEST_DOC)
+@router.post("/state", response_model=WebChatState, openapi_extra=WEB_REQUEST_DOC)
 async def chat_state(request: Request) -> dict[str, Any]:
     data = await body(request)
     bound = await context(request, data)
@@ -244,6 +282,7 @@ async def chat_state(request: Request) -> dict[str, Any]:
         "context": table.model_dump(mode="json"),
         "messages": messages,
         "cart": cart_payload(session) if session else {"items": [], "total": "0.00"},
+        "orderSummary": order_summary(session, table.serviceType).model_dump(mode="json"),
         "confirmationRef": session.pending_order_request_id
         if session and session.awaiting_confirmation
         else None,
@@ -312,7 +351,7 @@ async def send_message(request: Request) -> dict[str, Any]:
         text = data.text.strip() or "Compartí mi ubicación para la entrega."
     message = inbound(data, bound, data.requestId, text, data.action)
     hidden = data.action is not None and (
-        data.action.name.startswith("add_") or data.action.name == "remove_item"
+        data.action.name.startswith("add_") or data.action.name in {"remove_item", "prepare_confirmation"}
     )
     # Store transcript before enqueue: retry repairs a transient queue failure.
     # Both append and enqueue deduplicate by the SAME stable message id.

@@ -35,8 +35,16 @@ Armar el pedido no cierra el panel abierto: «Agregar» deja la carta a la vista
 para sumar varios platos seguidos y quitar un plato deja «Mi pedido» abierto.
 Cada toque deja una sola burbuja, la respuesta del local con el plato y lo que
 lleva el pedido («Agregué 1 × Lomo saltado. Llevas 2 productos · S/ 65.00.»);
-el toque en sí no se repite como mensaje del comensal. Enviar un texto, revisar
-o confirmar sí cierran el panel para mostrar la respuesta.
+el toque en sí no se repite como mensaje del comensal. Enviar un texto o
+confirmar cierran el panel para mostrar la respuesta.
+
+«Mi pedido» muestra los platos y el desglose Subtotal, Delivery y Total desde
+el servidor. Al abrirlo se prepara el resumen; la única acción final es
+«Confirmar pedido» dentro de la misma tarjeta (2026-11-13), sin una tarjeta
+de confirmación adicional ni el botón «Revisar para confirmar». Preparar el
+resumen no registra un pedido. Si falta contacto, forma de entrega o ubicación,
+el chat los solicita antes de habilitar Confirmar. Una tarifa aún no cotizada
+o fuera de cobertura queda pendiente; no se presenta como delivery gratis.
 
 El estado se consulta cada 1,2 s mientras el local responde, cada 4 s durante el
 minuto siguiente a la última actividad y cada 12 s con el chat quieto; al volver
