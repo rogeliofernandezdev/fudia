@@ -3,7 +3,7 @@
 import Image from "next/image";
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {IconCheck,IconChecks,IconChefHat,IconDotsVertical,IconMapPin,IconMenu2,IconNote,IconPlus,IconReceipt,IconSend2,IconShoppingBag,IconTrash,IconX} from "@tabler/icons-react";
+import {IconAdjustmentsHorizontal,IconCheck,IconChecks,IconChefHat,IconDotsVertical,IconMapPin,IconMenu2,IconNote,IconPlus,IconReceipt,IconSend2,IconShoppingBag,IconTrash,IconX} from "@tabler/icons-react";
 import {Button,Input,ModalBody,ModalFooter,ModalHeader,Skeleton} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import type {ChatAction,ChatInput,ChatMessage,ChatProduct,ProductOptions} from "../domain/types";
@@ -79,6 +79,9 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   const quantity=state?.cart.items.reduce((sum,item)=>sum+item.quantity,0)??0;
   // La foto del plato sale de la carta ya cargada: el carrito solo trae nombres e importes.
   const photos=new Map(menu.data?.items.map(item=>[item.productId,item.imageUrl]));
+  // Unidades de cada plato ya en el pedido (suma sus variantes): la tarjeta de la carta las muestra sobre la foto.
+  const inCart=new Map<string,number>();
+  for (const item of state?.cart.items??[]) inCart.set(item.productId,(inCart.get(item.productId)??0)+item.quantity);
   useEffect(()=>{
     activeAt.current=Date.now();
     if (following.current) bottom.current?.scrollIntoView({block:"end"});
@@ -124,11 +127,21 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
       {showMenu&&<section className="restaurant-chat-menu" aria-label="Carta del restaurante">
         <div className="restaurant-chat-section-heading"><h2>¿Qué te provoca hoy?</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar carta" onClick={()=>setShowMenu(false)}><IconX size={20}/></button></div>
         <Input aria-label="Buscar platos" placeholder="Buscar un plato o categoría" value={search} onChange={event=>setSearch(event.target.value)}/>
-        {menu.isPending?<div className="restaurant-chat-foods"><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/></div>:menu.isError?<div className="restaurant-chat-system" role="alert"><p>{menu.error.message}</p><button type="button" onClick={()=>void menu.refetch()}>Volver a cargar la carta</button></div>:items.length===0?<p className="restaurant-chat-system">{search?"No encontramos platos con ese nombre.":"La carta de este local todavía no tiene platos disponibles."}</p>:<div className="restaurant-chat-foods">{items.map(item=><article className="restaurant-chat-food" key={item.productId}>
-          {item.imageUrl?<Image src={item.imageUrl} alt={item.name} width={320} height={220} unoptimized/>:<div className="restaurant-chat-food-placeholder"><IconChefHat size={40}/><span>Sin foto</span></div>}
-          <div className="restaurant-chat-food-copy"><span>{item.categoryName}</span><h3>{item.name}</h3>{item.description&&<p>{item.description}</p>}<strong>{currency} {Number(item.price).toFixed(2)}</strong></div>
-          <button type="button" className="restaurant-chat-add" disabled={disabled||!["available","low"].includes(item.status)||item.remaining==="0"} onClick={()=>add(item)}><IconPlus size={18}/>{!["available","low"].includes(item.status)||Number(item.remaining)===0&&item.remaining!==null?"No disponible":item.isCombo||item.hasModifiers?"Elegir opciones":"Agregar"}</button>
-        </article>)}</div>}
+        {menu.isPending?<div className="restaurant-chat-foods"><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/></div>:menu.isError?<div className="restaurant-chat-system" role="alert"><p>{menu.error.message}</p><button type="button" onClick={()=>void menu.refetch()}>Volver a cargar la carta</button></div>:items.length===0?<p className="restaurant-chat-system">{search?"No encontramos platos con ese nombre.":"La carta de este local todavía no tiene platos disponibles."}</p>:<div className="restaurant-chat-foods">{items.map(item=>{
+          const available=["available","low"].includes(item.status)&&(item.remaining===null||Number(item.remaining)>0);
+          const choose=item.isCombo||item.hasModifiers;
+          const added=inCart.get(item.productId)??0;
+          return <article className={`restaurant-chat-food${available?"":" is-unavailable"}`} key={item.productId}>
+            <div className="restaurant-chat-food-media">
+              {item.imageUrl?<Image src={item.imageUrl} alt={item.name} width={320} height={220} unoptimized/>:<div className="restaurant-chat-food-placeholder"><IconChefHat size={40}/><span>Sin foto</span></div>}
+              {item.recommended&&<span className="restaurant-chat-food-badge">Recomendado</span>}
+              {/* La clave cambia con la cantidad: la insignia se vuelve a montar y confirma cada «Agregar» con un pequeño rebote. */}
+              {added>0&&<span key={added} className="restaurant-chat-food-qty"><span className="sr-only">En tu pedido: </span>{added}×</span>}
+            </div>
+            <div className="restaurant-chat-food-copy">{item.categoryName&&<span>{item.categoryName}</span>}<h3>{item.name}</h3>{item.description&&<p>{item.description}</p>}</div>
+            <div className="restaurant-chat-food-foot"><strong>{currency} {Number(item.price).toFixed(2)}</strong>{available?<button type="button" className="restaurant-chat-add" disabled={disabled} aria-label={`${choose?"Elegir opciones de":"Agregar"} ${item.name}`} onClick={()=>add(item)}>{choose?<IconAdjustmentsHorizontal size={18}/>:<IconPlus size={18}/>}{choose?"Elegir":"Agregar"}</button>:<span className="restaurant-chat-food-out">No disponible</span>}</div>
+          </article>;
+        })}</div>}
       </section>}
       {showCart&&<section className="restaurant-chat-cart" aria-label="Resumen de tu pedido">
         <div className="restaurant-chat-section-heading"><h2>Tu pedido{quantity>0&&<span className="restaurant-chat-cart-count">{quantity} {quantity===1?"producto":"productos"}</span>}</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar pedido" onClick={()=>setShowCart(false)}><IconX size={20}/></button></div>

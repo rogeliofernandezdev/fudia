@@ -3245,8 +3245,9 @@ Acciones dentro de la conversación: revisar y confirmar el pedido usan
 `restaurant-chat-primary`, píldora de 44 px con fondo `chat-action` (el mismo
 verde de la cabecera) y texto `chat-action-ink` (blanco). El botón de enviar es
 un círculo de 48 px con esos dos tokens; sin texto por enviar conserva el verde
-sólido y solo se atenúa su icono. «Agregar» usa `chat-outgoing` con texto
-oscuro. El campo de escritura es una píldora blanca de 48 px con sombra; su foco
+sólido y solo se atenúa su icono. «Agregar» es una píldora `chat-action` con
+texto blanco dentro de la tarjeta del plato (ver «Tarjeta de plato»); ya no usa
+la franja `chat-outgoing` a todo el ancho. El campo de escritura es una píldora blanca de 48 px con sombra; su foco
 es una línea fina `chat-focus`, no el halo azul del panel. En la cabecera el
 foco de teclado es blanco. El `Button` azul del panel no se usa en la
 conversación; sí dentro del modal de opciones, que conserva los componentes
@@ -3263,6 +3264,29 @@ blancas flotantes sobre el fondo, encima de los atajos.
 La cabecera solo lleva el logo, el nombre con local y mesa, y el menú de
 información: la lupa se retiró el 2026-11-12 porque abría la misma carta que el
 atajo «Carta», que ya incluye el buscador.
+
+Tarjeta de plato (2026-11-12): el usuario encontró la tarjeta «muy básica» y el
+botón «Agregar» «sin vida». Cada tarjeta de la carta horizontal mide entre 240 y
+260 px y se arma en tres partes:
+
+- Foto de 160 px. Encima, a la izquierda, la ficha blanca «Recomendado» con
+  texto `chat-action` cuando el plato está recomendado en la carta digital; a la
+  derecha, la insignia `chat-action` con las unidades que ya están en el pedido
+  («2×», la misma de «Tu pedido»). La insignia rebota al aparecer y al cambiar
+  (`chat-pop`, quieta con movimiento reducido): confirma cada «Agregar» sin
+  cerrar la carta.
+- Texto: categoría en 12 px `chat-muted`, nombre en 16 px / 700 y descripción de
+  hasta dos líneas.
+- Pie en una sola fila: precio a la izquierda en 18 px / 700 y la acción a la
+  derecha como píldora `chat-action` de 44 px con texto blanco y escala de
+  presión `--press-scale`. Dice «Agregar» (icono `+`) o «Elegir» (icono de
+  ajustes) cuando el plato es un combo o tiene opciones y abre el modal. Si un
+  precio muy largo no deja sitio, la píldora baja a su propia fila.
+
+Un plato agotado no muestra botón: la foto pasa a gris, el precio a
+`chat-muted` y en el lugar de la acción queda la ficha neutra «No disponible»
+(`chat-panel`). No se recolorea por plato ni se agregan más insignias sobre la
+foto.
 
 «Tu pedido» (2026-11-12) es una tarjeta con el conteo de productos junto al
 título. Cada fila muestra la foto del plato tomada de la carta (o el marcador
