@@ -235,6 +235,42 @@ def test_unreadable_carta_sends_only_the_greeting() -> None:
     assert reply == "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n¿Qué deseas pedir?"
 
 
+WEB_HINT = "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
+
+
+def test_web_welcome_does_not_repeat_the_header_or_list_the_carta() -> None:
+    full = carta(item("Lomo saltado", recommended=True), item("Chicha morada", "Bebidas"))
+
+    reply = welcome_message(table(), full, web=True)
+
+    assert reply == f"Bienvenido a La Panchita.\n\n{WEB_HINT}"
+    assert welcome_message(table(), None, web=True) == reply
+
+
+def test_web_welcome_keeps_the_service_note_and_the_counter_name_question() -> None:
+    delivery = table().model_copy(update={"serviceType": "delivery"})
+    counter = table().model_copy(update={"serviceType": "counter"})
+
+    assert welcome_message(delivery, carta(item("Causa")), customer_name="Ana", web=True) == (
+        "Bienvenido a La Panchita.\n"
+        "Hola, Ana. Pide aquí para delivery o para recoger en el local.\n\n"
+        f"{WEB_HINT}"
+    )
+    assert welcome_message(counter, carta(item("Causa")), web=True) == (
+        "Bienvenido a La Panchita.\n"
+        "Pide aquí, recoge en el mostrador y paga en caja.\n\n"
+        "Para empezar, ¿a nombre de quién va el pedido?"
+    )
+
+
+def test_web_welcome_says_when_nothing_is_available() -> None:
+    assert welcome_message(table(), carta(), web=True) == (
+        "Bienvenido a La Panchita.\n\n"
+        "Hoy no tenemos platos disponibles.\n\n"
+        "Si necesitas ayuda, puedo avisar al personal del local."
+    )
+
+
 def test_long_carta_fits_whatsapp_and_counts_the_rest() -> None:
     reply = welcome_message(
         table(),

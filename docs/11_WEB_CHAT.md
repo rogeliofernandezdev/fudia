@@ -14,6 +14,11 @@ familiar (2026-11-09; la primera versión era oscura) con los verdes de WhatsApp
 restaurante, mensajes recibidos en blanco a la izquierda y enviados
 en verde claro a la derecha, horas y escritura fija abajo. Identidad propia, sin
 logotipos ni fondos copiados de WhatsApp.
+Al abrir el chat solo aparece un saludo corto que invita a tocar «Carta» o a
+escribir (2026-11-13): no repite el logo ni el local de la cabecera, no lista
+la carta en texto y la carta con fotos no se abre sola. El comensal la pide con
+el atajo «Carta»; antes llegaban a la vez el logo, la carta en texto y las
+tarjetas, y resultaba redundante y confuso.
 Carta con imágenes reales del catálogo, búsqueda, Agregar, opciones de combos y
 modificadores, carrito y confirmación explícita. No se muestran precios inventados.
 El QR decide mesa, mostrador o pedido del local; nunca lo decide el texto del cliente.

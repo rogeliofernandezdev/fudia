@@ -120,6 +120,30 @@ async def test_opening_the_page_counts_no_conversation_until_the_first_interacti
     assert backend.opened == [{"token": QR, "conversation_id": session.conversation_id, "kind": "table"}]
 
 
+class BrandedFudia(FakeFudia):
+    async def search_menu(self, token: str, query: str = "", product_id: str = ""):
+        menu = await super().search_menu(token, query, product_id)
+        return menu.model_copy(
+            update={
+                "restaurantLogoUrl": "https://cdn.test/logo.png",
+                "virtualMenuUrls": ["https://cdn.test/carta-1.png"],
+            }
+        )
+
+
+@pytest.mark.asyncio
+async def test_web_welcome_is_a_short_greeting_without_logo_or_carta() -> None:
+    # The page header shows the logo and «Carta» opens the dishes: the welcome
+    # repeats neither, the diner asks for the carta when they want it.
+    service = ConciergeService(MemoryConversationStore(), BrandedFudia(), NoModel())
+    welcome = await service.process_inbound(message("start", "FUDIA:" + QR))
+    assert welcome.reply == (
+        "Bienvenido a Restaurante Demo.\n\n"
+        "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
+    )
+    assert welcome.media == []
+
+
 @pytest.mark.asyncio
 async def test_cart_buttons_answer_with_the_dish_and_what_the_order_holds() -> None:
     # The tap is not echoed as a bubble, so the reply alone must be clear.

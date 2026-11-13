@@ -1103,20 +1103,26 @@ class ConciergeService:
             try:
                 menu = await self.fudia.search_menu(token)
                 session.currency_symbol = menu.currencySymbol
-                journal.record.media = [
-                    ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
-                    for index, url in enumerate(menu.virtualMenuUrls)
-                ]
-                if menu.restaurantLogoUrl:
-                    journal.record.media.insert(
-                        0, ReplyImage(url=menu.restaurantLogoUrl, caption=table.organizationName)
-                    )
+                # Web chat: the header already carries the logo and «Carta»
+                # opens the dishes, so the welcome sends no images.
+                if not deferred:
+                    journal.record.media = [
+                        ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
+                        for index, url in enumerate(menu.virtualMenuUrls)
+                    ]
+                    if menu.restaurantLogoUrl:
+                        journal.record.media.insert(
+                            0,
+                            ReplyImage(url=menu.restaurantLogoUrl, caption=table.organizationName),
+                        )
                 carta: Carta | None = await build_carta(self.fudia, token, menu)
             except (FudiaError, ValueError):
                 # The carta is a courtesy: the table is already open, so the
                 # greeting goes out and the diner can still ask for it.
                 carta = None
-            reply = welcome_message(table, carta, customer_name=session.delivery.customer_name)
+            reply = welcome_message(
+                table, carta, customer_name=session.delivery.customer_name, web=deferred
+            )
             session.messages = [
                 ChatMessage(
                     role="user",
@@ -1518,18 +1524,22 @@ class ConciergeService:
         try:
             menu = await self.fudia.search_menu(token)
             session.currency_symbol = menu.currencySymbol
-            journal.record.media = [
-                ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
-                for index, url in enumerate(menu.virtualMenuUrls)
-            ]
-            if menu.restaurantLogoUrl:
-                journal.record.media.insert(
-                    0, ReplyImage(url=menu.restaurantLogoUrl, caption=table.organizationName)
-                )
+            # Web chat: no logo nor carta pages in the welcome, as with a table QR.
+            if not deferred:
+                journal.record.media = [
+                    ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
+                    for index, url in enumerate(menu.virtualMenuUrls)
+                ]
+                if menu.restaurantLogoUrl:
+                    journal.record.media.insert(
+                        0, ReplyImage(url=menu.restaurantLogoUrl, caption=table.organizationName)
+                    )
             carta: Carta | None = await build_carta(self.fudia, token, menu)
         except (FudiaError, ValueError):
             carta = None
-        reply = welcome_message(table, carta, customer_name=session.delivery.customer_name)
+        reply = welcome_message(
+            table, carta, customer_name=session.delivery.customer_name, web=deferred
+        )
         session.messages = [
             ChatMessage(
                 role="user",

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from src.domain.models import TableContext
-from src.services.carta import Carta, render_carta
+from src.services.carta import NONE_AVAILABLE, Carta, render_carta
 from src.services.start_codes import service_label
 
 CLOSING = "¿Qué deseas pedir?"
+# Web chat: points at the shortcut of the page instead of listing the carta.
+WEB_CLOSING = "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
 NONE_AVAILABLE_CLOSING = "Si necesitas ayuda, puedo avisar al personal del local."
 # A new diner at the counter is asked for the name the cashier calls out.
 COUNTER_NAME_CLOSING = "Para empezar, ¿a nombre de quién va el pedido?"
@@ -14,13 +16,35 @@ DELIVERY_NOTE = "Pide aquí para delivery o para recoger en el local."
 MAX_REPLY_CHARS = 3500
 
 
+def _web_welcome(table: TableContext, carta: Carta | None, customer_name: str) -> str:
+    """Web chat greeting. The page header already shows the restaurant, the
+    venue and the table, and «Carta» opens the dishes with photos, so nothing
+    of that is repeated here: the diner asks for the carta when they want it."""
+    counter = table.serviceType == "counter"
+    hello = f"Hola, {customer_name}. " if customer_name else ""
+    greeting = f"Bienvenido a {table.organizationName}."
+    if table.serviceType == "delivery":
+        greeting = f"{greeting}\n{hello}{DELIVERY_NOTE}"
+    elif counter:
+        greeting = f"{greeting}\n{hello}{COUNTER_NOTE}"
+    if carta is not None and not carta.available:
+        return f"{greeting}\n\n{NONE_AVAILABLE}\n\n{NONE_AVAILABLE_CLOSING}"
+    closing = COUNTER_NAME_CLOSING if counter and not customer_name else WEB_CLOSING
+    return f"{greeting}\n\n{closing}"
+
+
 def welcome_message(
     table: TableContext,
     carta: Carta | None,
     customer_name: str = "",
+    *,
+    web: bool = False,
 ) -> str:
     """Deterministic first reply to a QR start: greeting plus the real carta,
-    so the diner sees it without a model call."""
+    so the diner sees it without a model call. On the web chat (`web`) the
+    greeting is short and the carta is left to the «Carta» button."""
+    if web:
+        return _web_welcome(table, carta, customer_name)
     # Plain WhatsApp text: no markdown, sober icons only (see
     # docs/03_CONVERSATION_FLOW.md, «Formato de los mensajes»).
     counter = table.serviceType == "counter"

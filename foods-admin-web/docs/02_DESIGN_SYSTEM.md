@@ -3265,6 +3265,12 @@ La cabecera solo lleva el logo, el nombre con local y mesa, y el menú de
 información: la lupa se retiró el 2026-11-12 porque abría la misma carta que el
 atajo «Carta», que ya incluye el buscador.
 
+Inicio sin redundancia (2026-11-13): al abrir el chat solo se ve el saludo
+corto de Concierge y los atajos. La carta no se abre sola: aparece cuando el
+comensal toca «Carta», y su panel se titula «Carta», igual que el atajo (antes
+«¿Qué te provoca hoy?»). El logo vive solo en la cabecera; la bienvenida no lo
+repite como imagen ni lista los platos en texto.
+
 Tarjeta de plato (2026-11-12): el usuario encontró la tarjeta «muy básica» y el
 botón «Agregar» «sin vida». Cada tarjeta de la carta horizontal mide entre 240 y
 260 px y se arma en tres partes:

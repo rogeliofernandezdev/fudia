@@ -53,7 +53,8 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   const client=useQueryClient();
   const [text,setText]=useState("");
   const [search,setSearch]=useState("");
-  const [showMenu,setShowMenu]=useState(true);
+  // La carta no se abre sola: el comensal la pide con el atajo «Carta».
+  const [showMenu,setShowMenu]=useState(false);
   const [showCart,setShowCart]=useState(false);
   const [showInfo,setShowInfo]=useState(false);
   const [product,setProduct]=useState<ChatProduct|null>(null);
@@ -125,7 +126,7 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
       {state.pending&&<div className="restaurant-chat-typing" role="status"><span className="sr-only">El restaurante está respondiendo</span><span className="restaurant-chat-dot" aria-hidden="true"/><span className="restaurant-chat-dot" aria-hidden="true"/><span className="restaurant-chat-dot" aria-hidden="true"/></div>}
       {state.failed&&<p className="restaurant-chat-system" role="alert">No pudimos procesar un mensaje. Revisa tu pedido antes de volver a enviarlo.</p>}
       {showMenu&&<section className="restaurant-chat-menu" aria-label="Carta del restaurante">
-        <div className="restaurant-chat-section-heading"><h2>¿Qué te provoca hoy?</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar carta" onClick={()=>setShowMenu(false)}><IconX size={20}/></button></div>
+        <div className="restaurant-chat-section-heading"><h2>Carta</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar carta" onClick={()=>setShowMenu(false)}><IconX size={20}/></button></div>
         <Input aria-label="Buscar platos" placeholder="Buscar un plato o categoría" value={search} onChange={event=>setSearch(event.target.value)}/>
         {menu.isPending?<div className="restaurant-chat-foods"><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/><Skeleton className="restaurant-chat-skeleton restaurant-chat-food-skeleton"/></div>:menu.isError?<div className="restaurant-chat-system" role="alert"><p>{menu.error.message}</p><button type="button" onClick={()=>void menu.refetch()}>Volver a cargar la carta</button></div>:items.length===0?<p className="restaurant-chat-system">{search?"No encontramos platos con ese nombre.":"La carta de este local todavía no tiene platos disponibles."}</p>:<div className="restaurant-chat-foods">{items.map(item=>{
           const available=["available","low"].includes(item.status)&&(item.remaining===null||Number(item.remaining)>0);

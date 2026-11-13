@@ -148,6 +148,15 @@ abre, de modo que reprocesar ese mensaje no cuenta dos veces.
   guardados el canal y el destinatario de origen; el siguiente QR o mensaje lo
   vuelve a intentar. Sin el directorio (pruebas y modo anterior) la atención
   continúa y el primer reporte de tokens la registra y la cuenta.
+- En el chat web (`FUDIA_WEB`) la bienvenida es corta (2026-11-13): «Bienvenido
+  a {restaurante}.», la nota de delivery o mostrador si corresponde y «Toca
+  «Carta» para ver los platos o escríbeme lo que deseas pedir.» (en mostrador
+  sin nombre, la pregunta del nombre). No lleva iconos, mesa ni local, porque
+  la cabecera de la página ya los muestra; no lista la carta en texto ni envía
+  el logo o las páginas de la carta virtual: el comensal abre la carta con el
+  atajo «Carta». Sin platos disponibles mantiene «Hoy no tenemos platos
+  disponibles.». WhatsApp conserva la bienvenida con la carta completa
+  (`welcome_message(..., web=True)` solo para este canal).
 - En el chat web (`FUDIA_WEB`) la página abre la bienvenida por sí sola, así
   que la conversación no se registra al abrirla sino con la primera interacción
   del comensal (`conversation_counted` en la sesión). El rechazo usa el mismo
