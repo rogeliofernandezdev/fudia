@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.services.contact_name import CUSTOMER_NAME_PROMPT
+
 
 def cart_line(cart: dict[str, Any], currency: str) -> str:
     """What the order holds after a cart button, in one line."""
@@ -15,21 +17,19 @@ def cart_line(cart: dict[str, Any], currency: str) -> str:
 
 
 def action_reply(
-    name: str, result: dict[str, Any], currency: str, *, dish: str = "", quantity: float = 1
+    name: str, result: dict[str, Any], currency: str, *, dish: str = "", quantity: float = 1,
+    web: bool = True,
 ) -> str:
     """`dish` is what a cart button acted on: its tap is not echoed as a
     bubble, so the reply names it."""
     if not result.get("ok"):
         messages = {
             "empty_cart": "Tu pedido está vacío. Agrega un plato de la carta.",
-            "customer_name_required": "¿A nombre de quién registramos el pedido? Escríbeme tu nombre.",
+            "customer_name_required": CUSTOMER_NAME_PROMPT,
             "customer_phone_required": (
-                "Escríbeme tu número de contacto con código de país, por ejemplo +51 seguido de tu número."
+                result.get("message") or "¿Cuál es tu número de contacto?"
             ),
-            "delivery_details_required": (
-                "Para continuar, dime si recogerás en el local o deseas delivery "
-                "y a nombre de quién va el pedido."
-            ),
+            "delivery_details_required": missing_delivery_reply(result.get("missing", [])),
             "insufficient_stock": "La cantidad disponible cambió. Revisa la carta antes de agregarlo.",
             "product_unavailable": "Ese plato ya no está disponible. Puedes elegir otro de la carta.",
             "stale_confirmation": "El pedido cambió. Revisa nuevamente el resumen antes de confirmar.",
@@ -81,13 +81,28 @@ def action_reply(
             lines.append("Recojo en el local.")
         summary = "\n".join(lines)
         total = result.get("delivery", {}).get("total", cart.get("total", "0.00"))
-        return f"Tu pedido\n{summary}\n\nTotal: {currency} {total}" + (
+        confirmation = (
             "\nRevisa el resumen y pulsa «Confirmar pedido» para enviarlo."
-            if name == "prepare_confirmation"
-            else ""
+            if web else "\n¿Confirmas este pedido? Responde «sí» para enviarlo."
+        )
+        return f"Tu pedido\n{summary}\n\nTotal: {currency} {total}" + (
+            confirmation if name == "prepare_confirmation" else ""
         )
     if dish and name.startswith("add_"):
         return f"Agregué {quantity:g} × {dish}.\n{cart_line(cart, currency)}"
     if dish and name == "remove_item":
         return f"Quité {dish} de tu pedido.\n{cart_line(cart, currency)}"
     return "Actualicé tu pedido. Puedes seguir eligiendo o revisar el resumen."
+
+
+def missing_delivery_reply(missing: list[str]) -> str:
+    prompts = {
+        "fulfillment": "¿Recogerás el pedido en el local o deseas delivery?",
+        "customerName": CUSTOMER_NAME_PROMPT,
+        "location": "Comparte tu ubicación para calcular el costo de envío.",
+        "locationInRange": "Comparte una ubicación dentro de la cobertura o elige recojo en el local.",
+        "address": "Escríbeme la dirección exacta de entrega.",
+    }
+    return " ".join(prompts[key] for key in missing if key in prompts) or (
+        "Revisa los datos de entrega para continuar."
+    )

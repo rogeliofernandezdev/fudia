@@ -6,6 +6,8 @@ from uuid import uuid4
 
 from src.domain.models import CartLine, CartModifier, CartSelection, MenuItem
 from src.services.confirmation import explicit_confirmation
+from src.services.contact_name import full_customer_name, request_customer_name
+from src.services.contact_phone import contact_phone_prompt
 from src.services.delivery_tools import (
     COUNTER_PAYMENT,
     DeliveryTools,
@@ -148,6 +150,8 @@ class OrderTools:
             delivery: dict[str, Any] | None = None
             if session.mode == "delivery":
                 delivery = delivery_summary(session)
+                if "customerName" in delivery["missing"]:
+                    return await request_customer_name(self.context)
                 if delivery["missing"]:
                     return {
                         "ok": False,
@@ -159,11 +163,9 @@ class OrderTools:
             if session.mode == "counter":
                 counter = counter_summary(session)
                 if counter["missing"]:
-                    return {
-                        "ok": False,
-                        "code": "customer_name_required",
-                        "missing": counter["missing"],
-                    }
+                    return await request_customer_name(self.context)
+            if not session.contact_phone and (session.mode == "delivery" or session.provider != "FUDIA_WEB"):
+                return await self._request_contact_phone()
             session.awaiting_confirmation = True
             if not session.pending_order_request_id:
                 session.order_submission_started = False
@@ -437,6 +439,12 @@ class OrderTools:
                 "requiresExplicitConfirmation": True,
             }
 
+        if session.mode in {"delivery", "counter"} and not full_customer_name(session.delivery.customer_name):
+            return await request_customer_name(self.context)
+
+        if not session.contact_phone and (session.mode == "delivery" or session.provider != "FUDIA_WEB"):
+            return await self._request_contact_phone()
+
         # The idempotency key lives in the session before the backend sees
         # it: a retry after a crash, a lost lease or a network error reuses
         # it and recovers the same round instead of creating another one.
@@ -446,18 +454,7 @@ class OrderTools:
         session.order_submission_started = True
         lines = order_lines(session.cart)
         if session.mode == "delivery":
-            if not session.contact_phone:
-                self.context.invalidate_confirmation()
-                return {"ok": False, "code": "customer_phone_required", "missing": ["customerPhone"]}
             return await self._confirm_delivery_order(request_id, lines)
-        if not session.contact_phone and session.provider != "FUDIA_WEB":
-            self.context.invalidate_confirmation()
-            return {
-                "ok": False,
-                "code": "customer_phone_required",
-                "missing": ["customerPhone"],
-                "message": "Necesito un número de contacto con código de país antes de confirmar.",
-            }
         counter = session.mode == "counter"
         customer_name = session.delivery.customer_name if counter else ""
         if counter and not customer_name:
@@ -514,6 +511,20 @@ class OrderTools:
             # Independent order: the next one in this chat is a new order.
             return {"ok": True, "order": order, "payment": COUNTER_PAYMENT, "awaitingStaff": "cashier"}
         return {"ok": True, "order": order, "awaitingStaff": "waiter"}
+
+    async def _request_contact_phone(self) -> dict[str, Any]:
+        session = self.context.session
+        session.awaiting_contact_phone = True
+        self.context.invalidate_confirmation()
+        session.order_submission_started = False
+        result = {
+            "ok": False,
+            "code": "customer_phone_required",
+            "missing": ["customerPhone"],
+            "message": contact_phone_prompt(session.country_code),
+        }
+        await self.context.journal.local_effect("contact", {"reply": result["message"]})
+        return result
 
     async def _confirm_delivery_order(
         self,

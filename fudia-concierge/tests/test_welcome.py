@@ -259,7 +259,7 @@ def test_web_welcome_keeps_the_service_note_and_the_counter_name_question() -> N
     assert welcome_message(counter, carta(item("Causa")), web=True) == (
         "Bienvenido a La Panchita.\n"
         "Pide aquí, recoge en el mostrador y paga en caja.\n\n"
-        "Para empezar, ¿a nombre de quién va el pedido?"
+        "Para empezar, escríbeme tus nombres y apellidos."
     )
 
 

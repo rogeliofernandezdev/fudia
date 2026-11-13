@@ -333,6 +333,33 @@ elimina los emojis informales.
 - Una conversación cuya atención en mesa terminó nunca vuelve a agregar rondas a esa mesa sin escanear el QR de nuevo.
 
 
+## Contacto del pedido en chat web
+
+Antes de confirmar delivery, recojo o mostrador se solicitan **nombres y
+apellidos**, además del celular cuando corresponde. Se conservan juntos en
+`customerName`, sin adivinar cómo separar nombres o apellidos compuestos.
+Si solo se indicó el primer nombre, las tools piden completar el dato y
+guardan `awaiting_customer_name`. La respuesta directa se guarda sin IA y
+retoma los datos pendientes o el resumen, conservando el carrito. Los nombres
+completos ya proporcionados no se vuelven a pedir. El backend los utiliza para
+la ficha nueva del cliente cuando se confirma y persiste el pedido.
+
+Antes de preparar la confirmación de un pedido de delivery o recojo, las tools
+comprueban el teléfono de contacto. Si falta, guardan `awaiting_contact_phone`
+y piden solo ese dato, sin marcar un envío como iniciado. El país proviene del
+QR validado y del canal: para Perú se aceptan los 9 dígitos del celular y se
+normalizan con `51`; también se acepta un número internacional explícito.
+Sin reglas nacionales conocidas se solicita el formato internacional.
+
+La respuesta con el celular se procesa antes del filtro de operaciones
+matemáticas (2026-11-13): antes, los números y el signo `+` coincidían con ese
+filtro y devolvían el rechazo de alcance. Al guardar el contacto se conservan
+carrito, nombre, dirección, referencia y ubicación, se vuelve a mostrar el
+resumen y se permite confirmarlo. Escribir el teléfono no crea un pedido ni
+verifica la identidad del comensal. Las solicitudes y respuestas de contacto
+se guardan con el journal y el commit con fencing; sus reintentos no repiten
+la operación ni consultan perfiles por un teléfono escrito.
+
 ## Selección multirrestaurante
 
 En producción, antes de IA, Concierge consulta el directorio privado de

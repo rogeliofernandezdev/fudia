@@ -14,6 +14,7 @@ from src.domain.models import (
     DeliveryQuote,
     GeoPoint,
 )
+from src.services.contact_name import full_customer_name, request_customer_name
 from src.services.tooling import ToolContext, cart_payload
 
 NOT_IN_DELIVERY_MODE = {
@@ -46,7 +47,7 @@ def counter_summary(session: ConversationSession) -> dict[str, Any]:
         "customerName": name,
         "total": _money(Decimal(cart["total"])),
         "payment": COUNTER_PAYMENT,
-        "missing": [] if name else ["customerName"],
+        "missing": [] if full_customer_name(name) else ["customerName"],
     }
 
 
@@ -75,7 +76,7 @@ def missing_details(session: ConversationSession) -> list[str]:
     missing: list[str] = []
     if delivery.fulfillment is None:
         return ["fulfillment"]
-    if not delivery.customer_name:
+    if not full_customer_name(delivery.customer_name):
         missing.append("customerName")
     if delivery.fulfillment == "delivery":
         if delivery.location is None:
@@ -231,8 +232,11 @@ class DeliveryTools:
         reference = str(args.get("reference", "")).strip()
         if len(name) > 160 or len(address) > 240 or len(reference) > 240:
             return {"ok": False, "code": "delivery_details_too_long"}
+        if name and not full_customer_name(name):
+            return await request_customer_name(self.context)
         if name:
-            delivery.customer_name = name
+            delivery.customer_name = " ".join(name.split())
+            self.context.session.awaiting_customer_name = False
         if address:
             delivery.address = address
         if reference:
@@ -244,9 +248,10 @@ class DeliveryTools:
         name = str(args.get("customerName", "")).strip()
         if len(name) > 160:
             return {"ok": False, "code": "delivery_details_too_long"}
-        if not name:
-            return {"ok": False, "code": "customer_name_required"}
-        self.context.session.delivery.customer_name = name
+        if not full_customer_name(name):
+            return await request_customer_name(self.context)
+        self.context.session.delivery.customer_name = " ".join(name.split())
+        self.context.session.awaiting_customer_name = False
         self.context.invalidate_confirmation()
         summary = counter_summary(self.context.session)
         await self.context.journal.local_effect("delivery", summary)

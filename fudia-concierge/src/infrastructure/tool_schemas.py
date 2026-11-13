@@ -246,7 +246,7 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "properties": {
                 "customerName": {
                     "type": "string",
-                    "description": "Nombre de quien recibe o recoge.",
+                    "description": "Nombres y apellidos completos del cliente; no solo su primer nombre.",
                 },
                 "address": {
                     "type": "string",

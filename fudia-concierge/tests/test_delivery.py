@@ -357,7 +357,8 @@ async def test_delivery_order_requires_details_and_sends_quoted_fee() -> None:
 
     assert (await tools.execute("set_fulfillment", {"type": "delivery"}))["ok"]
     missing = await tools.execute("prepare_confirmation", {})
-    assert set(missing["missing"]) == {"customerName", "location", "address"}
+    assert missing["code"] == "customer_name_required"
+    assert missing["missing"] == ["customerName"]
 
     quote = await fudia.quote_delivery("a" * 32, PIN.latitude, PIN.longitude)
     from src.services.delivery_tools import apply_quote
@@ -365,7 +366,7 @@ async def test_delivery_order_requires_details_and_sends_quoted_fee() -> None:
     apply_quote(session, PIN, quote)
     await tools.execute(
         "set_delivery_details",
-        {"customerName": "Ana", "address": "Av. Larco 123", "reference": "Puerta azul"},
+        {"customerName": "Ana Quispe", "address": "Av. Larco 123", "reference": "Puerta azul"},
     )
     prepared = await tools.execute("prepare_confirmation", {})
     assert prepared["ok"] is True
@@ -394,7 +395,7 @@ async def test_pickup_order_needs_only_a_name() -> None:
     assert unavailable["code"] == "delivery_unavailable"
     await tools.execute("set_fulfillment", {"type": "pickup"})
     await tools.execute(
-        "set_delivery_details", {"customerName": "Luis", "address": "", "reference": ""}
+        "set_delivery_details", {"customerName": "Luis Rojas", "address": "", "reference": ""}
     )
     prepared = await tools.execute("prepare_confirmation", {})
     assert prepared["ok"] is True and prepared["delivery"]["deliveryFee"] == "0.00"
@@ -415,7 +416,7 @@ async def test_changed_fee_is_requoted_and_needs_a_new_confirmation() -> None:
 
     apply_quote(session, PIN, await fudia.quote_delivery("t", 0, 0))
     await tools.execute(
-        "set_delivery_details", {"customerName": "Ana", "address": "Calle 1", "reference": ""}
+        "set_delivery_details", {"customerName": "Ana Quispe", "address": "Calle 1", "reference": ""}
     )
     await tools.execute("prepare_confirmation", {})
     fudia.fee_changed = True
@@ -480,7 +481,7 @@ async def test_delivery_changes_invalidate_a_prepared_confirmation(change: str) 
     await tools.execute("add_item", {"productId": "p1", "quantity": 1, "note": ""})
     await tools.execute("set_fulfillment", {"type": "pickup"})
     await tools.execute(
-        "set_delivery_details", {"customerName": "Ana", "address": "", "reference": ""}
+        "set_delivery_details", {"customerName": "Ana Quispe", "address": "", "reference": ""}
     )
     await tools.execute("prepare_confirmation", {})
     assert session.awaiting_confirmation
@@ -532,7 +533,7 @@ async def test_crash_after_delivery_order_replays_the_same_request_id() -> None:
     session.mode = "delivery"
     session.table = None
     session.delivery.fulfillment = "pickup"
-    session.delivery.customer_name = "Ana"
+    session.delivery.customer_name = "Ana Quispe"
     await store.save(session)
     await service(store, backend, ScriptedAgent([ADD_P1])).process_inbound(
         message("wamid.d-cart", "un p1")

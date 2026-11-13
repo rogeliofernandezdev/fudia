@@ -146,6 +146,8 @@ def recovery_reply(
             "No pudimos completar tu solicitud. Revisa tu pedido e "
             "inténtalo nuevamente, o pide ayuda al personal de tu mesa."
         )
+    if effect.kind == "contact":
+        return str(effect.result["reply"])
     if effect.kind == "marketing_consent":
         if effect.result.get("decision") != "asked":
             return str(effect.result.get("reply", "")) or (

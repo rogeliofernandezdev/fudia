@@ -236,6 +236,8 @@ class ConversationSession(BaseModel):
     country_code: str = ""
     customer_identity: VerifiedCustomer | None = None
     customer_contact_phone: str = ""
+    awaiting_contact_phone: bool = False
+    awaiting_customer_name: bool = False
     selection: RestaurantSelection | None = None
     context_sent_at: float = 0.0
     last_customer_message_at: float = 0.0
@@ -445,6 +447,7 @@ class InboundMessage(BaseModel):
 
 EffectKind = Literal[
     "cart",
+    "contact",
     "confirmation",
     "delivery",
     "create_order",

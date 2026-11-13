@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.domain.models import TableContext
 from src.services.carta import NONE_AVAILABLE, Carta, render_carta
+from src.services.contact_name import full_customer_name
 from src.services.start_codes import service_label
 
 CLOSING = "¿Qué deseas pedir?"
@@ -9,7 +10,7 @@ CLOSING = "¿Qué deseas pedir?"
 WEB_CLOSING = "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
 NONE_AVAILABLE_CLOSING = "Si necesitas ayuda, puedo avisar al personal del local."
 # A new diner at the counter is asked for the name the cashier calls out.
-COUNTER_NAME_CLOSING = "Para empezar, ¿a nombre de quién va el pedido?"
+COUNTER_NAME_CLOSING = "Para empezar, escríbeme tus nombres y apellidos."
 COUNTER_NOTE = "Pide aquí, recoge en el mostrador y paga en caja."
 DELIVERY_NOTE = "Pide aquí para delivery o para recoger en el local."
 # WhatsApp cuts text messages at 4096 characters; keep room for the tail.
@@ -29,7 +30,7 @@ def _web_welcome(table: TableContext, carta: Carta | None, customer_name: str) -
         greeting = f"{greeting}\n{hello}{COUNTER_NOTE}"
     if carta is not None and not carta.available:
         return f"{greeting}\n\n{NONE_AVAILABLE}\n\n{NONE_AVAILABLE_CLOSING}"
-    closing = COUNTER_NAME_CLOSING if counter and not customer_name else WEB_CLOSING
+    closing = COUNTER_NAME_CLOSING if counter and not full_customer_name(customer_name) else WEB_CLOSING
     return f"{greeting}\n\n{closing}"
 
 
@@ -62,7 +63,7 @@ def welcome_message(
     if counter:
         hello = f"Hola, {customer_name}. " if customer_name else ""
         greeting = f"{greeting}\n\n{hello}{COUNTER_NOTE}"
-    ask_name = counter and not customer_name
+    ask_name = counter and not full_customer_name(customer_name)
     if carta is None:
         # The carta could not be read: the diner can still ask for it.
         return f"{greeting}\n\n{COUNTER_NAME_CLOSING if ask_name else CLOSING}"

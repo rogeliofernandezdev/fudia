@@ -49,7 +49,7 @@ class CounterFudia(FakeFudia):
     async def get_customer(self, token: str, phone: str) -> CustomerProfile:
         if not self.known:
             return CustomerProfile(marketingConsent=self.consent_status)
-        return await super().get_customer(token, phone)
+        return (await super().get_customer(token, phone)).model_copy(update={"customerName": "Ana Quispe"})
 
     async def create_order(
         self,
@@ -126,12 +126,12 @@ async def test_counter_qr_greets_a_returning_customer_and_opens_counter_mode() -
 
     assert reply.startswith(
         "🍽️ Bienvenido a Restaurante Demo\n📍 Mostrador\n\n"
-        "Hola, Ana. Pide aquí, recoge en el mostrador y paga en caja."
+        "Hola, Ana Quispe. Pide aquí, recoge en el mostrador y paga en caja."
     )
     assert reply.endswith("¿Qué deseas pedir?")
     session = await store.get(PHONE)
     assert session is not None and session.mode == "counter"
-    assert session.delivery.customer_name == "Ana"
+    assert session.delivery.customer_name == "Ana Quispe"
     assert fudia.opened[-1]["kind"] == "table"
 
 
@@ -142,19 +142,19 @@ async def test_new_counter_customer_is_asked_for_a_name_before_ordering() -> Non
     service, store = counter_service(fudia, agent)
 
     reply = await service.handle_message(PHONE, QR)
-    assert reply.endswith("Para empezar, ¿a nombre de quién va el pedido?")
+    assert reply.endswith("Para empezar, escríbeme tus nombres y apellidos.")
 
     await service.handle_message(PHONE, "Quiero un lomo")
     assert agent.results[-1]["code"] == "customer_name_required"
     assert "Nombre del cliente: pendiente" in agent.messages[-1]
     assert fudia.order_calls == []
 
-    await service.handle_message(PHONE, "Soy rosa")
+    await service.handle_message(PHONE, "Soy Rosa Flores")
     session = await store.get(PHONE)
-    assert session is not None and session.delivery.customer_name == "Rosa"
+    assert session is not None and session.delivery.customer_name == "Rosa Flores"
     await service.handle_message(PHONE, "Quiero un lomo")
     await service.handle_message(PHONE, "Sí")
-    assert fudia.order_calls[-1]["customer_name"] == "Rosa"
+    assert fudia.order_calls[-1]["customer_name"] == "Rosa Flores"
 
 
 @pytest.mark.asyncio
@@ -176,7 +176,7 @@ async def test_each_counter_order_is_independent_and_has_no_bill() -> None:
     assert second["order"]["code"] == "PED-002"
     assert second["order"]["id"] != first["order"]["id"]
     assert fudia.order_calls[0]["request_id"] != fudia.order_calls[1]["request_id"]
-    assert {call["customer_name"] for call in fudia.order_calls} == {"Ana"}
+    assert {call["customer_name"] for call in fudia.order_calls} == {"Ana Quispe"}
 
     session = await store.get(PHONE)
     assert session is not None and session.mode == "counter" and session.cart == []
@@ -196,9 +196,9 @@ async def test_counter_mode_has_no_delivery() -> None:
     result = await tools.execute("set_fulfillment", {"type": "delivery"})
     assert result["code"] == "counter_pickup_only"
     named = await tools.execute(
-        "set_delivery_details", {"customerName": "Luis", "address": "Av. 1"}
+        "set_delivery_details", {"customerName": "Luis Rojas", "address": "Av. 1"}
     )
-    assert named["ok"] is True and named["counter"]["customerName"] == "Luis"
+    assert named["ok"] is True and named["counter"]["customerName"] == "Luis Rojas"
     assert session.delivery.address == ""
 
 
@@ -312,7 +312,7 @@ def test_recovery_reply_rebuilds_counter_order_and_question() -> None:
             EffectRecord(
                 kind="create_order",
                 request_id="r1",
-                payload={"mode": "counter", "customerName": "Ana"},
+                payload={"mode": "counter", "customerName": "Ana Quispe"},
                 result={"order": {"code": "PED-009", "total": "25.00"}},
             ),
             EffectRecord(

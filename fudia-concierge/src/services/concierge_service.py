@@ -45,6 +45,8 @@ from src.services.consent import (
     consent_question,
     consent_reply,
 )
+from src.services.contact_name import CUSTOMER_NAME_PROMPT, customer_name_reply, full_customer_name
+from src.services.contact_phone import contact_phone_prompt, normalize_contact_phone, phone_text
 from src.services.customer_notices import CUSTOMER_WINDOW_SECONDS, notice_text
 from src.services.delivery_partners import action_reply
 from src.services.delivery_tools import apply_quote, delivery_summary
@@ -281,7 +283,10 @@ def agent_message(session: ConversationSession, user_message: str) -> str:
             "Tiene Carta y Mi pedido; para delivery puede usar Compartir ubicación. "
             "No indiques menús de la aplicación WhatsApp. "
             "En mesa y mostrador no se exige teléfono; para recojo o delivery solicita "
-            "un teléfono de contacto con código de país si la herramienta lo requiere.]\n" + state
+            "un celular de contacto si la herramienta lo requiere. En Perú acepta los 9 dígitos "
+            "sin exigir +51; un número extranjero puede incluir su código de país. "
+            f"Contacto: {'registrado, no volver a pedirlo' if session.contact_phone else 'pendiente'}.]\n"
+            + state
         )
     return state
 
@@ -889,6 +894,8 @@ class ConciergeService:
         session.cart = []
         session.delivery = DeliveryDetails()
         session.awaiting_confirmation = False
+        session.awaiting_contact_phone = False
+        session.awaiting_customer_name = False
         session.pending_order_request_id = None
         session.last_order_id = None
         session.consent_prompt_pending = False
@@ -1033,6 +1040,7 @@ class ConciergeService:
                     "en este momento. Pide ayuda al personal.",
                     "none",
                 )
+            session.country_code = table.countryCode or session.country_code
             if (
                 self.directory is not None
                 and session.mode == "table"
@@ -1090,6 +1098,8 @@ class ConciergeService:
             session.last_activity_at = self.clock()
             session.cart = []
             session.awaiting_confirmation = False
+            session.awaiting_contact_phone = False
+            session.awaiting_customer_name = False
             session.pending_order_request_id = None
             session.handoff_pending = False
             session.consent_checked = False
@@ -1099,6 +1109,7 @@ class ConciergeService:
                 # greeted by it, a new one is asked for it.
                 profile = await self._customer_profile(token, session.profile_phone)
                 session.delivery = DeliveryDetails(customer_name=profile_name(profile))
+                session.awaiting_customer_name = not full_customer_name(session.delivery.customer_name)
                 session.consent_checked = bool(profile and profile.marketingConsent != "pending")
             try:
                 menu = await self.fudia.search_menu(token)
@@ -1309,20 +1320,51 @@ class ConciergeService:
             reply = await self._record_consent(session, journal, "withdrawn", text)
             return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
 
+        # A phone reply belongs to checkout, even though digits and «+» also
+        # match the arithmetic guard. Handle it before scope classification.
+        if session.provider in {"WHATSMEOW", "FUDIA_WEB"} and not session.contact_phone:
+            contact = normalize_contact_phone(text, session.country_code)
+            if contact and (session.awaiting_contact_phone or session.cart):
+                session.customer_contact_phone = contact
+                session.awaiting_contact_phone = False
+                session.awaiting_confirmation = False
+                session.pending_order_request_id = None
+                session.order_submission_started = False
+                reply = "Guardé tu número de contacto."
+                if session.cart:
+                    tools = ToolRegistry(TurnScopedFudia(self.fudia), session, text, journal)
+                    prepared = await tools.execute_any("prepare_confirmation", {})
+                    reply += "\n\n" + web_action_reply(
+                        "prepare_confirmation", prepared, session.currency_symbol,
+                        web=session.provider == "FUDIA_WEB",
+                    )
+                await journal.local_effect("contact", {"reply": reply})
+                return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
+            if session.awaiting_contact_phone and phone_text(text):
+                return contact_phone_prompt(session.country_code, invalid=True), "transcript"
+
+        if session.awaiting_customer_name:
+            name = customer_name_reply(text)
+            if name == "":
+                return CUSTOMER_NAME_PROMPT, "transcript"
+            if name is not None:
+                tools = ToolRegistry(TurnScopedFudia(self.fudia), session, text, journal)
+                await tools.execute_any("set_delivery_details", {"customerName": name})
+                reply = "Guardé tus nombres y apellidos."
+                if session.cart:
+                    prepared = await tools.execute_any("prepare_confirmation", {})
+                    reply += "\n\n" + web_action_reply(
+                        "prepare_confirmation", prepared, session.currency_symbol,
+                        web=session.provider == "FUDIA_WEB",
+                    )
+                await journal.local_effect("contact", {"reply": reply})
+                return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
+
         if obviously_out_of_scope(text):
             SCOPE_DECISIONS.labels(decision="out_of_scope").inc()
             if notice:
                 return f"{notice}\n\n{OFF_SCOPE_REPLY}", "transcript"
             return OFF_SCOPE_REPLY, "none"
-
-        if session.provider in {"WHATSMEOW", "FUDIA_WEB"} and not session.contact_phone:
-            if re.fullmatch(r"\+[1-9][0-9 ()-]{7,20}", text.strip()):
-                contact = re.sub(r"\D", "", text)
-                if 8 <= len(contact) <= 15:
-                    session.customer_contact_phone = contact
-                    session.awaiting_confirmation = False
-                    session.pending_order_request_id = None
-                    return "Usaré ese número de contacto para tu pedido. ¿Qué deseas pedir?", "transcript"
 
         result = await self.graph.ainvoke(
             {
@@ -1566,6 +1608,8 @@ class ConciergeService:
         session.mode = "delivery"
         session.table = None
         session.venue = venue
+        session.awaiting_contact_phone = False
+        session.awaiting_customer_name = False
         session.delivery = DeliveryDetails(customer_name=customer_name)
         session.cart = []
         session.awaiting_confirmation = False
@@ -1626,8 +1670,8 @@ class ConciergeService:
         ]
         if not session.delivery.address:
             lines.append("Escríbeme la dirección exacta y una referencia para el repartidor.")
-        if not session.delivery.customer_name:
-            lines.append("¿A nombre de quién va el pedido?")
+        if not full_customer_name(session.delivery.customer_name):
+            lines.append(CUSTOMER_NAME_PROMPT)
         if not session.cart:
             lines.append("¿Qué te gustaría pedir?")
         return " ".join(lines), "transcript"
