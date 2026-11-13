@@ -39,7 +39,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
 
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-return-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-return-title" aria-busy={busy}>
 
-  <ModalHeader title={<>{"Corregir o devolver recepción"} · {receipt.supplierName}</>} titleId="purchase-return-title" icon="undo" onClose={close} busy={busy} closeLabel="Cerrar"/>
+  <ModalHeader title={<>{"Corregir o devolver recepción"} · {receipt.supplierName}</>} titleId="purchase-return-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate>
    <div className="purchase-return-body" inert={busy}>
     <div className="form-grid">

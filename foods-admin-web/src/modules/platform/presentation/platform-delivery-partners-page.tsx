@@ -82,7 +82,7 @@ export function PlatformDeliveryPartnersPage(){
     <div className="management-cards">{items.map((item,index)=><article key={item.id}><header><span className="row-icon r0"><Icon name="motorbike"/></span><div><b>{item.name}</b><small>{formatPartnerPhone(item.whatsappPhone)}</small><small>{item.coverageLabels.join("; ")||"Sin cobertura"}</small></div>{status(item)}</header><footer>{order(index)}{actions(item)}</footer></article>)}</div></>}
   </section>
 
-  {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal platform-partner-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="delivery-partner-title" aria-busy={save.isPending}><ModalHeader title={editingId?"Editar central":"Nueva central"} titleId="delivery-partner-title" icon="motorbike" onClose={close} busy={save.isPending} closeLabel="Cerrar"/>
+  {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal platform-partner-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="delivery-partner-title" aria-busy={save.isPending}><ModalHeader title={editingId?"Editar central":"Nueva central"} titleId="delivery-partner-title" onClose={close} busy={save.isPending} closeLabel="Cerrar"/>
    <ModalForm onSubmit={event=>{event.preventDefault();save.mutate({value:draft,id:editingId})}}>
     <ModalBody><div className="form-sections-flow"><div className="form-grid platform-partner-fields">
      <FormField className="span-2" label="Nombre"><Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Central Norte" autoFocus required/></FormField>

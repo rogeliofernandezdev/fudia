@@ -149,7 +149,7 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
   });
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-refund-title" aria-busy={busy}>
 
-    <ModalHeader title={<>Devolución · {payment.orderCode}</>} titleId="pos-refund-title" icon="undo" onClose={close} busy={busy} closeLabel="Cerrar"/>
+    <ModalHeader title={<>Devolución · {payment.orderCode}</>} titleId="pos-refund-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
     <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <ModalBody className="pos-payment-body">
         <div className="pos-refund-source"><span className={"pos-payment-method"+(payment.affectsCash?" cash":"")}><Icon name={paymentMethodIcon(payment.affectsCash)} size={16}/></span><div><small>Pago disponible para devolver</small><strong>{formatMoney(max)}</strong><span>{payment.methodName} · {payment.cashRegisterName}</span></div></div>

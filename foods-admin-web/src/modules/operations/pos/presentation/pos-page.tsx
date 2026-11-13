@@ -261,7 +261,7 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,s
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className={"crud-modal pos-payment-modal modal-panel-in"+(state?"":" pos-checkout-modal")} role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
 
-    <ModalHeader title={data?.order.tableName||data?.order.customerName||"Cobrar saldo"} titleId="pos-payment-entry-title" icon="cash" onClose={close} busy={busy} closeLabel="Cerrar"/>
+    <ModalHeader title={data?.order.tableName||data?.order.customerName||"Cobrar saldo"} titleId="pos-payment-entry-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
     {form??(state?state.retry?<ErrorState title={state.title} text={state.text} onRetry={state.retry}/>:<EmptyState icon={state.icon} title={state.title} text={state.text} action={state.cash?cashLink():undefined}/>:<POSPaymentLoading/>)}
   </Dialog></div>;
 }
@@ -282,7 +282,6 @@ export function POSDetailDialog({loading,error,data,preview,canManage,hasShift,f
   const head=data?.order??preview;
   const tableName=head?.tableName?.trim();
   const title=tableName?(/^mesa\b/i.test(tableName)?tableName:`Mesa ${tableName}`):head?.customerName||(head?"Venta directa":"Detalle de cobro");
-  const icon:IconName=tableName?"utensils":head?channelIcons[head.channel]??"receipt":"receipt";
   const paid=Number(data?.paidAmount??0);
   const remaining=Number(data?.remainingAmount??0);
   const[tab,setTab]=useState<"products"|"payments">("products");
@@ -292,8 +291,8 @@ export function POSDetailDialog({loading,error,data,preview,canManage,hasShift,f
   // El resumen no repite el importe principal: Total y Pagado neto solo explican un saldo o una propina cobrada.
   const breakdown=pending||Boolean(tip);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title" aria-busy={loading}>
-    {loading?<POSDetailLoading close={close} withFooter={Boolean(ticket)} heading={head?{title,icon}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
-    <ModalHeader title={title} titleId="pos-detail-title" icon={icon} onClose={close} closeLabel="Cerrar detalle"/>
+    {loading?<POSDetailLoading close={close} withFooter={Boolean(ticket)} heading={head?{title}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
+    <ModalHeader title={title} titleId="pos-detail-title" onClose={close} closeLabel="Cerrar detalle"/>
     {error?<div className="modal-body pos-detail-body"><ErrorState title="No pudimos cargar el cobro" text={error} onRetry={retry}/></div>
     :!data?<div className="modal-body pos-detail-body"><EmptyState icon="receipt" title="No hay detalle disponible"/></div>
     :<ModalWorkspace summary={<section className={`modal-summary pos-detail-totals is-band${pending?"":" is-paid"}`} aria-labelledby="pos-detail-summary-title">
@@ -358,10 +357,9 @@ function POSLoading(){return <>
 
 /** Skeleton con la geometría final: cabecera, identidad, tarjeta, pestañas, productos, resumen y acción. */
 /** Con `heading` (datos de la fila) la cabecera ya es la real; solo sin ellos (enlace directo) se dibuja su skeleton. */
-function POSDetailLoading({close,withFooter,heading,withContact}:{close:()=>void;withFooter:boolean;heading?:{title:string;icon:IconName};withContact:boolean}){return <>
-  {heading?<ModalHeader title={heading.title} titleId="pos-detail-title" icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
-  :<ModalHeader title={<><span className="sr-only">Cargando detalle de cobro</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId="pos-detail-title"
-    iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)"/>} onClose={close} closeLabel="Cerrar detalle"/>}
+function POSDetailLoading({close,withFooter,heading,withContact}:{close:()=>void;withFooter:boolean;heading?:{title:string};withContact:boolean}){return <>
+  {heading?<ModalHeader title={heading.title} titleId="pos-detail-title" onClose={close} closeLabel="Cerrar detalle"/>
+  :<ModalHeader title={<><span className="sr-only">Cargando detalle de cobro</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId="pos-detail-title" onClose={close} closeLabel="Cerrar detalle"/>}
   <ModalWorkspace summary={<section className="modal-summary is-band" aria-hidden="true">
     <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/></div>
     <div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><Skeleton width="var(--size-72)" height="var(--size-9)"/><Skeleton width="var(--size-68)" height="var(--size-16)"/></div>)}</div>

@@ -219,7 +219,7 @@ test("el formulario de pago tiene Cobrar y envía solo al confirmar",()=>{
 test("detalle de cobro sigue el patrón del pedido: cabecera con mesa, identidad, pestañas y resumen fijo",()=>{
  const {POSDetailDialog}=mountPage();
  const view=nodes(POSDetailDialog({loading:false,data:{...detail,order:{...detail.order,waiterName:"Daniel Machaca Rojasa",items:[{id:"line-1",name:"Puca picante con chicharrón",qty:"1",unitPrice:"40",note:"Sin sal"}]}},canManage:false,hasShift:false,formatMoney:String,formatDateTime:()=>"7 oct. 2026",close:()=>{},refund:()=>{}}));
- const header=view.find(node=>node.type==="ModalHeader");assert.equal(header.props.title,"Mesa 04");assert.equal(header.props.icon,"utensils");assert.equal(header.props.subtitle,undefined);
+ const header=view.find(node=>node.type==="ModalHeader");assert.equal(header.props.title,"Mesa 04");assert.equal(header.props.icon,undefined,"la cabecera no lleva icono");assert.equal(header.props.subtitle,undefined);
  assert.equal(view.some(node=>node.type==="DetailFacts"||node.type==="DetailHero"),false,"sin pestaña Detalles ni datos repetidos");
  assert.deepEqual(Array.from(view.find(node=>node.type==="Tabs").props.items,item=>item.label),["Productos","Pagos"]);
  const identity=nodes(view.find(node=>node.props.className==="pos-detail-identity"));

@@ -137,15 +137,15 @@ test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todo
  for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-44)");
  assert.equal(declaration(css,".modal-footer>.modal-footer-note","flex-basis"),"100%");
 });
-test("icono y X blancos directos sobre la cabecera marina, sin caja ni contorno",()=>{
+test("la cabecera marina solo lleva título y X blanca directa, sin icono ni caja",()=>{
  const css=sheet("design-system/styles/modal.css");
- assert.equal(declaration(css,".modal-title-icon","background"),"transparent");
- assert.equal(declaration(css,".modal-title-icon","color"),"var(--surface)");
+ let titleIcon=false;css.walkRules(rule=>{if(/modal-title-icon|has-icon/.test(rule.selector))titleIcon=true;});
+ assert.equal(titleIcon,false,"ningún modal reserva un icono antes del título");
  assert.equal(declaration(css,".modal-close","background"),"transparent");
  assert.equal(declaration(css,".modal-close","border"),"0");
  let closeFrame=false;css.walkRules(rule=>{if(rule.selector.includes("modal-close::before"))closeFrame=true;});
  assert.equal(closeFrame,false,"la X no lleva recuadro");
- for(const selector of [".crud-modal>header .modal-title-icon>svg",".crud-modal>header>button>svg"]){
+ for(const selector of [".crud-modal>header>button>svg"]){
   for(const prop of ["width","height"])assert.equal(declaration(css,selector,prop),"var(--size-20)");
  }
  assert.equal(declaration(css,".modal-close:hover:not(:disabled)","background","(hover:hover) and (pointer:fine)"),undefined);

@@ -174,14 +174,16 @@ oculta; al cerrar el teclado todo vuelve a su tamaño.
 | Hoja | Configurar una opción dentro de una tarea (combo, resumen de comanda) | Contenido | Grip y X; inerte mientras está cerrada | Hoja inferior |
 | Tarea completa | Comanda | 100 % | Un solo cierre; confirma si hay líneas | Pantalla completa |
 
-Anatomía de la cabecera: icono blanco de 20 px sin superficie tintada, **título
-de 18 px con la acción concreta** («Nuevo gasto», «Editar zona», «Mesa 04») y X.
+Anatomía de la cabecera: **título de 18 px con la acción concreta** («Nuevo
+gasto», «Editar zona», «Mesa 04») y X. Ningún modal lleva icono antes del
+título (2026-11-12): `ModalHeader`, `Modal` y `RemoteModalSkeleton` no aceptan
+`icon`, y `modal-standard.test.mjs` impide volver a pasarlo.
 Nunca añadir información debajo del título: sin subtítulo, eyebrow, fecha,
 responsable ni estado dentro de la cabecera.
 
 `ModalHeader` es la cabecera reutilizable tanto de `Modal` como de detalles
 remotos que necesitan `Dialog` directamente. La cabecera reserva una fila para
-icono, título y X. No acepta `subtitle` ni reserva una franja antes del cuerpo;
+título y X. No acepta `subtitle` ni reserva una franja antes del cuerpo;
 solo 8 px separan el contenido de la cabecera. El título comunica crear/editar; el nombre del registro se
 integra en él cuando hace falta. `meta` y `details` se reservan para datos y
 controles útiles, fuera de la cabecera; las descripciones van en el cuerpo
@@ -194,9 +196,8 @@ Icono primario blanco de 20 px, centrado en un espacio de 44 px sin recuadro.
 La X blanca de 20 px va sin recuadro ni contorno, fondo transparente y sin
 sombra, dentro de un área de clic de 44 px;
 no cambia de color con hover ni al guardar y mantiene foco blanco visible para teclado.
-Con `busy`, queda deshabilitada sin reducir su opacidad: icono y contorno siguen blancos.
-Todos los iconos de cabecera son blancos, también en altas, ediciones y errores
-de carga. Las respuestas success/error y confirmaciones warning conservan su
+Con `busy`, queda deshabilitada sin reducir su opacidad: la X sigue blanca,
+también en altas, ediciones y errores de carga. Las respuestas success/error y confirmaciones warning conservan su
 componente independiente y su semántica.
 
 `ModalFooter({children,note,status,statusLabel})` agrupa los botones contiguos
@@ -321,7 +322,7 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `ModalItemNote` | Nota del producto como cápsula `cloud-50` con borde `line` e icono `note` |
 | `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
 
-Detalle de Menús y combos (patrón de Detalle de pedido): `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo) y `ModalWorkspace`. Arriba, el `Status` real (Activo, Inactivo o «Fuera de fecha») y una línea con icono `calendar` de cuándo se vende («Se vende el …» o días · desde · hasta), con la descripción si existe. «Platos y opciones» (`h3` de 16 px) es una `ModalItemList`: cada parte lleva su `IconTile` (`sm`, mismo tono e icono que en el editor), el nombre de la parte en 12 px y sus platos en 14 px separados por «·», con el costo extra si aplica. El resumen fijo «Resumen del menú» muestra Partes y Opciones, con el Precio como importe principal. Es de lectura: sin `ModalFooter`; la X es el único cierre. No repite reglas de elección («Obligatorio · elige 1»). Error con `ModalError`; la carga usa `Skeleton` con la misma geometría.
+Detalle de Menús y combos (patrón de Detalle de pedido): `Dialog` `size-md` con `ModalHeader` (título = nombre del menú, sin icono, franja ni subtítulo) y `ModalWorkspace`. Arriba, el `Status` real (Activo, Inactivo o «Fuera de fecha») y una línea con icono `calendar` de cuándo se vende («Se vende el …» o días · desde · hasta), con la descripción si existe. «Platos y opciones» (`h3` de 16 px) es una `ModalItemList`: cada parte lleva su `IconTile` (`sm`, mismo tono e icono que en el editor), el nombre de la parte en 12 px y sus platos en 14 px separados por «·», con el costo extra si aplica. El resumen fijo «Resumen del menú» muestra Partes y Opciones, con el Precio como importe principal. Es de lectura: sin `ModalFooter`; la X es el único cierre. No repite reglas de elección («Obligatorio · elige 1»). Error con `ModalError`; la carga usa `Skeleton` con la misma geometría.
 La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera marino. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
@@ -669,9 +670,29 @@ elegidos en otras líneas; en móvil su ancho es fijo para que la tabla no desbo
 El ajuste de entrada pide **Costo unitario** por unidad base. Vacío usa el
 promedio actual (el texto de ayuda lo muestra); si el artículo aún no tiene
 promedio es obligatorio, y el backend repite esa validación. Las salidas no
-muestran el campo. Los cuerpos de Registrar ajuste y Transferir usan
-`grid-auto-rows:max-content` para que, al desplazarse, ninguna sección se
-comprima.
+muestran el campo. El cuerpo de Transferir usa `grid-auto-rows:max-content`
+para que, al desplazarse, ninguna sección se comprima.
+
+### Registrar ajuste
+
+Formulario corto sin `FormSection` ni títulos de sección (aprobado
+2026-11-12): `ModalForm` + `ModalBody` + `ModalFooter` compartidos, con el
+desplazamiento estándar del modal y sin altura ni scroll propios. Campos
+`FormField` en una rejilla de dos columnas (`inventory-adjustment-fields`; una
+en móvil), agrupados por proximidad:
+
+1. **Artículo** a todo el ancho; al elegirlo, la ayuda del campo muestra
+   «Stock actual: 12 kg». La unidad no se repite como dato aparte: acompaña a
+   «Cantidad (kg)» y «Costo unitario por kg».
+2. **Entrada | Salida** con las `Tabs` compartidas (cambian los campos del
+   formulario, igual que el tipo de atención del pedido manual); no se usa
+   `ChoiceGroup` ni una etiqueta «Tipo de movimiento» visible.
+3. **Motivo** y **Cantidad** en la misma fila; **Costo unitario** (`MoneyInput`
+   con el símbolo de la moneda) solo en entradas.
+4. **Observación** con `optional`, a todo el ancho.
+5. **Stock resultante** en una franja `primary-50` de una línea (valor en
+   negrita y la operación «12 + 2» a la derecha), igual para entradas y
+   salidas: sin verde ni ámbar, porque no es un estado ni una alerta.
 
 ## Niveles de inventario
 

@@ -4,11 +4,11 @@ import test from "node:test";
 
 const read=file=>readFileSync(new URL(`../src/${file}`,import.meta.url),"utf8");
 
-// La cabecera de un modal (icono y título) no depende del API: se conoce por la acción o por la fila del listado.
+// La cabecera de un modal (solo título y X, sin icono) no depende del API: se conoce por la acción o por la fila del listado.
 // Solo el cuerpo espera la respuesta; la cabecera en carga queda para el enlace directo sin datos previos.
 test("los modales remotos muestran su cabecera real mientras cargan",()=>{
  const skeleton=read("design-system/remote-modal-skeleton.tsx");
- assert.match(skeleton,/\{title\?<ModalHeader title=\{title\} icon=\{icon\} onClose=/,"RemoteModalSkeleton conserva título e icono sin otra franja");
+ assert.match(skeleton,/\{title\?<ModalHeader title=\{title\} onClose=/,"RemoteModalSkeleton conserva el título, sin icono ni otra franja");
  assert.doesNotMatch(skeleton,/subtitle/);
  const calls=[
   "modules/customers/presentation/customers-manager.tsx",

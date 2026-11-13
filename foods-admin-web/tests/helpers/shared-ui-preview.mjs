@@ -55,7 +55,7 @@ function fixture(showModal,long,typography=false,actions=false,cancelRecord=fals
   ...(long?Array.from({length:20},(_,i)=>h(FormField,{key:i,label:`Dato adicional ${i+1}`,className:"span-2"},h(Input,{defaultValue:"Contenido de prueba para comprobar el desplazamiento"}))):[]));
  return renderToStaticMarkup(h(React.Fragment,null,
   h("main",{style:{padding:"24px"}},h(PageHeader,{title:"Carta y productos",description:"Gestiona la oferta de tu restaurante."}),h(TabsBar,{action:tabAction},tabs),h("div",{className:"panel",style:{padding:"24px"}},"Vista de comprobación de componentes compartidos; datos ilustrativos.")),
-  showModal&&h(Modal,{title:typography?"Jerarquía compartida de datos":long?"Editar categoría con un nombre extenso que conserva toda su información":"Nueva categoría",subtitle:typography?"Datos ilustrativos; sin consultas ni escrituras":"Carta y productos",icon:"dish",size:long||typography?"lg":"md",onClose:noop},h(ModalForm,{onSubmit:noop},h(ModalBody,null,fields,typography&&h("div",{style:{display:"grid",gap:24,marginTop:24}},
+  showModal&&h(Modal,{title:typography?"Jerarquía compartida de datos":long?"Editar categoría con un nombre extenso que conserva toda su información":"Nueva categoría",subtitle:typography?"Datos ilustrativos; sin consultas ni escrituras":"Carta y productos",size:long||typography?"lg":"md",onClose:noop},h(ModalForm,{onSubmit:noop},h(ModalBody,null,fields,typography&&h("div",{style:{display:"grid",gap:24,marginTop:24}},
    ...["pos-detail-context","sales-detail-context","expense-detail-grid","company-detail-fields","cash-report-identity","order-attribution","product-review"].map(className=>h("section",{key:className},h("h3",null,className),h("dl",{className},h("div",null,h("dt",{"data-type-label":true},"Atendido por"),h("dd",{"data-type-value":true},"Daniel Machaca Rojasa Fernández de los Ríos"))))),
    ...["customer-detail-fields","purchase-detail-meta","company-detail-summary","order-detail-context"].map(className=>h("section",{key:className},h("h3",null,className),h("div",{className},h("div",null,h("small",{"data-type-label":true},"Descripción"),h("b",{"data-type-value":true},"Contenido ilustrativo que conserva toda su información"))))),
   )),h(ModalFooter,null,cancelRecord?h(Button,{action:"cancel-record"},"Cancelar pedido"):h(ModalCancel),h(Button,actions?{type:"submit",action:"continue"}:{type:"submit",icon:"check"},actions?"Continuar":"Guardar"))))));
@@ -111,14 +111,15 @@ try{
    if(outsideWeight!=="500")throw new Error("La tipografía de controles fuera del modal no debe cambiar");
    if(modal){
     const header=modal.querySelector("header");
-    const close=header.querySelector("button"),icon=header.querySelector(".modal-title-icon");
+    const close=header.querySelector("button");
+    if(header.querySelector(".modal-title-icon")||header.firstElementChild!==header.querySelector(".modal-heading"))throw new Error("La cabecera no lleva icono antes del título");
     const closeOutline=getComputedStyle(close,"::before");
-    if(closeOutline.width!=="32px"||closeOutline.height!=="32px"||closeOutline.borderTopWidth!=="1px"||closeOutline.borderTopColor!==style(header.querySelector("h2")).color||style(close).backgroundColor!=="rgba(0, 0, 0, 0)"||style(icon).backgroundColor!=="rgba(0, 0, 0, 0)")throw new Error("Icono sin recuadro y X con solo contorno blanco compacto de 32 px");
+    if(closeOutline.width!=="32px"||closeOutline.height!=="32px"||closeOutline.borderTopWidth!=="1px"||closeOutline.borderTopColor!==style(header.querySelector("h2")).color||style(close).backgroundColor!=="rgba(0, 0, 0, 0)")throw new Error("X con solo contorno blanco compacto de 32 px");
     if(rect(close).width<44||rect(close).height<44)throw new Error("La X debe conservar 44 px también en escritorio");
-    for(const glyph of [icon.querySelector("svg"),close.querySelector("svg")]){
+    for(const glyph of [close.querySelector("svg")]){
      if(rect(glyph).width!==20||rect(glyph).height!==20)throw new Error("Glifos de 20 px en la cabecera");
     }
-    if(style(icon).color!==style(header.querySelector("h2")).color||style(close).color!==style(header.querySelector("h2")).color)throw new Error("Icono y X blancos de la paleta");
+    if(style(close).color!==style(header.querySelector("h2")).color)throw new Error("X blanca de la paleta");
     if(modal.querySelector(".modal-accent")||Math.abs(rect(header).y-rect(modal).y)>0.5||Math.abs(rect(header).width-rect(modal).width)>0.5)throw new Error("Cabecera sin ocupar todo el borde superior");
     const luminance=color=>{
      const rgb=color.match(/[\d.]+/g).slice(0,3).map(Number).map(value=>value/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);

@@ -3,13 +3,12 @@
 import {createContext,useCallback,useContext,useId,useState,type FormHTMLAttributes,type ReactNode} from "react";
 import {Dialog} from "./dialog";
 import {ConfirmDialog} from "./confirm-dialog";
-import {Icon,type IconName} from "./icons";
+import {Icon} from "./icons";
 import {Button,Spinner} from "./page-header";
 import {ErrorState} from "./states";
 import {Skeleton} from "./skeleton";
 
 export type ModalSize="sm"|"md"|"lg"|"xl";
-type ModalTone="primary"|"danger"|"success"|"digital";
 
 type ModalContextValue={requestClose:()=>void;busy:boolean};
 const ModalContext=createContext<ModalContextValue>({requestClose:()=>{},busy:false});
@@ -23,8 +22,6 @@ type ModalProps={
   meta?:ReactNode;
   /** Datos de lectura relacionados con la identidad, sin otra cabecera. */
   details?:ReactNode;
-  icon:IconName;
-  tone?:ModalTone;
   /** sm 480 · md 640 · lg 880 · xl 1040. En móvil sm/md son hoja inferior; lg/xl, pantalla completa. */
   size?:ModalSize;
   onClose:()=>void;
@@ -40,10 +37,10 @@ type ModalProps={
 };
 
 /**
- * Modal homologado sobre `Dialog`: fondo, panel por tamaño, cabecera (icono, título, X),
+ * Modal homologado sobre `Dialog`: fondo, panel por tamaño, cabecera (título y X, sin icono),
  * cuerpo desplazable y pie fijo. No cierra con Escape ni con el fondo.
  */
-export function Modal({title,meta,details,icon,tone="primary",size="md",onClose,dirty=false,busy=false,closeLabel="Cerrar",onResponseClose,className="",children}:ModalProps){
+export function Modal({title,meta,details,size="md",onClose,dirty=false,busy=false,closeLabel="Cerrar",onResponseClose,className="",children}:ModalProps){
   const id=useId();
   const [confirmDiscard,setConfirmDiscard]=useState(false);
   const requestClose=useCallback(()=>{if(busy)return;if(dirty){setConfirmDiscard(true);return}onClose()},[busy,dirty,onClose]);
@@ -51,7 +48,7 @@ export function Modal({title,meta,details,icon,tone="primary",size="md",onClose,
     <div className="modal-backdrop modal-overlay-in">
       <Dialog onResponseClose={onResponseClose??onClose} className={`crud-modal ds-modal size-${size} ${className}`.trim()} aria-labelledby={`${id}-title`} aria-busy={busy||undefined}>
 
-        <ModalHeader title={title} titleId={`${id}-title`} meta={meta} details={details} icon={icon} tone={tone} onClose={requestClose} busy={busy} closeLabel={closeLabel}/>
+        <ModalHeader title={title} titleId={`${id}-title`} meta={meta} details={details} onClose={requestClose} busy={busy} closeLabel={closeLabel}/>
         {children}
       </Dialog>
     </div>
@@ -60,14 +57,13 @@ export function Modal({title,meta,details,icon,tone="primary",size="md",onClose,
 }
 
 /**
- * Cabecera única, también para detalles remotos que usan Dialog directamente. Con `busy` deshabilita la X y
+ * Cabecera única (título y X; nunca un icono antes del título), también para detalles remotos que usan Dialog directamente. Con `busy` deshabilita la X y
  * cubre el cuerpo con `ModalBusy`: todo modal que guarda lo bloquea sin marcado propio. El botón que originó la
  * acción es el único que dice «Guardando…». `busyOverlay={false}` solo para pantallas de tarea completa (Comanda).
  */
-export function ModalHeader({title,titleId,meta,details,icon,tone="primary",onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",iconSlot,initialFocusClose=false}:{title:ReactNode;titleId?:string;meta?:ReactNode;details?:ReactNode;icon?:IconName;tone?:ModalTone;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;iconSlot?:ReactNode;initialFocusClose?:boolean}){
+export function ModalHeader({title,titleId,meta,details,onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",initialFocusClose=false}:{title:ReactNode;titleId?:string;meta?:ReactNode;details?:ReactNode;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;initialFocusClose?:boolean}){
   const generatedId=useId();
-  return <><header className={`modal-header${iconSlot||icon?" has-icon":""}`}>
-    {(iconSlot||icon)&&<span className={`modal-title-icon ${tone==="primary"?"":tone}`.trim()}>{iconSlot??(icon&&<Icon name={icon} size={18}/>)}</span>}
+  return <><header className="modal-header">
     <div className="modal-heading">
       <h2 id={titleId??`${generatedId}-title`}>{title}</h2>
     </div>

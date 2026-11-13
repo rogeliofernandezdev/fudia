@@ -18,7 +18,7 @@ export function CashTeamDialog({shift,users,options,loading,error,retrying,retry
   const available=useMemo(()=>availableCashCollaborators(options,users,currentUser?.id??"",shift.status).filter(option=>option.id!==shift.openedById),[options,users,currentUser?.id,shift.status,shift.openedById]);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-team-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-team-title">
 
-    <ModalHeader title={<>{"Equipo del turno"} · {shift.cashRegisterName}</>} titleId="cash-team-title" icon="users" onClose={close} closeLabel="Cerrar"/>
+    <ModalHeader title={<>{"Equipo del turno"} · {shift.cashRegisterName}</>} titleId="cash-team-title" onClose={close} closeLabel="Cerrar"/>
     <div className="cash-team-body">
       <p className="cash-dialog-intro">Los colaboradores pueden cobrar desde POS mientras este turno siga abierto. La asignación no cambia su rol ni permite administrar la caja.</p>
       {error?<ErrorState title="No pudimos cargar el equipo" text={error} onRetry={retry} retrying={retrying}/>:<>
@@ -51,7 +51,7 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
   const label=type==="deposit"?"Registrar depósito":type==="transfer"?"Transferir efectivo":"Registrar retiro";
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy}>
 
-    <ModalHeader title={<>{"Operación de caja"} · {shift.cashRegisterName}</>} titleId="cash-operation-title" icon={type==="transfer"?"share":"stock"} onClose={close} busy={busy} closeLabel="Cerrar"/>
+    <ModalHeader title={<>{"Operación de caja"} · {shift.cashRegisterName}</>} titleId="cash-operation-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="cash-dialog-body">
         <FormField label="Operación">

@@ -17,7 +17,7 @@ export function TipPayoutDialog({shift,close}:{shift:{id:string;cashRegisterName
  const recipients=(query.data?.recipients??[]).map(person=>({value:person.id,label:person.name}));
  function change(){setValidation("")}
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!mutation.isPending)close()}} className="crud-modal compact tip-payout-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="tip-payout-title">
- <ModalHeader title={<>{"Entrega de propinas"} · {shift.cashRegisterName}</>} titleId="tip-payout-title" icon="cash" busy={mutation.isPending} onClose={close}/>
+ <ModalHeader title={<>{"Entrega de propinas"} · {shift.cashRegisterName}</>} titleId="tip-payout-title" busy={mutation.isPending} onClose={close}/>
  <ModalForm onSubmit={event=>{event.preventDefault();if(mutation.isPending)return;if(!recipientId||!Number.isFinite(Number(amount))||Number(amount)<=0||Number(amount)>Number(query.data?.available??0)){setValidation("Selecciona un trabajador e ingresa un monto dentro del saldo disponible.");return}mutation.mutate()}} noValidate inert={mutation.isPending}>
  <ModalBody>{query.isLoading?<Skeleton className="tip-settings-skeleton"/>:query.isError?<ErrorState title="No pudimos cargar las propinas" text={query.error.message} onRetry={()=>void query.refetch()}/>:!query.data?<EmptyState title="Sin información disponible"/>:<div className="tip-settings-form">
  <div className="tip-available"><span>Propinas disponibles para entregar</span><strong>{money(Number(query.data.available))}</strong></div>

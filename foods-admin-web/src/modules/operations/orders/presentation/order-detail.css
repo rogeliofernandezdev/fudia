@@ -60,7 +60,6 @@
 .order-detail .order-detail-actions .order-detail-pay{display:inline-flex;align-items:center;border:var(--stroke-1) solid var(--action-pay);background:var(--action-pay);color:var(--surface);text-decoration:none;box-shadow:none}
 .order-detail .order-detail-actions .order-detail-pay[aria-disabled="true"]{opacity:.5;cursor:wait}
 .order-detail-skeleton-copy{min-width:0;display:grid;align-content:center;gap:var(--space-1-5)}
-.order-detail-skeleton-icon{flex-shrink:0}
 .order-detail-skeleton-actions .ds-skeleton{height:var(--control-height);border-radius:var(--radius-control)}
 @media(width>600px){
  .order-detail-skeleton-actions .order-detail-buttons{width:calc(var(--size-170) + var(--size-150) + var(--space-2-5));max-width:100%}

@@ -139,7 +139,7 @@ export function CombosPage(){
     </section>
     {selected&&<ComboDetailDialog query={detail} previewName={combos.data?.items.find(item=>item.id===selected)?.name} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
     <ConfirmDialog open={canManage&&Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>canManage&&statusTarget&&changeStatus.mutate(statusTarget)}/>
-    {canManage&&!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-editor" label="Cargando menú o combo" rows={8} title="Actualiza tu menú o combo" icon="chefHat" close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
+    {canManage&&!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-editor" label="Cargando menú o combo" rows={8} title="Actualiza tu menú o combo" close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
     {canManage&&draft&&<ComboEditor draft={draft} setDraft={setDraft} products={pickerProducts} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} currencyPosition={settings.currencyPosition} money={money} busy={save.isPending} editing={Boolean(editingId)} close={closeEditor} finish={()=>{if(canManage)save.mutate(draft)}}/>}
   </>
 }
@@ -164,7 +164,7 @@ function ComboDetailDialog({query,previewName,currencySymbol,close}:{query:Retur
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal size-md combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
       {query.isLoading?<ComboDetailSkeleton close={close} name={previewName}/>:<>
-        <ModalHeader title={value?.name??previewName??"Menú o combo"} titleId="combo-detail-title" icon="combo" onClose={close} closeLabel="Cerrar"/>
+        <ModalHeader title={value?.name??previewName??"Menú o combo"} titleId="combo-detail-title" onClose={close} closeLabel="Cerrar"/>
         {query.isError?<ModalError title="No pudimos cargar el menú" text={query.error.message} onRetry={()=>query.refetch()} retrying={query.isFetching}/>:value&&<ModalWorkspace summary={<section className="modal-summary" aria-labelledby="combo-detail-summary-title">
           <div className="modal-summary-heading"><h3 id="combo-detail-summary-title" className="modal-section-title">Resumen del menú</h3></div>
           <div className="modal-summary-lines">
@@ -198,7 +198,7 @@ function ComboDetailDialog({query,previewName,currencySymbol,close}:{query:Retur
  */
 function ComboDetailSkeleton({close,name}:{close:()=>void;name?:string}){
  return <>
-  <ModalHeader title={name??<><span className="sr-only">Cargando detalle del menú</span><Skeleton width="var(--size-168)" height="var(--size-16)"/></>} titleId="combo-detail-title" icon="combo" onClose={close} initialFocusClose/>
+  <ModalHeader title={name??<><span className="sr-only">Cargando detalle del menú</span><Skeleton width="var(--size-168)" height="var(--size-16)"/></>} titleId="combo-detail-title" onClose={close} initialFocusClose/>
   <ModalWorkspace summary={<section className="modal-summary" aria-hidden="true">
    <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/></div>
    <div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><Skeleton width="var(--size-72)" height="var(--size-9)"/><Skeleton width="var(--size-36)" height="var(--size-16)"/></div>)}</div>
@@ -268,7 +268,7 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
   const partCount=draft.groups.length;
   return <><div className="modal-backdrop modal-overlay-in">
     <Dialog onResponseClose={close} className="crud-modal size-lg combo-editor modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-editor-title" aria-busy={busy}>
-      <ModalHeader title={editing?"Actualiza tu menú o combo":"Arma tu menú o combo"} titleId="combo-editor-title" icon="chefHat" onClose={requestClose} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={editing?"Actualiza tu menú o combo":"Arma tu menú o combo"} titleId="combo-editor-title" onClose={requestClose} busy={busy} closeLabel="Cerrar"/>
       <div className="modal-body combo-editor-body">
         <h3 className="form-section-title"><IconTile name="chefHat" size="sm"/>Datos del menú</h3>
         <div className="combo-editor-basics">

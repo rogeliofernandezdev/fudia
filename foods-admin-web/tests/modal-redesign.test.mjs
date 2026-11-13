@@ -59,7 +59,7 @@ test("cabecera breve, responsables en el cuerpo y estados junto a su informació
  assert.match(loading,/class="modal-summary is-band"/,"y el resumen en franja");
  assert.match(loading,/Cargando detalle del pedido/,"sin datos previos (enlace directo) la cabecera también carga");
  const immediate=renderDetail({skeleton:true,preview:{tableName:"04",customerName:"",channel:"salon"}});
- assert.match(immediate.slice(0,immediate.indexOf("</header>")),/>Mesa 04<\/h2>/,"con la fila del listado, título e icono se muestran sin esperar al API");
+ assert.match(immediate.slice(0,immediate.indexOf("</header>")),/>Mesa 04<\/h2>/,"con la fila del listado, el título se muestra sin esperar al API");
  assert.doesNotMatch(immediate.slice(0,immediate.indexOf("</header>")),/ds-skeleton/);
  assert.match(renderDetail({skeleton:true,preview:{tableName:"",customerName:"Ana",channel:"delivery"}}),/>Ana<\/h2>/);
  const delivery=renderDetail({order:{...exampleOrder,channel:"delivery",customerPhone:"999 123 456",address:"Av. Los Olivos 124"}});

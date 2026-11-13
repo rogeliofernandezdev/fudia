@@ -124,7 +124,7 @@ export function PurchaseItemDialog({
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={locked}>
 
-      <ModalHeader title={view.kind==="create"?"Nuevo artículo":view.kind==="link"?"Controlar con inventario":"Agregar artículo"} titleId="purchase-item-title" icon="stock" onClose={close} busy={locked||catalogBusy} closeLabel="Cerrar"/>
+      <ModalHeader title={view.kind==="create"?"Nuevo artículo":view.kind==="link"?"Controlar con inventario":"Agregar artículo"} titleId="purchase-item-title" onClose={close} busy={locked||catalogBusy} closeLabel="Cerrar"/>
 
       <form autoComplete="off" onSubmit={event=>event.preventDefault()} noValidate>
         <div className="purchase-item-body" inert={busy}>

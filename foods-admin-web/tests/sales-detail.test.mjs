@@ -305,10 +305,10 @@ test("detalle de venta identifica mesa, cliente o venta directa una sola vez",()
 test("venta sigue el patrón del pedido: cabecera con mesa o cliente, identidad, tarjeta y pestañas",()=>{
  const view=mount({data:{...data,order:{...data.order,tableName:"03",waiterName:"Daniel Machaca Rojasa"}}});
  const header=view.find(node=>node.type==="ModalHeader");
- assert.equal(header.props.title,"Mesa 03");assert.equal(header.props.icon,"utensils");
+ assert.equal(header.props.title,"Mesa 03");assert.equal(header.props.icon,undefined,"la cabecera no lleva icono");
  assert.equal(mount().find(node=>node.type==="ModalHeader").props.title,"Mesa 5","no duplica Mesa si ya forma parte del nombre");
  const delivery=mount({data:{...data,order:{...data.order,channel:"delivery",tableName:""}}}).find(node=>node.type==="ModalHeader");
- assert.equal(delivery.props.title,"Familia Pérez");assert.equal(delivery.props.icon,"truck");
+ assert.equal(delivery.props.title,"Familia Pérez");assert.equal(delivery.props.icon,undefined);
  assert.equal(mount({data:{...data,order:{...data.order,channel:"mostrador",tableName:"",customerName:""}}}).find(node=>node.type==="ModalHeader").props.title,"Venta directa");
  const hero=view.find(node=>node.props.className==="sales-detail-hero");
  const identity=nodes(hero).find(node=>node.props.className==="sales-detail-identity");

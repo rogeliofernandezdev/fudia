@@ -54,7 +54,7 @@ export function WhatsAppChannelEditor({initial,existing,countries,usedCountries,
   onSave(draft.provider==="FUDIA_WEB"?{...value,phoneNumber:""}:value);
  };
  return <><div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={onClose} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={pending}>
-  <ModalHeader title={existing?"Editar canal":"Nuevo canal"} titleId="global-channel-title" icon="chat" onClose={onClose} busy={pending} closeLabel="Cerrar"/>
+  <ModalHeader title={existing?"Editar canal":"Nuevo canal"} titleId="global-channel-title" onClose={onClose} busy={pending} closeLabel="Cerrar"/>
   <ModalForm onSubmit={event=>{event.preventDefault();submit()}}>
    <ModalBody><div className="form-grid platform-channel-fields">
     {error&&<p className="field-error span-2" role="alert">{error}</p>}

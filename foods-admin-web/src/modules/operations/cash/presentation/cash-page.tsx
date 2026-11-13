@@ -324,7 +324,7 @@ export function CashPage(){
       save={draft=>cashOperation.mutate({shiftId:operationTarget.id,draft})}
     />}
     {detailId&&(detail.isLoading
-      ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} title="Detalle del turno" icon="sales" close={()=>setDetailId(null)}/>
+      ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} title="Detalle del turno" close={()=>setDetailId(null)}/>
       :detail.isError
         ?<CashDetailError message={detail.error.message} retrying={detail.isFetching} retry={()=>void detail.refetch()} close={()=>setDetailId(null)}/>
         :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)} viewReport={()=>{setDetailId(null);setReportId(detailId);}}/>)}
@@ -453,4 +453,4 @@ function CashRegistersSkeleton(){return <div className="cash-registers-workspace
   </article>)}</div>
 </div>}
 
-function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><ModalHeader title="Detalle no disponible" titleId="cash-detail-error-title" icon="alert" onClose={close} closeLabel="Cerrar"/><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}
+function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><ModalHeader title="Detalle no disponible" titleId="cash-detail-error-title" onClose={close} closeLabel="Cerrar"/><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}

@@ -19,7 +19,7 @@ export function PdfViewerModal({document:pdf,filename,title,subtitle,size="lg",o
   finally{window.clearTimeout(timer);onClose();}
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog className={`crud-modal pdf-viewer-modal pdf-viewer-${size} modal-panel-in`} onResponseClose={onClose} aria-labelledby={`${id}-title`} aria-description={subtitle}>
-  <ModalHeader title={title} titleId={`${id}-title`} icon="receipt" onClose={()=>void close()} closeLabel="Cerrar visor PDF"/>
+  <ModalHeader title={title} titleId={`${id}-title`} onClose={()=>void close()} closeLabel="Cerrar visor PDF"/>
   {(notice||details)&&<div className="pdf-viewer-context">{notice&&<div>{notice}</div>}{details&&<Button kind="ghost" icon="eye" onClick={()=>setShowDetails(value=>!value)}>{showDetails?"Ver PDF":"Ver detalle"}</Button>}</div>}
   {showDetails?<div className="pdf-viewer-details">{details}</div>:error?<div className="pdf-viewer-state"><ErrorState title={errorTitle} text={error} onRetry={onRetry}/></div>
    :loading?<PdfLoading/>:!pdf?<div className="pdf-viewer-state"><ErrorState title="No hay un PDF disponible" text="Vuelve a generar el documento para previsualizarlo." onRetry={onRetry}/></div>:<PdfFrame document={pdf} filename={filename} receipt={size==="sm"} releaseRef={releaseRef} onRetry={onRetry}/>}

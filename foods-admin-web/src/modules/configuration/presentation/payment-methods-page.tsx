@@ -82,7 +82,7 @@ function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:Paym
  const{register,handleSubmit,setValue,formState:{errors}}=useForm<PaymentMethodDraft>({defaultValues:initial,resolver:paymentMethodResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const submit=handleSubmit(value=>save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim(),sortOrder:Number(value.sortOrder)}));
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-method-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
-  <ModalHeader title={editing?"Editar medio de pago":"Nuevo medio de pago"} titleId="payment-method-title" icon="payment" onClose={close} busy={busy} closeLabel="Cerrar"/>
+  <ModalHeader title={editing?"Editar medio de pago":"Nuevo medio de pago"} titleId="payment-method-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
   <ModalForm onSubmit={submit} noValidate><ModalBody><div className="payment-method-form-body">
    <FormSection icon="payment" title="Datos del medio de pago" bare><div className="form-grid">
     <FormField label="Código interno" help={editing?"El código no se puede cambiar.":"Minúsculas, números, guion o guion bajo."} error={errors.code?.message}><Input data-dialog-initial-focus={!editing||undefined} readOnly={editing} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. voucher"/></FormField>

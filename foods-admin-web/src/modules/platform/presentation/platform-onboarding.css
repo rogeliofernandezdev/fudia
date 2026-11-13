@@ -33,7 +33,7 @@
 /* Panel del paso */
 .onboarding-form .panel.management{overflow:visible;border:0;border-radius:0;background:var(--surface);box-shadow:none}
 .onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:var(--space-3);min-height:var(--size-58);padding:var(--space-5) var(--space-6) var(--space-3-5);background:var(--surface);border-bottom:var(--stroke-1) solid var(--cloud-100)}
-.onboarding-form .panel.management header .modal-title-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-600);box-shadow:none}
+.onboarding-form .panel.management header .modal-title-icon{flex:none;width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-600);box-shadow:none}
 .onboarding-form .panel.management header h2{margin:0;text-align:left;font-size:var(--font-size-md);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-snug);color:var(--ink-950)}
 .onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4) var(--space-5);padding:var(--space-5) var(--space-6) var(--space-6)}
 .onboarding-form .panel.management .form-grid .span-2{grid-column:span 2}

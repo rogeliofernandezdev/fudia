@@ -66,7 +66,7 @@
 .sales-detail-paid b{color:var(--ink-600)}
 .sales-detail-paid.has-payment b{color:var(--amount-paid)}
 .sales-detail-totals.is-paid .modal-summary-total span{color:var(--brand-700)}
-.sales-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}.sales-detail-skeleton-icon{flex-shrink:0}
+.sales-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}
 .sales-detail-skeleton-copy{min-width:0;display:grid;align-content:center;gap:var(--space-1-5)}
 .sales-detail-skeleton-action.ds-skeleton{width:var(--size-220);height:var(--control-height);border-radius:var(--radius-control)}
 @media(max-width:900px){

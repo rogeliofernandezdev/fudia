@@ -12,7 +12,7 @@ const declarations=rule=>Object.fromEntries(rule.nodes.filter(node=>node.type===
 
 test("el detalle de menú usa la anatomía compartida de los modales de detalle",()=>{
  assert.match(dialog,/className="crud-modal size-md combo-detail modal-panel-in"/);
- assert.match(dialog,/<ModalHeader title=\{value\?\.name\?\?previewName\?\?"Menú o combo"\} titleId="combo-detail-title" icon="combo" onClose=\{close\} closeLabel="Cerrar"\/>/);
+ assert.match(dialog,/<ModalHeader title=\{value\?\.name\?\?previewName\?\?"Menú o combo"\} titleId="combo-detail-title" onClose=\{close\} closeLabel="Cerrar"\/>/);
  assert.match(dialog,/<ComboDetailSkeleton close=\{close\} name=\{previewName\}\/>/,"mientras carga, la cabecera ya muestra el nombre de la fila");
  assert.doesNotMatch(dialog,/subtitle=|DETALLE DEL MENÚ|PARTES DEL MENÚ|QUÉ INCLUYE/,"sin franja ni datos redundantes bajo el título");
  assert.match(dialog,/className="modal-body combo-detail-body"/,"un solo cuerpo desplazable del design system");
@@ -47,7 +47,7 @@ test("el detalle no repite reglas de elección propias del asistente",()=>{
 
 test("la hoja de menú reutiliza el panel compartido, sin borde, franja ni pasos",()=>{
  const editor=page.slice(page.indexOf("function ComboEditor("),page.indexOf("function CompositionStep("));
- assert.match(editor,/<ModalHeader title=\{editing\?"Actualiza tu menú o combo":"Arma tu menú o combo"\} titleId="combo-editor-title" icon="chefHat" onClose=\{requestClose\}/);
+ assert.match(editor,/<ModalHeader title=\{editing\?"Actualiza tu menú o combo":"Arma tu menú o combo"\} titleId="combo-editor-title" onClose=\{requestClose\}/);
  assert.doesNotMatch(editor,/subtitle=|NUEVO MENÚ O COMBO|EDITAR MENÚ O COMBO/);
  assert.match(editor,/className="crud-modal size-lg combo-editor modal-panel-in"/,"size-lg: pantalla completa con pie fijo en móvil");
  assert.match(editor,/className="modal-body combo-editor-body"/,"un solo desplazamiento del design system");

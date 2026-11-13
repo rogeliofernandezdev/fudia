@@ -21,7 +21,7 @@ const bundle=await build({absWorkingDir:root,bundle:true,write:false,outfile:"pr
  function Preview(){
   const[codes,setCodes]=useState(['150101']),[labels,setLabels]=useState(['LIMA · LIMA · LIMA']),[saved,setSaved]=useState(false);
   return <div className="modal-backdrop"><Dialog className="crud-modal platform-partner-modal" role="dialog" aria-modal="true" aria-labelledby="preview-title">
-   <ModalHeader title="Editar central" titleId="preview-title" icon="motorbike" onClose={()=>{}}/>
+   <ModalHeader title="Editar central" titleId="preview-title" onClose={()=>{}}/>
    <ModalForm onSubmit={event=>{event.preventDefault();setSaved(true)}}><ModalBody><div className="form-sections-flow">
     <div className="form-grid platform-partner-fields"><FormField label="Nombre" className="span-2"><Input defaultValue="Central de reparto de Lima Metropolitana" required/></FormField><FormField label="WhatsApp" className="span-2"><Input defaultValue="51 987 654 321" required/></FormField></div>
     <DeliveryCoverageFields codes={codes} labels={labels} disabled={false} onChange={(next,names)=>{setCodes(next);setLabels(names)}}/>

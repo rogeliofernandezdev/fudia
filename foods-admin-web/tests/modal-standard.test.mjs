@@ -13,17 +13,30 @@ const read=file=>readFileSync(resolve(root,file),"utf8");
 const {ModalHeader,ModalFooter}=detailComponents();
 const h=React.createElement;
 
-test("cabecera solo con icono, título y cierre; contexto siempre fuera",()=>{
- const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva orden",icon:"receipt",details:"Proveedor seleccionado",onClose:()=>{}}));
+test("cabecera solo con título y cierre, sin icono; contexto siempre fuera",()=>{
+ const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva orden",details:"Proveedor seleccionado",onClose:()=>{}}));
  const header=html.match(/<header\b[\s\S]*?<\/header>/)[0];
  assert.match(header,/<h2[^>]*>Nueva orden<\/h2>/);
+ assert.match(header,/^<header class="modal-header"><div class="modal-heading">/,"el título es lo primero de la cabecera: ningún icono lo precede");
+ assert.equal((header.match(/<svg\b/g)??[]).length,1,"el único icono de la cabecera es la X");
  assert.doesNotMatch(header,/<(?:small|p)\b|Orden de compra|Proveedor seleccionado/);
  assert.match(html,/<\/header><div class="modal-context">/);
  assert.match(html,/aria-label="Cerrar"/);
 });
 
+test("ningún modal pasa un icono a la cabecera",()=>{
+ const files=dir=>readdirSync(resolve(root,dir),{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?files(`${dir}/${entry.name}`):entry.name.endsWith(".tsx")?[`${dir}/${entry.name}`]:[]);
+ const offenders=[];
+ for(const file of files(".")){
+  const source=read(file);
+  for(const match of source.matchAll(/<(ModalHeader|Modal|RemoteModalSkeleton)\s[^>]*?\s(icon|iconSlot)=/g))offenders.push(`${file}: <${match[1]} ${match[2]}=`);
+ }
+ assert.deepEqual(offenders,[],"La cabecera de un modal solo lleva título y X");
+ assert.doesNotMatch(read("design-system/modal.tsx"),/modal-title-icon|iconSlot/,"ModalHeader no dibuja ni acepta un icono de título");
+});
+
 test("formularios empiezan bajo la cabecera sin franja ni título repetidos",()=>{
- const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva reserva",icon:"clock",onClose:()=>{}}));
+ const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva reserva",onClose:()=>{}}));
  assert.doesNotMatch(html,/modal-context|modal-context-description/);
  const reservation=read("modules/operations/reservations/presentation/reservations-page.tsx");
  assert.match(reservation,/<ModalHeader title=\{initial.id\?"Editar reserva":"Nueva reserva"\}/);

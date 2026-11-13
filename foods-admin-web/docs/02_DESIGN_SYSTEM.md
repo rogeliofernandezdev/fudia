@@ -121,7 +121,8 @@ Reglas:
   vivos no se usan como color de texto. La legibilidad se apoya en peso bold y
   etiqueta explícita. La confirmación destructiva usa `danger-500`.
 - Las cabeceras de modal no participan de este patrón: siempre `navigation-900`
-  con icono, título y X blancos, sin círculos ni fondos de otro color.
+  con título y X blancos, sin icono antes del título, círculos ni fondos de
+  otro color.
 - Los estados combinan color, texto e icono; nunca dependen solo del color.
   En `Status`, el punto o icono decorativo es blanco como el texto, sobre el relleno
   vivo de su familia.
@@ -409,14 +410,15 @@ de página en `03_LAYOUTS.md`. Resumen:
   descripción de una línea, retorno opcional y como máximo una acción primaria y
   una secundaria. Sin eyebrow.
 - **Modales**: `Modal` con tamaños `sm` 480, `md` 640, `lg` 880 y `xl` 1040.
-  Cabecera marino `navigation-900` (borde `navigation-950`), título
-  blanco de 18 px e icono blanco de 20 px directo sobre el marino, sin caja ni
-  fondo, centrado en un espacio de 44 px. Altura mínima 52 px y padding vertical de 4 px;
+  Cabecera marino `navigation-900` (borde `navigation-950`) y título
+  blanco de 18 px que empieza en el borde izquierdo del contenido. **Ningún
+  modal lleva icono antes del título** (aprobado 2026-11-12): el único icono de
+  la cabecera es la X. Altura mínima 52 px y padding vertical de 4 px;
   puede crecer si el título necesita varias líneas. La X blanca mide 20 px, sin
   recuadro ni contorno, fondo transparente y sin sombra. El área de clic conserva
   44 px también en escritorio.
   No cambia de color con hover; conserva foco blanco visible para teclado.
-  El título nombra la acción. La cabecera solo contiene icono, título y X:
+  El título nombra la acción. La cabecera solo contiene título y X:
   nunca subtítulos, fechas, responsables ni estados debajo del título.
   No hay franja de subtítulo ni padding reservado entre cabecera y cuerpo. El
   título identifica la acción («Nueva reserva», «Editar cliente»); el nombre
@@ -550,8 +552,9 @@ de página en `03_LAYOUTS.md`. Resumen:
   cierre), plan SaaS (identificación, precio y prueba, límites), suscripción
   (ciclo y estado del pago con `ChoiceGroup`), cobro y devolución en POS, medio
   de pago (datos y dónde se usa), menús y combos (datos, qué incluye, cuándo se
-  vende) e inventario (niveles de stock, ajuste con entrada/salida en
-  `ChoiceGroup`, transferencia).
+  vende) e inventario (niveles de stock y transferencia). «Registrar ajuste»
+  no usa secciones: agrupa por proximidad y elige Entrada | Salida con `Tabs`
+  (ver `04_COMPONENTS.md` › Registrar ajuste).
 - Títulos de modal y etiquetas se escriben en caja normal («Nuevo gasto»,
   «Fondo inicial»); solo las siglas van en mayúsculas.
 
@@ -775,7 +778,7 @@ La selección permite flechas, Home y End con una sola parada de Tab.
 **Detalle de venta** sigue el patrón de «Detalle del pedido» (siguiente
 sección), con la misma geometría de modal y hoja inferior móvil:
 
-1. **Cabecera**: icono del canal (`utensils` si hay mesa) y como título la mesa
+1. **Cabecera**: sin icono; como título la mesa
    («Mesa 03», sin repetir «Mesa»), el cliente o «Venta directa». El código
    `PED-…` no se repite en el detalle: ya identifica la fila del listado.
 2. **Identidad**: estado de pago (`Status`, sin énfasis); debajo, en una sola
@@ -810,8 +813,8 @@ sección), con la misma geometría de modal y hoja inferior móvil:
 
 ### Detalle de cobro en POS (organización)
 
-Igual que «Detalle de venta»: cabecera con mesa, cliente o «Venta directa» e
-icono del canal; identidad con estado de pago («Pagada», «Pago parcial» o «Sin
+Igual que «Detalle de venta»: cabecera con mesa, cliente o «Venta directa»,
+sin icono; identidad con estado de pago («Pagada», «Pago parcial» o «Sin
 pagos», el mismo nombre que en Ventas) y, en una línea (`pos-detail-meta`),
 fecha y «Canal · Atendido por»; tarjeta de cliente solo si existe; pestañas
 «Productos» y «Pagos» en azul `primary` (con «Devolver» en cada pago cuando
@@ -895,7 +898,7 @@ editable; si el local no tiene tarifas queda manual sin avisos.
 
 ### Comanda de Salón, Pedidos y pedido manual
 
-La tarea a pantalla completa conserva la cabecera marino homologada, con icono,
+La tarea a pantalla completa conserva la cabecera marino homologada, con
 título y X. El catálogo presenta buscador, categorías del API y acceso explícito
 a «Menús y combos». Las categorías usan una sola fila deslizable con el dedo,
 sin barra visible; se conserva el desplazamiento nativo y el foco de teclado.
@@ -1010,7 +1013,7 @@ control circular de 44 px, fondo `primary-100`, sin borde y color `primary-700`,
 sin sombra
 ni cambio de color al hover. Su nombre accesible es «Volver a la carta»;
 no guarda, descarta ni cierra la comanda y conserva productos y notas.
-La cabecera marino queda por encima del scrim móvil: conserva título, icono y X
+La cabecera marino queda por encima del scrim móvil: conserva título y X
 blancos, sin oscurecerse al abrir la hoja. El scrim atenúa únicamente el fondo
 operativo y mantiene el cierre de la hoja al tocar fuera de ella.
 El resumen conserva la misma composición: foto, nombre/precio juntos y cantidad
@@ -1740,8 +1743,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   periodo de año completo se nombra por su año («2026») y otro por sus fechas
   completas («01/03/2028 – 31/12/2028»). En móvil la tabla se desliza en
   horizontal, como el resto de listados.
-- Crear o editar un periodo abre un modal compacto: cabecera solo con icono
-  `tax`, «Nuevo periodo» o «Editar periodo» y X; campos Impuesto (solo lectura),
+- Crear o editar un periodo abre un modal compacto: cabecera solo con
+  «Nuevo periodo» o «Editar periodo» y X; campos Impuesto (solo lectura),
   Desde, Hasta opcional e inclusivo, IGV % con la ayuda «Total que sale en el
   comprobante (IGV + IPM)» y Base legal; la nota del pie dice a cuántas empresas
   acogidas se aplica. La propuesta empieza donde termina el último periodo y dura
@@ -1847,8 +1850,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
 - Los botones «Guardar» y «Cancelar» de un mismo footer tienen idéntica altura
   (`--control-height`). El ícono de «Guardar» es un check (✓), no un disquete.
 - La cabecera de los modales de registro usa el patrón compartido: padding
-  horizontal de 24 px en escritorio y 16 px en móvil, título h2 de 18 px e
-  icono blanco de 20 px sin recuadro, en un espacio de 44×44 px. La X es blanca
+  horizontal de 24 px en escritorio y 16 px en móvil, título h2 de 18 px sin
+  icono que lo preceda. La X es blanca
   sin contorno, con área táctil de 44×44 px; no se fijan dimensiones
   locales para reducir la cabecera. Durante el guardado la X conserva su blanco
   y opacidad completa, aunque esté deshabilitada para evitar cierres prematuros.
@@ -1877,7 +1880,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
 ### Registro de pedidos sin mesa
 
 Pedidos ofrece «Nuevo pedido» únicamente con `orders.manage`. El modal comparte
-cabecera compacta con icono, título y X, campos `FormField` y primitivas del design
+cabecera compacta con título y X, campos `FormField` y primitivas del design
 system. Contacto y entrega forman una rejilla uniforme; dirección ocupa dos columnas
 y referencia el ancho completo. La carta y el resumen se presentan en dos columnas
 en escritorio y en una sola desde móvil, sin un wizard artificial ni textos redundantes.
@@ -2171,8 +2174,8 @@ texto inequívoco, cursor interactivo, respuesta hover, foco y estado bloqueado.
 Los datos y notas no reciben el contorno de acción, cursor de mano ni respuesta hover.
 
 El detalle compartido de Pedidos y Salón usa un modal de hasta 760 px, sin altura
-mínima artificial. `ModalHeader` contiene únicamente icono, título («Mesa 04»)
-y X, alineados en una fila. Responsables primero (Mozo/Cobrado por), luego fecha
+mínima artificial. `ModalHeader` contiene únicamente el título («Mesa 04»)
+y la X, alineados en una fila. Responsables primero (Mozo/Cobrado por), luego fecha
 y cliente pertenecen al contexto
 del cuerpo, antes de Productos. No se cargan estados ni responsables en la cabecera.
 `ModalWorkspace` organiza una sola columna: cuerpo desplazable con productos y notas,
@@ -2405,12 +2408,12 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
   con barras cortas y filas de cuerpo con celdas alineadas, incluyendo icono,
   título y subtítulo en la primera columna. Nunca se renderiza como un bloque
   o barra única sin estructura.
-- **La cabecera de un modal no espera al API** (2026-11-06). Icono y título
-  se conocen por la acción («Nuevo producto», «Detalle del turno») o
+- **La cabecera de un modal no espera al API** (2026-11-06). El título
+  se conoce por la acción («Nuevo producto», «Detalle del turno») o
   por la fila que lo abrió (mesa, cliente, canal, nombre del menú o de la
-  empresa), así que se muestran reales desde el primer cuadro; solo el cuerpo y
-  el resumen usan skeleton. `RemoteModalSkeleton` recibe `title` e `icon`
-  iguales a los del modal final, sin una franja secundaria, y los detalles de Venta, Cobro POS,
+  empresa), así que se muestra real desde el primer cuadro; solo el cuerpo y
+  el resumen usan skeleton. `RemoteModalSkeleton` recibe el `title`
+  del modal final, sin una franja secundaria, y los detalles de Venta, Cobro POS,
   Pedido/Salón, Menú y Empresa reciben la fila como `preview`. La cabecera en
   carga queda solo para el enlace directo, sin datos previos. El skeleton del
   resumen de esos detalles dibuja la franja `is-band` del importe principal.
@@ -2852,7 +2855,7 @@ el panel depende de `whatsapp_bot`.
 
 ### Compras: nueva orden de compra
 
-La cabecera lleva solo icono, «Nueva orden de compra» (o «Editar orden») y X, sin
+La cabecera lleva solo «Nueva orden de compra» (o «Editar orden») y X, sin
 subtítulo. El cuerpo es blanco y tipográfico: «Datos de la orden» y «Artículos · N»
 son títulos de sección de 16 px / 700, sin icono ni frase de ayuda, separados por una
 línea `cloud-100`; no hay tarjetas `cloud-50` anidadas. Sin líneas, bajo «Artículos»
@@ -2907,7 +2910,7 @@ el estado vacío ofrece esa misma acción. En esta vista el pie solo tiene Cance
   receta no aparecen: su stock ya sale de sus componentes.
 
 Crear y vincular usan «Volver» (`action="back"`) y una sola acción primaria:
-«Crear y agregar» o «Vincular y agregar». El encabezado lleva solo icono, título
+«Crear y agregar» o «Vincular y agregar». El encabezado lleva solo el título
 («Agregar artículo», «Nuevo artículo» o «Controlar con inventario») y X.
 
 ### Compras: recepciones e historial de la orden

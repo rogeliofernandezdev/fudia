@@ -105,7 +105,7 @@ export function PurchaseCombinationDialog({unit,unitName,close,save}:{unit:strin
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-combination-title" aria-busy={mutation.isPending}>
 
-  <ModalHeader title={<>{"Nueva presentación"} · {unitName}</>} titleId="purchase-combination-title" icon="box" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
+  <ModalHeader title={<>{"Nueva presentación"} · {unitName}</>} titleId="purchase-combination-title" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre" className="span-2"><Input data-dialog-initial-focus maxLength={80} value={name} disabled={mutation.isPending} onChange={event=>{setName(event.target.value);setValidation("")}}/></FormField>
    {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><Skeleton width="70%"/></div>}

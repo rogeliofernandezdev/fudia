@@ -45,7 +45,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
 
-      <ModalHeader title={<>{"Recibir mercadería"} · {order.supplierName}</>} titleId="purchase-receipt-title" icon="stock" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={<>{"Recibir mercadería"} · {order.supplierName}</>} titleId="purchase-receipt-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="purchase-receipt-body">
           <div className="purchase-receipt-intro"><Icon name="truck" size={18}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>

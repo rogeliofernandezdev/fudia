@@ -174,7 +174,7 @@ function CategoryFilters({categories,category,loading,error,retrying,onRetry,onC
     </div>
     <Button kind="secondary" className="cmd-category-all" icon="menu" aria-label="Ver todas las categorías" aria-haspopup="dialog" aria-expanded={expanded} onClick={onExpand}><span>Categorías</span></Button>
     {error&&<div className="cmd-category-error" role="alert"><span>No pudimos cargar las categorías.</span><Button kind="ghost" onClick={onRetry} loading={retrying}>Reintentar</Button></div>}
-  </nav>{expanded&&<Modal title="Categorías de la carta" icon="menu" size="sm" onClose={()=>onDismiss?.()} closeLabel="Cerrar categorías">
+  </nav>{expanded&&<Modal title="Categorías de la carta" size="sm" onClose={()=>onDismiss?.()} closeLabel="Cerrar categorías">
     <ModalBody><div className="cmd-category-options" role="group" aria-label="Todas las categorías">
       {[{id:"",name:"Todo"},{id:COMBOS,name:"Menús y combos"},...categories].map(item=><button type="button" className="cmd-category-option" key={item.id} aria-pressed={category===item.id} onClick={()=>onChange(item.id)}><span className={"cmd-category-label cmd-tone-"+categoryTone(item.id)}><i className="cmd-category-dot" aria-hidden="true"/>{item.name}</span>{category===item.id&&<Icon name="check" size={18}/>}</button>)}
       {loading&&<Skeleton height="var(--control-height)"/>}
@@ -252,7 +252,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
   const finalPrice=Number(data?.price??0)+selections.reduce((sum,sel)=>sum+sel.surcharge,0);
 
   return(
-    <Modal title={data?.name??"Elige las opciones"} icon="combo" size="md" onClose={onClose} closeLabel="Cerrar selección de opciones" className="cmd-combo">
+    <Modal title={data?.name??"Elige las opciones"} size="md" onClose={onClose} closeLabel="Cerrar selección de opciones" className="cmd-combo">
       <ModalBody className="cmd-combo-body">
         {plainText(data?.description)&&<p className="modal-description">{plainText(data?.description)}</p>}
         {combo.isLoading?(
@@ -347,7 +347,7 @@ export function ProductOptionsConfigurator({product,initialModifiers=[],editing=
     onConfirm({productId:product.id,name:product.name,unitPrice,modifiers,imageUrl:product.imageUrl});
   };
   return(
-    <Modal title={product.name} icon="dish" size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
+    <Modal title={product.name} size="md" onClose={onClose} closeLabel="Cerrar opciones del plato" className="cmd-combo cmd-options">
       <ModalBody className="cmd-combo-body">
         {plainText(product.description)&&<p className="modal-description">{plainText(product.description)}</p>}
         {config.isLoading?(

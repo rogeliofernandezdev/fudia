@@ -39,7 +39,8 @@ La autoridad visual exclusiva de este proyecto es
   clase en bloques posteriores ni depender de la cascada para corregirla;
   estados y breakpoints deben usar variantes explícitas.
 - Modales de contenido: `ModalHeader` y `ModalFooter` compartidos; header solo
-  con icono, título y X, nunca información adicional debajo del título. Acciones
+  con título y X: ningún modal lleva icono antes del título (2026-11-12), ni
+  información adicional debajo del título. Acciones
   contiguas a la derecha, Cancelar antes de Guardar, separación de 10 px; sin
   márgenes automáticos que las distribuyan entre extremos. Estados reales en el
   resumen o footer, sin inventar estados para formularios. Se exceptúan

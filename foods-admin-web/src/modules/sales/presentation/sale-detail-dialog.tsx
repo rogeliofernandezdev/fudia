@@ -25,7 +25,6 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
   const head=data?.order??preview;
   const tableName=head?.tableName?.trim();
   const title=tableName?(/^mesa\b/i.test(tableName)?tableName:`Mesa ${tableName}`):head?.customerName||(head?"Venta directa":"Detalle de venta");
-  const icon:IconName=tableName?"utensils":head?channelIcons[head.channel]??"receipt":"receipt";
   const paid=Number(data?.paidAmount??0);
   const remaining=Number(data?.remainingAmount??0);
   const[tab,setTab]=useState<"products"|"payments">("products");
@@ -34,8 +33,8 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
   // El resumen no repite el importe principal: el desglose solo aparece si suma delivery y «Pagado neto» solo con saldo.
   const breakdown=hasDelivery||pending;
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal sales-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={loading}>
-    {loading?<SaleDetailSkeleton close={close} withFooter={Boolean(ticket)} heading={head?{title,icon}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
-    <ModalHeader title={title} titleId={titleId} icon={icon} onClose={close} closeLabel="Cerrar detalle"/>
+    {loading?<SaleDetailSkeleton close={close} withFooter={Boolean(ticket)} heading={head?{title}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
+    <ModalHeader title={title} titleId={titleId} onClose={close} closeLabel="Cerrar detalle"/>
     {error?<div className="modal-body sales-detail-body"><ErrorState title="No pudimos cargar la venta" text={error} onRetry={retry}/></div>
     :!data?<div className="modal-body sales-detail-body"><EmptyState icon="receipt" title="No hay detalle disponible"/></div>
     :<ModalWorkspace summary={<section className={`modal-summary sales-detail-totals is-band${pending?"":" is-paid"}`} aria-labelledby="sales-detail-summary-title">
@@ -102,11 +101,10 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
  * Skeleton con la geometría final: identidad, tarjeta, pestañas, productos, resumen en franja y acción.
  * Con `heading` (datos de la fila) la cabecera ya es la real; solo sin ellos (enlace directo) se dibuja su skeleton.
  */
-function SaleDetailSkeleton({close,withFooter,heading,withContact}:{close:()=>void;withFooter:boolean;heading?:{title:string;icon:IconName};withContact:boolean}){
+function SaleDetailSkeleton({close,withFooter,heading,withContact}:{close:()=>void;withFooter:boolean;heading?:{title:string};withContact:boolean}){
   return <>
-    {heading?<ModalHeader title={heading.title} titleId={titleId} icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
-    :<ModalHeader title={<><span className="sr-only">Cargando detalle de venta</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId={titleId}
-      iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)" className="sales-detail-skeleton-icon"/>} onClose={close} closeLabel="Cerrar detalle"/>}
+    {heading?<ModalHeader title={heading.title} titleId={titleId} onClose={close} closeLabel="Cerrar detalle"/>
+    :<ModalHeader title={<><span className="sr-only">Cargando detalle de venta</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId={titleId} onClose={close} closeLabel="Cerrar detalle"/>}
     <ModalWorkspace summary={
       <section className="modal-summary is-band" aria-hidden="true">
         <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/></div>

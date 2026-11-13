@@ -202,13 +202,13 @@ de notificaciones quedará visible cuando exista una fuente remota real.
 ## Plantilla compartida de modal
 
 Autoridad visual: `02_DESIGN_SYSTEM.md`; contrato: `04_COMPONENTS.md`.
-Cabecera breve (icono, título, X), cuerpo desplazable, resumen inferior opcional
+Cabecera breve (título y X, sin icono), cuerpo desplazable, resumen inferior opcional
 y pie fijo con acciones autorizadas. Fecha y responsables van en el contexto del
 cuerpo; los estados acompañan los datos que describen. No se usa columna lateral
 de cuenta. Esto no impide rejillas de campos dentro de un formulario.
 
 Usar `ModalHeader` y `ModalFooter` en modales de contenido. Cabecera solo con
-icono, título y X, sin información debajo del título. Botones contiguos a la
+título y X, sin icono ni información debajo del título. Botones contiguos a la
 derecha, Cancelar antes de Guardar, separación de 10 px. En móvil comparten
 fila cuando caben, repartiendo el ancho por igual. Si queda un botón solo en
 su fila, llena todo el ancho útil; si se apilan, cada acción llena su fila.

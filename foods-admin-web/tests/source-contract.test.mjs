@@ -138,13 +138,15 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("useForm<InventoryAdjustmentDraft>"),"El ajuste usa React Hook Form");
   assert.ok(dialog.includes("resolver:inventoryAdjustmentResolver"),"El ajuste delega validación al resolver Zod");
   assert.ok(dialog.includes("Stock actual"),"El formulario muestra la existencia actual");
-  assert.ok(dialog.includes("Unidad de inventario"),"El formulario muestra la unidad de inventario");
+  assert.ok(dialog.includes("`Cantidad (${selected.unit})`"),"La unidad de inventario acompaña a la cantidad, sin un dato aparte");
+  assert.equal(/FormSection|ChoiceGroup|<ModalHeader[^>]* icon=/.test(dialog),false,"El ajuste agrupa por proximidad: sin secciones ni icono de título");
+  assert.ok(dialog.includes("<ModalForm")&&dialog.includes("<ModalBody>")&&dialog.includes("<Tabs "),"El ajuste usa los contenedores y pestañas compartidos");
   assert.ok(dialog.includes("Tipo de movimiento"),"El ajuste solicita entrada o salida");
   assert.ok(dialog.includes('value:"entry"'),"El ajuste permite entrada");
   assert.ok(dialog.includes('value:"exit"'),"El ajuste permite salida");
   for(const reason of ["Ajuste por sobrante","Ajuste por faltante","Merma","Vencimiento","Otro motivo de salida"])assert.ok(dialog.includes(reason),reason);
   assert.ok(dialog.includes("La salida no puede superar el stock actual."),"La interfaz evita saldos negativos antes de enviar");
-  assert.ok(dialog.includes("Observación opcional"),"La observación permanece opcional");
+  assert.ok(dialog.includes('label="Observación" optional'),"La observación permanece opcional mediante FormField optional");
   assert.ok(dialog.includes('busy?"Guardando…":"Guardar"'),"El footer conserva el texto estándar de guardado");
   assert.ok(adjustmentSchema.includes('movementType:z.enum(["entry","exit"])'),"El esquema restringe los tipos de ajuste");
   assert.ok(adjustmentSchema.includes("surplus_adjustment"),"El esquema valida el motivo de sobrante");
@@ -262,7 +264,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
   assert.equal((purchases.match(/>Agregar artículo</g)??[]).length,1,"La OC tiene un único punto para agregar artículos, al final de la lista");
   assert.ok(purchases.includes('className="purchase-add-row"'),"Agregar artículo es la fila punteada índigo, no otra acción primaria");
-  assert.ok(purchases.includes('titleId="purchase-order-title" icon="receipt" onClose={close}'),"La cabecera de la OC no repite el título en un subtítulo");
+  assert.ok(purchases.includes('titleId="purchase-order-title" onClose={close}'),"La cabecera de la OC no repite el título en un subtítulo");
   assert.equal(purchases.includes("Agregar primer artículo"),false,"El estado vacío no duplica el CTA con otra etiqueta");
   assert.ok(purchases.includes("Guardar borrador"),"Guardar la OC comunica que aún no hay recepción ni movimiento de stock");
   assert.ok(purchases.includes("Busca un artículo existente o crea uno nuevo para incluirlo en la orden."),"La OC usa una ayuda breve en el estado vacío");

@@ -19,7 +19,7 @@ export function CompanyDetailDialog({organizationId,previewName,standingOptions,
  return <div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={close} className="crud-modal company-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={detail.isLoading} aria-labelledby="company-detail-title">
 
-   <ModalHeader title={company?.tradeName??previewName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" icon="building" onClose={close} closeLabel="Cerrar detalle"/>
+   <ModalHeader title={company?.tradeName??previewName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" onClose={close} closeLabel="Cerrar detalle"/>
    {detail.isLoading?<CompanyDetailSkeleton/>
     :detail.isError||!company?<div className="company-detail-body"><ErrorState title="No pudimos cargar el detalle" text={detail.error?.message} retrying={detail.isFetching} onRetry={()=>void detail.refetch()}/></div>
     :<CompanyDetailContent company={company} standingOptions={standingOptions}/>}

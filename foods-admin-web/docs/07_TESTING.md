@@ -76,7 +76,8 @@ La foto del catálogo acompaña al borrador sin formar parte del payload del ped
 No registra pedidos ni consume el API. La emulación
 comprueba geometría; tacto, teclado y chrome del navegador requieren teléfono real.
 
-`modal-standard.test.mjs` protege la cabecera solo con icono, título y X,
+`modal-standard.test.mjs` protege la cabecera solo con título y X (ningún
+modal pasa `icon` a `ModalHeader`, `Modal` ni `RemoteModalSkeleton`),
 contexto fuera del header, estado opcional real y acciones contiguas a la
 derecha con 10 px. Audita que los Dialog de contenido no dupliquen la cabecera
 ni el footer del formulario. Confirmaciones y respuestas quedan exceptuadas.

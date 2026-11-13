@@ -59,7 +59,7 @@ export function FiscalDocumentDialog({id,canRetry,close}:{id:string;canRetry:boo
  const percent=(rate:string)=>`${formatRegionalNumber(Math.round(Number(rate)*1_000_000)/10_000,location?.country,{maximumFractionDigits:4})} %`;
  if(printing)return <FiscalPrintDialog documentId={id} close={()=>setPrinting(false)}/>;
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!retry.isPending)close()}} className="crud-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="fiscal-document-title">
-  <ModalHeader title={data?`${data.label} ${data.number}`:"Comprobante"} titleId="fiscal-document-title" icon="receipt" onClose={close} busy={retry.isPending} closeLabel="Cerrar"/>
+  <ModalHeader title={data?`${data.label} ${data.number}`:"Comprobante"} titleId="fiscal-document-title" onClose={close} busy={retry.isPending} closeLabel="Cerrar"/>
   <div className="modal-body">{detail.isLoading?<div className="organization-field-skeleton" role="status" aria-busy="true" aria-label="Cargando comprobante"><Skeleton height="var(--size-44)"/><Skeleton height="var(--size-120)"/></div>:detail.isError||!data?<ErrorState title="No pudimos cargar el comprobante" text={detail.error?.message??""} onRetry={()=>void detail.refetch()}/>:<>
    <DetailHero title={money(Number(data.total))} status={<FiscalStatus status={data.status}/>} meta={<><Icon name="calendar" size={14}/>{formatRegionalCalendarDate(data.issueDate,location?.country,{dateStyle:"medium"})} · {data.orderCode}</>}/>
    {data.statusMessage&&data.status!=="ACCEPTED"&&<p className="field-error" role="status">{data.statusMessage}</p>}

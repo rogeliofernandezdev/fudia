@@ -108,7 +108,7 @@ function RateDialog({regime,initial,busy,close,save}:{regime:Regime;initial:Rate
  const submit=()=>{const message=draftError(draft);setError(message);if(!message)save(draft)};
  const reach=regime.enrolledProfiles===1?"Se aplica a 1 empresa acogida.":`Se aplica a ${regime.enrolledProfiles} empresas acogidas.`;
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact tax-rate-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="tax-rate-title" aria-busy={busy}>
-  <ModalHeader title={draft.id?"Editar periodo":"Nuevo periodo"} titleId="tax-rate-title" icon="tax" onClose={close} busy={busy} closeLabel="Cerrar"/>
+  <ModalHeader title={draft.id?"Editar periodo":"Nuevo periodo"} titleId="tax-rate-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();submit()}} noValidate>
    <div className="form-grid">
     {error&&<p className="field-error span-2" role="alert">{error}</p>}

@@ -32,7 +32,7 @@ export function InventorySettingsDialog({item,busy,close,save}:{item:InventoryIt
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-settings-title" aria-busy={locked}>
 
-  <ModalHeader title="Editar artículo" titleId="inventory-settings-title" icon="edit" onClose={close} busy={locked} closeLabel="Cerrar"/>
+  <ModalHeader title="Editar artículo" titleId="inventory-settings-title" onClose={close} busy={locked} closeLabel="Cerrar"/>
   <form className="modal-form-compact" onSubmit={event=>event.preventDefault()} noValidate>
    <FormSection icon="stock" title="Datos del artículo" className="inventory-settings-section" bare><div className="form-grid">
     <FormField label="Nombre" className="span-2" error={errors.name?.message} help={item.productId?"Este nombre también se usa en Carta y productos.":undefined}><Input maxLength={160} disabled={locked} aria-invalid={Boolean(errors.name)} {...register("name")}/></FormField>

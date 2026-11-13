@@ -143,7 +143,7 @@ test("con comprobante el cobro abre la representación impresa en lugar del tick
  assert.ok(dialog.includes("prepared?.key===key"),"las consultas de estado no regeneran el PDF");
  assert.ok(dialog.includes('else if(data.status!=="ACCEPTED")notice='),"aceptado es el caso normal: sin franja de estado");
  for(const viewer of ["modules/einvoicing/presentation/fiscal-print-dialog.tsx","modules/sales/presentation/payment-ticket-dialog.tsx","modules/operations/cash/presentation/cash-report-dialog.tsx"])
-  assert.ok(!/<PdfViewer[^>]*subtitle=/.test(read(viewer)),`${viewer}: la cabecera del visor solo lleva icono, título y X`);
+  assert.ok(!/<PdfViewer[^>]*subtitle=/.test(read(viewer)),`${viewer}: la cabecera del visor solo lleva título y X`);
  assert.ok(read("modules/einvoicing/presentation/fiscal-documents-page.tsx").includes("Ver comprobante"),"se reimprime desde Comprobantes");
  assert.ok(!read("modules/einvoicing/infrastructure/fiscal-printout-pdf.ts").includes("SUNAT"),"el contenido legal viene del API");
 });

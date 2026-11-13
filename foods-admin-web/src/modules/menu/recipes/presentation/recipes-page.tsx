@@ -193,7 +193,7 @@ export function RecipesPage(){
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
    <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
-    <ModalHeader title={<>{editingProductId?"Editar receta":"Configurar receta"} · {editingProductId?"Editar receta":"Nueva receta"}</>} titleId="recipe-modal-title" icon="cookingPot" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
+    <ModalHeader title={<>{editingProductId?"Editar receta":"Configurar receta"} · {editingProductId?"Editar receta":"Nueva receta"}</>} titleId="recipe-modal-title" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
 
     <ModalForm className="recipe-form" onSubmit={submit} noValidate>
      <div className="recipe-form-body">

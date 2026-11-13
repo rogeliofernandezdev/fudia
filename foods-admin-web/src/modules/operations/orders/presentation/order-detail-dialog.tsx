@@ -2,7 +2,7 @@
 import "./order-detail.css";
 import Link from "next/link";
 import {useState} from "react";
-import {Button,DetailFacts,ErrorState,Icon,IconTile,Skeleton,Status,Tabs,type IconName} from "@/design-system";
+import {Button,DetailFacts,ErrorState,Icon,IconTile,Skeleton,Status,Tabs} from "@/design-system";
 import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents} from "@/design-system/modal";
 import {useMoney,useSession} from "@/providers";
 import {OrderDispatchBlock} from "@/modules/delivery";
@@ -15,7 +15,7 @@ import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
 import type {ServiceItem} from "../domain/service-flow";
 import {OrderAttribution} from "./order-attribution";
 import {OrderTimeline} from "./order-timeline";
-import {channelIcons,isEditableOrder,lineServiceStatus,openedAgo,orderStatus,registeredAt,serviceStateLook,tableTitle} from "./order-meta";
+import {isEditableOrder,lineServiceStatus,openedAgo,orderStatus,registeredAt,serviceStateLook,tableTitle} from "./order-meta";
 import {OrderAccountActions,OrderItemService,accountLabel,accountTone} from "./order-service-controls";
 
 /**
@@ -28,12 +28,11 @@ export const orderDetailTitleId="order-detail-title";
 /** Datos que ya trae la fila o la mesa: bastan para la cabecera mientras carga el detalle. */
 export type OrderDetailPreview=Pick<Order,"tableName"|"customerName"|"channel">;
 
-/** Título e icono de la cabecera; los comparten el detalle y su skeleton para no esperar al API. */
-function orderDetailHeading(variant:OrderDetailVariant,order?:OrderDetailPreview):{title:string;icon:IconName}{
+/** Título de la cabecera; lo comparten el detalle y su skeleton para no esperar al API. */
+function orderDetailHeading(variant:OrderDetailVariant,order?:OrderDetailPreview):{title:string}{
   const table=variant==="table";
   return {
     title:table||order?.channel==="salon"?tableTitle(order?.tableName):order?(order.tableName||order.customerName||"Pedido"):"Pedido",
-    icon:table?"utensils":order?channelIcons[order.channel]??"receipt":"receipt",
   };
 }
 
@@ -79,7 +78,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const opened=order?(table?openedAgo(order.createdAt,location?.country,location?.timezone):registeredAt(order.createdAt,location?.country,location?.timezone)):"";
   return <>
 
-    <ModalHeader title={heading.title} titleId={orderDetailTitleId} icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
+    <ModalHeader title={heading.title} titleId={orderDetailTitleId} onClose={close} closeLabel="Cerrar detalle"/>
 
     {error?(
       <div className="modal-body order-detail-body"><ErrorState title="No pudimos cargar el pedido" text={error} onRetry={retry} retrying={retrying}/></div>
@@ -218,9 +217,8 @@ export function OrderDetailSkeleton({variant,close,preview}:{variant:OrderDetail
   const heading=preview?orderDetailHeading(variant,preview):null;
   return <>
 
-    {heading?<ModalHeader title={heading.title} titleId={orderDetailTitleId} icon={heading.icon} onClose={close} closeLabel="Cerrar detalle"/>
-    :<ModalHeader title={<><span className="sr-only">{variant==="table"?"Cargando detalle de la mesa":"Cargando detalle del pedido"}</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId={orderDetailTitleId}
-      iconSlot={<Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-tile)" className="order-detail-skeleton-icon"/>} onClose={close} closeLabel="Cerrar detalle"/>}
+    {heading?<ModalHeader title={heading.title} titleId={orderDetailTitleId} onClose={close} closeLabel="Cerrar detalle"/>
+    :<ModalHeader title={<><span className="sr-only">{variant==="table"?"Cargando detalle de la mesa":"Cargando detalle del pedido"}</span><Skeleton width="var(--size-138)" height="var(--size-16)"/></>} titleId={orderDetailTitleId} onClose={close} closeLabel="Cerrar detalle"/>}
     <ModalWorkspace summary={
       <section className="modal-summary is-band" aria-hidden="true">
         <div className="modal-summary-heading"><Skeleton width="var(--size-138)" height="var(--size-13)"/><Skeleton width="var(--size-108)" height="var(--size-24)" radius="var(--radius-pill)"/></div>

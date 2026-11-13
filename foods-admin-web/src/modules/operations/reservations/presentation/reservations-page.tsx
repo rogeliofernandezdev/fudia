@@ -65,7 +65,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
 
-      <ModalHeader title={initial.id?"Editar reserva":"Nueva reserva"} titleId="reservation-title" icon="clock" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={initial.id?"Editar reserva":"Nueva reserva"} titleId="reservation-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <ModalForm onSubmit={handleSubmit(save)} noValidate>
         <ModalBody><div className="form-grid reservation-form-grid">
           <label>

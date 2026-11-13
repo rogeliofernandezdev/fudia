@@ -144,7 +144,7 @@ export function LoginForm({hasSession=false}:{hasSession?:boolean}={}) {
     {showRecoveryHelp && <div className="modal-backdrop modal-overlay-in">
       <Dialog className="crud-modal compact modal-panel-in" aria-labelledby="login-recovery-title" onResponseClose={() => setShowRecoveryHelp(false)}>
 
-        <ModalHeader title="Próximamente" titleId="login-recovery-title" icon="key" onClose={() => setShowRecoveryHelp(false)} closeLabel="Cerrar ayuda"/>
+        <ModalHeader title="Próximamente" titleId="login-recovery-title" onClose={() => setShowRecoveryHelp(false)} closeLabel="Cerrar ayuda"/>
       </Dialog>
     </div>}
   </main>;
