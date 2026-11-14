@@ -120,7 +120,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
                   {point.distanceKm!==null&&<span className="order-detail-map-distance">{formatRegionalNumber(point.distanceKm,location?.country,{maximumFractionDigits:1})} km</span>}
                 </span>}
               </p></div>
-              <OrderDispatchBlock order={order} canManage={canManage} money={money} disabled={busy}/>
+              <OrderDispatchBlock order={order} money={money}/>
             </section>}
           </section>
 

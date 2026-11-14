@@ -148,3 +148,21 @@ func (h *Handler) PartnerAction(w http.ResponseWriter, r *http.Request) {
 	out, err := h.dispatcher.Act(r.Context(), in)
 	respond(w, http.StatusOK, out, err)
 }
+
+// DeliveryBoard lista los deliveries del local de la sesión.
+func (h *Handler) DeliveryBoard(w http.ResponseWriter, r *http.Request) {
+	items, err := h.dispatcher.Board(r.Context(), requestScope(r))
+	respond(w, http.StatusOK, map[string]any{"items": items}, err)
+}
+
+// LocationPartners lista las centrales que cubren el local; solo lectura.
+func (h *Handler) LocationPartners(w http.ResponseWriter, r *http.Request) {
+	out, err := h.dispatcher.Partners(r.Context(), requestScope(r))
+	respond(w, http.StatusOK, out, err)
+}
+
+// LocationFailedDeliveries lista las entregas fallidas del local.
+func (h *Handler) LocationFailedDeliveries(w http.ResponseWriter, r *http.Request) {
+	items, err := h.dispatcher.FailedDeliveries(r.Context(), requestScope(r))
+	respond(w, http.StatusOK, map[string]any{"items": items}, err)
+}

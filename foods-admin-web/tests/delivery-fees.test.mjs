@@ -5,7 +5,7 @@ import {createRequire} from "node:module";
 import vm from "node:vm";
 import ts from "typescript";
 const require=createRequire(import.meta.url);
-const root=new URL("../src/modules/configuration/",import.meta.url);
+const root=new URL("../src/modules/delivery/",import.meta.url);
 function compile(path,resolve=require){const exports={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});return exports}
 const fees=compile("domain/delivery-fees.ts");
 const row=(key,maxDistanceKm,fee)=>({key,maxDistanceKm,fee});
@@ -32,9 +32,9 @@ test("tarifas de delivery: filas editables desde la respuesta del backend",()=>{
  assert.equal(new Set(rows.map(item=>item.key)).size,2);
 });
 
-test("tarifas de delivery: la API usa el endpoint de Concierge con GET y PUT",async()=>{
+test("tarifas de delivery: la API usa el endpoint de tarifas con GET y PUT",async()=>{
  const calls=[];
- const api=compile("infrastructure/concierge-settings-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return{tiers:[]}}}:require(name));
+ const api=compile("infrastructure/delivery-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return{tiers:[]}}}:require(name));
  await api.getDeliveryFees();
  await api.saveDeliveryFees({tiers:[{maxDistanceKm:2,fee:5}]});
  assert.equal(calls[0].path,"concierge-settings/delivery-fees");assert.equal(calls[0].options,undefined);
@@ -50,6 +50,11 @@ test("tarifas de delivery: el proxy de administración reenvía PUT",()=>{
 test("tarifas de delivery: la pantalla tiene carga, error, vacío y permisos",()=>{
  const panel=readFileSync(new URL("presentation/delivery-fees-panel.tsx",root),"utf8");
  for(const fragment of ["DeliveryFeesSkeleton","ErrorState","Sin rangos configurados","can(\"organizations.manage\")","Falta la ubicación del local","pageRoutes.locations"])assert.ok(panel.includes(fragment),fragment);
- const page=readFileSync(new URL("presentation/concierge-settings-page.tsx",root),"utf8");
- assert.match(page,/<DeliveryFeesPanel\/>/);
+});
+
+test("tarifas de delivery: viven en Delivery › Tarifas de envío y salen de la página del chatbot",()=>{
+ assert.match(readFileSync(new URL("presentation/delivery-page.tsx",root),"utf8"),/tab==="fees"&&<DeliveryFeesPanel\/>/);
+ const concierge=readFileSync(new URL("../src/modules/configuration/presentation/concierge-settings-page.tsx",import.meta.url),"utf8");
+ assert.doesNotMatch(concierge,/DeliveryFeesPanel/);
+ assert.match(concierge,/deliveryTabPath\("fees"\)/,"el chatbot enlaza a la pestaña de tarifas");
 });

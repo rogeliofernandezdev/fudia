@@ -292,6 +292,16 @@ de solo lectura y la ausencia de topes comerciales fijos en el frontend.
 - Que las centrales vienen del API.
 - Que el enlace usa la ruta pública del QR.
 - El vacío de Plataforma.
+- La opción única «Delivery» del menú: pestañas visibles según módulos, `?tab=`
+  en inglés con caída a Pedidos y las redirecciones de `/delivery-apps`,
+  `/couriers`, `/repartidores` y `/platform/delivery-partners`.
+- El tablero de Pedidos (en curso, modo, alertas de recogida, incidencias y
+  teléfono agrupado), carga/error/vacío de cada pestaña, que el restaurante solo
+  consulta sus centrales y que Plataforma las administra en Proveedores.
+- Que el detalle del pedido solo resume el despacho y enlaza a Delivery.
+
+`delivery-fees.test.mjs` cubre las tarifas de envío (límites, payload, filas,
+API) y que viven en Delivery › Tarifas de envío y no en la página del chatbot.
 
 `location-plan-limit.test.mjs` comprueba además que el enlace de delivery
 aparece al editar el local y que el local no guarda modo ni centrales.

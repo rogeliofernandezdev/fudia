@@ -32,6 +32,10 @@ type PanelRepository interface {
 	CourierView(ctx context.Context, courierToken string) (domain.CourierView, error)
 	// SetCourierLocationByToken guarda la ubicación en el reparto del motorizado; false si el enlace ya no vale.
 	SetCourierLocationByToken(ctx context.Context, courierToken string, latitude, longitude float64) (bool, error)
+	// Opción «Delivery» del restaurante (alcance de la sesión).
+	BoardOrders(ctx context.Context, s scope) ([]domain.BoardOrder, error)
+	LocationPartners(ctx context.Context, s scope) (domain.LocationPartners, error)
+	LocationFailedDeliveries(ctx context.Context, s scope) ([]domain.LocationFailedDelivery, error)
 }
 
 var errPanelNotFound = failure(apperror.NotFound, "delivery_panel_not_found", "Este enlace del panel ya no es válido. Pide uno nuevo a Fudia.")

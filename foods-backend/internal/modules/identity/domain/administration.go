@@ -66,7 +66,7 @@ var MenuAccessCatalog = []map[string]any{
 	{"group": "Operación", "items": []map[string]string{{"value": "pos", "label": "Punto de venta"}, {"value": "pedidos", "label": "Pedidos"}, {"value": "salon", "label": "Salón"}, {"value": "cocina", "label": "Cocina"}, {"value": "mesas", "label": "Mesas y zonas"}, {"value": "caja", "label": "Caja y turnos"}, {"value": "reservas", "label": "Reservas"}, {"value": "call_center", "label": "Call center"}, {"value": "carta_qr", "label": "Carta digital QR"}, {"value": "kiosco", "label": "Kiosco de autoservicio"}}},
 	{"group": "Carta y producción", "items": []map[string]string{{"value": "productos", "label": "Carta y productos"}, {"value": "disponibilidad", "label": "Disponibilidad"}, {"value": "combos", "label": "Menús y combos"}, {"value": "recetas", "label": "Recetas"}}},
 	{"group": "Abastecimiento", "items": []map[string]string{{"value": "inventario", "label": "Inventario"}, {"value": "kardex", "label": "Kardex"}, {"value": "compras", "label": "Compras"}, {"value": "logistica", "label": "Logística"}}},
-	{"group": "Delivery", "items": []map[string]string{{"value": "delivery", "label": "Delivery propio"}, {"value": "delivery_apps", "label": "Apps de delivery"}, {"value": "repartidores", "label": "App repartidores"}}},
+	{"group": "Delivery", "items": []map[string]string{{"value": "delivery", "label": "Delivery"}}},
 	{"group": "Negocio", "items": []map[string]string{{"value": "clientes", "label": "Clientes"}, {"value": "crm", "label": "CRM y fidelización"}, {"value": "puntos", "label": "Plaza puntos"}, {"value": "ofertas", "label": "Ofertas y descuentos"}, {"value": "personal", "label": "Personal y asistencias"}, {"value": "locales", "label": "Locales"}}},
 	{"group": "Inteligencia", "items": []map[string]string{{"value": "costos", "label": "Costos y gastos"}, {"value": "bi", "label": "Restaurant BI"}, {"value": "app_manager", "label": "App manager"}}},
 	{"group": "Configuración", "items": []map[string]string{{"value": "mi_restaurante", "label": "Mi restaurante"}, {"value": "fiscal", "label": "Fiscal y moneda"}, {"value": "medios_pago", "label": "Medios de pago"}, {"value": "usuarios", "label": "Usuarios y roles"}, {"value": "facturacion", "label": "Facturación"}, {"value": "integraciones", "label": "Integraciones"}, {"value": "whatsapp_bot", "label": "Fudia Concierge"}}},
@@ -132,7 +132,7 @@ type OrganizationRoleSeed struct {
 var CompanyAdministratorMenuAccess = []string{
 	"dashboard", "ventas", "comprobantes", "pos", "pedidos", "salon", "mi_restaurante", "medios_pago", "cocina", "mesas", "caja", "reservas", "productos", "disponibilidad", "combos", "recetas",
 	"inventario", "kardex", "compras", "logistica", "clientes", "locales", "fiscal", "usuarios", "call_center", "carta_qr", "kiosco",
-	"delivery", "delivery_apps", "repartidores", "crm", "puntos", "ofertas", "personal", "costos", "bi", "app_manager", "facturacion",
+	"delivery", "crm", "puntos", "ofertas", "personal", "costos", "bi", "app_manager", "facturacion",
 	"integraciones", "whatsapp_bot",
 }
 var CompanyAdministratorPermissions = []string{

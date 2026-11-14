@@ -1,38 +1,21 @@
 "use client";
-import {useMutation,useQueryClient} from "@tanstack/react-query";
-import {Button,Status} from "@/design-system";
-import {useFeedback} from "@/providers";
-import {canRetryDispatch,canUseOwnDelivery,dispatchStatusMeta,isDispatchStatus} from "../domain/dispatch-status";
-import {retryDeliveryDispatch,switchToOwnDelivery} from "../infrastructure/delivery-api";
+import Link from "next/link";
+import {Icon,Status} from "@/design-system";
+import {deliveryTabPath} from "../domain/board";
+import {dispatchStatusMeta,isDispatchStatus} from "../domain/dispatch-status";
 import "./delivery.css";
 
 type DispatchOrder={id:string;deliveryDispatchStatus?:string;deliveryPartnerName?:string;deliveryPartnerFee?:string};
 
 /**
- * Despacho del pedido a las centrales de Delivery Fudia dentro del bloque de
- * entrega del detalle: estado, central y, si ninguna aceptó, Reintentar o
- * Usar delivery propio. Sin despacho no se muestra nada.
+ * Resumen del despacho a las centrales de Delivery Fudia en el bloque de
+ * entrega del detalle del pedido: estado y central. Reintentar y Usar delivery
+ * propio viven en Delivery › Pedidos. Sin despacho no se muestra nada.
  */
-export function OrderDispatchBlock({order,canManage,money,disabled}:{order:DispatchOrder;canManage:boolean;money:(value:string)=>string;disabled?:boolean}){
-  const{notify}=useFeedback();
-  const client=useQueryClient();
-  const refresh=()=>{
-    for(const key of ["order","orders","pos-order","pos-orders","staff-notices"])void client.invalidateQueries({queryKey:[key]});
-  };
-  const retry=useMutation({
-    mutationFn:()=>retryDeliveryDispatch(order.id),
-    onSuccess:()=>{refresh();notify({tone:"success",title:"Pedido ofrecido de nuevo",message:"La 1.ª central lo recibe ahora en su panel de reparto."});},
-    onError:e=>notify({tone:"danger",title:"No se pudo reintentar",message:e.message}),
-  });
-  const own=useMutation({
-    mutationFn:()=>switchToOwnDelivery(order.id),
-    onSuccess:()=>{refresh();notify({tone:"success",title:"Delivery propio",message:"Ninguna central recogerá este pedido; despáchalo con tu repartidor."});},
-    onError:e=>notify({tone:"danger",title:"No se pudo cambiar",message:e.message}),
-  });
+export function OrderDispatchBlock({order,money}:{order:DispatchOrder;money:(value:string)=>string}){
   const status=order.deliveryDispatchStatus;
   if(!isDispatchStatus(status))return null;
   const meta=dispatchStatusMeta[status];
-  const busy=disabled||retry.isPending||own.isPending;
   const partner=status==="own"||status==="cancelled"?"":order.deliveryPartnerName;
   return <div className="order-dispatch" aria-label="Despacho a centrales">
     <div className="order-dispatch-state">
@@ -40,9 +23,6 @@ export function OrderDispatchBlock({order,canManage,money,disabled}:{order:Dispa
       {partner&&<b>{partner}</b>}
     </div>
     {order.deliveryPartnerFee&&<p className="order-dispatch-fee">Envío {money(order.deliveryPartnerFee)}: lo cobra la central al cliente.</p>}
-    {canManage&&(canRetryDispatch(status)||canUseOwnDelivery(status))&&<div className="order-dispatch-actions">
-      {canRetryDispatch(status)&&<Button kind="secondary" icon="refresh" disabled={busy} loading={retry.isPending} onClick={()=>retry.mutate()}>Reintentar centrales</Button>}
-      {canUseOwnDelivery(status)&&<Button kind="ghost" icon="store" disabled={busy} loading={own.isPending} onClick={()=>own.mutate()}>Usar delivery propio</Button>}
-    </div>}
+    <Link className="order-dispatch-link" href={deliveryTabPath("orders")}>Ver en Delivery<Icon name="arrowUpRight" size={14}/></Link>
   </div>;
 }

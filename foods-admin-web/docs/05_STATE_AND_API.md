@@ -497,10 +497,10 @@ Cada acción invalida su consulta y muestra el resultado (`outcome`) con
 - Campana: `delivery_pickup_delayed` (8 min sin recogida) abre Pedidos, tono
   `peach` e ícono `clock`.
 
-## Tarifas de delivery de Concierge
+## Tarifas de envío
 
-`DeliveryFeesPanel` (módulo `configuration`) usa la clave
-`["concierge-delivery-fees"]` con `GET concierge-settings/delivery-fees` y guarda
+`DeliveryFeesPanel` (módulo `delivery`, pestaña Delivery › Tarifas de envío) usa la
+clave `["delivery-fees"]` con `GET concierge-settings/delivery-fees` y guarda
 con `PUT concierge-settings/delivery-fees` (el proxy `/api/admin` reenvía `PUT`).
 El borrador de filas es estado local; `deliveryFeeErrors` valida límites
 (0.01–50 km, costo 0–999, dos decimales, sin límites repetidos) y
@@ -521,7 +521,19 @@ seleccionan ni modifican centrales. El orden se aplica solo dentro de la cobertu
 `src/modules/delivery` publica tipos, API y componentes. Todo pasa por el proxy
 `/api/admin` o `/api/platform`:
 
-- **Centrales (Plataforma):**
+- **Delivery (`/delivery?tab=`):** `deliveryTabFrom` valida la pestaña pedida
+  contra las visibles (`visibleDeliveryTabs` según módulos) y cae en `orders`;
+  cambiar de pestaña actualiza la URL con `history.replaceState`, sin recargar.
+  - Pedidos: clave `["delivery-board"]` con `GET delivery/orders` y
+    `refetchInterval` de 10 s. «Reintentar centrales» y «Usar delivery propio»
+    (`POST orders/{id}/delivery-dispatch/retry|own`) invalidan `delivery-board`,
+    `order`, `orders` y `staff-notices`. «En curso / Todos de hoy» filtra en el
+    cliente (`filterBoard`).
+  - Proveedores: clave `["delivery-providers"]` con `GET delivery/partners`
+    (`{enabled,districtName,items:[{name,whatsappPhone}]}`), solo lectura. Si la
+    sesión es de Plataforma se muestra `DeliveryPartnersAdmin`.
+  - Entregas fallidas: clave `["delivery-failed"]` con `GET delivery/failed-deliveries`.
+- **Centrales (Plataforma, en Delivery › Proveedores):**
   - Clave `["platform-delivery-partners"]`, con `GET|POST /platform/delivery-partners`
     y `PATCH /platform/delivery-partners/{id}`.
   - Desactivar reenvía nombre y WhatsApp con `active:false`.
@@ -535,8 +547,8 @@ seleccionan ni modifican centrales. El orden se aplica solo dentro de la cobertu
   reemplaza la caché con la respuesta.
 - **Pedido:** la lectura trae `deliveryDispatchStatus`, `deliveryPartnerName`
   y `deliveryPartnerFee`, sin otra consulta.
-  - `POST orders/{id}/delivery-dispatch/retry|own` invalidan `order`, `orders`,
-    `pos-order`, `pos-orders` y `notices`.
+  - El detalle solo resume el despacho y enlaza a Delivery › Pedidos; las
+    acciones viven en el tablero.
 
 ## Tope mensual de Fudia Concierge (solo Plataforma)
 

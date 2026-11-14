@@ -1,2 +1,7 @@
-import {ComingSoonPage} from "@/shared/management";
-export default function Page(){return <ComingSoonPage eyebrow="DELIVERY" title="Delivery propio" description="Delivery con flota propia, zonas de reparto y tarifas de envío."/>}
+import {DeliveryPage} from "@/modules/delivery";
+
+/** `?tab=` abre una pestaña: orders, providers, fees, failed, apps o couriers. */
+export default async function Page({searchParams}:{searchParams:Promise<{tab?:string}>}){
+  const params=await searchParams;
+  return <DeliveryPage initialTab={params.tab}/>;
+}

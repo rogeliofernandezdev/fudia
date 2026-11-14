@@ -341,7 +341,9 @@ INEI de solo lectura para la sesión autenticada. Selección por cobertura,
 - Caja: `GET /v1/admin/orders/{id}/delivery-dispatch` (`orders.read`) devuelve el
   despacho con su historial de ofertas; `POST .../delivery-dispatch/retry` y
   `POST .../delivery-dispatch/own` (`orders.manage`) vuelven a ofrecer el pedido
-  a todas las centrales o lo dejan para el delivery propio.
+  a todas las centrales o lo dejan para el delivery propio. La opción «Delivery»
+  lee `GET /v1/admin/delivery/orders`, `/partners` y `/failed-deliveries`
+  (`orders.read`, alcance de la sesión, solo lectura).
 - Concierge (clave de servicio): `GET /v1/integrations/concierge/delivery-messages/pending`
   avanza los despachos y reclama los mensajes; `POST .../delivery-messages/{id}/dispatched`
   confirma el envío (inicia los 3 minutos de la oferta); `POST

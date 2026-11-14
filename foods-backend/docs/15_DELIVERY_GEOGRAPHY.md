@@ -166,13 +166,37 @@ pedido en sus estados de siempre. Los hechos del reparto son columnas de
   `409 delivery_in_progress_not_cancellable`. Concierge no ofrece ni acepta
   cancelaciones por mensaje en esa etapa.
 
+## Opción «Delivery» del restaurante
+
+Desde 2026-11-14 el restaurante tiene una sola opción «Delivery» en su menú,
+con todo su delivery. El backend publica tres lecturas con `orders.read` y el
+alcance de empresa y local de la sesión; ninguna permite editar centrales:
+
+- `GET /v1/admin/delivery/orders`: deliveries abiertos y de las últimas 24 h,
+  con despacho, central, motorizado, alerta de recogida, reporte «No pude
+  entregar» y entrega fallida. `dispatchStatus` vacío es delivery propio.
+- `GET /v1/admin/delivery/partners`: centrales activas que cubren el distrito
+  del local y si Delivery Fudia está activo para la empresa.
+- `GET /v1/admin/delivery/failed-deliveries`: entregas fallidas del local de los
+  últimos 90 días con sus montos.
+
+La migración `000127_delivery_single_menu` quita `delivery_apps` y
+`repartidores` del acceso a menú de los roles: ya no son opciones del menú, y sus
+pestañas dependen solo del módulo activo. El catálogo de menús del rol muestra
+solo «Delivery».
+
+Plataforma sigue siendo la única que administra centrales
+(`/v1/platform/delivery-partners`); en el frontend lo hace desde la misma
+pestaña «Proveedores». Reintentar y usar delivery propio siguen en
+`/v1/admin/orders/{id}/delivery-dispatch/*`.
+
 `TestDeliveryFudiaCourierFlow` recorre nombre inválido, oferta ajena, doble clic
 con el mismo nombre, cambio de motorizado con enlace anterior inválido,
 liberación con oferta a la otra central, alertas de 3 y 8 minutos con un solo
 aviso al restaurante sin liberar por tiempo, mantener, liberar con pago
 registrado, recoger desde el enlace, cancelación bloqueada, ubicación, «No pude
 entregar» con un solo aviso al cliente, espera mínima y montos de la entrega
-fallida.
+fallida, y las tres lecturas del local, incluido que otro local no ve nada.
 
 `TestDeliveryPartnerPanel` recorre enlace inválido o reemplazado, oferta ajena,
 acciones fuera de orden, ubicación inválida, vencida o de otra central,

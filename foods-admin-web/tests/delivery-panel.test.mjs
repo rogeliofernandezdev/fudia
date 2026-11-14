@@ -169,7 +169,7 @@ test("panel de reparto y enlace del motorizado: pantallas públicas, sin sesión
 });
 
 test("Plataforma: cada central tiene su enlace de panel, copiable y regenerable con confirmación",()=>{
- const page=read("src/modules/platform/presentation/platform-delivery-partners-page.tsx");
+ const page=read("src/modules/platform/presentation/delivery-partners-admin.tsx");
  assert.match(page,/<IconButton icon="link" label=\{`Panel de reparto de \$\{item\.name\}`\}/);
  const link=read("src/modules/platform/presentation/delivery-partner-panel-link.tsx");
  assert.match(link,/publicPartnerPanelPath\(partner\.panelToken\)/);

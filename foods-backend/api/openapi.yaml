@@ -2347,6 +2347,34 @@ paths:
       description: "Pasa a Cocina/Barra lo guardado sin enviar: un pedido Nuevo o las rondas que el cliente pidió por Fudia Concierge (ítems con status nuevo, «Sin enviar»; Cocina no los ve). La hora del ticket empieza al enviarlo. Quien envía queda como responsable (waiterId) si el pedido aún no tiene uno; en una mesa asignada solo su mozo puede enviar (403 order_assigned_to_another_waiter). Cada WhatsApp que pidió lo enviado recibe el aviso order_sent («en preparación»). Exige orders.manage. Sin nada por enviar responde 409 nothing_to_send."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Comanda enviada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: "nothing_to_send u order_closed" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/delivery/orders:
+    get:
+      operationId: listLocationDeliveryOrders
+      summary: Tablero de deliveries del local (opción «Delivery»)
+      description: "Exige orders.read; alcance de empresa y local de la sesión. Lista los deliveries abiertos y los creados en las últimas 24 horas, abiertos primero. dispatchStatus vacío significa delivery propio. Incluye central y motorizado asignados, espera de recogida con su alerta (3, 5 y 8 min), el reporte «No pude entregar» y si se registró la entrega fallida."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Deliveries del local, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/DeliveryBoardOrder" } } } } } } }
+        "403": { description: "Permiso insuficiente o location_required" }
+  /v1/admin/delivery/partners:
+    get:
+      operationId: listLocationDeliveryPartners
+      summary: Centrales de Delivery Fudia que cubren el local (solo lectura)
+      description: "Exige orders.read. Las empresas no editan centrales: solo Plataforma las administra. enabled indica si Delivery Fudia está activo para la empresa."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Centrales del local, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryLocationPartners" } } } }
+        "403": { description: "Permiso insuficiente o location_required" }
+        "404": { description: location_not_found }
+  /v1/admin/delivery/failed-deliveries:
+    get:
+      operationId: listLocationFailedDeliveries
+      summary: Entregas fallidas del local de los últimos 90 días
+      description: "Exige orders.read; alcance de empresa y local de la sesión."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Entregas fallidas, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { allOf: [{ $ref: "#/components/schemas/DeliveryFailedDelivery" }, { type: object, required: [partnerName], properties: { partnerName: { type: string } } }] } } } } } } }
+        "403": { description: "Permiso insuficiente o location_required" }
   /v1/admin/orders/{id}/delivery-dispatch:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     get:
@@ -2615,6 +2643,38 @@ components:
         token: { type: string, description: "32 caracteres hexadecimales; vacío si aún no se generó." }
         active: { type: boolean }
         updatedAt: { type: string, format: date-time }
+    DeliveryBoardOrder:
+      type: object
+      required: [id, code, status, customerName, customerPhone, address, total, currencySymbol, createdAt, dispatchStatus, partnerName, partnerPhone, courierName, pickupWaitSeconds, pickupAlert, pickupAlertAcknowledged, failedDelivery]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        status: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address: { type: string }
+        total: { type: string }
+        currencySymbol: { type: string }
+        createdAt: { type: string, format: date-time }
+        dispatchStatus: { type: string, enum: ["", searching, accepted, unassigned, picked_up, delivered, own, cancelled], description: "Vacío: delivery propio sin despacho." }
+        partnerName: { type: string }
+        partnerPhone: { type: string }
+        courierName: { type: string }
+        pickupWaitSeconds: { type: integer }
+        pickupAlert: { type: string, enum: ["", warning, urgent, critical] }
+        pickupAlertAcknowledged: { type: boolean }
+        issueReportedAt: { type: string, format: date-time }
+        failedDelivery: { type: boolean }
+        acceptedAt: { type: string, format: date-time }
+        pickedUpAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
+    DeliveryLocationPartners:
+      type: object
+      required: [enabled, districtName, items]
+      properties:
+        enabled: { type: boolean }
+        districtName: { type: string, description: "Distrito del local; vacío si no lo tiene." }
+        items: { type: array, items: { type: object, required: [name, whatsappPhone], properties: { name: { type: string }, whatsappPhone: { type: string } } } }
     DeliveryDispatch:
       type: object
       required: [orderId, status, round, offers]

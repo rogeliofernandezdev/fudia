@@ -3,7 +3,8 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,PageHeader,RowActionButton,Status,TableSkeleton,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,RowActionButton,Status,TableSkeleton,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
+import {formatPartnerPhone} from "@/modules/delivery/domain/board";
 import {useFeedback} from "@/providers";
 import type {DeliveryPartner,DeliveryPartnerDraft} from "../domain/types";
 import {listDeliveryPartners,reorderDeliveryPartners,saveDeliveryPartner} from "../infrastructure/platform-api";
@@ -15,18 +16,13 @@ const columns=["Orden","Central","Teléfono","Cobertura","Estado","Acciones"];
 const blank:DeliveryPartnerDraft={name:"",whatsappPhone:"51",coverageCodes:[],coverageLabels:[]};
 const queryKey=["platform-delivery-partners"];
 
-/** WhatsApp con código de país, agrupado para leerlo: +51 987 654 321. */
-export function formatPartnerPhone(digits:string){
- const match=/^(51)(\d{3})(\d{3})(\d{3})$/.exec(digits);
- return match?`+${match[1]} ${match[2]} ${match[3]} ${match[4]}`:`+${digits}`;
-}
-
 /**
- * Centrales de Delivery Fudia: la plataforma registra las centrales de reparto
- * y su orden global y su cobertura; cada pedido de una empresa con Delivery Fudia se ofrece a
- * la 1.ª y, si rechaza o no responde, a la siguiente.
+ * Administración de las centrales de Delivery Fudia (solo Plataforma), dentro
+ * de Delivery › Proveedores. Cuando cocina inicia la preparación, el pedido se
+ * ofrece a la vez a todas las centrales activas que cubren el distrito del
+ * local; la primera que acepta se lo queda. El orden prioriza el listado.
  */
-export function PlatformDeliveryPartnersPage(){
+export function DeliveryPartnersAdmin(){
  const{notify}=useFeedback();
  const client=useQueryClient();
  const partners=useQuery({queryKey,queryFn:listDeliveryPartners});
@@ -50,7 +46,7 @@ export function PlatformDeliveryPartnersPage(){
   onSuccess:(_,item)=>{
    setTarget(null);
    void client.invalidateQueries({queryKey});
-   notify({tone:"success",title:item.active?"Central desactivada":"Central activada",message:item.active?"Las ofertas pendientes pasan a la siguiente central con cobertura.":"Vuelve a recibir pedidos en su lugar del orden."});
+   notify({tone:"success",title:item.active?"Central desactivada":"Central activada",message:item.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas.":"Vuelve a recibir los pedidos de su cobertura."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
  });
@@ -75,8 +71,8 @@ export function PlatformDeliveryPartnersPage(){
  const actions=(item:DeliveryPartner)=><><IconButton icon="link" label={`Panel de reparto de ${item.name}`} onClick={()=>setPanelId(item.id)}/><RowActionButton action="edit" label={`Editar central ${item.name}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de la central ${item.name}`} onClick={()=>setTarget(item)}/></>;
 
  return <>
-  <PageHeader title="Centrales de delivery" description="Reciben en su panel de reparto los pedidos de las empresas con Delivery Fudia, según el departamento, provincia y distrito del local, en este orden." action={<Button icon="plus" onClick={start}>Nueva central</Button>}/>
-  <section className="panel management standardized-management platform-partners-panel">
+  <section className="panel management standardized-management platform-partners-panel" aria-label="Centrales de delivery">
+   <div className="toolbar platform-partners-toolbar"><p>Reciben a la vez en su panel de reparto los pedidos de las empresas con Delivery Fudia que cubren el distrito del local.</p><Button icon="plus" onClick={start}>Nueva central</Button></div>
    {partners.isLoading?<TableSkeleton columns={columns} rows={4} label="Cargando centrales de delivery"/>:
     partners.isError?<ErrorState title="No pudimos cargar las centrales" text={partners.error.message} retrying={partners.isFetching} onRetry={()=>void partners.refetch()}/>:
     !items.length?<EmptyState icon="motorbike" title="Aún no hay centrales" text="Registra la primera central de reparto para ofrecer Delivery Fudia a las empresas." action={<Button icon="plus" onClick={start}>Nueva central</Button>}/>:
@@ -96,6 +92,6 @@ export function PlatformDeliveryPartnersPage(){
    </ModalForm>
   </Dialog></div>}
   {panelPartner&&<DeliveryPartnerPanelLink partner={panelPartner} queryKey={queryKey} onClose={()=>setPanelId(undefined)}/>}
-  <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar central":"Activar central"} subject={target?{label:"Central",name:target.name}:undefined} description={target?.active?"Las ofertas pendientes pasarán a la siguiente central con cobertura. Los pedidos ya aceptados conservan su central.":"Volverá a recibir pedidos en su lugar del orden."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
+  <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar central":"Activar central"} subject={target?{label:"Central",name:target.name}:undefined} description={target?.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas. Los pedidos ya aceptados conservan su central.":"Volverá a recibir los pedidos de su cobertura."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
  </>;
 }

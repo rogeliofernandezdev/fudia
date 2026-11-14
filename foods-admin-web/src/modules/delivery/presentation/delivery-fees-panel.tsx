@@ -7,11 +7,12 @@ import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {deliveryFeeErrors,deliveryFeeLimits,deliveryFeeRows,deliveryFeesPayload,type DeliveryFeeRow} from "../domain/delivery-fees";
-import {getDeliveryFees,saveDeliveryFees} from "../infrastructure/concierge-settings-api";
+import {getDeliveryFees,saveDeliveryFees} from "../infrastructure/delivery-api";
+import "./delivery.css";
 
-const queryKey=["concierge-delivery-fees"];
+const queryKey=["delivery-fees"];
 
-/** Rangos de costo de envío por distancia en línea recta para pedidos sin mesa de Concierge. */
+/** Delivery › Tarifas de envío: rangos de costo por distancia en línea recta que usa el chatbot para cotizar. */
 export function DeliveryFeesPanel(){
  const{can}=useSession();
  const{notify}=useFeedback();
@@ -26,7 +27,7 @@ export function DeliveryFeesPanel(){
   mutationFn:()=>saveDeliveryFees(deliveryFeesPayload(rows)),
   onSuccess:data=>{
    client.setQueryData(queryKey,data);setDraft(null);setSubmitted(false);
-   notify({tone:"success",title:"Tarifas guardadas",message:data.tiers.length?"Concierge cotizará el delivery con estos rangos.":"Concierge solo ofrecerá recojo en el local."});
+   notify({tone:"success",title:"Tarifas guardadas",message:data.tiers.length?"El chatbot cotizará el delivery con estos rangos.":"El chatbot solo ofrecerá recojo en el local."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudieron guardar",message:e.message}),
  });
@@ -35,10 +36,10 @@ export function DeliveryFeesPanel(){
  function remove(key:string){setDraft(rows.filter(row=>row.key!==key))}
  function submit(){setSubmitted(true);if(!Object.keys(deliveryFeeErrors(rows)).length)save.mutate()}
 
- return <section className="panel concierge-delivery" aria-labelledby="concierge-delivery-title">
-  <header><h2 id="concierge-delivery-title">Delivery y recojo por WhatsApp</h2><p>Cuando termina la atención en mesa, Concierge toma pedidos para recojo en el local o delivery. El costo de envío se calcula por la distancia en línea recta desde el local hasta la ubicación que comparte el cliente.</p></header>
+ return <section className="panel delivery-fees" aria-label="Tarifas de envío">
+  <p className="delivery-fees-intro">El chatbot cotiza el envío por la distancia en línea recta desde el local hasta la ubicación que comparte el cliente.</p>
   {query.isLoading?<DeliveryFeesSkeleton/>:query.isError?<ErrorState title="No pudimos cargar las tarifas de delivery" text={query.error.message} onRetry={()=>void query.refetch()} retrying={query.isFetching}/>:query.data&&<>
-   {!query.data.hasCoordinates&&<InlineNotice tone="warning" title="Falta la ubicación del local" action={<Link className="button secondary" href={pageRoutes.locations}>Ir a Locales</Link>}>Ubica {query.data.locationName} en el mapa para cotizar el delivery. Mientras tanto Concierge solo ofrece recojo.</InlineNotice>}
+   {!query.data.hasCoordinates&&<InlineNotice tone="warning" title="Falta la ubicación del local" action={<Link className="button secondary" href={pageRoutes.locations}>Ir a Locales</Link>}>Ubica {query.data.locationName} en el mapa para cotizar el delivery. Mientras tanto el chatbot solo ofrece recojo.</InlineNotice>}
    {rows.length?<div className="delivery-fee-table" role="table" aria-label="Rangos de costo de envío">
     <div className="delivery-fee-row head" role="row"><span role="columnheader">HASTA (KM)</span><span role="columnheader">COSTO DE ENVÍO</span>{canManage&&<span role="columnheader" className="sr-only">Acciones</span>}</div>
     {rows.map((row,index)=><div className="delivery-fee-row" role="row" key={row.key}>
@@ -46,7 +47,7 @@ export function DeliveryFeesPanel(){
      <span role="cell"><MoneyInput symbol={query.data.currencySymbol} className="tabular" aria-label={`Costo de envío del rango ${index+1}`} aria-invalid={Boolean(errors[row.key]?.fee)} value={row.fee} disabled={!canManage||save.isPending} onChange={e=>update(row.key,{fee:e.target.value})}/>{errors[row.key]?.fee&&<small className="delivery-fee-error">{errors[row.key]?.fee}</small>}</span>
      {canManage&&<span role="cell"><RowActionButton action="remove" label={`Quitar rango ${index+1}`} disabled={save.isPending} onClick={()=>remove(row.key)}/></span>}
     </div>)}
-   </div>:<div className="concierge-note">Sin rangos configurados: Concierge solo ofrecerá recojo en el local.</div>}
+   </div>:<div className="delivery-fees-empty">Sin rangos configurados: el chatbot solo ofrecerá recojo en el local.</div>}
    <p className="delivery-fee-help">Cada rango empieza donde termina el anterior. Más allá del mayor límite no hay cobertura de delivery.</p>
    {canManage&&<footer className="delivery-fee-actions">
     <Button kind="secondary" icon="plus" onClick={add} disabled={rows.length>=deliveryFeeLimits.tiers||save.isPending}>Agregar rango</Button>

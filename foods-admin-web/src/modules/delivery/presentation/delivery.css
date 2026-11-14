@@ -1,4 +1,4 @@
-/* Delivery Fudia: enlace/QR en el formulario del local y despacho en el detalle del pedido. */
+/* Delivery: pestañas de la opción Delivery, enlace/QR en el formulario del local y resumen del despacho en el detalle del pedido. */
 .delivery-link{display:grid;gap:var(--space-2-5)}
 .delivery-link-title{margin:0;color:var(--ink-800);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 .delivery-link-content{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:var(--space-4)}
@@ -11,9 +11,38 @@
 .order-dispatch-state{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
 .order-dispatch-state b{color:var(--ink-950);font-size:var(--font-size-base)}
 .order-dispatch-fee{margin:0;color:var(--ink-600);font-size:var(--font-size-label)}
-.order-dispatch-actions{display:flex;flex-wrap:wrap;gap:var(--space-2-5)}
+.order-dispatch-link{display:inline-flex;align-items:center;gap:var(--space-1);min-height:var(--size-44);color:var(--primary-700);font-size:var(--font-size-label);font-weight:var(--weight-semibold);text-decoration:none}
+@media(hover:hover) and (pointer:fine){.order-dispatch-link:hover{text-decoration:underline}}
 
 @media(max-width:600px){
  .delivery-link-content{grid-template-columns:minmax(0,1fr)}
- .order-dispatch-actions>.button{flex:1 1 100%}
+}
+
+/* Delivery › Tarifas de envío. */
+.delivery-fees{padding:var(--space-5);display:grid;gap:var(--space-4)}
+.delivery-fees-intro{font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-400);margin:0;max-width:72ch}
+.delivery-fee-table{display:grid;gap:var(--space-2);max-width:var(--size-480)}
+.delivery-fee-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) var(--size-44);gap:var(--space-2);align-items:start}
+.delivery-fee-row>span{display:grid;gap:var(--space-1);min-width:0}
+.delivery-fee-row.head span{font-size:var(--font-size-label);color:var(--ink-400);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
+.delivery-fee-row .ds-input{min-height:var(--size-44)}
+.delivery-fee-error{color:var(--danger-700);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
+.delivery-fee-help{margin:0;font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-400)}
+.delivery-fee-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:flex-end}
+@media(max-width:600px){.delivery-fees{padding:var(--space-4)}.delivery-fee-actions>.button{flex:1 1 100%}}
+.delivery-fees-empty{padding:var(--space-2-5);border-radius:var(--radius-tile);background:var(--cloud-50);font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-500)}
+
+/* Delivery › Pedidos, Proveedores y Entregas fallidas: tabla estándar y tarjetas en móvil. */
+.delivery-board-order,.delivery-board-customer,.delivery-board-owner{display:grid;gap:var(--space-0-5);min-width:0}
+.delivery-board-order small,.delivery-board-customer small,.delivery-board-owner small{color:var(--ink-500);font-size:var(--font-size-label)}
+.delivery-board-customer small{max-width:var(--size-240);overflow:hidden;text-overflow:ellipsis}
+.delivery-board-owner small{display:inline-flex;align-items:center;gap:var(--space-1)}
+.delivery-board-owner a,.delivery-providers a{color:var(--primary-700);font-size:var(--font-size-label);text-decoration:none}
+.delivery-board-muted{color:var(--ink-500);font-size:var(--font-size-label)}
+.delivery-providers-intro{margin:0;padding:var(--space-3) var(--space-4);max-width:72ch;color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
+.delivery-providers .ds-notice{margin:0 var(--space-4) var(--space-3)}
+.delivery-failed-share{display:grid;gap:var(--space-1);justify-items:start}
+.delivery-failed-notes{margin:0;padding-left:var(--space-4);color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal);white-space:normal}
+@media(max-width:600px){
+ .delivery-providers-intro{padding:var(--space-3)}
 }

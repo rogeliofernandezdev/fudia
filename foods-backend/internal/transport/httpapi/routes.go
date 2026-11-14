@@ -40,6 +40,10 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("POST /v1/admin/locations/{id}/delivery-link", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(d.RotateDeliveryLink))))
 		m.Handle("GET /v1/admin/orders/{id}/delivery-dispatch", a.auth(a.requirePermission("orders.read", http.HandlerFunc(d.OrderDispatch))))
 		m.Handle("POST /v1/admin/orders/{id}/delivery-dispatch/retry", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(d.RetryDispatch))))
+		// Opción «Delivery» del restaurante: tablero, centrales que cubren el local y entregas fallidas.
+		m.Handle("GET /v1/admin/delivery/orders", a.auth(a.requirePermission("orders.read", http.HandlerFunc(d.DeliveryBoard))))
+		m.Handle("GET /v1/admin/delivery/partners", a.auth(a.requirePermission("orders.read", http.HandlerFunc(d.LocationPartners))))
+		m.Handle("GET /v1/admin/delivery/failed-deliveries", a.auth(a.requirePermission("orders.read", http.HandlerFunc(d.LocationFailedDeliveries))))
 		m.Handle("POST /v1/admin/orders/{id}/delivery-dispatch/own", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(d.UseOwnDelivery))))
 		// Bandeja de salida a las centrales y respuestas de sus botones: solo Concierge.
 		m.Handle("GET /v1/integrations/concierge/delivery-messages/pending", a.conciergeServiceAuth(http.HandlerFunc(d.ClaimMessages)))

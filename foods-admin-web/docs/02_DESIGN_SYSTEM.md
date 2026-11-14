@@ -368,7 +368,7 @@ se usan emojis ni glifos Unicode como iconos.
 La navegación comparte su selección con los accesos de Configuración mediante
 `navigationItemForPath`; la búsqueda y el menú móvil consumen el mismo catálogo.
 Cocina usa `chefHat`, Carta y productos `dish`, Mesas y zonas `grid`, Caja y turnos
-`cashShift` (reloj con importe), Apps de delivery `apps`, Repartidores `motorbike`,
+`cashShift` (reloj con importe), Delivery `truck` (sus pestañas: Pedidos `orders`, Proveedores `motorbike`, Tarifas `route`, Entregas fallidas `alert`, Apps de delivery `apps`, Repartidores propios `bike`),
 Personal y asistencias `userCheck`, Locales `mapPin`, Mi restaurante `store`,
 Países y WhatsApp `whatsapp`, Impuestos de plataforma
 `tax` (recibo con porcentaje, `IconReceiptTax`) y Concierge `chatbot`.
@@ -2801,10 +2801,28 @@ se gestiona globalmente (decisión del 2026-11-06):
 - El local solo tiene su enlace/QR.
 - Caja sigue el despacho del pedido.
 
-- **Plataforma › Centrales de delivery** (`/platform/delivery-partners`, menú
-  de plataforma con icono `motorbike`). Usa el mismo patrón que Países y
-  WhatsApp:
-  - Tabla «ORDEN | CENTRAL | TELÉFONO | COBERTURA | ESTADO | ACCIONES» y tarjetas en móvil.
+- **Delivery** (`/delivery`, decisión del 2026-11-14): el menú DELIVERY tiene una
+  sola opción, «Delivery», con todo el delivery del local en `Tabs` (la pestaña
+  viaja en `?tab=`, en inglés). «Apps de delivery» y «App repartidores» dejaron de
+  ser opciones sueltas: `/delivery-apps`, `/couriers`, `/repartidores` y
+  `/platform/delivery-partners` redirigen a su pestaña. En móvil la pista de
+  pestañas se desplaza y la activa se lleva a la vista.
+
+  | Pestaña (`tab`) | Contenido |
+  | --- | --- |
+  | Pedidos (`orders`) | Tablero en vivo (cada 10 s) con «En curso / Todos de hoy». Tabla «PEDIDO · CLIENTE · ESTADO · REPARTO · RESPONSABLE · RECOGIDA · TOTAL · ACCIONES»: estado del pedido `solid` (operativo), despacho `Status` suave de la matriz, central con teléfono y motorizado, alerta de recogida (`orange` 3 y 5 min, `red` 8 min) o incidencia («No pudo entregar» `orange`, «Entrega fallida» `red`). Acciones de fila con `IconButton`: «Reintentar centrales» (`refresh`) y «Usar delivery propio» (`store`, con `ConfirmDialog` «Usar propio») |
+  | Proveedores (`providers`) | Restaurante: tabla de solo lectura «CENTRAL · TELÉFONO» con las centrales que cubren el distrito del local y una línea que explica la oferta simultánea; aviso si falta el distrito. Plataforma: la administración completa de centrales (abajo) |
+  | Tarifas de envío (`fees`) | `DeliveryFeesPanel` (ver «Tarifas de envío») |
+  | Entregas fallidas (`failed`) | Tabla «PEDIDO · CLIENTE · CENTRAL · COMIDA · REEMBOLSO · CENTRAL ASUME · FUDIA ASUME · APORTE FUDIA», con `Tag` neutro «Con/Sin aporte Fudia» y las notas de validación |
+  | Apps de delivery (`apps`) · Repartidores propios (`couriers`) | «Próximamente», solo si el módulo `delivery_apps` o `repartidores` está activo |
+
+  En móvil las tablas usan el desplazamiento horizontal estándar del sistema.
+  El enlace/QR de delivery sigue en Locales › Editar (es un canal de venta del
+  local, también para recojo).
+- **Delivery › Proveedores (Plataforma)** (`DeliveryPartnersAdmin`, ya no está
+  en el menú de plataforma). Usa el mismo patrón que Países y WhatsApp, con una
+  barra superior que explica la oferta simultánea y «Nueva central»:
+  - Tabla «ORDEN | CENTRAL | TELÉFONO | COBERTURA | ESTADO | ACCIONES».
   - Acción de fila «Panel de reparto» (`IconButton` `link`): modal de solo
     lectura (sin pie) con el enlace privado, «Copiar enlace», «Abrir panel» y
     «Generar enlace nuevo» (`danger-outline` con `ConfirmDialog`).
@@ -2840,13 +2858,13 @@ se gestiona globalmente (decisión del 2026-11-06):
   - En ≤600 px la imagen va arriba y el grupo de acciones debajo; cada botón
     ocupa la fila y conserva su color semántico.
 - **Detalle del pedido › Entrega**: `OrderDispatchBlock` bajo la dirección
-  (línea fina superior). Solo aparece si el pedido tiene despacho. Muestra:
+  (línea fina superior). Solo aparece si el pedido tiene despacho. Es un resumen:
   - El estado con `Status` suave (no `solid`; es un registro, no el estado
     operativo del pedido) y el nombre de la central en 14 px semibold.
   - Si la central cobra el envío: «Envío S/ 5.00: lo cobra la central al cliente.»
     en `ink-600`.
-  - Con `orders.manage`: «Reintentar centrales» (secundario, sin central o con
-    delivery propio) y «Usar delivery propio» (ghost, mientras no se recoja).
+  - Enlace «Ver en Delivery» (44 px) a Delivery › Pedidos, donde viven
+    «Reintentar centrales» y «Usar delivery propio».
 - **Matriz del despacho** (`dispatchStatusMeta`, sin rojo porque nada es un error):
 
   | Estado | Etiqueta | Tono |
@@ -2867,12 +2885,12 @@ se gestiona globalmente (decisión del 2026-11-06):
   delivery») usa icono `motorbike`, tono `peach` (atención) y abre el detalle en
   Pedidos (`?orderId=`).
 
-### Tarifas de delivery de Fudia Concierge
+### Tarifas de envío
 
-La pantalla Fudia Concierge agrega un panel «Delivery y recojo por WhatsApp»
-debajo del estado y del flujo del comensal (paso 6, «Después de la mesa»). Vive
-aquí y no en «Delivery propio» porque ese módulo sigue planificado y bloqueado;
-el panel depende de `whatsapp_bot`.
+Viven en Delivery › Tarifas de envío (`DeliveryFeesPanel`, módulo `delivery`)
+desde el 2026-11-14. La pantalla Fudia Concierge solo enlaza a esa pestaña. El
+panel abre con una línea («El chatbot cotiza el envío por la distancia en línea
+recta…»), sin título que repita la pestaña.
 
 - Tabla compacta de filas editables (máximo 480 px): «HASTA (KM)» con `Input`
   decimal y «COSTO DE ENVÍO» con `MoneyInput` y el símbolo devuelto por el API;

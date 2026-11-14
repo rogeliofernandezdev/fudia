@@ -21,8 +21,6 @@ export const pageRoutes={
   purchases:"/purchases",
   logistics:"/logistics",
   delivery:"/delivery",
-  deliveryApps:"/delivery-apps",
-  couriers:"/couriers",
   customers:"/customers",
   crm:"/crm",
   loyaltyPoints:"/loyalty-points",
@@ -53,7 +51,6 @@ export const pageRoutes={
   platformSubscription:"/platform/subscription",
   platformGlobalSettings:"/platform/global-settings",
   platformTaxes:"/platform/taxes",
-  platformDeliveryPartners:"/platform/delivery-partners",
   login:"/login",
 } as const;
 
@@ -74,7 +71,7 @@ export const legacyPageAliases=[
   {legacy:"/kardex",canonical:pageRoutes.stockLedger},
   {legacy:"/compras",canonical:pageRoutes.purchases},
   {legacy:"/logistica",canonical:pageRoutes.logistics},
-  {legacy:"/repartidores",canonical:pageRoutes.couriers},
+  {legacy:"/repartidores",canonical:"/delivery?tab=couriers"},
   {legacy:"/clientes",canonical:pageRoutes.customers},
   {legacy:"/puntos",canonical:pageRoutes.loyaltyPoints},
   {legacy:"/ofertas",canonical:pageRoutes.offers},
@@ -100,6 +97,10 @@ export const legacyPageRedirects=[
   ...legacyPageAliases,
   {legacy:"/configuracion/onboarding",canonical:pageRoutes.platformOnboarding},
   {legacy:"/platform/configuracion-global",canonical:pageRoutes.platformGlobalSettings},
+  // Todo el delivery vive en una sola opción del menú: las pantallas sueltas abren su pestaña.
+  {legacy:"/delivery-apps",canonical:"/delivery?tab=apps"},
+  {legacy:"/couriers",canonical:"/delivery?tab=couriers"},
+  {legacy:"/platform/delivery-partners",canonical:"/delivery?tab=providers"},
 ] as const;
 
 export function companySettingsPath(organizationId:string){

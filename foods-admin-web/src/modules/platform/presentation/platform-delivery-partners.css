@@ -1,4 +1,4 @@
-/* Plataforma › Centrales de delivery: mismo modal compacto que los canales de WhatsApp. */
+/* Delivery › Proveedores (Plataforma): mismo modal compacto que los canales de WhatsApp. */
 .platform-partner-modal{width:min(var(--size-540),calc(100vw - var(--size-32)))}
 .platform-partner-fields{padding:0}
 
@@ -11,6 +11,8 @@
 .partner-order>b{min-width:var(--space-5);color:var(--ink-950);font-variant-numeric:tabular-nums;text-align:center}
 .partner-order-up svg{transform:rotate(-90deg)}
 .partner-order-down svg{transform:rotate(90deg)}
+.platform-partners-toolbar{align-items:center;justify-content:space-between}
+.platform-partners-toolbar p{margin:0;max-width:72ch;color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
 .platform-partners-panel .management-cards footer{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
 
 /* Detalle de empresa › Delivery Fudia (comparte la cabecera del panel de Concierge). */

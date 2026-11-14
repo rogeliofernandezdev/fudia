@@ -278,6 +278,25 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	if dispatch, _, _ := state(orderID); dispatch != "accepted" {
 		t.Fatalf("time must not release the order: %s", dispatch)
 	}
+	// La opción «Delivery» del restaurante ve la misma alerta, la central y el motorizado.
+	type boardOrder struct {
+		ID, Code, DispatchStatus, PartnerName, CourierName, PickupAlert, IssueReportedAt string
+		FailedDelivery                                                                  bool
+	}
+	board := func(subject scope) []boardOrder {
+		t.Helper()
+		rec := call(d.DeliveryBoard, "GET", "", nil, subject)
+		if rec.Code != 200 {
+			t.Fatalf("board: %d %s", rec.Code, rec.Body.String())
+		}
+		var out struct{ Items []boardOrder }
+		decode(rec, &out)
+		return out.Items
+	}
+	if items := board(s); len(items) != 1 || items[0].ID != orderID || items[0].DispatchStatus != "accepted" ||
+		items[0].PartnerName != "Motos Sur" || items[0].CourierName != "Rosa Quispe" || items[0].PickupAlert != "critical" {
+		t.Fatalf("board with alert: %#v", items)
+	}
 	if got := act(southPanel, "keep", southOffer); got != "kept" {
 		t.Fatalf("keep: %s", got)
 	}
@@ -374,6 +393,36 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	orders, failures := panel(southPanel)
 	if len(orders) != 0 || len(failures) != 1 {
 		t.Fatalf("failed delivery in panel: %#v %#v", orders, failures)
+	}
+	if items := board(s); len(items) != 1 || items[0].DispatchStatus != "cancelled" || !items[0].FailedDelivery {
+		t.Fatalf("board after failed delivery: %#v", items)
+	}
+	partnersRec := call(d.LocationPartners, "GET", "", nil, s)
+	var located struct {
+		Enabled      bool
+		DistrictName string
+		Items        []struct{ Name, WhatsappPhone string }
+	}
+	decode(partnersRec, &located)
+	if partnersRec.Code != 200 || !located.Enabled || located.DistrictName == "" || len(located.Items) != 2 {
+		t.Fatalf("location partners: %d %s", partnersRec.Code, partnersRec.Body.String())
+	}
+	failedRec := call(d.LocationFailedDeliveries, "GET", "", nil, s)
+	var localFailed struct {
+		Items []struct{ OrderCode, PartnerName, FudiaShare string }
+	}
+	decode(failedRec, &localFailed)
+	if failedRec.Code != 200 || len(localFailed.Items) != 1 || localFailed.Items[0].PartnerName != "Motos Sur" || localFailed.Items[0].FudiaShare != "30.00" {
+		t.Fatalf("location failed deliveries: %d %s", failedRec.Code, failedRec.Body.String())
+	}
+	// Otro local de la misma empresa no ve el delivery ni sus incidencias.
+	other := s
+	other.LocationID = "00000000-0000-0000-0000-000000000000"
+	if items := board(other); len(items) != 0 {
+		t.Fatalf("board leaked to another location: %#v", items)
+	}
+	if rec := call(d.LocationFailedDeliveries, "GET", "", nil, other); rec.Code != 200 || strings.Contains(rec.Body.String(), "Motos Sur") {
+		t.Fatalf("failed deliveries leaked: %d %s", rec.Code, rec.Body.String())
 	}
 	f := failures[0]
 	if f.CourierName != "Pedro Ramos" || f.FoodAmount != "60.00" || f.CourierReimbursement != "60.00" ||

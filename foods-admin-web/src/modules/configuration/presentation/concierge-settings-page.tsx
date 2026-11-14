@@ -3,7 +3,8 @@ import "./concierge-settings.css";
 import {useQuery} from "@tanstack/react-query";
 import {ErrorState,Icon,PageHeader,Skeleton,Status} from "@/design-system";
 import {getConciergeSettings} from "../infrastructure/concierge-settings-api";
-import {DeliveryFeesPanel} from "./delivery-fees-panel";
+import Link from "next/link";
+import {deliveryTabPath} from "@/modules/delivery";
 
 export function ConciergeSettingsPage(){
  const query=useQuery({queryKey:["concierge-settings"],queryFn:getConciergeSettings});
@@ -51,7 +52,7 @@ export function ConciergeSettingsPage(){
      </section>
     </div>
 
-    <DeliveryFeesPanel/>
+    <p className="concierge-note">Las tarifas de envío del delivery se configuran en <Link href={deliveryTabPath("fees")}>Delivery › Tarifas de envío</Link>.</p>
    </>}
   </div>
  </>;
