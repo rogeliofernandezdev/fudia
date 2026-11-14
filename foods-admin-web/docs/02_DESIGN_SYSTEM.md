@@ -3406,8 +3406,12 @@ ni menú, para el proveedor de Delivery Fudia. Mobile-first, validada a 390 y
   entregar» del motorizado. Se recuerda en el dispositivo. La central ya no
   comparte ubicación: lo hace el motorizado desde su enlace.
 - Secciones «Pedidos nuevos», «En curso», «Entregados hoy» (plegada) y
-  «Entregas fallidas», con contador `navigation-900`. Sin pedidos: `EmptyState`
-  «Sin pedidos por ahora». Carga con `Skeleton`; error con `ErrorState` y
+  «Entregas fallidas», con contador `navigation-900`. «Entregados hoy» se pliega
+  desde su propia fila de título (área táctil de 44 px): el contador queda junto
+  al nombre y una flecha al extremo derecho abre o cierra los entregados, que
+  rotan la flecha al abrirse. Sin pedidos: `EmptyState` compacto «Sin pedidos
+  por ahora», sin la altura del catálogo, para convivir con «Entregados hoy».
+  Carga con `Skeleton`; error con `ErrorState` y
   reintento; sin conexión, aviso sobre los últimos datos.
 - Tarjeta del pedido (`OrderDetails`, compartida con el motorizado): código y
   empresa; etapa con `Status` suave (Nuevo `orange`, Por recoger `blue`, En

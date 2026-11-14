@@ -193,16 +193,15 @@ export function PartnerPanel({token}:{token:string}){
       </div>
       {!data.active&&<p className="partner-panel-banner" role="status"><Icon name="info" size={18}/>Tu cuenta está pausada: no recibirás pedidos nuevos. Puedes terminar los que ya tienes.</p>}
       {panel.isError&&<p className="partner-panel-banner is-danger" role="alert"><Icon name="alert" size={18}/>Sin conexión con Fudia. Los pedidos pueden estar desactualizados; reintentando…</p>}
-      {groups.offers.length>0&&<section aria-labelledby="partner-panel-offers"><h2 id="partner-panel-offers">Pedidos nuevos<span>{groups.offers.length}</span></h2>{groups.offers.map(card)}</section>}
-      {groups.active.length>0&&<section aria-labelledby="partner-panel-active"><h2 id="partner-panel-active">En curso<span>{groups.active.length}</span></h2>{groups.active.map(card)}</section>}
-      {empty&&<EmptyState icon="motorbike" title="Sin pedidos por ahora" text="Deja esta pantalla abierta: los pedidos nuevos aparecen aquí al instante."/>}
+      {groups.offers.length>0&&<section aria-labelledby="partner-panel-offers"><h2 id="partner-panel-offers">Pedidos nuevos<span className="partner-panel-count">{groups.offers.length}</span></h2>{groups.offers.map(card)}</section>}
+      {groups.active.length>0&&<section aria-labelledby="partner-panel-active"><h2 id="partner-panel-active">En curso<span className="partner-panel-count">{groups.active.length}</span></h2>{groups.active.map(card)}</section>}
+      {empty&&<EmptyState icon="motorbike" title="Sin pedidos por ahora" text="Deja esta pantalla abierta: los pedidos nuevos aparecen aquí al instante." className="partner-panel-empty"/>}
       {groups.delivered.length>0&&<section aria-labelledby="partner-panel-delivered">
-        <h2 id="partner-panel-delivered">Entregados hoy<span>{groups.delivered.length}</span></h2>
-        <button type="button" className="partner-panel-link" aria-expanded={showDelivered} onClick={()=>setShowDelivered(!showDelivered)}>{showDelivered?"Ocultar entregados":"Ver entregados"}</button>
+        <h2 id="partner-panel-delivered"><button type="button" className="partner-panel-disclosure" aria-expanded={showDelivered} onClick={()=>setShowDelivered(!showDelivered)}>Entregados hoy<span className="partner-panel-count">{groups.delivered.length}</span><Icon name="chevron" size={18}/></button></h2>
         {showDelivered&&groups.delivered.map(card)}
       </section>}
       {failed.length>0&&<section aria-labelledby="partner-panel-failed">
-        <h2 id="partner-panel-failed">Entregas fallidas<span>{failed.length}</span></h2>
+        <h2 id="partner-panel-failed">Entregas fallidas<span className="partner-panel-count">{failed.length}</span></h2>
         {failed.map(item=><FailedCard key={`${item.orderCode}-${item.registeredAt}`} item={item}/>)}
       </section>}
     </div>
