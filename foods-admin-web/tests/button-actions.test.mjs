@@ -14,6 +14,24 @@ vm.runInNewContext(ts.transpileModule(read("src/design-system/page-header.tsx"),
 const {Button}=exports;
 const render=props=>renderToStaticMarkup(React.createElement(Button,props,"Acción"));
 
+test("contraste fuerte conserva intención y bloqueo sin filtrar props de presentación al DOM",()=>{
+ for(const kind of ["primary","secondary","ghost"]){
+  const html=render({kind,appearance:"strong",disabled:true});
+  assert.ok(html.includes(`class="button ${kind} strong"`));
+  assert.match(html,/disabled=""/);
+  assert.doesNotMatch(html,/appearance=/);
+ }
+});
+
+test("paginación de tamaño fijo omite el selector de filas; los listados configurables lo conservan",()=>{
+ const props={page:2,size:10,total:25,mode:"simple",onPage:()=>{}};
+ const fixed=renderToStaticMarkup(React.createElement(exports.Pagination,props));
+ assert.match(fixed,/Mostrando 11–20 de 25/);
+ assert.match(fixed,/Página 2 de 3/);
+ assert.doesNotMatch(fixed,/<select/);
+ assert.match(renderToStaticMarkup(React.createElement(exports.Pagination,{...props,onSize:()=>{}})),/<select/);
+});
+
 test("la intención fija el color e icono, sin inferirlos de la etiqueta",()=>{
  for(const [action,kind,icon] of [["cancel","ghost","close"],["cancel-record","danger-outline","cancel"],["continue","primary","chevron"],["back","ghost","chevronLeft"]]){
   const html=render({action,kind:"secondary",icon:"plus"});

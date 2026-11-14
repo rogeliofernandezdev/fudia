@@ -2,7 +2,7 @@
 import {useState} from "react";
 import {useMutation,useQueryClient} from "@tanstack/react-query";
 import {Dialog} from "@/design-system/dialog";
-import {Button,ConfirmDialog,FormField,Input,ModalBody,ModalHeader} from "@/design-system";
+import {Button,ConfirmDialog,IconTile,ModalBody,ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {publicPartnerPanelPath} from "@/shared/routing/page-routes";
 import type {DeliveryPartner} from "../domain/types";
@@ -10,7 +10,7 @@ import {rotateDeliveryPartnerPanel} from "../infrastructure/platform-api";
 
 /**
  * Enlace privado del panel de reparto de una central: quien lo abre recibe sus
- * pedidos y confirma la atención, la recogida y la entrega. Plataforma lo
+ * pedidos, acepta la atención y asigna motorizados. Plataforma lo
  * copia, lo abre o lo reemplaza si se filtró.
  */
 export function DeliveryPartnerPanelLink({partner,queryKey,onClose}:{partner:DeliveryPartner;queryKey:string[];onClose:()=>void}){
@@ -34,16 +34,16 @@ export function DeliveryPartnerPanelLink({partner,queryKey,onClose}:{partner:Del
     onError:e=>{setConfirm(false);notify({tone:"danger",title:"No se pudo generar el enlace",message:e.message});},
   });
   return <>
-    <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={onClose} className="crud-modal platform-partner-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="delivery-partner-panel-title">
-      <ModalHeader title="Panel de reparto" titleId="delivery-partner-panel-title" onClose={onClose} closeLabel="Cerrar"/>
+    <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={onClose} className="crud-modal platform-partner-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="delivery-partner-panel-title" aria-busy={rotate.isPending}>
+      <ModalHeader title="Panel de reparto" titleId="delivery-partner-panel-title" onClose={onClose} busy={rotate.isPending} closeLabel="Cerrar"/>
       <ModalBody><div className="partner-panel-link">
-        <p>En este panel <b>{partner.name}</b> recibe los pedidos, confirma la atención, la recogida y la entrega, y comparte su ubicación con el cliente.</p>
-        <FormField label="Enlace del panel" help="Abre el panel sin contraseña: compártelo solo con la central."><Input value={url} readOnly onFocus={event=>event.target.select()}/></FormField>
+        <div className="partner-panel-link-identity"><IconTile name="motorbike" tone="primary"/><div><b>{partner.name}</b><p>Recibe pedidos, acepta la atención y asigna motorizados.</p></div></div>
+        <p>El enlace permite entrar sin contraseña. Compártelo solo con esta central.</p>
         <div className="partner-panel-link-actions">
-          <Button kind="secondary" icon="link" disabled={copy.isPending||rotate.isPending} loading={copy.isPending} onClick={()=>copy.mutate()}>Copiar enlace</Button>
-          <Button kind="secondary" icon="arrowUpRight" disabled={rotate.isPending} onClick={()=>window.open(url,"_blank","noopener,noreferrer")}>Abrir panel</Button>
-          <Button kind="danger-outline" icon="refresh" disabled={rotate.isPending} onClick={()=>setConfirm(true)}>Generar enlace nuevo</Button>
+          <Button kind="primary" appearance="strong" icon="link" disabled={copy.isPending||rotate.isPending} loading={copy.isPending} onClick={()=>copy.mutate()}>{copy.isPending?"Copiando…":"Copiar enlace"}</Button>
+          <Button kind="secondary" appearance="strong" icon="arrowUpRight" disabled={rotate.isPending} onClick={()=>window.open(url,"_blank","noopener,noreferrer")}>Abrir panel</Button>
         </div>
+        <section className="partner-panel-link-renewal" aria-labelledby="partner-panel-renewal-title"><h3 id="partner-panel-renewal-title" className="modal-section-title">Renovar acceso</h3><p>Si el enlace se compartió con alguien más, genera uno nuevo. El anterior dejará de funcionar.</p><Button kind="danger-outline" appearance="strong" icon="refresh" disabled={rotate.isPending} onClick={()=>setConfirm(true)}>Generar enlace nuevo</Button></section>
       </div></ModalBody>
     </Dialog></div>
     <ConfirmDialog open={confirm} title="Generar enlace nuevo" subject={{label:"Central",name:partner.name}} description="El enlace actual dejará de abrir el panel de inmediato. La central necesitará el enlace nuevo para seguir recibiendo pedidos." tone="danger" confirmLabel="Generar enlace" pending={rotate.isPending} onCancel={()=>setConfirm(false)} onConfirm={()=>rotate.mutate()}/>

@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,InlineNotice,Skeleton,Status} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconTile,InlineNotice,PageHeader,Skeleton,Status} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {courierSteps,dialablePhone,outcomeFeedback,stageMeta} from "../domain/panel";
 import type {CourierAction} from "../domain/types";
@@ -23,14 +23,20 @@ const locationCopy:Record<LocationStatus,string>={
   error:"No pudimos obtener tu ubicación. Revisa el GPS.",
 };
 
+/** Barra de contexto: interruptor de ubicación del dispositivo. */
+function LocationToggle({enabled,onToggle,disabled,status}:{enabled:boolean;onToggle:()=>void;disabled:boolean;status:LocationStatus}){
+  return <button type="button" className="partner-panel-toggle" aria-pressed={enabled} disabled={disabled} onClick={onToggle}>
+    <IconTile name="mapPin" tone={enabled?"primary":"neutral"}/>
+    <span><b>Compartir ubicación</b><small>{enabled?locationCopy[status]:locationCopy.off}</small></span>
+    <i aria-hidden="true"/>
+  </button>;
+}
+
 function Frame({title,subtitle,busy,children}:{title:string;subtitle:string;busy?:boolean;children:React.ReactNode}){
-  return <main className="partner-panel-stage"><section className="partner-panel" aria-busy={busy||undefined} aria-label={title}>
-    <header className="partner-panel-header">
-      <span className="partner-panel-badge"><Icon name="motorbike" size={24}/></span>
-      <div><h1>{title}</h1><p>{subtitle}</p></div>
-    </header>
+  return <main className="partner-panel-stage"><div className="partner-panel-content" aria-busy={busy||undefined}>
+    <PageHeader title={title} description={subtitle}/>
     <div className="partner-panel-body">{children}</div>
-  </section></main>;
+  </div></main>;
 }
 
 /**
@@ -60,15 +66,19 @@ export function CourierPanel({token}:{token:string}){
     },
     onError:error=>{setConfirming(null);notify({tone:"danger",title:"No se pudo registrar",message:error.message})},
   });
+  const toggle=<LocationToggle enabled={sharing} disabled={!inProgress} status={location.status} onToggle={()=>setSharing(!sharing)}/>;
 
   if(finished)return <Frame title={view.data?.courierName||"Reparto"} subtitle="Delivery Fudia">
-    <EmptyState icon="circleCheck" title="Entrega registrada" text="Este enlace ya cumplió su reparto. Tu central te enviará el siguiente."/>
+    {toggle}
+    <section className="panel"><EmptyState icon="circleCheck" title="Entrega registrada" text="Este enlace ya cumplió su reparto. Tu central te enviará el siguiente."/></section>
   </Frame>;
-  if(view.isPending)return <Frame title="Reparto" subtitle="Cargando el pedido…" busy>
+  if(view.isPending)return <Frame title="Reparto" subtitle="Delivery Fudia" busy>
+    {toggle}
     <Skeleton height="var(--size-56)" radius="var(--radius-tile)"/><Skeleton height="var(--size-280)" radius="var(--radius-card)"/><span className="sr-only">Cargando pedido</span>
   </Frame>;
   if(!view.data||!order)return <Frame title="Reparto" subtitle="Delivery Fudia">
-    <ErrorState title="No pudimos abrir el reparto" text={view.error?.message} retrying={view.isFetching} onRetry={()=>void view.refetch()}/>
+    {toggle}
+    <section className="panel"><ErrorState title="No pudimos abrir el reparto" text={view.error?.message} retrying={view.isFetching} onRetry={()=>void view.refetch()}/></section>
   </Frame>;
 
   const data=view.data;
@@ -76,25 +86,20 @@ export function CourierPanel({token}:{token:string}){
   const steps=courierSteps(order);
   const phone=dialablePhone(order.customerPhone);
   return <Frame title={data.courierName} subtitle={`Motorizado · ${data.partnerName}`}>
-    <div className="partner-panel-controls">
-      <button type="button" className="partner-panel-toggle" aria-pressed={sharing} disabled={!inProgress} onClick={()=>setSharing(!sharing)}>
-        <Icon name="mapPin" size={18}/><span><b>Compartir ubicación</b><small>{sharing?locationCopy[location.status]:locationCopy.off}</small></span><i aria-hidden="true"/>
-      </button>
-    </div>
+    {toggle}
     {view.isError&&<p className="partner-panel-banner is-danger" role="alert"><Icon name="alert" size={18}/>Sin conexión con Fudia. El pedido puede estar desactualizado; reintentando…</p>}
-    <article className={`partner-panel-card is-${order.stage}`} aria-label={`Pedido ${order.orderCode}`}>
-      <header className="partner-panel-card-head">
-        <div><b>{order.orderCode}</b><span>{order.organizationName}</span></div>
-        <Status tone={meta.tone} icon={meta.icon}>{meta.label}</Status>
-      </header>
-      {order.issueReportedAt&&<InlineNotice tone="warning" title="Avisamos a tu central y al cliente"/>}
-      <OrderDetails order={order} courier={location.position}/>
-      {steps&&<footer className="partner-panel-actions is-single">
-        <p>{steps.primary.hint}</p>
-        <Button icon={steps.primary.action==="pickup"?"shoppingBag":"circleCheck"} disabled={act.isPending||!steps.primary.enabled}
-          onClick={()=>steps.primary.action==="deliver"?setConfirming("deliver"):act.mutate(steps.primary.action)}>{steps.primary.label}</Button>
-        {steps.secondary&&<Button kind="danger-outline" icon="alert" disabled={act.isPending} onClick={()=>setConfirming("not_delivered")}>{steps.secondary.label}</Button>}
-      </footer>}
+    <article className="panel" aria-label={`Pedido ${order.orderCode}`}>
+      <header><div><h2 className="partner-panel-code">{order.orderCode}</h2><small>{order.organizationName}</small></div><Status tone={meta.tone} icon={meta.icon}>{meta.label}</Status></header>
+      <div className="partner-panel-sheet-body">
+        {order.issueReportedAt&&<InlineNotice tone="warning" title="Avisamos a tu central y al cliente"/>}
+        <OrderDetails order={order} courier={location.position}/>
+        {steps&&<footer className="partner-panel-actions is-single">
+          <p>{steps.primary.hint}</p>
+          <Button icon={steps.primary.action==="pickup"?"shoppingBag":"circleCheck"} disabled={act.isPending||!steps.primary.enabled}
+            onClick={()=>steps.primary.action==="deliver"?setConfirming("deliver"):act.mutate(steps.primary.action)}>{steps.primary.label}</Button>
+          {steps.secondary&&<Button kind="danger-outline" icon="alert" disabled={act.isPending} onClick={()=>setConfirming("not_delivered")}>{steps.secondary.label}</Button>}
+        </footer>}
+      </div>
     </article>
     <ConfirmDialog open={confirming==="deliver"} tone="success" title="Confirmar la entrega" description="Confirma solo cuando el cliente ya recibió su pedido." subject={{label:"Pedido",name:order.orderCode}}
       confirmLabel="Confirmar entrega" pending={act.isPending} onCancel={()=>setConfirming(null)} onConfirm={()=>act.mutate("deliver")}/>

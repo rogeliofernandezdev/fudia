@@ -106,7 +106,7 @@ func scanPanelOrders(rows pgx.Rows) ([]domain.PanelOrder, error) {
 func (r *Repository) PanelOrders(ctx context.Context, partnerID string) ([]domain.PanelOrder, error) {
 	rows, err := r.db(ctx).Query(ctx, panelOrderSelect+`
 		WHERE f.partner_id=$1 AND f.round=d.round AND (
-		  (f.status='pending' AND d.status='searching' AND f.expires_at>now() AND p.active AND `+partnerCoverageSQL+`
+		  (f.status='pending' AND d.status='searching' AND f.expires_at>now() AND p.active AND `+partnerLocationEligibilitySQL+`
 		     AND o.paid_amount=0 AND o.completed_at IS NULL AND o.status IN ('preparando','listo'))
 		  OR (f.status='accepted' AND d.accepted_partner_id=f.partner_id AND (
 		       (d.status IN ('accepted','picked_up') AND o.status<>'cancelado'

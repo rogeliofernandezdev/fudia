@@ -143,7 +143,7 @@ test("panel de reparto y enlace del motorizado: pantallas públicas, sin sesión
  assert.match(view,/title="Registrar entrega fallida"/);
  assert.match(view,/100 % de lo que pagó por la comida/);
  assert.match(view,/50 % Fudia y 50 % tu central/);
- assert.match(view,/<EmptyState icon="motorbike" title="Sin pedidos por ahora"/);
+ assert.match(read("src/modules/delivery-panel/presentation/dispatch-workspace.tsx"),/<EmptyState icon="motorbike" title="Sin pedidos por ahora"/);
  assert.match(view,/<ErrorState title="No pudimos abrir el panel"/);
  assert.match(view,/<Skeleton /);
  assert.doesNotMatch(view,/whatsapp/i);

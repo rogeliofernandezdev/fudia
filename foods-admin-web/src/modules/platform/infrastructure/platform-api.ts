@@ -121,7 +121,7 @@ export async function recordSubscriptionPayment(input:{amount:string;currency:st
 
 export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[];providerOptions:WhatsAppProviderOption[]}>("whatsapp-channels",{cache:"no-store"});}
 export async function listDeliveryPartners(){return platformFetch<{items:DeliveryPartner[]}>("delivery-partners");}
-export async function saveDeliveryPartner(draft:DeliveryPartnerDraft,id?:string){return platformFetch<DeliveryPartner>(id?`delivery-partners/${encodeURIComponent(id)}`:"delivery-partners",{method:id?"PATCH":"POST",body:JSON.stringify({name:draft.name,whatsappPhone:draft.whatsappPhone,active:draft.active,coverageCodes:draft.coverageCodes})});}
+export async function saveDeliveryPartner(draft:DeliveryPartnerDraft,id?:string){return platformFetch<DeliveryPartner>(id?`delivery-partners/${encodeURIComponent(id)}`:"delivery-partners",{method:id?"PATCH":"POST",body:JSON.stringify({name:draft.name,whatsappPhone:draft.whatsappPhone,active:draft.active})});}
 /** Reemplaza el enlace privado del panel de la central; el anterior deja de abrir. */
 export async function rotateDeliveryPartnerPanel(id:string){return platformFetch<{partnerId:string;panelToken:string}>(`delivery-partners/${encodeURIComponent(id)}/panel-link`,{method:"POST"});}
 export async function reorderDeliveryPartners(partnerIds:string[]){return platformFetch<{items:DeliveryPartner[]}>("delivery-partners/order",{method:"PUT",body:JSON.stringify({partnerIds})});}

@@ -100,6 +100,19 @@ dentro de un módulo.
 
 `Button kind`:
 
+`appearance="strong"` conserva la intención y aumenta contraste en el panel de
+reparto: primario azul, secundario marino, neutro oscuro y destructivo con
+contorno rojo legible. No aplica colores locales ni cambia la apariencia por
+defecto de otras pantallas. Deshabilitados conservan `disabled`, su relleno y
+un contorno discontinuo, con motivo visible en el flujo. La variante se define
+en `globals.css` y se documenta en el sistema visual.
+
+`Pagination` permite omitir `onSize` cuando el tamaño de página es fijo: no
+muestra el selector «Filas». Conserva rango, total y navegación accesible.
+`appearance="strong"` presenta Anterior/Siguiente en marino, también con
+etiqueta y borde discontinuo cuando están deshabilitados; el valor predeterminado
+de otras pantallas se conserva.
+
 | Variante | Uso | Apariencia |
 | --- | --- | --- |
 | `primary` | La única acción dominante de la superficie | Sólido `primary-600`, realce teñido |

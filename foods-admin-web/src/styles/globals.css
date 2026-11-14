@@ -64,6 +64,11 @@ p{text-wrap:pretty}
 .button.ghost{color:var(--ink-700);border-color:var(--line);background:var(--surface)}
 .button.danger{color:var(--surface);background:var(--danger-500)}
 .button.danger-outline{color:var(--danger);border-color:var(--danger-200);background:var(--danger-50)}
+.button.secondary.strong{color:var(--surface);border-color:var(--navigation-900);background:var(--navigation-900)}
+.button.ghost.strong{color:var(--surface);border-color:var(--ink-700);background:var(--ink-700)}
+.button.danger-outline.strong{color:var(--danger-600);border-color:var(--danger-600);background:var(--surface)}
+.button.strong:disabled{opacity:1;border-style:dashed}
+.button.primary.strong:disabled{background:var(--primary-700);border-color:var(--primary-300)}
 .button.success{color:var(--surface);background:var(--primary-600);box-shadow:var(--elevation-primary)}
 .button:focus-visible,.toolbar button:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}
 
@@ -224,9 +229,12 @@ p{text-wrap:pretty}
   .page-header-back:hover{color:var(--primary-700)}
   .button.primary:hover:not(:disabled),.button.success:hover:not(:disabled){background:var(--primary-700)}
   .button.secondary:hover:not(:disabled){border-color:var(--primary-300);background:var(--primary-50)}
+  .button.secondary.strong:hover:not(:disabled){color:var(--surface);border-color:var(--navigation-950);background:var(--navigation-950)}
   .button.ghost:hover:not(:disabled){color:var(--ink-950);border-color:var(--line-strong);background:var(--cloud-50)}
+  .button.ghost.strong:hover:not(:disabled){color:var(--surface);border-color:var(--ink-950);background:var(--ink-950)}
   .button.danger:hover:not(:disabled){background:var(--danger-600)}
   .button.danger-outline:hover:not(:disabled){border-color:var(--danger-600);background:var(--danger-100)}
+  .button.danger-outline.strong:hover:not(:disabled){color:var(--danger-700);border-color:var(--danger-700);background:var(--surface)}
   .ds-input:hover:not(:disabled,:focus,[aria-invalid=true]),.ds-select:hover:not(:disabled,:focus,[aria-invalid=true]),.ds-textarea:hover:not(:disabled,:focus,[aria-invalid=true]),.form-grid :is(input,select,textarea):hover:not(:disabled,:focus,[aria-invalid=true]),.ds-input-shell:hover:not(:focus-within),.react-select-container .rs__control:hover{border-color:var(--line-strong)}
   .hover-scroll:hover{scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
   .hover-scroll:hover::-webkit-scrollbar{height:var(--size-6)}

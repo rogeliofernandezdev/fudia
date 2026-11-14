@@ -82,21 +82,6 @@ func (r *Repository) ListPartners(ctx context.Context) ([]domain.Partner, error)
 	return out, rows.Err()
 }
 
-func (r *Repository) SetCoverage(ctx context.Context, id string, codes []string) error {
-	var count int
-	if err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM geographic_areas WHERE code=ANY($1::text[]) AND length(code)=6`, codes).Scan(&count); err != nil {
-		return err
-	}
-	if count != len(codes) {
-		return application.ErrInvalidCoverage
-	}
-	if _, err := r.db(ctx).Exec(ctx, `DELETE FROM delivery_partner_coverage WHERE partner_id=$1`, id); err != nil {
-		return err
-	}
-	_, err := r.db(ctx).Exec(ctx, `INSERT INTO delivery_partner_coverage(partner_id,area_code) SELECT $1,unnest($2::text[])`, id, codes)
-	return err
-}
-
 func (r *Repository) CreatePartner(ctx context.Context, in domain.PartnerInput) (domain.Partner, error) {
 	active := in.Active == nil || *in.Active
 	p, err := scanPartner(r.db(ctx).QueryRow(ctx, `

@@ -1,7 +1,7 @@
 "use client";
 import {useQuery} from "@tanstack/react-query";
 import {DataTable} from "@/design-system/data-table";
-import {EmptyState,ErrorState,Icon,InlineNotice,TableSkeleton} from "@/design-system";
+import {EmptyState,ErrorState,Icon,TableSkeleton} from "@/design-system";
 import {useSession} from "@/providers";
 import {DeliveryPartnersAdmin} from "@/modules/platform/presentation/delivery-partners-admin";
 import {formatPartnerPhone} from "../domain/board";
@@ -11,7 +11,7 @@ const columns=["Central","Teléfono"];
 
 /**
  * Delivery › Proveedores. Plataforma (solo Fudia) administra aquí las centrales;
- * el restaurante ve en solo lectura las que cubren el distrito de su local.
+ * el restaurante ve en solo lectura todas las centrales activas.
  */
 export function DeliveryProviders(){
   const{user}=useSession();
@@ -28,13 +28,12 @@ function LocationProviders(){
       providers.isError?<ErrorState title="No pudimos cargar los proveedores" text={providers.error.message} retrying={providers.isFetching} onRetry={()=>void providers.refetch()}/>:
       data&&<>
         <p className="delivery-providers-intro">{data.enabled
-          ?`Cuando cocina inicia la preparación, el pedido se ofrece a la vez a estas centrales${data.districtName?` de ${data.districtName}`:""}; la primera que acepta lo recoge. Fudia las administra.`
+          ?"Cuando cocina inicia la preparación, todas las centrales activas reciben el pedido. La primera que acepta se queda con él y asigna un motorizado. Fudia las administra."
           :"Delivery Fudia no está activo para tu empresa: repartes con tu delivery propio. Fudia lo activa desde su plataforma."}</p>
-        {data.enabled&&!data.districtName&&<InlineNotice tone="warning" title="Falta el distrito del local">Sin distrito ninguna central recibe los pedidos. Complétalo en Locales.</InlineNotice>}
-        {!items.length?<EmptyState icon="motorbike" title="Sin centrales para tu local" text={data.enabled?"Ninguna central activa cubre el distrito del local. Los pedidos quedan para tu delivery propio.":"Las centrales aparecen aquí cuando Fudia active Delivery Fudia para tu empresa."}/>:
+        {!items.length?<EmptyState icon="motorbike" title="Sin centrales para tu local" text={data.enabled?"No hay centrales activas en este momento. Puedes gestionar los pedidos con tu delivery propio.":"Las centrales aparecen aquí cuando Fudia active Delivery Fudia para tu empresa."}/>:
           <DataTable label="Proveedores de delivery" containerClassName="hover-scroll"><thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead><tbody>
             {items.map((item,index)=><tr className={index%2?"alternate":""} key={`${item.name}-${item.whatsappPhone}`}>
-              <td><span className={`row-icon r${index%3}`}><Icon name="motorbike" size={18}/></span><b>{item.name}</b></td>
+              <td><span className="row-icon r0"><Icon name="motorbike" size={18}/></span><b>{item.name}</b></td>
               <td>{item.whatsappPhone?<a href={`tel:+${item.whatsappPhone}`}>{formatPartnerPhone(item.whatsappPhone)}</a>:"—"}</td>
             </tr>)}
           </tbody></DataTable>}

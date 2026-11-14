@@ -20,7 +20,6 @@ var (
 	ErrNotFound             = errors.New("delivery record not found")
 	ErrDuplicatePhone       = errors.New("delivery partner phone already registered")
 	ErrOrderMismatch        = errors.New("delivery partner order does not match the registered partners")
-	ErrInvalidCoverage      = errors.New("invalid delivery coverage")
 	uuidPattern             = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 	errPartnerNotFound      = failure(apperror.NotFound, "delivery_partner_not_found", "La central no existe.")
 	errLocationNotFound     = failure(apperror.NotFound, "location_not_found", "El local no existe.")
@@ -42,7 +41,6 @@ type PartnerRepository interface {
 	// CreatePartner agrega la central al final del orden global.
 	CreatePartner(ctx context.Context, in domain.PartnerInput) (domain.Partner, error)
 	UpdatePartner(ctx context.Context, id string, in domain.PartnerInput) (domain.Partner, error)
-	SetCoverage(ctx context.Context, id string, codes []string) error
 	// ReorderPartners devuelve ErrOrderMismatch si ids no son todas las centrales.
 	ReorderPartners(ctx context.Context, ids []string) error
 	// RotatePanelToken reemplaza el enlace del panel web de la central.
@@ -105,15 +103,12 @@ func (a *Partners) save(ctx context.Context, id string, in domain.PartnerInput) 
 		out, err = a.repo.UpdatePartner(tx.Context(), id, in)
 	}
 	if err == nil {
-		err = a.repo.SetCoverage(tx.Context(), out.ID, in.CoverageCodes)
-	}
-	if err == nil {
 		err = tx.Commit(ctx)
 	}
 	if err != nil {
 		return domain.Partner{}, partnerError(err)
 	}
-	// One query returns the canonical names of all coverage areas.
+	// Include the legacy response fields without changing historical districts.
 	items, err := a.repo.ListPartners(ctx)
 	if err != nil {
 		return domain.Partner{}, partnerError(err)
@@ -134,14 +129,12 @@ func partnerError(err error) error {
 		return errPartnerNotFound
 	case errors.Is(err, ErrDuplicatePhone):
 		return failure(apperror.Conflict, "delivery_partner_phone_taken", "Ya existe una central con ese WhatsApp.")
-	case errors.Is(err, ErrInvalidCoverage):
-		return failure(apperror.Invalid, "invalid_delivery_coverage", "Selecciona zonas de cobertura del catálogo geográfico.")
 	}
 	return unavailable("delivery_partners_unavailable", "No pudimos guardar la central.", err)
 }
 
-// Reorder fija el orden global de las centrales (la primera recibe primero
-// cada pedido). Debe incluir todas las centrales registradas, sin repetir.
+// Reorder fija el orden del listado; las ofertas se envían simultáneamente.
+// Debe incluir todas las centrales registradas, sin repetir.
 func (a *Partners) Reorder(ctx context.Context, in domain.PartnerOrderInput) ([]domain.Partner, error) {
 	ids, problem := domain.NormalizeOrder(in)
 	if problem != "" {

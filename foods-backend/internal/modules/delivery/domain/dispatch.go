@@ -8,8 +8,8 @@ import (
 
 // Delivery Fudia: la plataforma trabaja con centrales de reparto y activa
 // Delivery Fudia por empresa; todos sus locales lo usan. Cuando cocina inicia la
-// preparación, el pedido se ofrece a la vez a todas las centrales activas con
-// cobertura; la primera que acepta se lo queda y las demás ofertas se retiran.
+// preparación, el pedido se ofrece a la vez a todas las centrales activas;
+// la primera que acepta se lo queda y las demás ofertas se retiran.
 
 // Modos de delivery de una empresa.
 const (
@@ -75,13 +75,14 @@ const (
 
 // Partner es una central de delivery registrada por la plataforma.
 type Partner struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	WhatsAppPhone  string   `json:"whatsappPhone"`
-	Active         bool     `json:"active"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	WhatsAppPhone string `json:"whatsappPhone"`
+	Active        bool   `json:"active"`
+	// Deprecated: historical districts do not limit delivery offers.
 	CoverageCodes  []string `json:"coverageCodes"`
 	CoverageLabels []string `json:"coverageLabels"`
-	// Priority es el orden global: la 1 recibe primero cada pedido.
+	// Priority ordena el listado; las ofertas se reciben simultáneamente.
 	Priority int `json:"priority"`
 	// PanelToken abre el panel web de la central; solo lo ve Plataforma.
 	PanelToken string `json:"panelToken"`
@@ -91,9 +92,10 @@ type Partner struct {
 
 // PartnerInput crea o edita una central.
 type PartnerInput struct {
-	Name          string   `json:"name"`
-	WhatsAppPhone string   `json:"whatsappPhone"`
-	Active        *bool    `json:"active"`
+	Name          string `json:"name"`
+	WhatsAppPhone string `json:"whatsappPhone"`
+	Active        *bool  `json:"active"`
+	// Deprecated: ignored for compatibility with older clients.
 	CoverageCodes []string `json:"coverageCodes"`
 }
 
@@ -231,25 +233,9 @@ func NormalizePartner(in PartnerInput) (PartnerInput, string) {
 	if !ValidPhone(in.WhatsAppPhone) {
 		return in, "Escribe el WhatsApp con código de país, por ejemplo 51 987654321."
 	}
-	if len(in.CoverageCodes) == 0 && in.Active != nil && !*in.Active {
-		return in, ""
-	}
-	if len(in.CoverageCodes) == 0 || len(in.CoverageCodes) > 2000 {
-		return in, "Marca al menos un distrito de atención."
-	}
-	seen := map[string]bool{}
-	clean := make([]string, 0, len(in.CoverageCodes))
-	for _, code := range in.CoverageCodes {
-		code = strings.TrimSpace(code)
-		if len(code) != 6 || NormalizePhone(code) != code {
-			return in, "Selecciona un distrito de atención válido."
-		}
-		if !seen[code] {
-			clean = append(clean, code)
-			seen[code] = true
-		}
-	}
-	in.CoverageCodes = clean
+	// Deprecated input: districts no longer restrict which partners receive offers.
+	// Ignore old clients' values and preserve historical rows in PostgreSQL.
+	in.CoverageCodes = nil
 	return in, ""
 }
 

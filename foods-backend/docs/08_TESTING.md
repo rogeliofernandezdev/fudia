@@ -318,7 +318,7 @@ idempotente y 404 para un aviso inexistente. Unitarias en
 ## Cobertura geográfica y consistencia de Delivery Fudia
 
 La migración 000118 y las regresiones de reasignación, pagos, rollback del costo de
-envío, desactivación y cobertura se describen en
+envío, desactivación, oferta sin filtro de distritos y aceptación concurrente se describen en
 [15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md). Ejecutar la suite completa
-con PostgreSQL temporal; los permisos de cobertura se prueban con cookie real
+con PostgreSQL temporal; los permisos de administración de centrales se prueban con cookie real
 de empresa, no solo llamando directamente a handlers.

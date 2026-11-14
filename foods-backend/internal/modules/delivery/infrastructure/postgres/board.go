@@ -74,7 +74,7 @@ func (r *Repository) LocationPartners(ctx context.Context, s scope) (domain.Loca
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.name,p.whatsapp_phone
 		FROM delivery_partners p CROSS JOIN locations l
-		WHERE p.active AND l.organization_id=$1 AND l.id=$2 AND `+partnerCoverageSQL+`
+		WHERE p.active AND l.organization_id=$1 AND l.id=$2 AND `+partnerLocationEligibilitySQL+`
 		ORDER BY p.priority,p.name`, s.OrganizationID, s.LocationID)
 	if err != nil {
 		return out, err

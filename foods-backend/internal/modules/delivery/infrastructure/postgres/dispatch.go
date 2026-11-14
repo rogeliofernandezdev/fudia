@@ -73,15 +73,15 @@ func (r *Repository) StartRound(ctx context.Context, s scope, dispatchID string,
 }
 
 // The same predicate governs initial selection, pending messages and buttons.
-const partnerCoverageSQL = `EXISTS (SELECT 1 FROM delivery_partner_coverage c
- WHERE c.partner_id=p.id AND l.district_code=c.area_code)
- AND EXISTS (SELECT 1 FROM organization_fiscal_profiles fp WHERE fp.id=l.fiscal_profile_id AND fp.organization_id=l.organization_id AND fp.country_code='PE')`
+// Districts are historical data; every active partner can receive the offer.
+// Keep the existing supported-country and tenant/location checks.
+const partnerLocationEligibilitySQL = `EXISTS (SELECT 1 FROM organization_fiscal_profiles fp WHERE fp.id=l.fiscal_profile_id AND fp.organization_id=l.organization_id AND fp.country_code='PE')`
 
 func (r *Repository) HasActivePartners(ctx context.Context, s scope) (bool, error) {
 	var ok bool
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM delivery_partners p CROSS JOIN locations l
-        WHERE p.active AND l.organization_id=$1 AND l.id=$2 AND `+partnerCoverageSQL+`)`, s.OrganizationID, s.LocationID).Scan(&ok)
+        WHERE p.active AND l.organization_id=$1 AND l.id=$2 AND `+partnerLocationEligibilitySQL+`)`, s.OrganizationID, s.LocationID).Scan(&ok)
 	return ok, err
 }
 
@@ -97,7 +97,7 @@ func (r *Repository) OfferAll(ctx context.Context, s scope, dispatchID string, r
 		         (SELECT COALESCE(max(f.priority),0) FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.round=$2)
 		           + row_number() OVER (ORDER BY p.priority,p.id) AS priority
 		  FROM delivery_partners p CROSS JOIN locations l
-		  WHERE p.active AND l.organization_id=$3 AND l.id=$4 AND `+partnerCoverageSQL+`
+		  WHERE p.active AND l.organization_id=$3 AND l.id=$4 AND `+partnerLocationEligibilitySQL+`
 		    AND NOT EXISTS (SELECT 1 FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.round=$2 AND f.partner_id=p.id)
 		    AND (NOT $5 OR NOT EXISTS (SELECT 1 FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.partner_id=p.id AND f.released_at IS NOT NULL))
 		), offers AS (
@@ -118,11 +118,11 @@ func (r *Repository) OfferAll(ctx context.Context, s scope, dispatchID string, r
 // enviadas, o las que no se pudieron enviar en 5 minutos.
 func (r *Repository) ExpireOverdueOffers(ctx context.Context, s scope, dispatchID string) error {
 	_, err := r.db(ctx).Exec(ctx, `
-		UPDATE delivery_dispatch_offers f SET status=CASE WHEN p.active AND `+partnerCoverageSQL+` THEN 'expired' ELSE 'withdrawn' END
+		UPDATE delivery_dispatch_offers f SET status=CASE WHEN p.active AND `+partnerLocationEligibilitySQL+` THEN 'expired' ELSE 'withdrawn' END
         FROM delivery_partners p,locations l
 		WHERE f.dispatch_id=$1 AND f.organization_id=$2 AND f.status='pending'
           AND p.id=f.partner_id AND l.id=f.location_id AND l.organization_id=f.organization_id
-		  AND (NOT p.active OR NOT (`+partnerCoverageSQL+`) OR f.expires_at<now() OR (f.expires_at IS NULL AND f.created_at<now()-make_interval(secs => $3)))`,
+		  AND (NOT p.active OR NOT (`+partnerLocationEligibilitySQL+`) OR f.expires_at<now() OR (f.expires_at IS NULL AND f.created_at<now()-make_interval(secs => $3)))`,
 		dispatchID, s.OrganizationID, domain.UndeliveredOfferTimeout.Seconds())
 	return err
 }
@@ -304,7 +304,7 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		      SELECT 1 FROM delivery_dispatch_offers f JOIN delivery_partners p ON p.id=f.partner_id
               JOIN locations l ON l.id=f.location_id AND l.organization_id=f.organization_id
 		      WHERE f.dispatch_id=d.id AND f.status='pending'
-		        AND (NOT p.active OR NOT (`+partnerCoverageSQL+`) OR f.expires_at<now() OR (f.expires_at IS NULL AND f.created_at<now()-make_interval(secs => $2)))))
+		        AND (NOT p.active OR NOT (`+partnerLocationEligibilitySQL+`) OR f.expires_at<now() OR (f.expires_at IS NULL AND f.created_at<now()-make_interval(secs => $2)))))
 		  UNION ALL
 		  SELECT d.organization_id,d.location_id,d.order_id
 		  FROM delivery_dispatches d
@@ -357,7 +357,7 @@ func (r *Repository) ClaimMessages(ctx context.Context, limit int) ([]domain.Par
 		  WHERE m.status='pending' AND m.attempts<5 AND m.created_at>now()-interval '2 hours'
 		    AND (m.claimed_until IS NULL OR m.claimed_until<now())
 		    AND CASE m.kind
-		      WHEN 'offer' THEN f.status='pending' AND f.round=d.round AND d.status='searching' AND p.active AND `+partnerCoverageSQL+` AND o.paid_amount=0 AND o.completed_at IS NULL AND o.status IN ('confirmado','preparando','listo')
+		      WHEN 'offer' THEN f.status='pending' AND f.round=d.round AND d.status='searching' AND p.active AND `+partnerLocationEligibilitySQL+` AND o.paid_amount=0 AND o.completed_at IS NULL AND o.status IN ('confirmado','preparando','listo')
 		      WHEN 'ready' THEN f.status='accepted' AND f.round=d.round AND d.accepted_partner_id=f.partner_id AND d.status='accepted' AND o.status='listo'
 		      ELSE true END
 		  ORDER BY m.created_at,m.id
@@ -461,7 +461,7 @@ func (r *Repository) LockOfferByToken(ctx context.Context, token string) (applic
 		       (f.expires_at IS NOT NULL AND f.expires_at<now()),
 		       o.code,COALESCE(NULLIF(btrim(org.trade_name),''),org.legal_name),l.name,
                f.round=d.round,COALESCE(d.accepted_partner_id=f.partner_id,false),
-               p.active AND `+partnerCoverageSQL+`,o.paid_amount>0,o.completed_at IS NOT NULL,
+               p.active AND `+partnerLocationEligibilitySQL+`,o.paid_amount>0,o.completed_at IS NOT NULL,
                o.paid_amount>0 AND o.paid_amount>=o.total,COALESCE(d.courier_token,''),
                d.delivery_issue_reported_at IS NOT NULL,
                COALESCE(d.delivery_issue_reported_at<=now()-make_interval(secs => $2),false)

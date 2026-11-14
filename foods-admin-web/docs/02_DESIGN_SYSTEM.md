@@ -2811,7 +2811,7 @@ se gestiona globalmente (decisión del 2026-11-06):
   | Pestaña (`tab`) | Contenido |
   | --- | --- |
   | Pedidos (`orders`) | Tablero en vivo (cada 10 s) con «En curso / Todos de hoy». Tabla «PEDIDO · CLIENTE · ESTADO · REPARTO · RESPONSABLE · RECOGIDA · TOTAL · ACCIONES»: estado del pedido `solid` (operativo), despacho `Status` suave de la matriz, central con teléfono y motorizado, alerta de recogida (`orange` 3 y 5 min, `red` 8 min) o incidencia («No pudo entregar» `orange`, «Entrega fallida» `red`). Acciones de fila con `IconButton`: «Reintentar centrales» (`refresh`) y «Usar delivery propio» (`store`, con `ConfirmDialog` «Usar propio») |
-  | Proveedores (`providers`) | Restaurante: tabla de solo lectura «CENTRAL · TELÉFONO» con las centrales que cubren el distrito del local y una línea que explica la oferta simultánea; aviso si falta el distrito. Plataforma: la administración completa de centrales (abajo) |
+  | Proveedores (`providers`) | Restaurante: tabla de solo lectura «CENTRAL · TELÉFONO» con todas las centrales activas y una línea que explica la oferta simultánea y la aceptación exclusiva. Plataforma: la administración completa de centrales (abajo) |
   | Tarifas de envío (`fees`) | `DeliveryFeesPanel` (ver «Tarifas de envío») |
   | Entregas fallidas (`failed`) | Tabla «PEDIDO · CLIENTE · CENTRAL · COMIDA · REEMBOLSO · CENTRAL ASUME · FUDIA ASUME · APORTE FUDIA», con `Tag` neutro «Con/Sin aporte Fudia» y las notas de validación |
   | Apps de delivery (`apps`) · Repartidores propios (`couriers`) | «Próximamente», solo si el módulo `delivery_apps` o `repartidores` está activo |
@@ -2822,17 +2822,20 @@ se gestiona globalmente (decisión del 2026-11-06):
 - **Delivery › Proveedores (Plataforma)** (`DeliveryPartnersAdmin`, ya no está
   en el menú de plataforma). Usa el mismo patrón que Países y WhatsApp, con una
   barra superior que explica la oferta simultánea y «Nueva central»:
-  - Tabla «ORDEN | CENTRAL | TELÉFONO | COBERTURA | ESTADO | ACCIONES».
+  - Tabla «ORDEN | CENTRAL | TELÉFONO | ESTADO | ACCIONES».
   - Acción de fila «Panel de reparto» (`IconButton` `link`): modal de solo
-    lectura (sin pie) con el enlace privado, «Copiar enlace», «Abrir panel» y
-    «Generar enlace nuevo» (`danger-outline` con `ConfirmDialog`).
+    lectura (sin pie), con identidad de la central y aviso de acceso sin contraseña.
+    No muestra la URL. «Copiar enlace» azul y «Abrir panel» marino usan
+    `appearance="strong"`; «Generar enlace nuevo» queda en una sección separada
+    «Renovar acceso» (`danger-outline` fuerte con `ConfirmDialog`).
   - La columna Orden muestra la posición en cifras tabulares, con «Subir en el
     orden» y «Bajar en el orden» (`IconButton` chevron rotado). Cada cambio
     guarda al instante el orden completo. Una central nueva queda al final.
     En móvil, el orden va en el pie de la tarjeta, junto a las acciones.
   - Estado binario `Status active` («Activa/Inactiva»).
   - Acciones de fila editar y activar/desactivar, con `ConfirmDialog`.
-  - Modal compacto con Nombre y WhatsApp (ayuda: «Con código de país…»).
+  - Modal compacto con Nombre y Teléfono (ayuda: «Con código de país…»),
+    sin distritos. El orden solo organiza el listado: todas las activas reciben ofertas.
   - El número se muestra agrupado (+51 987 654 321).
   - Vacío según el patrón de Reservas: «Aún no hay centrales» con «Nueva central».
 - **Plataforma › Empresa › Delivery Fudia** (`DeliveryCompanyPanel`, debajo de
@@ -3394,37 +3397,92 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 ### Panel de reparto del proveedor (2026-11-14)
 
 `/delivery-panel/{token}` (`src/modules/delivery-panel`): pantalla pública, sin sesión
-ni menú, para el proveedor de Delivery Fudia. Mobile-first, validada a 390 y
-427 px; todos los controles miden al menos 44 px y las acciones principales 48 px.
+ni menú, para el proveedor de Delivery Fudia. Sigue las plantillas de la
+aplicación: cabecera de app con `PageHeader`, avisos integrados y paneles por sección.
+Mobile-first, validada a 390 y 427 px; todos los controles miden al menos 44 px y
+las acciones principales 48 px.
 
-- Cabecera fija `navigation-900` con el nombre del proveedor y «Panel de reparto
-  · Delivery Fudia»; color de la barra del navegador igual.
-- Interruptor de dispositivo «Avisos con sonido» (fila blanca de 56 px, pista
-  `primary-600` encendida): dos tonos, vibración, título de pestaña «(n) Pedido
-  nuevo» o «(n) Atención» y notificación del sistema si se permitió. Suena con
-  cada pedido nuevo, cada alerta crítica de recogida sin decidir y cada «No pude
-  entregar» del motorizado. Se recuerda en el dispositivo. La central ya no
-  comparte ubicación: lo hace el motorizado desde su enlace.
-- Secciones «Pedidos nuevos», «En curso», «Entregados hoy» (plegada) y
-  «Entregas fallidas», con contador `navigation-900`. «Entregados hoy» se pliega
-  desde su propia fila de título (área táctil de 44 px): el contador queda junto
-  al nombre y una flecha al extremo derecho abre o cierra los entregados, que
-  rotan la flecha al abrirse. Sin pedidos: `EmptyState` compacto «Sin pedidos
-  por ahora», sin la altura del catálogo, para convivir con «Entregados hoy».
-  Carga con `Skeleton`; error con `ErrorState` y
-  reintento; sin conexión, aviso sobre los últimos datos.
-- Tarjeta del pedido (`OrderDetails`, compartida con el motorizado): código y
-  empresa; etapa con `Status` suave (Nuevo `orange`, Por recoger `blue`, En
-  camino `navy` como el pedido, Entregado `green`); en la oferta, cuenta
-  regresiva en franja `warning-50`; «Recoge en», «Entrega en» y «Cliente» con
-  «Cómo llegar» y «Llamar al …»; productos con notas; «Pagas al local» y
-  «Cobras al cliente»; «Ver mapa» con `RouteMap`.
+- Cabecera de app persistente `navigation-900`, con texto blanco y descripción
+  `navigation-text`. `IconTile` de motorizado azul `primary` vivo identifica
+  la operación; `PageHeader` conserva «Panel de reparto» y «Delivery Fudia ·
+  {central}». El estado de la conexión mantiene etiqueta y punto
+  (nunca solo color): «Conectado» (`brand-100`/`brand-700`), «Reconectando…»
+  (`warning-100`/`warning-800`) y «Pausado» (neutro `cloud-100`). El color de la
+  barra del navegador sigue siendo el marino.
+- «Avisos con sonido» se integra en la cabecera con 44 px y pista `primary-600`
+  encendida, separado del estado de conexión. En móvil pasa a una segunda fila
+  junto a ese estado. El enlace independiente del motorizado conserva su barra
+  de contexto de 56 px. Avisos: dos tonos, vibración, título
+  de pestaña «(n) Pedido nuevo» o «(n) Atención» y notificación del sistema si se
+  permitió. Suena con cada pedido nuevo, cada alerta crítica de recogida sin
+  decidir y cada «No pude entregar» del motorizado. Se recuerda en el dispositivo.
+  La central ya no comparte ubicación: lo hace el motorizado desde su enlace.
+- Central de despacho (refinada el 2026-11-14): ancho máximo de 1450 px y
+  `Tabs` compartido: «Despacho», «Por asignar», «En camino» y «Entregados»,
+  con contadores derivados de los pedidos remotos. Búsqueda por pedido,
+  cliente, local, dirección o motorizado, ignorando tildes, y filtro «Con alertas».
+  En escritorio (desde 1000 px), listado a la izquierda y gestión del pedido
+  seleccionado a la derecha. En móvil se abre una sola vista de detalle con
+  «Volver a pedidos», traslado de foco y controles de al menos 44 px.
+  La selección del pedido usa `primary-100` con contorno `primary-300`, sin
+  modificar su `Status`. Los avatares de responsables usan azul operativo;
+  la sección de asignación comienza con `IconTile` `userCheck` azul y el campo
+  de enlace lleva el acento violeta digital en su icono. Superficies blancas
+  sobre `cloud-50`; no se añaden colores ajenos ni botones verdes.
+- Botones del panel con `Button appearance="strong"` (refuerzo visual
+  2026-11-14): acción principal azul intenso, secundarias marino, retorno neutro
+  oscuro y disparadores destructivos con contorno rojo legible, sin el relleno
+  rosado. La confirmación destructiva conserva el rojo sólido compartido.
+  Deshabilitar mantiene el bloqueo y `disabled`, con borde discontinuo y ayuda
+  explícita, sin lavar el relleno por opacidad. La variante vive en `Button` y
+  `globals.css`; el resto de pantallas mantiene su apariencia predeterminada.
+  `Tabs` reutiliza tonos centrales: Despacho azul, Por asignar naranja, En camino
+  índigo y Entregados verde en iconos/contadores. No cambia el `Status` del pedido.
+- Cada vista muestra inicialmente 10 pedidos y agrega 10 más automáticamente
+  al llegar al final, conservando los anteriores y la selección. En escritorio
+  crece dentro del listado desplazable; en móvil continúa el scroll de la página.
+  No lleva Anterior/Siguiente. El cierre indica «Mostrando X de Y pedidos» y
+  «Llegaste al final» al completar la colección. «Cargar más pedidos» permite
+  continuar con teclado o sin `IntersectionObserver`; su uso manual lleva el
+  foco al primer pedido agregado. La carga automática no cambia foco ni scroll.
+  Cambiar búsqueda, pestaña, alertas o motorizado reinicia en 10; el sondeo
+  mantiene la cantidad revelada y el detalle elegido. Los contadores y la carga
+  de los motorizados siempre usan toda la respuesta. Es revelado en cliente:
+  el API actual carga todos los activos y entregados de las últimas 12 horas;
+  un historial amplio o volumen masivo requiere cursor y agregados en servidor.
+- El listado presenta filas compactas con pedido, etapa (`Status` suave sin
+  cambiar la matriz), cliente, total, recogida, destino y motorizado. Prioriza
+  incidencias pendientes, ofertas y pedidos aceptados sin asignación. Las ofertas
+  conservan su cuenta regresiva; una vencida no permite aceptar. El historial
+  muestra primero la última entrega. La selección sigue estable durante el sondeo.
+  «Motorizados en curso» muestra nombres y cantidad de repartos por recoger/en
+  camino; pulsar un nombre filtra el despacho. No representa disponibilidad de
+  flota ni crea un catálogo: reúne únicamente responsables de pedidos activos.
+- Paneles del sistema (`.panel`) con cabecera `h2`; «Entregas fallidas» conserva
+  su sección independiente. Sin pedidos: `EmptyState` «Sin pedidos por ahora»;
+  búsqueda o filtro sin resultados: «Sin coincidencias» y «Ver todos los pedidos».
+  La columna de gestión vacía explica aceptar, asignar y compartir el enlace.
+  Carga con `Skeleton`; error con `ErrorState` y reintento; sin conexión,
+  aviso sobre los últimos datos y acciones de escritura bloqueadas.
+- Pedido (fila del panel, `OrderDetails` compartida con el motorizado): código
+  `PED-…` en 18 px/700 con cifras tabulares y la central como metadato; etapa con
+  `Status` suave (Nuevo `orange`, Por recoger `blue`, En camino `navy` como el
+  pedido, Entregado `green`); la oferta entra con la gramática de entrada del
+  sistema (12 px abajo y `scale(.98)`) y muestra la cuenta regresiva en franja
+  `warning-100` con la cifra en 22 px/800. La ruta es una línea de tiempo:
+  «Recoge en» y «Entrega en» con `IconTile` y conector de 2 px `line-strong`,
+  «Cómo llegar» por parada y el cliente en su franja `cloud-25` con «Llamar al …».
+  Productos con notas sobre `cloud-25`; «Pagas al local» y «Cobras al cliente» en
+  panel `cloud-25`, con la cifra del cliente en 22 px/800; «Ver mapa» con
+  `RouteMap`.
 - Oferta: «Rechazar» (secundario, con `ConfirmDialog`) y «Aceptar» (primario).
 - En curso, sin botones de recoger ni entregar (los registra el motorizado):
-  avance en una nota («El local aún prepara el pedido», «Listo; el motorizado
-  paga en caja al recoger», «Recogido a las …») y bloque del motorizado. Sin
-  nombre: campo «Nombre del motorizado» (2 a 60 caracteres) y «Generar enlace»
-  (primario). Con nombre: el enlace en un campo de solo lectura, «Copiar
+  asignación al inicio del detalle, antes de la ruta, y avance en una nota
+  («El local aún prepara el pedido», «Listo; el motorizado paga en caja al
+  recoger», «Recogido a las …»). Sin nombre: campo «Nombre del motorizado»
+  (2 a 60 caracteres), sugerencias de nombres recibidos del API en los pedidos
+  de hoy y «Asignar motorizado» (primario; «Asignando…» durante la petición).
+  Explica que se genera su enlace privado. Con nombre: el enlace en un campo de solo lectura, «Copiar
   enlace» y «Compartir» (si el navegador lo permite) secundarios y el enlace
   «Cambiar motorizado», que abre un `ConfirmDialog` con el nombre nuevo: el
   enlace anterior deja de funcionar y el avance se mantiene.
@@ -3452,10 +3510,12 @@ ni menú, para el proveedor de Delivery Fudia. Mobile-first, validada a 390 y
 ### Enlace del motorizado (2026-11-14)
 
 `/delivery-courier/{token}` (mismo módulo, `CourierPanel`): pantalla pública de un solo
-reparto que la central genera con el nombre del motorizado. Cabecera
-`navigation-900` con el nombre y «Motorizado · {central}». Interruptor
-«Compartir ubicación» (solo con el reparto por recoger o en camino; mantiene la
-pantalla encendida). Tarjeta con `OrderDetails` y una acción primaria: «Recogí el
+reparto que la central genera con el nombre del motorizado. Misma plantilla:
+`PageHeader` con el nombre del motorizado y «Motorizado · {central}», barra de
+contexto con el interruptor «Compartir ubicación» (solo con el reparto por
+recoger o en camino; mantiene la pantalla encendida) y el pedido como panel del
+sistema: cabecera con el código, la central y `Status`, y el contenido con
+`OrderDetails` y una acción primaria: «Recogí el
 pedido» (deshabilitada con el motivo hasta que cocina termina y caja confirma el
 pago) y luego «Entregado» (`ConfirmDialog` success). En camino, «No pude
 entregar» (`danger-outline`) abre un `ConfirmDialog` que pide antes llamar al

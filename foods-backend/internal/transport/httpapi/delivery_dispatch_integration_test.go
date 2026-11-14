@@ -13,7 +13,7 @@ import (
 )
 
 // Delivery Fudia: con la empresa activada, cuando cocina inicia la preparación el
-// pedido se ofrece a la vez a todas las centrales con cobertura; la primera que
+// pedido se ofrece a la vez a todas las centrales activas; la primera que
 // acepta se lo queda y las demás reciben «taken». Si todas rechazan o vencen, queda
 // sin asignar con aviso a caja; «Reintentar» abre otra vuelta; la central que
 // acepta recibe «listo para recoger» y «Recoger» lo pone en camino.
@@ -51,7 +51,7 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	}
 	phone := func(i int) string { return fmt.Sprintf("%s%d", prefix, i) }
 	partner := func(name, number string) string {
-		rec := call(d.CreatePartner, "POST", fmt.Sprintf(`{"name":%q,"whatsappPhone":"+%s","coverageCodes":["150101"]}`, name, number), "", s)
+		rec := call(d.CreatePartner, "POST", fmt.Sprintf(`{"name":%q,"whatsappPhone":"+%s"}`, name, number), "", s)
 		if rec.Code != 201 {
 			t.Fatalf("create partner: %d %s", rec.Code, rec.Body.String())
 		}
@@ -63,13 +63,7 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		return out.ID
 	}
 	first, second := partner("Central Norte", phone(1)), partner("Central Sur", phone(2))
-	for _, code := range []string{"15", "1501", "999999"} {
-		rec := call(d.CreatePartner, "POST", fmt.Sprintf(`{"name":"Cobertura inválida","whatsappPhone":%q,"coverageCodes":[%q]}`, phone(3), code), "", s)
-		if rec.Code != 400 {
-			t.Fatalf("only catalog districts can be checked: %s: %d %s", code, rec.Code, rec.Body.String())
-		}
-	}
-	if rec := call(d.CreatePartner, "POST", fmt.Sprintf(`{"name":"Copia","whatsappPhone":%q,"coverageCodes":["150101"]}`, phone(1)), "", s); rec.Code != 409 {
+	if rec := call(d.CreatePartner, "POST", fmt.Sprintf(`{"name":"Copia","whatsappPhone":%q}`, phone(1)), "", s); rec.Code != 409 {
 		t.Fatalf("duplicate phone: %d %s", rec.Code, rec.Body.String())
 	}
 	// El orden es global: la base de prueba solo conserva activas las centrales de esta ejecución.
@@ -472,38 +466,69 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		claim()
 		updatePartner(first, true, `["150101"]`)
 	})
-	t.Run("coverage_matches_only_checked_districts", func(t *testing.T) {
-		updatePartner(first, true, `["160101"]`)
-		updatePartner(second, true, `["150101"]`)
-		id := prepare()
-		messages := claim()
-		if len(messages) != 1 || messages[0].PartnerPhone != phone(2) {
-			t.Fatalf("checked district match: %#v", messages)
-		}
-		call(d.UseOwnDelivery, "POST", "", id, s)
-		updatePartner(second, true, `["150102"]`)
-		unmatched := prepare()
-		if dispatchStatus(unmatched) != "unassigned" || len(claim()) != 0 {
-			t.Fatal("wrong district received order")
-		}
-		updatePartner(first, true, `["150201","150101"]`)
-		matched := prepare()
-		messages = claim()
-		if len(messages) != 1 || messages[0].PartnerPhone != phone(1) {
-			t.Fatalf("district match: %#v", messages)
-		}
-		call(d.UseOwnDelivery, "POST", "", matched, s)
-		updatePartner(first, true, `["150101"]`)
-		updatePartner(second, true, `["150101"]`)
-		if _, err := pool.Exec(ctx, `UPDATE locations SET district_code=NULL WHERE id=$1`, s.LocationID); err != nil {
+	t.Run("all_active_partners_receive_orders_without_district_filter", func(t *testing.T) {
+		// Existing coverage rows remain historical and do not limit delivery.
+		if _, err := pool.Exec(ctx, `INSERT INTO delivery_partner_coverage(partner_id,area_code) VALUES ($1,'160101'),($2,'150102')`, first, second); err != nil {
 			t.Fatal(err)
 		}
-		missing := prepare()
-		if dispatchStatus(missing) != "unassigned" || len(claim()) != 0 {
-			t.Fatal("missing district treated as national coverage")
+		updatePartner(first, true, `["15","999999"]`) // ignored legacy input
+		updatePartner(second, true, `[]`)
+		var historical string
+		if err := pool.QueryRow(ctx, `SELECT area_code FROM delivery_partner_coverage WHERE partner_id=$1`, first).Scan(&historical); err != nil || historical != "160101" {
+			t.Fatalf("historical coverage changed: %s %v", historical, err)
+		}
+		for _, district := range []any{"150101", nil} {
+			if _, err := pool.Exec(ctx, `UPDATE locations SET district_code=$2 WHERE id=$1`, s.LocationID, district); err != nil {
+				t.Fatal(err)
+			}
+			id := prepare()
+			messages := claim()
+			if dispatchStatus(id) != "searching" || len(messages) != 2 {
+				t.Fatalf("all active partners must receive orders (district %v): %#v", district, messages)
+			}
+			byPhone(messages, phone(1))
+			byPhone(messages, phone(2))
+			call(d.UseOwnDelivery, "POST", "", id, s)
 		}
 		if _, err := pool.Exec(ctx, `UPDATE locations SET district_code='150101' WHERE id=$1`, s.LocationID); err != nil {
 			t.Fatal(err)
+		}
+	})
+	t.Run("simultaneous_acceptance_has_one_winner", func(t *testing.T) {
+		id := prepare()
+		messages := claim()
+		if len(messages) != 2 {
+			t.Fatalf("offers: %#v", messages)
+		}
+		start := make(chan struct{})
+		results := make(chan *httptest.ResponseRecorder, 2)
+		for _, number := range []string{phone(1), phone(2)} {
+			token := byPhone(messages, number).ActionToken
+			go func() {
+				<-start
+				results <- call(d.PartnerAction, "POST", fmt.Sprintf(`{"action":"accept","token":%q,"phone":%q}`, token, number), "", scope{})
+			}()
+		}
+		close(start)
+		outcomes := map[string]int{}
+		for range 2 {
+			rec := <-results
+			if rec.Code != 200 {
+				t.Fatalf("concurrent acceptance: %d %s", rec.Code, rec.Body.String())
+			}
+			var result struct{ Outcome string }
+			decode(rec, &result)
+			outcomes[result.Outcome]++
+		}
+		if outcomes["accepted"] != 1 || outcomes["taken"] != 1 {
+			t.Fatalf("exclusive winner: %#v", outcomes)
+		}
+		var accepted int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM delivery_dispatch_offers f JOIN delivery_dispatches d ON d.id=f.dispatch_id WHERE d.order_id=$1 AND f.status='accepted' AND f.partner_id=d.accepted_partner_id`, id).Scan(&accepted); err != nil || accepted != 1 {
+			t.Fatalf("persisted winner: %d %v", accepted, err)
+		}
+		if total, fee := money(id); total != "60.00" || fee != "0.00" {
+			t.Fatalf("delivery fee transferred more than once: %s %s", total, fee)
 		}
 	})
 

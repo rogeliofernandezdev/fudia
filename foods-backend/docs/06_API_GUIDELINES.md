@@ -320,7 +320,7 @@ La descripción permanece en el contrato para editar sin perder información.
 La migración 000118 agrega `coverageCodes` y `coverageLabels` al catálogo de
 centrales y `districtCode` al alta/edición del local y onboarding. Solo Plataforma
 escribe las zonas; `GET /v1/admin/geographic-areas?parentCode=` entrega la jerarquía
-INEI de solo lectura para la sesión autenticada. Selección por cobertura,
+INEI de solo lectura para la sesión autenticada. Oferta a todas las centrales activas,
 `payment_conflict`, permisos y atomicidad: [15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md).
 
 - Plataforma (`requirePlatformAdmin`), centrales:

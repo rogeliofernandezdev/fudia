@@ -8,11 +8,10 @@ Fechas se guardan en UTC; importes monetarios usan numeric, nunca flotantes.
 
 ## Delivery Fudia: centrales y despacho (migraciones 000113, 000117 y 000118)
 
-La cobertura por distritos marcados con casillas (filtrados por departamento y
-provincia), propiedad exclusiva de
-Plataforma, y la consistencia transaccional del despacho se detallan en
-[15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md). El orden global se filtra
-por el distrito del local; sin distrito o cobertura no se ofrece a otras zonas.
+Todas las centrales activas reciben ofertas simultáneas de locales con Delivery
+Fudia. El distrito del local y las antiguas filas de cobertura no restringen
+la selección. Los datos históricos se conservan; detalles y aceptación exclusiva
+en [15_DELIVERY_GEOGRAPHY.md](15_DELIVERY_GEOGRAPHY.md).
 
 Delivery Fudia se gestiona globalmente:
 
@@ -29,7 +28,7 @@ Delivery Fudia se gestiona globalmente:
 Cuando cocina inicia la preparación de un pedido de delivery (estado `preparando`,
 o `listo` si no pasa por estación) de una empresa con Delivery Fudia, se abre un
 `delivery_dispatches` (uno por pedido) y el pedido se ofrece **a la vez a todas
-las centrales activas con cobertura** (desde 2026-11-14; antes se ofrecía al
+las centrales activas** (desde 2026-11-14; antes se ofrecía al
 confirmar y en cascada). `delivery_dispatch_offers` guarda cada oferta con su
 `action_token` (generado por PostgreSQL, viaja en los botones y el panel) y su
 vencimiento (3 minutos desde que se muestra o se envía; 5 minutos si el mensaje

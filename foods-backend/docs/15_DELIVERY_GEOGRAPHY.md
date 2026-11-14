@@ -2,29 +2,25 @@
 
 ## Propiedad y selección
 
+Decisión vigente del 2026-11-14: todas las centrales activas reciben a la vez
+los pedidos de los locales peruanos de empresas con Delivery Fudia habilitado.
+La primera que acepta se queda con el pedido; las demás ofertas se retiran.
+El orden global solo organiza el listado, sin prioridad de recepción.
+
 Solo Plataforma Fudia registra, edita, ordena, activa o desactiva centrales y
-sus zonas. Las empresas no reciben endpoints de escritura de ese catálogo.
-La activación de Delivery Fudia por empresa sigue siendo exclusiva de Plataforma.
+habilita Delivery Fudia por empresa. El formulario requiere nombre y teléfono;
+no solicita distritos. Los datos históricos de `delivery_partner_coverage` y
+los campos de respuesta `coverageCodes/coverageLabels` se conservan por
+compatibilidad, pero no filtran ofertas, mensajes, botones ni paneles.
+`coverageCodes` de entrada está obsoleto y se ignora, sin modificar el histórico.
+Una central nueva sin cobertura registrada recibe ofertas normalmente.
 
-Cada central se registra una sola vez y conserva `coverageCodes` con los distritos
-que Fudia marca mediante casillas. Departamento y provincia sirven únicamente
-para filtrar la lista: no se guardan como cobertura implícita. La misma central
-puede atender distritos de distintas provincias y departamentos. El orden global
-se aplica solo entre centrales activas que tienen marcado exactamente el
-`districtCode` del local de origen; no se usa el destino del cliente para elegir
-ese origen.
-
-`locations.district_code` conserva el distrito del local. Alta de empresa y
-alta/edición de locales admiten `districtCode`. Las interfaces peruanas piden
-departamento, provincia y distrito, con selectores dependientes; el backend
-publica `GET /v1/admin/geographic-areas?parentCode=` para cualquier sesión
-autenticada. Ese endpoint es de solo lectura.
-
-Sin distrito o cobertura coincidente, el pedido queda sin central y se avisa a
-caja. Una lista vacía nunca significa cobertura nacional. Los locales y centrales
-anteriores necesitan completar sus zonas; no se infieren de direcciones libres
-ni de coordenadas. Los pedidos ya aceptados conservan su central cuando esta se
-desactiva o cambia su cobertura; las ofertas pendientes se retiran y avanzan.
+El distrito del local continúa siendo parte de su dirección y del catálogo
+INEI, independiente del despacho. Un local sin distrito también puede recibir
+Delivery Fudia. La tarifa y la distancia siguen calculándose entre coordenadas
+del local y ubicación del cliente según sus rangos de envío; no usan distritos.
+Los pedidos aceptados conservan su central al desactivarla; sus ofertas
+pendientes se retiran. Se conserva la restricción de país soportado (Perú).
 
 ## Fuente y migración
 
@@ -67,7 +63,8 @@ pagos: no se altera el total de una cuenta cobrada ni su comprobante.
 
 `TestDeliveryFudiaPartnerCascade` recorre botones antiguos tras reasignación,
 pagos completos/parciales anteriores a aceptación, desactivación con oferta
-pendiente y coincidencia exacta con distritos marcados, zonas múltiples y falta de distrito.
+pendiente, ofertas a centrales con distritos históricos distintos o vacíos,
+local sin distrito y aceptación concurrente con un único ganador.
 `TestDeliveryGeographyCatalogAndPlatformOwnership` usa una sesión real de empresa:
 permite leer el catálogo y rechaza administrar centrales, orden y activación de
 Delivery Fudia. Verifica también distrito válido, desconocido y provincia
@@ -122,7 +119,7 @@ pedido en sus estados de siempre. Los hechos del reparto son columnas de
 
 - **Oferta simultánea.** Cuando cocina inicia la preparación (`Orders` avisa al
   despacho también al pasar a `preparando`), el pedido se ofrece a todas las
-  centrales activas con cobertura. La primera que acepta se lo queda; la
+  centrales activas. La primera que acepta se lo queda; la
   aceptación bloquea pedido → despacho → central, así que dos clics o dos
   centrales a la vez no pueden tomarlo dos veces.
 - **Motorizado.** `POST /v1/public/delivery-panel/{token}/courier` exige el nombre

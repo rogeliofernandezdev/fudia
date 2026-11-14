@@ -9,18 +9,17 @@ import {useFeedback} from "@/providers";
 import type {DeliveryPartner,DeliveryPartnerDraft} from "../domain/types";
 import {listDeliveryPartners,reorderDeliveryPartners,saveDeliveryPartner} from "../infrastructure/platform-api";
 import "./platform-delivery-partners.css";
-import {DeliveryCoverageFields} from "./delivery-coverage-fields";
 import {DeliveryPartnerPanelLink} from "./delivery-partner-panel-link";
 
-const columns=["Orden","Central","Teléfono","Cobertura","Estado","Acciones"];
-const blank:DeliveryPartnerDraft={name:"",whatsappPhone:"51",coverageCodes:[],coverageLabels:[]};
+const columns=["Orden","Central","Teléfono","Estado","Acciones"];
+const blank:DeliveryPartnerDraft={name:"",whatsappPhone:"51"};
 const queryKey=["platform-delivery-partners"];
 
 /**
  * Administración de las centrales de Delivery Fudia (solo Plataforma), dentro
  * de Delivery › Proveedores. Cuando cocina inicia la preparación, el pedido se
- * ofrece a la vez a todas las centrales activas que cubren el distrito del
- * local; la primera que acepta se lo queda. El orden prioriza el listado.
+ * ofrece a la vez a todas las centrales activas; la primera que acepta se lo
+ * queda. El orden prioriza el listado.
  */
 export function DeliveryPartnersAdmin(){
  const{notify}=useFeedback();
@@ -37,16 +36,16 @@ export function DeliveryPartnersAdmin(){
   onSuccess:(_,{id})=>{
    close();
    void client.invalidateQueries({queryKey});
-   notify({tone:"success",title:id?"Central actualizada":"Central registrada",message:id?"La cobertura y el estado se aplican a las ofertas pendientes.":"Quedó al final del orden. Envíale el enlace de su panel de reparto para que reciba pedidos."});
+   notify({tone:"success",title:id?"Central actualizada":"Central registrada",message:id?"Se guardaron los datos de contacto de la central.":"Envíale el enlace de su panel de reparto para que reciba pedidos."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
  const toggle=useMutation({
-  mutationFn:(item:DeliveryPartner)=>saveDeliveryPartner({name:item.name,whatsappPhone:item.whatsappPhone,coverageCodes:item.coverageCodes,active:!item.active},item.id),
+  mutationFn:(item:DeliveryPartner)=>saveDeliveryPartner({name:item.name,whatsappPhone:item.whatsappPhone,active:!item.active},item.id),
   onSuccess:(_,item)=>{
    setTarget(null);
    void client.invalidateQueries({queryKey});
-   notify({tone:"success",title:item.active?"Central desactivada":"Central activada",message:item.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas.":"Vuelve a recibir los pedidos de su cobertura."});
+   notify({tone:"success",title:item.active?"Central desactivada":"Central activada",message:item.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas.":"Vuelve a recibir los pedidos de los locales con Delivery Fudia."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
  });
@@ -63,7 +62,7 @@ export function DeliveryPartnersAdmin(){
   reorder.mutate(ids);
  };
  const start=()=>{setEditingId(undefined);setDraft({...blank})};
- const edit=(item:DeliveryPartner)=>{setEditingId(item.id);setDraft({name:item.name,whatsappPhone:item.whatsappPhone,coverageCodes:item.coverageCodes,coverageLabels:item.coverageLabels})};
+ const edit=(item:DeliveryPartner)=>{setEditingId(item.id);setDraft({name:item.name,whatsappPhone:item.whatsappPhone})};
  const items=partners.data?.items??[];
  const panelPartner=items.find(item=>item.id===panelId);
  const status=(item:DeliveryPartner)=><Status active={item.active}>{item.active?"Activa":"Inactiva"}</Status>;
@@ -72,26 +71,26 @@ export function DeliveryPartnersAdmin(){
 
  return <>
   <section className="panel management standardized-management platform-partners-panel" aria-label="Centrales de delivery">
-   <div className="toolbar platform-partners-toolbar"><p>Reciben a la vez en su panel de reparto los pedidos de las empresas con Delivery Fudia que cubren el distrito del local.</p><Button icon="plus" onClick={start}>Nueva central</Button></div>
+   <div className="toolbar platform-partners-toolbar"><p>Todas las centrales activas reciben los pedidos de los locales con Delivery Fudia. La primera que acepta se queda con el pedido.</p><Button appearance="strong" icon="plus" onClick={start}>Nueva central</Button></div>
    {partners.isLoading?<TableSkeleton columns={columns} rows={4} label="Cargando centrales de delivery"/>:
     partners.isError?<ErrorState title="No pudimos cargar las centrales" text={partners.error.message} retrying={partners.isFetching} onRetry={()=>void partners.refetch()}/>:
     !items.length?<EmptyState icon="motorbike" title="Aún no hay centrales" text="Registra la primera central de reparto para ofrecer Delivery Fudia a las empresas." action={<Button icon="plus" onClick={start}>Nueva central</Button>}/>:
     <><DataTable label="Centrales de delivery" containerClassName="hover-scroll"><thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead><tbody>
-     {items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td>{order(index)}</td><td><span className={`row-icon r${index%3}`}><Icon name="motorbike" size={18}/></span><b>{item.name}</b></td><td>{formatPartnerPhone(item.whatsappPhone)}</td><td>{item.coverageLabels.length?item.coverageLabels.map(label=><small key={label}>{label}</small>):"Sin cobertura"}</td><td>{status(item)}</td><td><div className="table-actions">{actions(item)}</div></td></tr>)}
+     {items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td>{order(index)}</td><td><span className="row-icon r0"><Icon name="motorbike" size={18}/></span><b>{item.name}</b></td><td>{formatPartnerPhone(item.whatsappPhone)}</td><td>{status(item)}</td><td><div className="table-actions">{actions(item)}</div></td></tr>)}
     </tbody></DataTable>
-    <div className="management-cards">{items.map((item,index)=><article key={item.id}><header><span className="row-icon r0"><Icon name="motorbike"/></span><div><b>{item.name}</b><small>{formatPartnerPhone(item.whatsappPhone)}</small><small>{item.coverageLabels.join("; ")||"Sin cobertura"}</small></div>{status(item)}</header><footer>{order(index)}{actions(item)}</footer></article>)}</div></>}
+    <div className="management-cards">{items.map((item,index)=><article key={item.id}><header><span className="row-icon r0"><Icon name="motorbike"/></span><div><b>{item.name}</b><small>{formatPartnerPhone(item.whatsappPhone)}</small></div>{status(item)}</header><footer>{order(index)}{actions(item)}</footer></article>)}</div></>}
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal platform-partner-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="delivery-partner-title" aria-busy={save.isPending}><ModalHeader title={editingId?"Editar central":"Nueva central"} titleId="delivery-partner-title" onClose={close} busy={save.isPending} closeLabel="Cerrar"/>
    <ModalForm onSubmit={event=>{event.preventDefault();save.mutate({value:draft,id:editingId})}}>
     <ModalBody><div className="form-sections-flow"><div className="form-grid platform-partner-fields">
-     <FormField className="span-2" label="Nombre"><Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Central Norte" autoFocus required/></FormField>
+     <FormField className="span-2" label="Nombre"><Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Central Norte" minLength={2} maxLength={120} autoFocus required/></FormField>
      <FormField className="span-2" label="Teléfono" help="Con código de país. Los pedidos llegan a su panel de reparto; este número es su contacto."><Input value={draft.whatsappPhone} onChange={e=>setDraft({...draft,whatsappPhone:e.target.value})} inputMode="tel" placeholder="51 987 654 321" required/></FormField>
-    </div><DeliveryCoverageFields codes={draft.coverageCodes} labels={draft.coverageLabels??[]} disabled={save.isPending} onChange={(coverageCodes,coverageLabels)=>setDraft({...draft,coverageCodes,coverageLabels})}/></div></ModalBody>
-    <ModalFooter><Button type="button" action="cancel" disabled={save.isPending} onClick={close}>Cancelar</Button><Button type="submit" disabled={save.isPending||!draft.coverageCodes.length} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></ModalFooter>
+    </div></div></ModalBody>
+    <ModalFooter><Button type="button" action="cancel" disabled={save.isPending} onClick={close}>Cancelar</Button><Button type="submit" appearance="strong" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></ModalFooter>
    </ModalForm>
   </Dialog></div>}
   {panelPartner&&<DeliveryPartnerPanelLink partner={panelPartner} queryKey={queryKey} onClose={()=>setPanelId(undefined)}/>}
-  <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar central":"Activar central"} subject={target?{label:"Central",name:target.name}:undefined} description={target?.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas. Los pedidos ya aceptados conservan su central.":"Volverá a recibir los pedidos de su cobertura."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
+  <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar central":"Activar central"} subject={target?{label:"Central",name:target.name}:undefined} description={target?.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas. Los pedidos ya aceptados conservan su central.":"Volverá a recibir los pedidos de los locales con Delivery Fudia."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
  </>;
 }

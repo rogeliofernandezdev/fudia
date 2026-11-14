@@ -30,15 +30,12 @@ func TestNormalizeOrder(t *testing.T) {
 	}
 }
 
-func TestPartnerCoverageMustBeExplicit(t *testing.T) {
+func TestPartnerDoesNotRequireDistricts(t *testing.T) {
 	for _, codes := range [][]string{nil, {}, {"Lima"}, {"15"}, {"1501"}, {"150"}, {"1501011"}} {
-		if _, problem := NormalizePartner(PartnerInput{Name: "Central", WhatsAppPhone: "51987654321", CoverageCodes: codes}); problem == "" {
-			t.Fatalf("invalid coverage accepted: %#v", codes)
+		in, problem := NormalizePartner(PartnerInput{Name: "Central", WhatsAppPhone: "51987654321", CoverageCodes: codes})
+		if problem != "" || len(in.CoverageCodes) != 0 {
+			t.Fatalf("legacy districts must be ignored: %#v %q", in, problem)
 		}
-	}
-	in, problem := NormalizePartner(PartnerInput{Name: "Central", WhatsAppPhone: "51987654321", CoverageCodes: []string{"150101", "150102", "150122", "150101"}})
-	if problem != "" || len(in.CoverageCodes) != 3 {
-		t.Fatalf("valid coverage: %#v %s", in, problem)
 	}
 }
 

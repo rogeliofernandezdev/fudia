@@ -469,6 +469,24 @@ segundo plano: `["delivery-partner-panel",token]` y `["delivery-courier",token]`
 Cada acción invalida su consulta y muestra el resultado (`outcome`) con
 `outcomeFeedback`; el navegador no calcula estados ni montos.
 
+La central filtra y prioriza esa misma respuesta con `domain/dispatch.ts`, sin
+peticiones ni contratos nuevos. «Por asignar» incluye solo pedidos aceptados sin
+nombre. La carga agrupa nombres normalizados de repartos activos; no representa
+disponibilidad ni un padrón de trabajadores. Asignar desde esa vista conserva
+el detalle abierto para copiar el nuevo enlace aunque salga del filtro. Ante
+un error de actualización se conservan los datos y se bloquean las escrituras.
+
+Las vistas revelan los pedidos en cliente de 10 en 10 después de aplicar búsqueda
+y filtros. Un `IntersectionObserver` agrega el siguiente lote al alcanzar el
+final visible, respetando el scroll interno de escritorio y el de página en
+móvil. El botón «Cargar más pedidos» ofrece continuidad manual y por teclado.
+Los contadores y la carga del responsable usan la respuesta completa. Los sondeos
+conservan cantidad revelada y selección; cambiar filtros reinicia en 10. No se
+simula una petición al revelar datos ya recibidos. El API actual no ofrece cursor:
+conserva activos y entregados de las últimas 12 horas (`PanelHistoryHours`). Para
+escalar la consulta e historial amplio se requiere ampliar OpenAPI y backend con
+cursor, filtros y agregados independientes de la ventana visible.
+
 - Central: `POST …/actions` con `accept`, `reject`, `release` (solo por recoger),
   `keep` (mantener ante la alerta de recogida) y `fail` (entrega fallida tras el
   reporte del motorizado). `POST …/courier` `{token,courierName}` registra o
@@ -510,13 +528,14 @@ con la respuesta, sin otra consulta. Las tarifas aplican al local activo.
 
 ## Delivery Fudia
 
-Desde la migración 000118, `GeographicFields` comparte el catálogo remoto
-`["geographic-areas",parentCode]` entre Locales, Primer local y cobertura de
-centrales (solo Plataforma). La ubicación del local persiste `districtCode`;
-cambiar departamento/provincia limpia sus descendientes y exige elegir distrito.
-Una central guarda en `coverageCodes` solo distritos marcados con casillas y
-recibe `coverageLabels` para mostrarlas por nombre. Las empresas no crean,
-seleccionan ni modifican centrales. El orden se aplica solo dentro de la cobertura.
+El catálogo remoto `["geographic-areas",parentCode]` pertenece a Locales y
+Primer local. El distrito conserva su función de dirección. Centrales solo
+registra nombre, teléfono y estado: no envía `coverageCodes`. Los antiguos
+campos de cobertura del API son históricos y no restringen el reparto.
+Todas las centrales activas reciben ofertas simultáneas; la primera aceptación
+gana bajo bloqueo del backend. El orden solo organiza el listado. Las empresas
+no crean, seleccionan ni modifican centrales. Desplegar el backend sin filtro
+de distritos antes de este frontend.
 
 `src/modules/delivery` publica tipos, API y componentes. Todo pasa por el proxy
 `/api/admin` o `/api/platform`:

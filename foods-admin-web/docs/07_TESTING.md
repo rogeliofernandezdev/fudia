@@ -1,5 +1,24 @@
 # Pruebas
 
+`delivery-dispatch.test.mjs` cubre la prioridad de incidencias/ofertas/asignaciones,
+filtros por etapa, historial por fecha, búsqueda sin tildes y carga por motorizado
+sin contar entregas terminadas ni ofertas. Tras build,
+`node tests/helpers/delivery-dispatch-preview.mjs` sirve el panel real en
+`http://localhost:5198`, con pedidos ficticios y acciones solo en memoria. Los
+escenarios `?scenario=empty|error|loading|alerts|paused|long` permiten revisar
+estados y nombres/direcciones extensos. No usa el backend ni modifica pedidos reales.
+`?scenario=volume` agrega 63 pedidos para comprobar crecimiento automático de
+10 en 10 en Despacho, Por asignar, En camino y Entregados: scroll interno en
+escritorio, scroll de página a 390 px, final de resultados, búsqueda tras expandir,
+reinicio en 10 al filtrar y conservación del detalle durante el sondeo. Comprobar
+también «Cargar más pedidos» con teclado y foco en el primer pedido agregado.
+Las pruebas de dominio verifican acumulación sin duplicados, total, final y
+reducción del resultado. `button-actions.test.mjs` cubre la variante fuerte sin perder `disabled`
+ni filtrar props al DOM y la paginación de tamaño fijo sin un selector inoperante.
+Verificar a 390 px y escritorio: aceptar, asignar desde «Por asignar», conservar
+el enlace recién generado, cambiar responsable con confirmación, volver al listado,
+buscar por motorizado y consultar entregados. El viewport no certifica un teléfono físico.
+
 `delivery-panel.test.mjs` verifica que el motorizado recoge solo con pedido
 listo y `paymentConfirmed=true` (un campo ausente no habilita la acción), que en
 camino tiene «Entregado» y una sola vez «No pude entregar», el nombre y el enlace
@@ -660,11 +679,11 @@ el shell), skeleton/error/vacío y anuncio `aria-live`, refresco de 15 s solo co
 `tables.read` o `cash.manage`, endpoints del contrato OpenAPI, área táctil de
 44 px y rojo reservado al contador sin leer.
 
-## Geografía y cobertura de centrales
+## Geografía y centrales
 
-`geographic-fields.test.mjs` verifica selección dependiente, limpieza de
-descendientes, distrito obligatorio, carga, error recuperable y vacío.
-`tests/helpers/delivery-coverage-preview.mjs` monta componentes reales en Chrome
-con catálogo ilustrativo y sin escrituras: marca y desmarca distritos, conserva la selección al cambiar de provincia y guarda con el
-filtro auxiliar vacío y comprueba 390×844, 390×480 y 1440×900, pie visible,
-ausencia de desborde y controles móviles de al menos 44 px.
+`geographic-fields.test.mjs` conserva la selección dependiente de la dirección
+del local, limpieza de descendientes, carga, error recuperable y vacío.
+Las centrales se crean y editan sin cobertura; el modal de acceso no expone la
+URL y conserva copiar, abrir y renovar con confirmación. La vista de prueba
+`tests/helpers/delivery-partners-preview.mjs` monta los componentes reales y
+una API ilustrativa en memoria para verificar escritorio y móvil desde 390 px.
