@@ -1,5 +1,17 @@
 # Pruebas
 
+`delivery/application/TestPickupRequiresConfirmedPayment` verifica el bloqueo de
+recogida sin pago completo, preparación pendiente, despacho manual, cancelación e
+idempotencia. `TestDeliveryPartnerPanel` recorre con cobros reales de caja el
+pedido listo sin pagar, abono parcial, pago completo y devolución antes de recoger;
+comprueba `paymentConfirmed` y que un rechazo no cambie pedido ni despacho.
+`TestDeliveryFudiaPartnerCascade` verifica que el pedido se ofrece a todas las
+centrales recién cuando cocina inicia la preparación, la aceptación exclusiva y
+el bloqueo de cancelación con central asignada. `TestDeliveryFudiaCourierFlow`
+cubre motorizado, liberación, alertas de recogida y entrega fallida
+(`15_DELIVERY_GEOGRAPHY.md`). `delivery/domain/TestSettleFailedDelivery` fija el
+reparto 100 % al motorizado y 50/50 con validación, tope y límite mensual.
+
 ## Puerta completa de integración
 
 GitHub Actions ejecuta las migraciones y `go test ./...` con `DATABASE_URL`

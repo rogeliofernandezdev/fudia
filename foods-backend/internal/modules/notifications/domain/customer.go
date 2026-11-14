@@ -14,6 +14,10 @@ const CustomerOrderSent = "order_sent"
 // (el personal lo despachó o la central de Delivery Fudia lo recogió).
 const CustomerOrderOnTheWay = "order_on_the_way"
 
+// CustomerDeliveryContact pide al cliente que se comunique: el motorizado de la
+// central llegó a la dirección, llamó y no logró ubicarlo («No pude entregar»).
+const CustomerDeliveryContact = "delivery_contact_request"
+
 // Formas de entrega que avisan «pedido listo»: el cliente recoge en el local.
 // «En preparación» también avisa en mesa y delivery.
 const (
@@ -91,6 +95,14 @@ func OrderOnTheWayForCustomer(orderID, channel, phone, conversationID string) (C
 	}
 	ok := channel == "delivery" && in.OrderID != "" &&
 		len(in.CustomerPhone) <= 32 && in.ConversationID != "" && len(in.ConversationID) <= 160
+	return in, ok
+}
+
+// DeliveryContactForCustomer arma el aviso «comunícate con el repartidor» solo
+// para delivery con un cliente de Concierge identificado; se avisa una vez por pedido.
+func DeliveryContactForCustomer(orderID, channel, phone, conversationID string) (CustomerInput, bool) {
+	in, ok := OrderOnTheWayForCustomer(orderID, channel, phone, conversationID)
+	in.Kind = CustomerDeliveryContact
 	return in, ok
 }
 

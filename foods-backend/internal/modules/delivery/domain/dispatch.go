@@ -6,10 +6,10 @@ import (
 	"unicode/utf8"
 )
 
-// Delivery Fudia: la plataforma trabaja con centrales de reparto en un orden
-// global y activa Delivery Fudia por empresa; todos sus locales lo usan. Un
-// pedido confirmado se ofrece a la 1.ª central y, si rechaza o no responde, pasa
-// a la siguiente.
+// Delivery Fudia: la plataforma trabaja con centrales de reparto y activa
+// Delivery Fudia por empresa; todos sus locales lo usan. Cuando cocina inicia la
+// preparación, el pedido se ofrece a la vez a todas las centrales activas con
+// cobertura; la primera que acepta se lo queda y las demás ofertas se retiran.
 
 // Modos de delivery de una empresa.
 const (
@@ -19,7 +19,7 @@ const (
 	ModeFudia = "fudia"
 )
 
-// OfferTimeout es cuánto espera una central antes de pasar a la siguiente.
+// OfferTimeout es cuánto tiene cada central para responder su oferta.
 const OfferTimeout = 3 * time.Minute
 
 // UndeliveredOfferTimeout descarta una oferta cuyo mensaje nunca se pudo enviar.
@@ -70,6 +70,7 @@ const (
 	OutcomePickedUp        = "picked_up"
 	OutcomeNotFound        = "not_found"
 	OutcomePaymentConflict = "payment_conflict"
+	OutcomePaymentPending  = "payment_pending"
 )
 
 // Partner es una central de delivery registrada por la plataforma.
@@ -278,12 +279,13 @@ func ValidAction(action string) bool {
 	return action == ActionAccept || action == ActionReject || action == ActionPickup
 }
 
-// OrderDispatchable indica si un pedido confirmado debe ofrecerse a las centrales.
+// OrderDispatchable indica si un pedido debe ofrecerse a las centrales: desde
+// que cocina inicia la preparación hasta que el pedido sale del local.
 func OrderDispatchable(channel, status string, completed bool) bool {
 	if channel != "delivery" || completed {
 		return false
 	}
-	return status == "confirmado" || status == "preparando" || status == "listo"
+	return status == "preparando" || status == "listo"
 }
 
 // ActiveDispatch indica si el despacho aún puede cambiar por una central.
@@ -291,7 +293,7 @@ func ActiveDispatch(status string) bool {
 	return status == DispatchSearching || status == DispatchAccepted || status == DispatchUnassigned
 }
 
-// Retryable indica si caja puede volver a ofrecer el pedido desde la 1.ª central.
+// Retryable indica si caja puede volver a ofrecer el pedido a todas las centrales.
 func Retryable(status string) bool {
 	return status == DispatchUnassigned || status == DispatchOwn
 }

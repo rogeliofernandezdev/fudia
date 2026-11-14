@@ -93,6 +93,19 @@ func DeliveryUnassigned(orderID, code, customer string, round int) Input {
 	}
 }
 
+// DeliveryPickupDelayed avisa a caja que el pedido de Delivery Fudia lleva 8
+// minutos listo y el motorizado de la central no llega. La central decide si lo
+// mantiene, lo cambia o libera el pedido; Fudia no lo libera por tiempo. key
+// distingue cada motorizado asignado.
+func DeliveryPickupDelayed(orderID, code, customer, partner, key string) Input {
+	return Input{
+		Kind: KindDeliveryPickupDelayed, Audience: AudienceCashier,
+		Title:   "El motorizado no llega a recoger",
+		Detail:  Join(code, customer, partner, "Listo hace 8 min"),
+		OrderID: orderID, DedupeKey: dedupe("delivery-pickup-delayed", orderID, key),
+	}
+}
+
 // OrderReady avisa que una comanda está lista para entregar. En mesa la
 // entrega el mozo; mostrador, recojo y delivery se avisan también a caja.
 func OrderReady(ticketID, station, orderID, tableID, tableName, code, customer string) Input {

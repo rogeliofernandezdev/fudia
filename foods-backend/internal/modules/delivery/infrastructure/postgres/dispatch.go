@@ -66,7 +66,8 @@ func (r *Repository) SetDispatchStatus(ctx context.Context, s scope, dispatchID,
 func (r *Repository) StartRound(ctx context.Context, s scope, dispatchID string, round int) error {
 	_, err := r.db(ctx).Exec(ctx, `
 		UPDATE delivery_dispatches
-		SET round=$4,status='searching',accepted_partner_id=NULL,accepted_at=NULL,ready_notified_at=NULL,updated_at=now()
+		SET round=$4,status='searching',accepted_partner_id=NULL,accepted_at=NULL,ready_notified_at=NULL,
+		    `+clearCourierSQL+`,updated_at=now()
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3`, dispatchID, s.OrganizationID, s.LocationID, round)
 	return err
 }
@@ -84,37 +85,33 @@ func (r *Repository) HasActivePartners(ctx context.Context, s scope) (bool, erro
 	return ok, err
 }
 
-// NextPartner toma la siguiente central activa del orden global que aún no se
-// ofreció en la vuelta: un rechazo o un vencimiento nunca vuelve a la misma.
-func (r *Repository) NextPartner(ctx context.Context, s scope, dispatchID string, round int) (string, int, bool, error) {
-	var partnerID string
-	var priority int
+// OfferAll ofrece el pedido a la vez a todas las centrales activas con
+// cobertura que aún no lo tienen en la vuelta. La prioridad solo ordena el
+// historial; cualquiera puede aceptar y la primera se lo queda. excludeReleased
+// deja fuera a las centrales que liberaron este pedido.
+func (r *Repository) OfferAll(ctx context.Context, s scope, dispatchID string, round int, excludeReleased bool) (int, error) {
+	var created int
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT p.id::text,
-		       (SELECT COALESCE(max(f.priority),0)+1 FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.round=$2)
-		FROM delivery_partners p CROSS JOIN locations l
-		WHERE p.active AND l.organization_id=$3 AND l.id=$4 AND `+partnerCoverageSQL+` AND NOT EXISTS (
-		  SELECT 1 FROM delivery_dispatch_offers f
-		  WHERE f.dispatch_id=$1 AND f.round=$2 AND f.partner_id=p.id)
-		ORDER BY p.priority,p.id
-		LIMIT 1`, dispatchID, round, s.OrganizationID, s.LocationID).Scan(&partnerID, &priority)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", 0, false, nil
-	}
-	return partnerID, priority, err == nil, err
-}
-
-func (r *Repository) CreateOffer(ctx context.Context, s scope, dispatchID, partnerID string, round, priority int) error {
-	_, err := r.db(ctx).Exec(ctx, `
-		WITH offer AS (
+		WITH eligible AS (
+		  SELECT p.id,
+		         (SELECT COALESCE(max(f.priority),0) FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.round=$2)
+		           + row_number() OVER (ORDER BY p.priority,p.id) AS priority
+		  FROM delivery_partners p CROSS JOIN locations l
+		  WHERE p.active AND l.organization_id=$3 AND l.id=$4 AND `+partnerCoverageSQL+`
+		    AND NOT EXISTS (SELECT 1 FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.round=$2 AND f.partner_id=p.id)
+		    AND (NOT $5 OR NOT EXISTS (SELECT 1 FROM delivery_dispatch_offers f WHERE f.dispatch_id=$1 AND f.partner_id=p.id AND f.released_at IS NOT NULL))
+		), offers AS (
 		  INSERT INTO delivery_dispatch_offers(organization_id,location_id,dispatch_id,partner_id,round,priority)
-		  VALUES ($1,$2,$3,$4,$5,$6)
+		  SELECT $3,$4,$1,eligible.id,$2,eligible.priority FROM eligible
 		  RETURNING id
+		), messages AS (
+		  INSERT INTO delivery_partner_messages(organization_id,location_id,dispatch_id,offer_id,kind)
+		  SELECT $3,$4,$1,offers.id,'offer' FROM offers
+		  RETURNING 1
 		)
-		INSERT INTO delivery_partner_messages(organization_id,location_id,dispatch_id,offer_id,kind)
-		SELECT $1,$2,$3,offer.id,'offer' FROM offer`,
-		s.OrganizationID, s.LocationID, dispatchID, partnerID, round, priority)
-	return err
+		SELECT count(*) FROM offers`,
+		dispatchID, round, s.OrganizationID, s.LocationID, excludeReleased).Scan(&created)
+	return created, err
 }
 
 // ExpireOverdueOffers vence las ofertas sin respuesta 3 minutos después de
@@ -283,10 +280,11 @@ func (r *Repository) Dispatch(ctx context.Context, s scope, orderID string) (dom
 }
 
 // DueOrders lista los pedidos con trabajo pendiente para la cascada:
-//   - delivery confirmado de un local en modo Fudia, aún sin despacho (12 h);
+//   - delivery en preparación o listo de un local en modo Fudia, aún sin despacho (12 h);
 //   - despacho buscando central sin oferta pendiente o con la oferta vencida;
 //   - central aceptó y cocina terminó, sin «listo para recoger» enviado;
-//   - despacho activo de un pedido cancelado, o resuelto por el local.
+//   - despacho activo de un pedido cancelado, o resuelto por el local;
+//   - pedido listo hace 8 minutos sin recoger, sin aviso crítico al restaurante.
 func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.OrderRef, error) {
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT DISTINCT organization_id::text,location_id::text,order_id::text FROM (
@@ -294,7 +292,7 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		  FROM orders o
 		  JOIN organization_delivery_settings ds
 		    ON ds.organization_id=o.organization_id AND ds.enabled
-		  WHERE o.channel='delivery' AND o.status IN ('confirmado','preparando','listo') AND o.completed_at IS NULL
+		  WHERE o.channel='delivery' AND o.status IN ('preparando','listo') AND o.completed_at IS NULL
 		    AND o.created_at>now()-interval '12 hours'
 		    AND NOT EXISTS (SELECT 1 FROM delivery_dispatches d WHERE d.order_id=o.id)
 		  UNION ALL
@@ -315,6 +313,8 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		    o.status='cancelado'
 		    OR (d.status='searching' AND o.paid_amount>0)
 		    OR (d.status='accepted' AND d.ready_notified_at IS NULL AND o.status='listo')
+		    OR (d.status='accepted' AND o.status='listo' AND d.pickup_alerted_at IS NULL
+		        AND `+pickupWaitSinceSQL+`<now()-make_interval(secs => $3))
 		    OR (d.status<>'accepted' AND (o.completed_at IS NOT NULL OR o.status IN ('en_camino','entregado'))))
 		  UNION ALL
 		  -- Envío por mover: la central lo tiene y aún no salió del pedido, o el
@@ -324,9 +324,9 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		  JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id
 		  WHERE o.completed_at IS NULL AND o.status<>'cancelado' AND (
 		    (d.status IN ('accepted','picked_up','delivered') AND NOT d.fee_released AND COALESCE(d.partner_fee,0)>0)
-		    OR (d.status NOT IN ('accepted','picked_up','delivered') AND d.fee_released))
+		    OR (d.status NOT IN ('accepted','picked_up','delivered','cancelled') AND d.fee_released))
 		) due
-		LIMIT $1`, limit, domain.UndeliveredOfferTimeout.Seconds())
+		LIMIT $1`, limit, domain.UndeliveredOfferTimeout.Seconds(), domain.PickupCriticalAfter.Seconds())
 	if err != nil {
 		return nil, err
 	}
@@ -461,7 +461,10 @@ func (r *Repository) LockOfferByToken(ctx context.Context, token string) (applic
 		       (f.expires_at IS NOT NULL AND f.expires_at<now()),
 		       o.code,COALESCE(NULLIF(btrim(org.trade_name),''),org.legal_name),l.name,
                f.round=d.round,COALESCE(d.accepted_partner_id=f.partner_id,false),
-               p.active AND `+partnerCoverageSQL+`,o.paid_amount>0,o.completed_at IS NOT NULL
+               p.active AND `+partnerCoverageSQL+`,o.paid_amount>0,o.completed_at IS NOT NULL,
+               o.paid_amount>0 AND o.paid_amount>=o.total,COALESCE(d.courier_token,''),
+               d.delivery_issue_reported_at IS NOT NULL,
+               COALESCE(d.delivery_issue_reported_at<=now()-make_interval(secs => $2),false)
 		FROM delivery_dispatch_offers f
 		JOIN delivery_dispatches d ON d.id=f.dispatch_id
 		JOIN delivery_partners p ON p.id=f.partner_id
@@ -469,10 +472,11 @@ func (r *Repository) LockOfferByToken(ctx context.Context, token string) (applic
 		JOIN organizations org ON org.id=d.organization_id
 		JOIN locations l ON l.id=d.location_id AND l.organization_id=d.organization_id
 		WHERE f.action_token=$1::uuid
-		FOR UPDATE OF d FOR SHARE OF p`, token).Scan(
+		FOR UPDATE OF d FOR SHARE OF p`, token, domain.FailedDeliveryMinWait.Seconds()).Scan(
 		&st.OrganizationID, &st.LocationID, &st.OfferID, &st.DispatchID, &st.OrderID,
 		&st.PartnerID, &st.PartnerPhone, &st.OfferStatus, &st.DispatchStatus, &st.OrderStatus,
-		&st.Expired, &st.OrderCode, &st.OrganizationName, &st.LocName, &st.CurrentRound, &st.Assigned, &st.Eligible, &st.HasPayments, &st.Completed)
+		&st.Expired, &st.OrderCode, &st.OrganizationName, &st.LocName, &st.CurrentRound, &st.Assigned, &st.Eligible, &st.HasPayments, &st.Completed, &st.PaymentConfirmed,
+		&st.CourierToken, &st.IssueReported, &st.FailReady)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return st, application.ErrNotFound
 	}

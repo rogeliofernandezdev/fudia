@@ -77,20 +77,28 @@ enviada como distrito, sin modificar el local ante el rechazo.
 
 Desde 2026-11-14 la central de reparto atiende sus pedidos en un panel web
 propio, sin WhatsApp ni sesión: `delivery_partners.panel_token` (32 hex,
-generado por PostgreSQL, único) abre `/reparto/{token}` en foods-admin-web.
+generado por PostgreSQL, único) abre `/delivery-panel/{token}` en foods-admin-web.
 Plataforma lo copia o lo reemplaza con
 `POST /v1/platform/delivery-partners/{id}/panel-link`; el anterior deja de abrir.
 
 - `GET /v1/public/delivery-panel/{token}`: ofertas vigentes de esa central,
   repartos en curso y entregados de las últimas 12 horas. Mostrar una oferta
   por primera vez inicia sus 3 minutos (`expires_at`), igual que enviarla por
-  WhatsApp; la cascada no cambia.
+  WhatsApp.
 - `POST …/actions` (`accept`, `reject`, `pickup`, `deliver`): comparte con los
   botones de WhatsApp los mismos bloqueos y resultados (`Dispatcher.act`). La
   autorización compara la central del enlace con la de la oferta; la de otra
   central responde `not_found`. `deliver` exige el despacho `picked_up` y el
   pedido `en_camino`; lo pasa a `entregado` y el despacho a `delivered`
   (`not_picked_up` si aún no se recoge). Es idempotente.
+- Recoger exige el pedido listo y el pago completo registrado por caja al local,
+  neto de devoluciones (`orders.paid_amount >= orders.total` y cobrado positivo).
+  `paymentConfirmed` publica esa confirmación en cada pedido del panel. Sin ella,
+  «Recogí el pedido» está deshabilitado y explica que debe esperar a caja. Un abono
+  parcial o una devolución que deja saldo vuelven a bloquearlo. El backend devuelve
+  `payment_pending` sin modificar pedido ni despacho, también desde WhatsApp y si
+  el local ya lo puso en camino. La validación usa el bloqueo del pedido compartido
+  con cobros y devoluciones. Repetir una recogida ya aplicada conserva su resultado.
 - `POST …/location`: guarda la última ubicación del repartidor
   (`delivery_dispatches.courier_*`) en los repartos `accepted` y `picked_up` de
   la central. El punto viaja en el cuerpo, nunca en la URL.
@@ -104,6 +112,67 @@ El seguimiento del cliente (`delivery/contracts.TrackingReader`) se agrega a
 coordenadas, estado del despacho, central y, solo mientras el reparto sigue en
 curso y la ubicación tiene menos de 15 minutos, la posición del repartidor.
 Concierge lo publica al chat web; el navegador nunca elige el pedido.
+
+## Motorizado, liberación, alertas y entrega fallida (migración 000126)
+
+Desde 2026-11-14. No hay estados nuevos: el despacho sigue en `searching`,
+`accepted`, `picked_up`, `delivered`, `own`, `unassigned` o `cancelled`, y el
+pedido en sus estados de siempre. Los hechos del reparto son columnas de
+`delivery_dispatches`. El delivery propio no cambia.
+
+- **Oferta simultánea.** Cuando cocina inicia la preparación (`Orders` avisa al
+  despacho también al pasar a `preparando`), el pedido se ofrece a todas las
+  centrales activas con cobertura. La primera que acepta se lo queda; la
+  aceptación bloquea pedido → despacho → central, así que dos clics o dos
+  centrales a la vez no pueden tomarlo dos veces.
+- **Motorizado.** `POST /v1/public/delivery-panel/{token}/courier` exige el nombre
+  (2 a 60 caracteres) antes de entregar el enlace `/delivery-courier/{courierToken}`
+  (32 hex generados por PostgreSQL). El mismo nombre conserva el enlace; otro
+  nombre lo reemplaza, el anterior responde 404 y la etapa no cambia. El enlace
+  vale hasta la entrega, la liberación, la entrega fallida o un cambio de nombre.
+  Desde él, el motorizado recoge (pago completo confirmado por caja), entrega,
+  marca «No pude entregar» y comparte su ubicación
+  (`/v1/public/delivery-courier/{token}`, `…/actions`, `…/location`).
+- **Liberar.** `release` (solo antes de recoger) marca la oferta `withdrawn` con
+  `released_at`, invalida el enlace, abre una vuelta nueva, devuelve el envío al
+  pedido y ofrece el pedido a las demás centrales. La central que liberó no lo
+  vuelve a recibir automáticamente; «Reintentar» de caja sí la incluye. Con pagos
+  registrados responde `payment_conflict`; recogido, `already_picked_up`.
+- **Alertas de recogida.** Con el pedido `listo` y el despacho `accepted`, la
+  espera cuenta desde `ready_notified_at` o desde el último cambio de motorizado
+  (`courier_assigned_at`): 3 min `warning`, 5 min `urgent` y 8 min `critical`. A
+  los 8 min el barrido publica una sola vez por motorizado `delivery_pickup_delayed`
+  a caja (`pickup_alerted_at`). La central decide: `keep` (guarda
+  `pickup_alert_ack_level`), cambiar motorizado (nuevo enlace, la espera se
+  reinicia) o `release`. Fudia nunca libera por tiempo.
+- **No pude entregar.** El motorizado llama al cliente al número del pedido
+  (fuera de Fudia), espera y reintenta. Si no logra entregar, `not_delivered`
+  guarda `delivery_issue_reported_at` y la distancia al destino si su ubicación
+  tiene menos de 15 minutos (`delivery_issue_distance_m`). La central lo ve en su
+  panel y, si el pedido vino del chat, Orders deja el aviso al cliente
+  `delivery_contact_request` en la misma transacción. «Entregado» sigue disponible.
+- **Entrega fallida.** `fail` exige el reporte y 10 minutos desde él. Guarda en
+  `delivery_failed_deliveries` cliente, dirección, motorizado y montos; cierra el
+  pedido del local como `entregado` (ya cobró la comida al motorizado), cierra el
+  despacho como `cancelled` (el envío queda con la central) e invalida el enlace.
+  La central reembolsa al motorizado el 100 % de lo que pagó por la comida. La
+  pérdida se reparte 50 % Fudia y 50 % central solo si la incidencia se valida:
+  el motorizado reportó a 300 m o menos del destino con ubicación reciente y el
+  cliente recibió el aviso por el chat. Límites: 3 incidencias cubiertas por
+  central en 30 días y aporte de Fudia de hasta 100 por incidencia. Fuera de eso
+  la central asume el total y `validation_notes` explica el motivo.
+- **Cancelación.** Preparado y en manos de una central (`listo`/`en_camino` con
+  despacho `accepted`, `picked_up` o `delivered`), Orders rechaza cancelar con
+  `409 delivery_in_progress_not_cancellable`. Concierge no ofrece ni acepta
+  cancelaciones por mensaje en esa etapa.
+
+`TestDeliveryFudiaCourierFlow` recorre nombre inválido, oferta ajena, doble clic
+con el mismo nombre, cambio de motorizado con enlace anterior inválido,
+liberación con oferta a la otra central, alertas de 3 y 8 minutos con un solo
+aviso al restaurante sin liberar por tiempo, mantener, liberar con pago
+registrado, recoger desde el enlace, cancelación bloqueada, ubicación, «No pude
+entregar» con un solo aviso al cliente, espera mínima y montos de la entrega
+fallida.
 
 `TestDeliveryPartnerPanel` recorre enlace inválido o reemplazado, oferta ajena,
 acciones fuera de orden, ubicación inválida, vencida o de otra central,

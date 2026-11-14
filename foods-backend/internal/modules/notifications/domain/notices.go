@@ -17,6 +17,8 @@ const (
 	KindStaleAccount = "stale_account"
 	// KindDeliveryUnassigned: ninguna central de Delivery Fudia aceptó el pedido.
 	KindDeliveryUnassigned = "delivery_unassigned"
+	// KindDeliveryPickupDelayed: el motorizado de la central no llega a recoger (8 min).
+	KindDeliveryPickupDelayed = "delivery_pickup_delayed"
 )
 
 // Audiencias: el servicio de salón (mozos), la caja (cajeros) o ambos.
@@ -69,7 +71,7 @@ func Audiences(service, cashier bool) []string {
 // Normalize recorta los textos a sus límites y rechaza tipos o audiencias desconocidos.
 func Normalize(in Input) (Input, bool) {
 	switch in.Kind {
-	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount, KindDeliveryUnassigned:
+	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount, KindDeliveryUnassigned, KindDeliveryPickupDelayed:
 	default:
 		return in, false
 	}

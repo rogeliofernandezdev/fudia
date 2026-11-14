@@ -3375,31 +3375,72 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Panel de reparto del proveedor (2026-11-14)
 
-`/reparto/{token}` (`src/modules/delivery-panel`): pantalla pública, sin sesión
+`/delivery-panel/{token}` (`src/modules/delivery-panel`): pantalla pública, sin sesión
 ni menú, para el proveedor de Delivery Fudia. Mobile-first, validada a 390 y
 427 px; todos los controles miden al menos 44 px y las acciones principales 48 px.
 
 - Cabecera fija `navigation-900` con el nombre del proveedor y «Panel de reparto
   · Delivery Fudia»; color de la barra del navegador igual.
-- Dos interruptores de dispositivo (fila blanca de 56 px, pista `primary-600`
-  encendida): «Avisos con sonido» (dos tonos, vibración, título de pestaña
-  «(n) Pedido nuevo» y notificación del sistema si se permitió) y «Compartir
-  ubicación», que solo envía mientras hay un reparto en curso y mantiene la
-  pantalla encendida. Se recuerdan en el dispositivo.
-- Secciones «Pedidos nuevos», «En curso» y «Entregados hoy» (plegada), con
-  contador `navigation-900`. Sin pedidos: `EmptyState` «Sin pedidos por ahora».
-  Carga con `Skeleton`; error con `ErrorState` y reintento; sin conexión, aviso
-  sobre los últimos datos.
-- Tarjeta del pedido: código y empresa; etapa con `Status` suave (Nuevo
-  `orange`, Por recoger `blue`, En camino `navy` como el pedido, Entregado
-  `green`); en la oferta, cuenta regresiva en franja `warning-50`; «Recoge en»,
-  «Entrega en» y «Cliente» con «Cómo llegar» y «Llamar al …»; productos con
-  notas; «Pagas al local» y «Cobras al cliente»; «Ver mapa» con `RouteMap`.
-- Acciones: oferta con «Rechazar» (secundario, con `ConfirmDialog`) y
-  «Aceptar» (primario). En curso, una sola acción primaria: «Recogí el pedido»
-  (deshabilitada con la explicación mientras el local prepara) y luego
-  «Entregado» (con `ConfirmDialog` de éxito). Cada respuesta del backend se
-  muestra con `FeedbackProvider` y su texto; nada se infiere en el navegador.
+- Interruptor de dispositivo «Avisos con sonido» (fila blanca de 56 px, pista
+  `primary-600` encendida): dos tonos, vibración, título de pestaña «(n) Pedido
+  nuevo» o «(n) Atención» y notificación del sistema si se permitió. Suena con
+  cada pedido nuevo, cada alerta crítica de recogida sin decidir y cada «No pude
+  entregar» del motorizado. Se recuerda en el dispositivo. La central ya no
+  comparte ubicación: lo hace el motorizado desde su enlace.
+- Secciones «Pedidos nuevos», «En curso», «Entregados hoy» (plegada) y
+  «Entregas fallidas», con contador `navigation-900`. Sin pedidos: `EmptyState`
+  «Sin pedidos por ahora». Carga con `Skeleton`; error con `ErrorState` y
+  reintento; sin conexión, aviso sobre los últimos datos.
+- Tarjeta del pedido (`OrderDetails`, compartida con el motorizado): código y
+  empresa; etapa con `Status` suave (Nuevo `orange`, Por recoger `blue`, En
+  camino `navy` como el pedido, Entregado `green`); en la oferta, cuenta
+  regresiva en franja `warning-50`; «Recoge en», «Entrega en» y «Cliente» con
+  «Cómo llegar» y «Llamar al …»; productos con notas; «Pagas al local» y
+  «Cobras al cliente»; «Ver mapa» con `RouteMap`.
+- Oferta: «Rechazar» (secundario, con `ConfirmDialog`) y «Aceptar» (primario).
+- En curso, sin botones de recoger ni entregar (los registra el motorizado):
+  avance en una nota («El local aún prepara el pedido», «Listo; el motorizado
+  paga en caja al recoger», «Recogido a las …») y bloque del motorizado. Sin
+  nombre: campo «Nombre del motorizado» (2 a 60 caracteres) y «Generar enlace»
+  (primario). Con nombre: el enlace en un campo de solo lectura, «Copiar
+  enlace» y «Compartir» (si el navegador lo permite) secundarios y el enlace
+  «Cambiar motorizado», que abre un `ConfirmDialog` con el nombre nuevo: el
+  enlace anterior deja de funcionar y el avance se mantiene.
+- «Liberar pedido» (`danger-outline`, `ConfirmDialog` danger) solo antes de la
+  recogida: se ofrece a otras centrales e invalida el enlace.
+- Alerta de recogida (`InlineNotice`): «El motorizado aún no llega» (3 min,
+  warning), «Recogida urgente» (5 min, warning) y «Recogida crítica» (8 min,
+  danger; también avisa al restaurante), con los minutos de espera en el
+  título. Mientras la central no decide, muestra «Mantener», «Cambiar
+  motorizado» y «Liberar» (apilados en móvil, tres columnas desde 560 px); al
+  mantener queda una nota info «Esperando la recogida · n min». Nunca se libera
+  por tiempo.
+- «No pude entregar» del motorizado: `InlineNotice` warning «El motorizado no
+  pudo entregar» y «Registrar entrega fallida» (`danger-outline`), deshabilitado
+  con la cuenta regresiva hasta que el backend lo permite. Su `ConfirmDialog`
+  explica que la central reembolsa al motorizado el 100 % de lo que pagó por la
+  comida y que la pérdida se reparte 50 % Fudia y 50 % central, sujeta a
+  validación y límites.
+- «Entregas fallidas»: código, cliente y hora, `Tag` neutro «Con/Sin aporte
+  Fudia», dirección, motorizado, «Pagó el motorizado», «Le reembolsas», «Asume
+  tu central», «Asume Fudia» y las notas de validación del backend.
+- Cada respuesta del backend se muestra con `FeedbackProvider` y su texto; nada
+  se infiere en el navegador.
+
+### Enlace del motorizado (2026-11-14)
+
+`/delivery-courier/{token}` (mismo módulo, `CourierPanel`): pantalla pública de un solo
+reparto que la central genera con el nombre del motorizado. Cabecera
+`navigation-900` con el nombre y «Motorizado · {central}». Interruptor
+«Compartir ubicación» (solo con el reparto por recoger o en camino; mantiene la
+pantalla encendida). Tarjeta con `OrderDetails` y una acción primaria: «Recogí el
+pedido» (deshabilitada con el motivo hasta que cocina termina y caja confirma el
+pago) y luego «Entregado» (`ConfirmDialog` success). En camino, «No pude
+entregar» (`danger-outline`) abre un `ConfirmDialog` que pide antes llamar al
+cliente al número del pedido, esperar unos minutos y reintentar, con «Llamar
+al …». Tras reportarlo queda la nota «Avisamos a tu central y al cliente» y
+«Entregado» sigue disponible. Al entregar, `EmptyState` «Entrega registrada».
+Enlace reasignado, liberado o vencido: `ErrorState` con el mensaje del backend.
 
 ### Seguimiento del pedido en el chat web (2026-11-14)
 

@@ -1,20 +1,23 @@
 "use client";
 
 import {useEffect,useRef} from "react";
-import {newOffers} from "../domain/panel";
+import {newOffers,urgentKeys} from "../domain/panel";
 import type {PanelOrder} from "../domain/types";
 
 const TITLE="Panel de reparto";
 
 /**
- * Avisa cada pedido nuevo: sonido, vibración, título de la pestaña y, si el
- * navegador lo permite, una notificación cuando el panel no está a la vista.
+ * Avisa cada pedido nuevo, cada alerta crítica de recogida sin decidir y cada
+ * «No pude entregar» del motorizado: sonido, vibración, título de la pestaña y,
+ * si el navegador lo permite, una notificación cuando el panel no está a la vista.
  * El sonido necesita que el usuario lo haya activado con un toque (`enabled`).
  */
 export function useOfferAlert(orders:PanelOrder[]|undefined,enabled:boolean){
   const seen=useRef<Set<string>>(new Set());
+  const urgentSeen=useRef<Set<string>>(new Set());
   const audio=useRef<AudioContext|null>(null);
   const offers=orders?.filter(order=>order.stage==="offer").length??0;
+  const urgent=orders?urgentKeys(orders).length:0;
 
   // El navegador solo deja sonar después de un gesto: el contexto se crea al
   // activar los avisos y se reanuda con el siguiente toque tras recargar.
@@ -32,20 +35,24 @@ export function useOfferAlert(orders:PanelOrder[]|undefined,enabled:boolean){
   },[enabled]);
 
   useEffect(()=>{
-    document.title=offers?`(${offers}) Pedido nuevo · ${TITLE}`:TITLE;
+    document.title=urgent?`(${urgent}) Atención · ${TITLE}`:offers?`(${offers}) Pedido nuevo · ${TITLE}`:TITLE;
     return ()=>{document.title=TITLE};
-  },[offers]);
+  },[offers,urgent]);
 
   useEffect(()=>{
     if(!orders)return;
     const fresh=newOffers(seen.current,orders);
     seen.current=new Set(orders.filter(order=>order.stage==="offer").map(order=>order.token));
-    if(!fresh.length||!enabled)return;
+    const keys=urgentKeys(orders);
+    const freshUrgent=keys.filter(key=>!urgentSeen.current.has(key));
+    urgentSeen.current=new Set(keys);
+    if((!fresh.length&&!freshUrgent.length)||!enabled)return;
     beep(audio.current);
     navigator.vibrate?.([220,120,220]);
     if(document.hidden&&"Notification" in window&&Notification.permission==="granted"){
       // En Android Chrome `new Notification` exige un service worker y lanza: el sonido ya avisó.
-      try{new Notification("Pedido nuevo de delivery",{body:`${fresh[0].organizationName} · ${fresh[0].address}`,tag:"fudia-delivery-offer"})}catch{/* sin notificación del sistema */}
+      const body=fresh.length?`${fresh[0].organizationName} · ${fresh[0].address}`:"Un reparto necesita tu decisión.";
+      try{new Notification(fresh.length?"Pedido nuevo de delivery":"Atención en un reparto",{body,tag:fresh.length?"fudia-delivery-offer":"fudia-delivery-alert"})}catch{/* sin notificación del sistema */}
     }
   },[orders,enabled]);
 }

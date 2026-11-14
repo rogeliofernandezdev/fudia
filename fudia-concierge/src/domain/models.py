@@ -380,8 +380,11 @@ class CustomerNotice(BaseModel):
 
     id: str
     # order_sent: el personal envió a cocina lo que pidió; order_ready: está
-    # listo; order_on_the_way: el delivery salió del local.
-    kind: Literal["order_ready", "order_sent", "order_on_the_way"] = "order_ready"
+    # listo; order_on_the_way: el delivery salió del local;
+    # delivery_contact_request: el repartidor llegó y no ubica al cliente.
+    kind: Literal[
+        "order_ready", "order_sent", "order_on_the_way", "delivery_contact_request"
+    ] = "order_ready"
     orderId: str = ""
     orderCode: str = ""
     # counter: venta por mostrador; pickup: recojo; table: mesa; delivery: envío.

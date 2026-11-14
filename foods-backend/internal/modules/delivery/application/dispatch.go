@@ -37,7 +37,13 @@ type OfferState struct {
 	Expired                              bool
 	CurrentRound, Assigned, Eligible     bool
 	HasPayments, Completed               bool
+	PaymentConfirmed                     bool
 	OrderCode, OrganizationName, LocName string
+	// CourierToken es el enlace vigente del motorizado ("" si no hay).
+	CourierToken string
+	// IssueReported: el motorizado marcó «No pude entregar»; FailReady: ya pasó
+	// la espera mínima para registrar la entrega fallida.
+	IssueReported, FailReady bool
 }
 
 // OrderRef identifica un pedido que el barrido debe revisar.
@@ -52,10 +58,10 @@ type DispatchRepository interface {
 	SetDispatchStatus(ctx context.Context, s scope, dispatchID, status string) error
 	StartRound(ctx context.Context, s scope, dispatchID string, round int) error
 	HasActivePartners(ctx context.Context, s scope) (bool, error)
-	// NextPartner elige la central activa de mayor prioridad aún no ofrecida en la vuelta.
-	NextPartner(ctx context.Context, s scope, dispatchID string, round int) (partnerID string, priority int, ok bool, err error)
-	// CreateOffer registra la oferta y su mensaje en la bandeja de salida.
-	CreateOffer(ctx context.Context, s scope, dispatchID, partnerID string, round, priority int) error
+	// OfferAll ofrece el pedido a todas las centrales activas con cobertura que
+	// aún no lo tienen en la vuelta, con su mensaje en la bandeja de salida.
+	// excludeReleased deja fuera a las centrales que ya liberaron este pedido.
+	OfferAll(ctx context.Context, s scope, dispatchID string, round int, excludeReleased bool) (int, error)
 	ExpireOverdueOffers(ctx context.Context, s scope, dispatchID string) error
 	HasPendingOffer(ctx context.Context, s scope, dispatchID string) (bool, error)
 	WithdrawPendingOffers(ctx context.Context, s scope, dispatchID string) error
@@ -66,6 +72,18 @@ type DispatchRepository interface {
 	MarkReadyNotified(ctx context.Context, s scope, dispatchID string) error
 	MarkPickedUp(ctx context.Context, s scope, dispatchID string) error
 	MarkDelivered(ctx context.Context, s scope, dispatchID string) error
+	// Motorizado, liberación, alertas y entrega fallida.
+	AssignCourier(ctx context.Context, s scope, dispatchID, name string) (CourierAssignment, error)
+	ReleaseOffer(ctx context.Context, s scope, offerID string) error
+	KeepPickupAlert(ctx context.Context, s scope, dispatchID string) (bool, error)
+	// MarkPickupAlerted registra el aviso crítico al restaurante; ok=false si no corresponde o ya se envió.
+	MarkPickupAlerted(ctx context.Context, s scope, dispatchID string) (PickupDelay, bool, error)
+	// ReportDeliveryIssue registra «No pude entregar»; first=false si ya estaba reportado.
+	ReportDeliveryIssue(ctx context.Context, s scope, dispatchID string) (bool, error)
+	FailedDeliveryFacts(ctx context.Context, s scope, dispatchID string) (FailedDeliveryRecord, error)
+	InsertFailedDelivery(ctx context.Context, s scope, record FailedDeliveryRecord, settlement domain.FailedDeliverySettlement) error
+	ClearCourier(ctx context.Context, s scope, dispatchID string) error
+	CourierOffer(ctx context.Context, courierToken string) (string, error)
 	FeeState(ctx context.Context, s scope, orderID string) (FeeState, bool, error)
 	MarkFeeReleased(ctx context.Context, s scope, dispatchID string, released bool) error
 	Dispatch(ctx context.Context, s scope, orderID string) (domain.Dispatch, error)
@@ -83,6 +101,8 @@ type DispatchRepository interface {
 type OrderHandoff interface {
 	MarkOnTheWay(ctx context.Context, s scope, orderID string) error
 	MarkDelivered(ctx context.Context, s scope, orderID string) error
+	// RequestCustomerContact pide por el chat al cliente que se comunique con el motorizado.
+	RequestCustomerContact(ctx context.Context, s scope, orderID string) error
 	ReleaseDeliveryFee(ctx context.Context, s scope, orderID string) error
 	RestoreDeliveryFee(ctx context.Context, s scope, orderID string, fee float64) error
 }
@@ -225,7 +245,7 @@ func (a *Dispatcher) sync(ctx context.Context, s scope, orderID string) (*notice
 		if d, created, err = a.repo.CreateDispatch(ctx, s, orderID, domain.DispatchSearching); err != nil || !created {
 			return nil, err
 		}
-		return a.offerNext(ctx, s, facts, d)
+		return a.offerNext(ctx, s, facts, d, true)
 	}
 	if !domain.ActiveDispatch(d.Status) {
 		return nil, nil
@@ -249,27 +269,48 @@ func (a *Dispatcher) sync(ctx context.Context, s scope, orderID string) (*notice
 		if err != nil || pending {
 			return nil, err
 		}
-		return a.offerNext(ctx, s, facts, d)
+		return a.offerNext(ctx, s, facts, d, true)
 	case domain.DispatchAccepted:
 		if err := a.settleFee(ctx, s, orderID); err != nil {
 			return nil, err
 		}
-		return nil, a.notifyReady(ctx, s, d, facts.Status)
+		if err := a.notifyReady(ctx, s, d, facts.Status); err != nil {
+			return nil, err
+		}
+		return a.pickupDelayNotice(ctx, s, facts, d)
 	}
 	return nil, nil
 }
 
-// offerNext ofrece el pedido a la siguiente central de la vuelta o, si no
-// queda ninguna, lo deja sin asignar y prepara el aviso a caja.
-func (a *Dispatcher) offerNext(ctx context.Context, s scope, facts OrderFacts, d DispatchState) (*noticecontracts.Notice, error) {
-	partnerID, priority, ok, err := a.repo.NextPartner(ctx, s, d.ID, d.Round)
+// pickupDelayNotice avisa al restaurante, una vez por motorizado, que el pedido
+// lleva 8 minutos listo sin recoger. Nunca libera el pedido: decide la central.
+func (a *Dispatcher) pickupDelayNotice(ctx context.Context, s scope, facts OrderFacts, d DispatchState) (*noticecontracts.Notice, error) {
+	if facts.Status != "listo" {
+		return nil, nil
+	}
+	delay, ok, err := a.repo.MarkPickupAlerted(ctx, s, d.ID)
+	if err != nil || !ok {
+		return nil, err
+	}
+	notice := noticecontracts.DeliveryPickupDelayed(facts.ID, facts.Code, facts.CustomerName, delay.PartnerName, delay.Key)
+	return &notice, nil
+}
+
+// offerNext ofrece el pedido a la vez a todas las centrales activas con
+// cobertura que aún no lo tienen en la vuelta. Si ninguna queda por responder,
+// lo deja sin asignar y prepara el aviso a caja.
+func (a *Dispatcher) offerNext(ctx context.Context, s scope, facts OrderFacts, d DispatchState, excludeReleased bool) (*noticecontracts.Notice, error) {
+	created, err := a.repo.OfferAll(ctx, s, d.ID, d.Round, excludeReleased)
 	if err != nil {
 		return nil, err
 	}
-	if ok {
-		if err = a.repo.CreateOffer(ctx, s, d.ID, partnerID, d.Round, priority); err != nil {
+	pending := created > 0
+	if !pending {
+		if pending, err = a.repo.HasPendingOffer(ctx, s, d.ID); err != nil {
 			return nil, err
 		}
+	}
+	if pending {
 		return nil, a.repo.SetDispatchStatus(ctx, s, d.ID, domain.DispatchSearching)
 	}
 	if err = a.repo.SetDispatchStatus(ctx, s, d.ID, domain.DispatchUnassigned); err != nil {
@@ -332,7 +373,7 @@ func (a *Dispatcher) Dispatch(ctx context.Context, s scope, orderID string) (dom
 	return out, nil
 }
 
-// Retry vuelve a ofrecer el pedido desde la 1.ª central (nueva vuelta). Sirve
+// Retry vuelve a ofrecer el pedido a todas las centrales (nueva vuelta). Sirve
 // cuando ninguna aceptó o cuando el local había elegido su delivery propio.
 func (a *Dispatcher) Retry(ctx context.Context, s scope, orderID string) (domain.Dispatch, error) {
 	if !uuidPattern.MatchString(orderID) {
@@ -388,7 +429,8 @@ func (a *Dispatcher) Retry(ctx context.Context, s scope, orderID string) (domain
 			return fail(err)
 		}
 	}
-	notice, err := a.offerNext(tctx, s, facts, d)
+	// Caja decide reintentar: incluye también a las centrales que lo liberaron.
+	notice, err := a.offerNext(tctx, s, facts, d, false)
 	if err != nil {
 		return fail(err)
 	}
@@ -533,7 +575,7 @@ func (a *Dispatcher) act(ctx context.Context, action, token string, authorized f
 	s := scope{OrganizationID: st.OrganizationID, LocationID: st.LocationID}
 	result := domain.ActionResult{OrderCode: st.OrderCode, OrganizationName: st.OrganizationName, LocationName: st.LocName}
 	var notice *noticecontracts.Notice
-	pickup, deliver := false, false
+	pickup, deliver, contact := false, false, false
 	switch action {
 	case domain.ActionAccept:
 		result.Outcome, notice, err = a.accept(tctx, s, st)
@@ -543,11 +585,23 @@ func (a *Dispatcher) act(ctx context.Context, action, token string, authorized f
 		result.Outcome, pickup, err = a.checkPickup(tctx, s, st)
 	case domain.ActionDeliver:
 		result.Outcome, deliver, err = a.checkDeliver(tctx, s, st)
+	case domain.ActionNotDelivered:
+		result.Outcome, contact, err = a.reportIssue(tctx, s, st)
+	case domain.ActionRelease:
+		result.Outcome, notice, err = a.release(tctx, s, st)
+	case domain.ActionKeep:
+		result.Outcome, err = a.keep(tctx, s, st)
+	case domain.ActionFail:
+		result.Outcome, err = a.fail(tctx, s, st)
 	}
 	if err != nil {
+		var known *apperror.Error
+		if errors.As(err, &known) {
+			return handoffFailure(err)
+		}
 		return fail(err)
 	}
-	if (pickup || deliver) && a.handoff == nil {
+	if (pickup || deliver || contact) && a.handoff == nil {
 		return fail(errors.New("order handoff is not configured"))
 	}
 	if pickup {
@@ -567,6 +621,12 @@ func (a *Dispatcher) act(ctx context.Context, action, token string, authorized f
 			return fail(err)
 		}
 		result.Outcome = domain.OutcomeDelivered
+	}
+	if contact {
+		// Fudia pide al cliente, por su chat, que se comunique con el motorizado.
+		if err = a.handoff.RequestCustomerContact(tctx, s, st.OrderID); err != nil {
+			return handoffFailure(err)
+		}
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return fail(err)
@@ -655,7 +715,7 @@ func (a *Dispatcher) advance(ctx context.Context, s scope, st OfferState) (*noti
 	if err != nil || pending {
 		return nil, err
 	}
-	return a.offerNext(ctx, s, facts, d)
+	return a.offerNext(ctx, s, facts, d, true)
 }
 
 // checkPickup valida «Recoger»; true indica que hay que pasar el pedido a «en camino».
@@ -674,8 +734,14 @@ func (a *Dispatcher) checkPickup(ctx context.Context, s scope, st OfferState) (s
 	}
 	switch st.OrderStatus {
 	case "listo":
+		if !st.PaymentConfirmed {
+			return domain.OutcomePaymentPending, false, nil
+		}
 		return "", true, nil
 	case "en_camino", "entregado":
+		if !st.PaymentConfirmed {
+			return domain.OutcomePaymentPending, false, nil
+		}
 		// El local ya lo despachó: se registra la recogida sin repetir la transición.
 		return domain.OutcomePickedUp, false, a.repo.MarkPickedUp(ctx, s, st.DispatchID)
 	}

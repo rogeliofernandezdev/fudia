@@ -108,7 +108,7 @@ export function companySettingsPath(organizationId:string){
 
 /** Panel web de una central de Delivery Fudia; el enlace privado va en la ruta. */
 export function publicPartnerPanelPath(token:string){
-  return `/reparto/${encodeURIComponent(token)}`;
+  return `/delivery-panel/${encodeURIComponent(token)}`;
 }
 
 export function publicConciergePath(qr:string){

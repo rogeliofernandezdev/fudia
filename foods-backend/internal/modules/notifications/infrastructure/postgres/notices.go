@@ -34,6 +34,7 @@ const visible = `n.organization_id=$1 AND n.location_id=$2 AND n.audience=ANY($3
 //     ya se entregó o se completó;
 //   - cuenta anterior sin cerrar: se cobró (completada) o el personal agregó productos;
 //   - ninguna central aceptó el delivery: se reintentó, se pasó a delivery propio, se entregó o se completó;
+//   - el motorizado no llega a recoger: ya lo recogió, se entregó, se completó o la central lo liberó;
 //   - cualquier pedido cancelado.
 //
 // Los llamados al mozo y los avisos sin pedido siguen visibles sus 24 horas. Marcar
@@ -47,6 +48,9 @@ const pending = visible + ` AND NOT EXISTS (
 	    WHEN n.kind='delivery_unassigned' THEN o.completed_at IS NOT NULL OR o.status IN ('en_camino','entregado') OR NOT EXISTS (
 	      SELECT 1 FROM delivery_dispatches d
 	      WHERE d.organization_id=n.organization_id AND d.order_id=n.order_id AND d.status='unassigned')
+	    WHEN n.kind='delivery_pickup_delayed' THEN o.completed_at IS NOT NULL OR o.status IN ('en_camino','entregado') OR NOT EXISTS (
+	      SELECT 1 FROM delivery_dispatches d
+	      WHERE d.organization_id=n.organization_id AND d.order_id=n.order_id AND d.status='accepted')
 	    WHEN n.kind='stale_account' THEN o.completed_at IS NOT NULL OR EXISTS (
 	      SELECT 1 FROM order_kitchen_rounds k
 	      WHERE k.organization_id=n.organization_id AND k.location_id=n.location_id AND k.order_id=n.order_id AND k.created_at>=n.created_at)

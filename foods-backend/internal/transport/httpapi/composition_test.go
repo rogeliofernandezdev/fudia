@@ -84,6 +84,10 @@ func (h testOrderHandoff) MarkDelivered(ctx context.Context, s requestscope.Scop
 	return h.orders.MarkDeliveryDeliveredInTransaction(ctx, s, orderID)
 }
 
+func (h testOrderHandoff) RequestCustomerContact(ctx context.Context, s requestscope.Scope, orderID string) error {
+	return h.orders.RequestDeliveryContactInTransaction(ctx, s, orderID)
+}
+
 func (h testOrderHandoff) ReleaseDeliveryFee(ctx context.Context, s requestscope.Scope, orderID string) error {
 	return h.orders.ReleaseDeliveryFeeInTransaction(ctx, s, orderID)
 }

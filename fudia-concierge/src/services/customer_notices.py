@@ -1,5 +1,5 @@
-"""Avisos de foods-backend para el cliente («en preparación», «pedido listo» y
-«va en camino»).
+"""Avisos de foods-backend para el cliente («en preparación», «pedido listo»,
+«va en camino» y «el repartidor no te ubica»).
 
 foods-backend deja el aviso en su bandeja de salida cuando el personal envía a
 cocina lo que el cliente pidió por WhatsApp (los pedidos del bot esperan
@@ -74,11 +74,23 @@ def order_on_the_way_text(notice: CustomerNotice) -> str:
     return f"🛵 {order} va en camino.\nPaga al recibirlo."
 
 
+def delivery_contact_request_text(notice: CustomerNotice) -> str:
+    """El repartidor llegó a la dirección, llamó y no ubica al cliente. Solo pide
+    que se comunique: no promete reembolsos ni ofrece cancelar."""
+    order = f"tu pedido {notice.orderCode}" if notice.orderCode.strip() else "tu pedido"
+    return (
+        f"🛵 El repartidor llegó con {order} y no logra ubicarte.\n"
+        "Devuelve su llamada o contesta la próxima para recibir tu pedido."
+    )
+
+
 def notice_text(notice: CustomerNotice) -> str:
     if notice.kind == "order_sent":
         return order_sent_text(notice)
     if notice.kind == "order_on_the_way":
         return order_on_the_way_text(notice)
+    if notice.kind == "delivery_contact_request":
+        return delivery_contact_request_text(notice)
     return order_ready_text(notice)
 
 

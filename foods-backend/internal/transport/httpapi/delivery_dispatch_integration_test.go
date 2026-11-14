@@ -12,10 +12,11 @@ import (
 	"time"
 )
 
-// Delivery Fudia: con la empresa activada, un pedido confirmado se ofrece a las
-// centrales en el orden global; un rechazo o 3 minutos sin respuesta pasan a la siguiente; sin
-// centrales queda sin asignar con aviso a caja; «Reintentar» abre otra vuelta;
-// la central que acepta recibe «listo para recoger» y «Recoger» lo pone en camino.
+// Delivery Fudia: con la empresa activada, cuando cocina inicia la preparación el
+// pedido se ofrece a la vez a todas las centrales con cobertura; la primera que
+// acepta se lo queda y las demás reciben «taken». Si todas rechazan o vencen, queda
+// sin asignar con aviso a caja; «Reintentar» abre otra vuelta; la central que
+// acepta recibe «listo para recoger» y «Recoger» lo pone en camino.
 func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
@@ -118,6 +119,19 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		decode(rec, &out)
 		return out.ID
 	}
+	cook := func(id, status string) {
+		t.Helper()
+		if rec := call(api.updateKitchenTicketStatus, "PATCH", fmt.Sprintf(`{"status":%q}`, status), id, s); rec.Code != 204 {
+			t.Fatalf("kitchen %s: %d %s", status, rec.Code, rec.Body.String())
+		}
+	}
+	// prepare crea el pedido y cocina inicia la preparación: recién ahí se ofrece.
+	prepare := func() string {
+		t.Helper()
+		id := createOrder()
+		cook(id, "preparando")
+		return id
+	}
 	type message struct {
 		ID, Kind, PartnerName, PartnerPhone, ActionToken, OrderCode, Total string
 		ExpiresInSeconds                                                   int
@@ -145,6 +159,16 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		}
 		return mine
 	}
+	byPhone := func(messages []message, number string) message {
+		t.Helper()
+		for _, m := range messages {
+			if m.PartnerPhone == number {
+				return m
+			}
+		}
+		t.Fatalf("no message for %s: %#v", number, messages)
+		return message{}
+	}
 	act := func(action, token, from string) string {
 		rec := call(d.PartnerAction, "POST", fmt.Sprintf(`{"action":%q,"token":%q,"phone":%q}`, action, token, from), "", scope{})
 		if rec.Code != 200 {
@@ -170,23 +194,32 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	}
 
 	orderID := createOrder()
-	offers := claim()
-	if len(offers) != 1 || offers[0].Kind != "offer" || offers[0].PartnerName != "Central Norte" || offers[0].ExpiresInSeconds != 180 ||
-		offers[0].Total != "65.00" || len(offers[0].Items) != 1 || offers[0].Items[0].Note != "Sin ají" {
-		t.Fatalf("first offer: %#v", offers)
+	// Confirmado en caja todavía no se ofrece: espera a que cocina inicie.
+	if early := claim(); len(early) != 0 {
+		t.Fatalf("offered before preparation: %#v", early)
 	}
-	firstToken := offers[0].ActionToken
+	cook(orderID, "preparando")
+	offers := claim()
+	if len(offers) != 2 {
+		t.Fatalf("offer to every central: %#v", offers)
+	}
+	for _, m := range offers {
+		if m.Kind != "offer" || m.ExpiresInSeconds != 180 || m.Total != "65.00" || len(m.Items) != 1 || m.Items[0].Note != "Sin ají" {
+			t.Fatalf("offer: %#v", m)
+		}
+	}
+	firstToken := byPhone(offers, phone(1)).ActionToken
+	secondToken := byPhone(offers, phone(2)).ActionToken
 	if got := act("reject", firstToken, phone(2)); got != "not_found" {
 		t.Fatalf("another phone answered: %s", got)
 	}
 	if got := act("reject", firstToken, "+"+phone(1)); got != "rejected" {
 		t.Fatalf("reject: %s", got)
 	}
-	offers = claim()
-	if len(offers) != 1 || offers[0].PartnerName != "Central Sur" {
-		t.Fatalf("cascade to second: %#v", offers)
+	// La otra central ya tenía su oferta: un rechazo no envía nada nuevo.
+	if more := claim(); len(more) != 0 {
+		t.Fatalf("reject must not resend: %#v", more)
 	}
-	secondToken := offers[0].ActionToken
 	if got := act("accept", firstToken, phone(1)); got != "taken" {
 		t.Fatalf("late accept after reject: %s", got)
 	}
@@ -213,12 +246,16 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		t.Fatalf("retry: %d %s", retry.Code, retry.Body.String())
 	}
 	offers = claim()
-	if len(offers) != 1 || offers[0].PartnerName != "Central Norte" {
+	if len(offers) != 2 {
 		t.Fatalf("retry offer: %#v", offers)
 	}
-	acceptedToken := offers[0].ActionToken
+	acceptedToken := byPhone(offers, phone(1)).ActionToken
 	if got := act("accept", acceptedToken, phone(1)); got != "accepted" {
 		t.Fatalf("accept: %s", got)
+	}
+	// Aceptación exclusiva: la segunda central ya no puede tomarlo.
+	if got := act("accept", byPhone(offers, phone(2)).ActionToken, phone(2)); got != "taken" {
+		t.Fatalf("second central accepted too: %s", got)
 	}
 	if got := act("accept", acceptedToken, phone(1)); got != "already_accepted" {
 		t.Fatalf("double accept: %s", got)
@@ -248,20 +285,29 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		t.Fatalf("order read model: %#v", detail)
 	}
 
-	for _, status := range []string{"preparando", "listo"} {
-		req := httptest.NewRequest("PATCH", "/", bytes.NewReader([]byte(fmt.Sprintf(`{"status":%q}`, status))))
-		req.SetPathValue("id", orderID)
-		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
-		rec := httptest.NewRecorder()
-		api.updateKitchenTicketStatus(rec, req)
-		if rec.Code != 204 {
-			t.Fatalf("kitchen %s: %d %s", status, rec.Code, rec.Body.String())
-		}
-	}
+	cook(orderID, "listo")
 	ready := claim()
 	if len(ready) != 1 || ready[0].Kind != "ready" || ready[0].ActionToken != acceptedToken || ready[0].ExpiresInSeconds != 0 || ready[0].Total != "65.00" {
 		t.Fatalf("ready message: %#v", ready)
 	}
+	if got := act("pickup", acceptedToken, phone(1)); got != "payment_pending" {
+		t.Fatalf("pickup before cashier confirms: %s", got)
+	}
+	grantCashManagementForPaymentTest(t, api, s)
+	var registerID string
+	if err := pool.QueryRow(ctx, `INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja de centrales',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID).Scan(&registerID); err != nil {
+		t.Fatal(err)
+	}
+	if rec := call(api.openCashShift, "POST", fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`, registerID), "", s); rec.Code != 201 {
+		t.Fatalf("cash shift: %d %s", rec.Code, rec.Body.String())
+	}
+	pay := func(id string) {
+		t.Helper()
+		if rec := call(api.createPayment, "POST", fmt.Sprintf(`{"orderId":%q,"method":"card","amount":60}`, id), "", s); rec.Code != 201 {
+			t.Fatalf("cashier payment: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+	pay(orderID)
 	if got := act("pickup", acceptedToken, phone(1)); got != "picked_up" {
 		t.Fatalf("pickup: %s", got)
 	}
@@ -272,7 +318,7 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		t.Fatalf("after pickup: %s %s", dispatchStatus(orderID), orderStatus(orderID))
 	}
 	history := call(d.OrderDispatch, "GET", "", orderID, s)
-	if history.Code != 200 || strings.Count(history.Body.String(), `"partnerName"`) != 4 {
+	if history.Code != 200 || strings.Count(history.Body.String(), `"partnerName"`) != 5 {
 		t.Fatalf("history: %d %s", history.Code, history.Body.String())
 	}
 
@@ -286,9 +332,9 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	}
 
 	// Aceptado y luego delivery propio: el envío vuelve al pedido del local.
-	backID := createOrder()
+	backID := prepare()
 	offers = claim()
-	if len(offers) != 1 || act("accept", offers[0].ActionToken, phone(1)) != "accepted" {
+	if len(offers) != 2 || act("accept", byPhone(offers, phone(1)).ActionToken, phone(1)) != "accepted" {
 		t.Fatalf("accept before own: %#v", offers)
 	}
 	if total, fee := money(backID); total != "60.00" || fee != "0.00" {
@@ -305,7 +351,7 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	}
 
 	t.Run("stale_buttons_cannot_take_reassigned_order", func(t *testing.T) {
-		oldToken := offers[0].ActionToken
+		oldToken := byPhone(offers, phone(1)).ActionToken
 		if got := act("accept", oldToken, phone(1)); got != "taken" {
 			t.Fatalf("old acceptance after own: %s", got)
 		}
@@ -313,23 +359,15 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 			t.Fatal(rec.Body.String())
 		}
 		next := claim()
-		if len(next) != 1 {
+		if len(next) != 2 {
 			t.Fatalf("retry: %#v", next)
 		}
-		act("reject", next[0].ActionToken, phone(1))
-		next = claim()
-		if len(next) != 1 {
-			t.Fatalf("second: %#v", next)
-		}
-		if got := act("accept", next[0].ActionToken, phone(2)); got != "accepted" {
+		act("reject", byPhone(next, phone(1)).ActionToken, phone(1))
+		current := byPhone(next, phone(2))
+		if got := act("accept", current.ActionToken, phone(2)); got != "accepted" {
 			t.Fatal(got)
 		}
-		for _, status := range []string{"preparando", "listo"} {
-			rec := call(api.updateKitchenTicketStatus, "PATCH", fmt.Sprintf(`{"status":%q}`, status), backID, s)
-			if rec.Code != 204 {
-				t.Fatal(rec.Body.String())
-			}
-		}
+		cook(backID, "listo")
 		claim()
 		if got := act("pickup", oldToken, phone(1)); got != "taken" {
 			t.Fatalf("old central picked up: %s", got)
@@ -337,17 +375,19 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		if orderStatus(backID) != "listo" || dispatchStatus(backID) != "accepted" {
 			t.Fatal("stale button changed order")
 		}
-		if got := act("pickup", next[0].ActionToken, phone(2)); got != "picked_up" {
+		pay(backID)
+		if got := act("pickup", current.ActionToken, phone(2)); got != "picked_up" {
 			t.Fatalf("current central: %s", got)
 		}
 	})
 
 	t.Run("failed_fee_transfer_rolls_back_acceptance", func(t *testing.T) {
-		id := createOrder()
+		id := prepare()
 		messages := claim()
-		if len(messages) != 1 {
+		if len(messages) != 2 {
 			t.Fatalf("offer: %#v", messages)
 		}
+		token := byPhone(messages, phone(1)).ActionToken
 		_, err := pool.Exec(ctx, fmt.Sprintf(`CREATE FUNCTION delivery_fee_review_failure() RETURNS trigger LANGUAGE plpgsql AS $test$ BEGIN IF NEW.id='%s'::uuid AND OLD.delivery_fee>0 AND NEW.delivery_fee=0 THEN RAISE EXCEPTION 'simulated fee failure'; END IF; RETURN NEW; END $test$;
    CREATE TRIGGER delivery_fee_review_failure BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION delivery_fee_review_failure();`, id))
 		if err != nil {
@@ -356,13 +396,13 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		t.Cleanup(func() {
 			_, _ = pool.Exec(context.Background(), `DROP TRIGGER IF EXISTS delivery_fee_review_failure ON orders; DROP FUNCTION IF EXISTS delivery_fee_review_failure();`)
 		})
-		rec := call(d.PartnerAction, "POST", fmt.Sprintf(`{"action":"accept","token":%q,"phone":%q}`, messages[0].ActionToken, phone(1)), "", scope{})
+		rec := call(d.PartnerAction, "POST", fmt.Sprintf(`{"action":"accept","token":%q,"phone":%q}`, token, phone(1)), "", scope{})
 		if rec.Code != 503 {
 			t.Fatalf("failed money transfer accepted: %d %s", rec.Code, rec.Body.String())
 		}
 		var feeReleased bool
 		var offerStatus string
-		if err := pool.QueryRow(ctx, `SELECT d.fee_released,f.status FROM delivery_dispatches d JOIN delivery_dispatch_offers f ON f.dispatch_id=d.id WHERE d.order_id=$1`, id).Scan(&feeReleased, &offerStatus); err != nil {
+		if err := pool.QueryRow(ctx, `SELECT d.fee_released,f.status FROM delivery_dispatches d JOIN delivery_dispatch_offers f ON f.dispatch_id=d.id WHERE d.order_id=$1 AND f.action_token=$2`, id, token).Scan(&feeReleased, &offerStatus); err != nil {
 			t.Fatal(err)
 		}
 		total, fee := money(id)
@@ -373,30 +413,17 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	})
 
 	t.Run("paid_orders_are_not_assigned_or_discounted", func(t *testing.T) {
-		grantCashManagementForPaymentTest(t, api, s)
-		var registerID string
-		if err := pool.QueryRow(ctx, `INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja reparto',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID).Scan(&registerID); err != nil {
-			t.Fatal(err)
-		}
-		if rec := call(api.openCashShift, "POST", fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`, registerID), "", s); rec.Code != 201 {
-			t.Fatal(rec.Body.String())
-		}
 		for _, amount := range []int{10, 65} {
-			id := createOrder()
+			id := prepare()
 			messages := claim()
-			if len(messages) != 1 {
+			if len(messages) != 2 {
 				t.Fatalf("offer: %#v", messages)
 			}
-			for _, status := range []string{"preparando", "listo"} {
-				rec := call(api.updateKitchenTicketStatus, "PATCH", fmt.Sprintf(`{"status":%q}`, status), id, s)
-				if rec.Code != 204 {
-					t.Fatal(rec.Body.String())
-				}
-			}
+			cook(id, "listo")
 			if rec := call(api.createPayment, "POST", fmt.Sprintf(`{"orderId":%q,"method":"card","amount":%d}`, id, amount), "", s); rec.Code != 201 {
 				t.Fatal(rec.Body.String())
 			}
-			if got := act("accept", messages[0].ActionToken, phone(1)); got != "payment_conflict" {
+			if got := act("accept", byPhone(messages, phone(1)).ActionToken, phone(1)); got != "payment_conflict" {
 				t.Fatalf("paid acceptance: %s", got)
 			}
 			total, fee := money(id)
@@ -427,10 +454,10 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 			t.Fatalf("update: %d %s", rec.Code, rec.Body.String())
 		}
 	}
-	t.Run("deactivation_withdraws_pending_offer_and_cascades", func(t *testing.T) {
-		id := createOrder()
+	t.Run("deactivation_withdraws_pending_offer", func(t *testing.T) {
+		id := prepare()
 		var old string
-		if err := pool.QueryRow(ctx, `SELECT f.action_token::text FROM delivery_dispatch_offers f JOIN delivery_dispatches d ON d.id=f.dispatch_id WHERE d.order_id=$1 AND f.status='pending'`, id).Scan(&old); err != nil {
+		if err := pool.QueryRow(ctx, `SELECT f.action_token::text FROM delivery_dispatch_offers f JOIN delivery_dispatches d ON d.id=f.dispatch_id WHERE d.order_id=$1 AND f.status='pending' AND f.partner_id=$2`, id, first).Scan(&old); err != nil {
 			t.Fatal(err)
 		}
 		updatePartner(first, false, `["150101"]`)
@@ -448,19 +475,19 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	t.Run("coverage_matches_only_checked_districts", func(t *testing.T) {
 		updatePartner(first, true, `["160101"]`)
 		updatePartner(second, true, `["150101"]`)
-		id := createOrder()
+		id := prepare()
 		messages := claim()
 		if len(messages) != 1 || messages[0].PartnerPhone != phone(2) {
 			t.Fatalf("checked district match: %#v", messages)
 		}
 		call(d.UseOwnDelivery, "POST", "", id, s)
 		updatePartner(second, true, `["150102"]`)
-		unmatched := createOrder()
+		unmatched := prepare()
 		if dispatchStatus(unmatched) != "unassigned" || len(claim()) != 0 {
 			t.Fatal("wrong district received order")
 		}
 		updatePartner(first, true, `["150201","150101"]`)
-		matched := createOrder()
+		matched := prepare()
 		messages = claim()
 		if len(messages) != 1 || messages[0].PartnerPhone != phone(1) {
 			t.Fatalf("district match: %#v", messages)
@@ -471,7 +498,7 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		if _, err := pool.Exec(ctx, `UPDATE locations SET district_code=NULL WHERE id=$1`, s.LocationID); err != nil {
 			t.Fatal(err)
 		}
-		missing := createOrder()
+		missing := prepare()
 		if dispatchStatus(missing) != "unassigned" || len(claim()) != 0 {
 			t.Fatal("missing district treated as national coverage")
 		}
@@ -480,23 +507,28 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		}
 	})
 
-	// Cancelado después de aceptar: la central recibe el aviso de cancelación.
-	cancelID := createOrder()
+	// Preparado y en manos de una central: nadie puede cancelarlo.
+	cancelID := prepare()
 	offers = claim()
-	if len(offers) != 1 || act("accept", offers[0].ActionToken, phone(1)) != "accepted" {
+	if len(offers) != 2 || act("accept", byPhone(offers, phone(1)).ActionToken, phone(1)) != "accepted" {
 		t.Fatalf("accept before cancel: %#v", offers)
 	}
-	req := httptest.NewRequest("PATCH", "/", bytes.NewReader([]byte(`{"status":"cancelado"}`)))
-	req.SetPathValue("id", cancelID)
-	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
-	rec := httptest.NewRecorder()
-	api.updateOrderStatus(rec, req)
-	if rec.Code != 200 {
-		t.Fatalf("cancel: %d %s", rec.Code, rec.Body.String())
+	cook(cancelID, "listo")
+	claim()
+	rec := call(api.updateOrderStatus, "PATCH", `{"status":"cancelado"}`, cancelID, s)
+	if rec.Code != 409 || !strings.Contains(rec.Body.String(), "delivery_in_progress_not_cancellable") {
+		t.Fatalf("cancel in delivery: %d %s", rec.Code, rec.Body.String())
 	}
-	cancelled := claim()
-	if dispatchStatus(cancelID) != "cancelled" || len(cancelled) != 1 || cancelled[0].Kind != "cancelled" {
-		t.Fatalf("cancel notice: %s %#v", dispatchStatus(cancelID), cancelled)
+	if dispatchStatus(cancelID) != "accepted" || orderStatus(cancelID) != "listo" || len(claim()) != 0 {
+		t.Fatal("blocked cancellation changed the delivery")
+	}
+	// Delivery propio en el mismo estado conserva sus reglas: no lo bloquea este control.
+	ownReady := createOrder()
+	call(d.UseOwnDelivery, "POST", "", ownReady, s)
+	cook(ownReady, "preparando")
+	cook(ownReady, "listo")
+	if rec := call(api.updateOrderStatus, "PATCH", `{"status":"cancelado"}`, ownReady, s); strings.Contains(rec.Body.String(), "delivery_in_progress_not_cancellable") {
+		t.Fatalf("own delivery blocked by central rule: %d %s", rec.Code, rec.Body.String())
 	}
 
 	// Otra empresa no ve ni reintenta el despacho.

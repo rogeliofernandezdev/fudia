@@ -89,6 +89,7 @@ func (a *Orders) allowHistoricalTicket(ctx context.Context, s scope, orderID str
 	}
 	return nil
 }
+
 // stationTicket separa la estación del id de comanda: "~bar" es Barra y lo demás Cocina.
 func stationTicket(id string) (string, string) {
 	if strings.HasSuffix(id, "~bar") {
@@ -125,7 +126,10 @@ func (a *Orders) stationChanged(ctx context.Context, s scope, orderID, id, desti
 	_ = a.audit.Record(ctx, s, "preparation."+status, "order", orderID)
 	if status == "listo" {
 		a.noticeReady(ctx, s, orderID, id, destination)
+		return
 	}
+	// Delivery Fudia ofrece el pedido a las centrales cuando cocina inicia la preparación.
+	a.dispatchChanged(ctx, s, orderID)
 }
 
 func (a *Orders) tryStationTicket(ctx context.Context, s scope, rawID, status string) (bool, error) {
@@ -264,6 +268,8 @@ func (a *Orders) UpdateKitchen(ctx context.Context, s scope, id string, in Order
 		if in.Status == "listo" {
 			action = "kitchen.round.ready"
 			a.noticeReady(ctx, s, roundOrderID, id, "kitchen")
+		} else {
+			a.dispatchChanged(ctx, s, roundOrderID)
 		}
 		_ = a.audit.Record(ctx, s, action, "order_round", id)
 		return nil
@@ -301,6 +307,8 @@ func (a *Orders) UpdateKitchen(ctx context.Context, s scope, id string, in Order
 	if in.Status == "listo" {
 		action = "kitchen.ready"
 		a.noticeReady(ctx, s, id, id, "kitchen")
+	} else {
+		a.dispatchChanged(ctx, s, id)
 	}
 	_ = a.audit.Record(ctx, s, action, "order", id)
 	return nil

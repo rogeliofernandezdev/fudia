@@ -112,7 +112,7 @@ foods-backend registra un aviso en su bandeja de salida. Estas rutas
 son globales (sin `{token}`) y usan la misma clave `X-Fudia-Concierge-Key`:
 
 - `GET /v1/integrations/concierge/notices/pending?limit=20` reserva hasta 50
-  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready"|"order_sent"|"order_on_the_way", orderId,
+  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready"|"order_sent"|"order_on_the_way"|"delivery_contact_request", orderId,
   orderCode, fulfillment:"counter"|"pickup"|"table"|"delivery", customerPhone, conversationId,
   organizationName, locationName, createdAt}]}`. Un reclamo no confirmado vence
   y el aviso vuelve (máximo 5 intentos, avisos de las últimas 2 horas, pedidos no
@@ -123,13 +123,17 @@ son globales (sin `{token}`) y usan la misma clave `X-Fudia-Concierge-Key`:
 foods-backend solo entrega hechos; Concierge redacta el mensaje. Los pedidos de
 mesa (los entrega el mozo), los de delivery y los registrados por el personal no
 generan aviso de «listo». Un delivery pedido por WhatsApp sí avisa
-`order_on_the_way` («va en camino», una vez) cuando sale del local. Un tipo de
-aviso que esta versión no conoce se omite sin bloquear los demás.
+`order_on_the_way` («va en camino», una vez) cuando sale del local, y
+`delivery_contact_request` (una vez) cuando el repartidor de la central marca
+«No pude entregar» en su enlace: llegó, llamó al número del pedido y no ubicó al
+cliente. Concierge solo le pide devolver o contestar la llamada del repartidor;
+no ofrece cancelar ni promete reembolsos. Un tipo de aviso que esta versión no
+conoce se omite sin bloquear los demás.
 
 ## Centrales de Delivery Fudia
 
-- `GET /v1/integrations/concierge/delivery-messages/pending?limit=20` avanza la
-  cascada de centrales y reserva hasta 50 mensajes por 60 s:
+- `GET /v1/integrations/concierge/delivery-messages/pending?limit=20` avanza los
+  despachos a centrales y reserva hasta 50 mensajes por 60 s:
   `{items:[{id, kind:"offer"|"ready"|"cancelled", partnerName, partnerPhone,
   actionToken, expiresInSeconds, orderCode, organizationName, locationName,
   locationAddress, customerName, customerPhone, address, reference, latitude,

@@ -26,6 +26,12 @@ type PanelRepository interface {
 	// SetCourierLocation guarda la ubicación en los repartos en curso de la central.
 	SetCourierLocation(ctx context.Context, partnerID string, latitude, longitude float64) error
 	Tracking(ctx context.Context, s scope, orderID string) (domain.Tracking, error)
+	// FailedDeliveries lista las entregas fallidas recientes de la central.
+	FailedDeliveries(ctx context.Context, partnerID string) ([]domain.FailedDelivery, error)
+	// CourierView carga el reparto vigente del enlace del motorizado.
+	CourierView(ctx context.Context, courierToken string) (domain.CourierView, error)
+	// SetCourierLocationByToken guarda la ubicación en el reparto del motorizado; false si el enlace ya no vale.
+	SetCourierLocationByToken(ctx context.Context, courierToken string, latitude, longitude float64) (bool, error)
 }
 
 var errPanelNotFound = failure(apperror.NotFound, "delivery_panel_not_found", "Este enlace del panel ya no es válido. Pide uno nuevo a Fudia.")
@@ -67,11 +73,17 @@ func (a *Dispatcher) Panel(ctx context.Context, token string) (domain.PartnerPan
 	if err != nil {
 		return fail(err)
 	}
-	return domain.PartnerPanel{PartnerName: partner.Name, Active: partner.Active, Orders: orders}, nil
+	failed, err := a.panel.FailedDeliveries(ctx, partner.ID)
+	if err != nil {
+		return fail(err)
+	}
+	return domain.PartnerPanel{PartnerName: partner.Name, Active: partner.Active, Orders: orders, FailedDeliveries: failed}, nil
 }
 
-// PanelAct aplica una acción del panel: aceptar o rechazar la oferta, recoger
-// el pedido y confirmar la entrega. Solo vale para ofertas de esa central.
+// PanelAct aplica una acción del panel: aceptar o rechazar la oferta, liberar
+// el pedido antes de recogerlo, mantener al motorizado ante una alerta de
+// recogida y registrar la entrega fallida (recoger y entregar siguen aceptándose
+// por compatibilidad). Solo vale para ofertas de esa central.
 func (a *Dispatcher) PanelAct(ctx context.Context, token string, in domain.PanelActionInput) (domain.ActionResult, error) {
 	partner, err := a.panelPartner(ctx, token)
 	if err != nil {

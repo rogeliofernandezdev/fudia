@@ -460,6 +460,43 @@ no numéricas. La presentación solo formatea la distancia con
 `formatRegionalNumber`. Usa la misma consulta del detalle (`getOrder`), sin
 peticiones adicionales ni geocodificación en el cliente.
 
+## Panel de reparto y enlace del motorizado
+
+Ambas pantallas son públicas y usan el proxy `/api/public/[...path]`, sin sesión:
+`delivery-panel/{token}` (central) y `delivery-courier/{courierToken}`
+(motorizado). TanStack Query consulta cada 5 s (30 s tras un error), también en
+segundo plano: `["delivery-partner-panel",token]` y `["delivery-courier",token]`.
+Cada acción invalida su consulta y muestra el resultado (`outcome`) con
+`outcomeFeedback`; el navegador no calcula estados ni montos.
+
+- Central: `POST …/actions` con `accept`, `reject`, `release` (solo por recoger),
+  `keep` (mantener ante la alerta de recogida) y `fail` (entrega fallida tras el
+  reporte del motorizado). `POST …/courier` `{token,courierName}` registra o
+  cambia al motorizado y devuelve `courierToken`; el enlace se arma con
+  `courierLink(origin,courierToken)` como `/delivery-courier/{token}`. El mismo nombre
+  conserva el enlace; otro nombre lo reemplaza y el backend invalida el anterior.
+- Alertas: `pickupAlert` (`warning` 3 min, `urgent` 5 min, `critical` 8 min),
+  `pickupWaitSeconds` y `pickupAlertAcknowledged` vienen del backend;
+  `needsPickupDecision` muestra Mantener / Cambiar motorizado / Liberar. Los
+  relojes (oferta, espera y `failAvailableInSeconds`) solo descuentan el tiempo
+  transcurrido desde la última consulta. Nada se libera ni se registra por tiempo.
+- `failedDeliveries` lista las entregas fallidas registradas con sus montos y
+  notas de validación tal como las devuelve el backend.
+- Motorizado: `GET` devuelve `{partnerName,courierName,order}`; `POST …/actions`
+  con `pickup`, `deliver` y `not_delivered`; `POST …/location` con la ubicación
+  (cuerpo, nunca la URL) solo con el reparto en curso. Un 404 muestra el mensaje
+  del backend (enlace reasignado, liberado, entregado o cancelado).
+- «Recogí el pedido» requiere `paymentConfirmed` y cocina terminada. Sin
+  confirmación, incluso si falta el campo, permanece deshabilitado con el motivo
+  visible; `payment_pending` explica que debe esperar a caja. El backend valida
+  nuevamente bajo bloqueo.
+- Pedidos: `canCancelOrder` oculta «Cancelar» en un delivery con central asignada
+  (`deliveryDispatchStatus` `accepted`, `picked_up` o `delivered`) que está listo
+  o en camino; el backend responde `delivery_in_progress_not_cancellable`. Sin
+  despacho o con delivery propio la regla no cambia.
+- Campana: `delivery_pickup_delayed` (8 min sin recogida) abre Pedidos, tono
+  `peach` e ícono `clock`.
+
 ## Tarifas de delivery de Concierge
 
 `DeliveryFeesPanel` (módulo `configuration`) usa la clave

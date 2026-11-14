@@ -22,6 +22,12 @@ ORDER_STATUS_LABELS = {
     "cancelado": "cancelado",
 }
 
+# Un delivery de Delivery Fudia listo o en camino, con central asignada, está en
+# proceso de entrega: el cliente ya no puede cancelarlo (foods-backend también lo
+# bloquea). El delivery propio no usa esta regla.
+DELIVERY_IN_PROGRESS_STATUSES = frozenset({"listo", "en_camino"})
+PARTNER_ASSIGNED_DISPATCH = frozenset({"accepted", "picked_up", "delivered"})
+
 
 class ServiceTools:
     def __init__(self, context: ToolContext) -> None:
@@ -178,6 +184,11 @@ class ServiceTools:
                 "deliveryFee": str(status.deliveryFee),
                 "paymentStatus": status.paymentStatus,
                 "active": status.active,
+                # Delivery preparado o en camino: ya no se cancela de ninguna forma.
+                "deliveryInProgress": status.channel == "delivery"
+                and status.status in DELIVERY_IN_PROGRESS_STATUSES
+                and status.delivery is not None
+                and status.delivery.dispatchStatus in PARTNER_ASSIGNED_DISPATCH,
             },
         }
 

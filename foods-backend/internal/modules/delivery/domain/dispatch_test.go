@@ -43,12 +43,13 @@ func TestPartnerCoverageMustBeExplicit(t *testing.T) {
 }
 
 func TestOrderDispatchable(t *testing.T) {
-	for _, status := range []string{"confirmado", "preparando", "listo"} {
+	// Se ofrece cuando cocina inicia la preparación, no al confirmar en caja.
+	for _, status := range []string{"preparando", "listo"} {
 		if !OrderDispatchable("delivery", status, false) {
 			t.Fatalf("%s should be dispatchable", status)
 		}
 	}
-	if OrderDispatchable("delivery", "nuevo", false) || OrderDispatchable("delivery", "listo", true) ||
+	if OrderDispatchable("delivery", "nuevo", false) || OrderDispatchable("delivery", "confirmado", false) || OrderDispatchable("delivery", "listo", true) ||
 		OrderDispatchable("recojo", "confirmado", false) || OrderDispatchable("delivery", "en_camino", false) {
 		t.Fatal("unexpected dispatchable order")
 	}

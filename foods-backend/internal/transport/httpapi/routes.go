@@ -28,6 +28,10 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("GET /v1/public/delivery-panel/{token}", http.HandlerFunc(d.Panel))
 		m.Handle("POST /v1/public/delivery-panel/{token}/actions", http.HandlerFunc(d.PanelAction))
 		m.Handle("POST /v1/public/delivery-panel/{token}/location", http.HandlerFunc(d.PanelLocation))
+		m.Handle("POST /v1/public/delivery-panel/{token}/courier", http.HandlerFunc(d.PanelCourier))
+		m.Handle("GET /v1/public/delivery-courier/{token}", http.HandlerFunc(d.Courier))
+		m.Handle("POST /v1/public/delivery-courier/{token}/actions", http.HandlerFunc(d.CourierAction))
+		m.Handle("POST /v1/public/delivery-courier/{token}/location", http.HandlerFunc(d.CourierLocation))
 		// Delivery Fudia se activa por empresa desde la plataforma.
 		m.Handle("GET /v1/platform/organizations/{id}/delivery", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.OrganizationDelivery))))
 		m.Handle("PUT /v1/platform/organizations/{id}/delivery", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.SetOrganizationDelivery))))

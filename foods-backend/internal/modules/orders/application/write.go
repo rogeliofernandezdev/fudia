@@ -117,6 +117,7 @@ func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (dom
 	return o, nil
 
 }
+
 // resolveDeliveryPoint valida el punto del mapa y calcula la distancia desde el
 // local. Fuera de delivery el punto se descarta; sin coordenadas del local se
 // guarda el punto sin distancia.
@@ -292,6 +293,16 @@ func (a *Orders) SetStatus(ctx context.Context, s scope, id string, in OrderStat
 		return result, orderFailure(apperror.Conflict, "kitchen_transition_required", "Los estados de preparación solo se actualizan desde Cocina.")
 	}
 	var hasService bool
+	if in.Status == "cancelado" && channel == "delivery" && (current == "listo" || current == "en_camino" || current == "entregado") {
+		// Delivery Fudia: preparado y en manos de una central, nadie puede cancelarlo.
+		assigned, err := a.repo.PartnerDeliveryAssigned(tx.Context(), s, id)
+		if err != nil {
+			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el reparto del pedido.")
+		}
+		if assigned {
+			return result, orderFailure(apperror.Conflict, "delivery_in_progress_not_cancellable", "El pedido ya está preparado y en proceso de entrega. No se puede cancelar.")
+		}
+	}
 	if in.Status == "cancelado" {
 		var started bool
 		if err = func() error {

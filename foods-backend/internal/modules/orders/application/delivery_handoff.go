@@ -2,6 +2,9 @@ package application
 
 import (
 	"context"
+	"errors"
+
+	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 )
 
@@ -79,6 +82,30 @@ func (a *Orders) MarkDeliveryOnTheWayInTransaction(ctx context.Context, s scope,
 		return err
 	}
 	a.noticeOnTheWay(ctx, s, o)
+	return nil
+}
+
+// RequestDeliveryContactInTransaction pide al cliente de Concierge, por su chat,
+// que se comunique: el motorizado llegó y no lo ubica. Un pedido registrado por
+// el personal no tiene chat y no recibe aviso.
+func (a *Orders) RequestDeliveryContactInTransaction(ctx context.Context, s scope, id string) error {
+	if a.notices == nil {
+		return nil
+	}
+	o, err := a.repo.Record(ctx, s, id)
+	if err != nil {
+		return err
+	}
+	conversationID, err := a.repo.ConciergeConversation(ctx, s, id)
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if customer, ok := noticecontracts.DeliveryContactForCustomer(o.ID, o.Channel, o.CustomerPhone, conversationID); ok {
+		return a.notices.PublishCustomer(ctx, s, customer)
+	}
 	return nil
 }
 

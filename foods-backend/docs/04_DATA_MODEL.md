@@ -26,22 +26,29 @@ Delivery Fudia se gestiona globalmente:
   y `location_delivery_partners`). Las empresas que ya usaban Delivery Fudia en
   algún local quedaron activadas.
 
-Un pedido de delivery confirmado (alta con `sendToKitchen`, «Enviar comanda» o
-estado Confirmado) de una empresa con Delivery Fudia abre un `delivery_dispatches` (uno
-por pedido) y se ofrece a la 1.ª central: `delivery_dispatch_offers` guarda cada
-intento con su `action_token` (generado por PostgreSQL, viaja en los botones) y
-su vencimiento (3 minutos desde que Concierge confirma el envío; 5 minutos si el
-mensaje nunca se pudo enviar). Un rechazo o un vencimiento ofrece el pedido a la
-siguiente central activa del orden global que aún no lo recibió en la vuelta
-(`round`); la `priority` de la oferta es su posición en la vuelta; sin más centrales el despacho
-queda `unassigned` y se publica el aviso `delivery_unassigned` a caja.
-«Reintentar» abre otra vuelta desde la 1.ª central; «Usar delivery propio» lo deja
-en `own` y retira las ofertas. Al aceptar, se retiran las demás ofertas; si cocina
-ya terminó, la central recibe de inmediato «listo para recoger». «Recoger» pasa el
+Cuando cocina inicia la preparación de un pedido de delivery (estado `preparando`,
+o `listo` si no pasa por estación) de una empresa con Delivery Fudia, se abre un
+`delivery_dispatches` (uno por pedido) y el pedido se ofrece **a la vez a todas
+las centrales activas con cobertura** (desde 2026-11-14; antes se ofrecía al
+confirmar y en cascada). `delivery_dispatch_offers` guarda cada oferta con su
+`action_token` (generado por PostgreSQL, viaja en los botones y el panel) y su
+vencimiento (3 minutos desde que se muestra o se envía; 5 minutos si el mensaje
+nunca se pudo enviar). La `priority` solo ordena el historial. La primera central
+que acepta se queda con el pedido bajo el bloqueo pedido → despacho → central;
+las demás ofertas se retiran y sus botones responden `taken` (doble clic:
+`already_accepted`). Si todas rechazan o vencen, el despacho queda `unassigned`
+y se publica `delivery_unassigned` a caja. «Reintentar» abre otra vuelta para
+todas las centrales; «Usar delivery propio» lo deja en `own` y retira las
+ofertas. Si cocina ya terminó, la central recibe de inmediato «listo para recoger».
+El motorizado, la liberación, las alertas de recogida y la entrega fallida
+(migración 000126) se describen en `15_DELIVERY_GEOGRAPHY.md`. «Recoger» pasa el
 pedido a `en_camino` por el caso de uso de Orders y el despacho a `picked_up`.
 «Entregado» (solo en el panel web, migración 000125) pasa el pedido a
 `entregado` y el despacho a `delivered`; la cuenta se cierra solo si ya estaba
 pagada. Un pedido cancelado cierra el despacho y avisa a la central que había aceptado.
+Un delivery con central asignada (`accepted`, `picked_up` o `delivered`) ya no se
+cancela una vez `listo`, `en_camino` o `entregado`: `409
+delivery_in_progress_not_cancellable`. El delivery propio conserva sus reglas.
 
 `delivery_partner_messages` es la bandeja de salida hacia las centrales (`offer`,
 `ready`, `cancelled`, uno por oferta y tipo), reclamada por Concierge como

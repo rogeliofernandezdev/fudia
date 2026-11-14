@@ -1,7 +1,8 @@
 """Delivery Fudia: mensajes a las centrales de reparto y sus botones.
 
-foods-backend decide a qué central se ofrece cada pedido (cascada por
-prioridad, 3 minutos por oferta) y deja el mensaje en su bandeja de salida.
+foods-backend ofrece cada pedido a la vez a todas las centrales con cobertura
+cuando cocina inicia la preparación (3 minutos por oferta; la primera que acepta
+se lo queda) y deja el mensaje en su bandeja de salida.
 `PartnerMessageRelay` lo reclama, lo envía al WhatsApp de la central y
 confirma el envío (desde ese momento corren los 3 minutos de la oferta).
 
@@ -215,10 +216,17 @@ def action_reply(result: DeliveryActionResult) -> str:
             f"El local ya registró un pago del pedido {code}.\n"
             "No lo recojas ni cobres al cliente; el local coordinará el reparto."
         ),
-        "expired": f"Se acabó el tiempo para aceptar el pedido {code}.\nLo ofrecimos a otra central.",
+        "expired": f"Se acabó el tiempo para aceptar el pedido {code}.\nYa no puedes tomarlo.",
         "cancelled": f"El pedido {code} fue cancelado.\nNo lo recojas.",
         "not_ready": f"⏳ El pedido {code} aún no está listo.\nTe avisaremos cuando puedas recogerlo.",
+        "payment_pending": (
+            f"El pago del pedido {code} aún no está confirmado.\n"
+            "Espera a que caja registre el pago completo antes de recogerlo."
+        ),
         "picked_up": f"🛵 Registramos que recogiste el pedido {code}.\nCobra al cliente al entregar.",
+        # Resultados del panel web; por WhatsApp solo llegan si se repite un estado.
+        "delivered": f"✅ El pedido {code} ya figura como entregado.",
+        "not_picked_up": f"Primero registra la recogida del pedido {code}.",
     }
     return replies.get(
         result.outcome,

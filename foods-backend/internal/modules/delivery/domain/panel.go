@@ -37,9 +37,10 @@ var panelTokenPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
 // ValidPanelToken valida la forma del enlace privado antes de consultar la base.
 func ValidPanelToken(token string) bool { return panelTokenPattern.MatchString(token) }
 
-// ValidPanelAction acepta las acciones del panel: las de la oferta y la entrega.
+// ValidPanelAction acepta las acciones del panel: las de la oferta, la entrega
+// (compatibles con versiones anteriores), liberar, mantener y entrega fallida.
 func ValidPanelAction(action string) bool {
-	return ValidAction(action) || action == ActionDeliver
+	return ValidAction(action) || action == ActionDeliver || action == ActionRelease || action == ActionKeep || action == ActionFail
 }
 
 // WithPartner indica si el reparto está en manos de una central.
@@ -57,10 +58,12 @@ type PanelLink struct {
 // necesita para recogerlo y entregarlo.
 type PanelOrder struct {
 	// Token identifica la oferta en las acciones del panel.
-	Token             string        `json:"token"`
-	Stage             string        `json:"stage"`
-	OrderCode         string        `json:"orderCode"`
-	OrderStatus       string        `json:"orderStatus"`
+	Token       string `json:"token"`
+	Stage       string `json:"stage"`
+	OrderCode   string `json:"orderCode"`
+	OrderStatus string `json:"orderStatus"`
+	// PaymentConfirmed exige el pago completo registrado por caja, neto de devoluciones.
+	PaymentConfirmed  bool          `json:"paymentConfirmed"`
 	OrganizationName  string        `json:"organizationName"`
 	LocationName      string        `json:"locationName"`
 	LocationAddress   string        `json:"locationAddress"`
@@ -86,6 +89,19 @@ type PanelOrder struct {
 	AcceptedAt       string `json:"acceptedAt,omitempty"`
 	PickedUpAt       string `json:"pickedUpAt,omitempty"`
 	DeliveredAt      string `json:"deliveredAt,omitempty"`
+	// CourierName y CourierToken: motorizado responsable y su enlace (vacíos si no hay).
+	CourierName  string `json:"courierName"`
+	CourierToken string `json:"courierToken"`
+	// PickupWaitSeconds: espera con el pedido listo y sin recoger (0 fuera de esa situación).
+	PickupWaitSeconds int `json:"pickupWaitSeconds"`
+	// PickupAlert: "", warning (3 min), urgent (5 min) o critical (8 min).
+	PickupAlert string `json:"pickupAlert"`
+	// PickupAlertAcknowledged: la central eligió mantener al motorizado en este nivel.
+	PickupAlertAcknowledged bool `json:"pickupAlertAcknowledged"`
+	// IssueReportedAt: el motorizado marcó «No pude entregar».
+	IssueReportedAt string `json:"issueReportedAt,omitempty"`
+	// FailAvailableInSeconds: espera restante para registrar la entrega fallida.
+	FailAvailableInSeconds int `json:"failAvailableInSeconds"`
 }
 
 // PartnerPanel es lo que ve la central al abrir su panel.
@@ -94,6 +110,8 @@ type PartnerPanel struct {
 	// Active false: la central está desactivada y ya no recibe ofertas.
 	Active bool         `json:"active"`
 	Orders []PanelOrder `json:"orders"`
+	// FailedDeliveries: entregas fallidas registradas en las últimas horas.
+	FailedDeliveries []FailedDelivery `json:"failedDeliveries"`
 }
 
 // PanelActionInput es una acción del panel sobre una oferta.

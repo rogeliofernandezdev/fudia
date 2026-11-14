@@ -267,7 +267,7 @@ mostrador o sin mesa).
 6. Tras la confirmación explícita, `confirm_order` envía `POST .../delivery-orders` con `quotedFee` y un `requestId` persistido antes de llamar.
 7. El pedido queda guardado como canal `delivery` o `recojo`; caja lo revisa y pulsa «Enviar comanda» para que entre a Cocina (el cliente recibe «en preparación»). Se paga al recibir o recoger.
 
-Cambiar el tipo de entrega, la dirección, el nombre o la ubicación invalida una confirmación preparada. `check_order_status` consulta el estado real del último pedido en ambos modos.
+Cambiar el tipo de entrega, la dirección, el nombre o la ubicación invalida una confirmación preparada. `check_order_status` consulta el estado real del último pedido en ambos modos. Para un delivery listo o en camino devuelve `deliveryInProgress=true` (delivery listo o en camino con central de Delivery Fudia asignada): el pedido está en proceso de entrega y el cliente ya no puede cancelarlo; el chat no ofrece ni acepta la cancelación por mensaje (foods-backend también la rechaza con `delivery_in_progress_not_cancellable`). Si el repartidor no ubica al cliente, llega el aviso `delivery_contact_request` pidiendo devolver o contestar su llamada.
 
 ## Contexto de cada turno
 

@@ -13,6 +13,7 @@ from src.domain.models import (
     DeliveryOptions,
     DeliveryQuote,
     DeliveryTier,
+    DeliveryTracking,
     EffectRecord,
     GeoPoint,
     InboundMessage,
@@ -447,6 +448,32 @@ async def test_order_status_reads_backend() -> None:
     )
     assert result["ok"] is True
     assert result["order"]["statusLabel"] == "en preparación"
+    assert result["order"]["deliveryInProgress"] is False
+
+
+async def test_delivery_on_the_way_is_flagged_as_not_cancellable() -> None:
+    def on_the_way(dispatch: str) -> type[DeliveryFudia]:
+        class OnTheWay(DeliveryFudia):
+            async def get_order_status(self, token: str, order_id: str, conversation_id: str) -> OrderStatus:
+                return OrderStatus(
+                    orderId=order_id, code="PED-001", channel="delivery", status="en_camino",
+                    total=Decimal("32.50"), active=True, delivery=DeliveryTracking(dispatchStatus=dispatch),
+                )
+
+        return OnTheWay
+
+    async def flag(dispatch: str) -> bool:
+        session = delivery_session(last_order_id="d1")
+        result = await ConciergeTools(on_the_way(dispatch)(), session, "cancela mi pedido").execute(
+            "check_order_status", {}
+        )
+        return bool(result["order"]["deliveryInProgress"])
+
+    # Con central de Delivery Fudia asignada ya no se cancela; el delivery propio no usa esta regla.
+    assert await flag("picked_up") is True
+    assert await flag("accepted") is True
+    assert await flag("") is False
+    assert await flag("own") is False
 
 
 def test_agent_message_carries_delivery_state_only_without_table() -> None:

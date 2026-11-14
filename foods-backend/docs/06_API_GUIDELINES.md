@@ -341,9 +341,9 @@ INEI de solo lectura para la sesión autenticada. Selección por cobertura,
 - Caja: `GET /v1/admin/orders/{id}/delivery-dispatch` (`orders.read`) devuelve el
   despacho con su historial de ofertas; `POST .../delivery-dispatch/retry` y
   `POST .../delivery-dispatch/own` (`orders.manage`) vuelven a ofrecer el pedido
-  desde la 1.ª central o lo dejan para el delivery propio.
+  a todas las centrales o lo dejan para el delivery propio.
 - Concierge (clave de servicio): `GET /v1/integrations/concierge/delivery-messages/pending`
-  avanza la cascada y reclama los mensajes; `POST .../delivery-messages/{id}/dispatched`
+  avanza los despachos y reclama los mensajes; `POST .../delivery-messages/{id}/dispatched`
   confirma el envío (inicia los 3 minutos de la oferta); `POST
   /v1/integrations/concierge/delivery-actions` aplica Aceptar, Rechazar o Recoger
   con el `actionToken` del botón y el WhatsApp que lo pulsó, que debe ser el de la

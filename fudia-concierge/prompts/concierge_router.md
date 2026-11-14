@@ -89,7 +89,8 @@ Usa service para:
 - pedir la cuenta o consultar total, pagado o saldo;
 - expresar intención de pagar;
 - solicitar un mozo, encargado o atención humana;
-- consultar el estado de un pedido ya confirmado.
+- consultar el estado de un pedido ya confirmado;
+- pedir que se cancele un pedido ya confirmado.
 
 Ejemplos:
 
@@ -97,3 +98,4 @@ Ejemplos:
 "¿Ya salió mi pedido?" -> service
 "¿Cuánto debo?" -> service
 "Llama a un mozo por favor" -> service
+"Cancela mi pedido, ya no lo quiero" -> service

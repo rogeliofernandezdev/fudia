@@ -12,9 +12,10 @@ import (
 	"time"
 )
 
-// Panel web del proveedor de Delivery Fudia: la central ve la oferta sin
-// WhatsApp, confirma la atención, recoge y entrega; su ubicación llega al
-// seguimiento del cliente solo mientras el reparto sigue en curso.
+// Panel web del proveedor de Delivery Fudia: todas las centrales ven la oferta
+// sin WhatsApp cuando cocina inicia la preparación; la primera que acepta se la
+// queda, recoge y entrega; su ubicación llega al seguimiento del cliente solo
+// mientras el reparto sigue en curso.
 func TestDeliveryPartnerPanel(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
@@ -73,6 +74,7 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 
 	type panelOrder struct {
 		Token, Stage, OrderCode, OrderStatus, CustomerName, Address, Subtotal, DeliveryFee, Total string
+		PaymentConfirmed                                                                          bool
 		ExpiresInSeconds                                                                          int
 		LocationLatitude, Latitude                                                                *float64
 		Items                                                                                     []struct {
@@ -148,6 +150,16 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	kitchen := func(status string) {
+		t.Helper()
+		if rec := call(api.updateKitchenTicketStatus, "PATCH", fmt.Sprintf(`{"status":%q}`, status), map[string]string{"id": orderID}, s); rec.Code != 204 {
+			t.Fatalf("kitchen %s: %d %s", status, rec.Code, rec.Body.String())
+		}
+	}
+	if orders := panel(firstPanel); len(orders) != 0 {
+		t.Fatalf("offered before preparation: %#v", orders)
+	}
+	kitchen("preparando")
 	// La oferta aparece en el panel sin WhatsApp, y verla inicia sus 3 minutos.
 	orders := panel(firstPanel)
 	if len(orders) != 1 || orders[0].Stage != "offer" || orders[0].CustomerName != "Ana" || orders[0].Total != "65.00" ||
@@ -156,8 +168,9 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 		t.Fatalf("offer in panel: %#v", orders)
 	}
 	offer := orders[0].Token
-	if other := panel(secondPanel); len(other) != 0 {
-		t.Fatalf("the offer belongs to the first partner only: %#v", other)
+	other := panel(secondPanel)
+	if len(other) != 1 || other[0].Stage != "offer" || other[0].Token == offer {
+		t.Fatalf("every partner receives its own offer: %#v", other)
 	}
 	// Otra central no puede responder la oferta aunque conozca su token.
 	if got := act(secondPanel, "accept", offer); got != "not_found" {
@@ -174,6 +187,13 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 	}
 	if got := act(firstPanel, "accept", offer); got != "already_accepted" {
 		t.Fatalf("double accept: %s", got)
+	}
+	// Aceptación exclusiva: la otra central deja de verla y ya no puede tomarla.
+	if got := act(secondPanel, "accept", other[0].Token); got != "taken" {
+		t.Fatalf("second partner took an accepted order: %s", got)
+	}
+	if late := panel(secondPanel); len(late) != 0 {
+		t.Fatalf("accepted order still offered: %#v", late)
 	}
 	orders = panel(firstPanel)
 	if len(orders) != 1 || orders[0].Stage != "accepted" || orders[0].Token != offer || orders[0].ExpiresInSeconds != 0 || orders[0].Total != "65.00" {
@@ -217,18 +237,56 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 		t.Fatalf("stale location shown: %#v", tracking.Courier)
 	}
 
-	for _, kitchen := range []string{"preparando", "listo"} {
-		req := httptest.NewRequest("PATCH", "/", bytes.NewReader([]byte(fmt.Sprintf(`{"status":%q}`, kitchen))))
-		req.SetPathValue("id", orderID)
-		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
-		rec := httptest.NewRecorder()
-		api.updateKitchenTicketStatus(rec, req)
-		if rec.Code != 204 {
-			t.Fatalf("kitchen %s: %d %s", kitchen, rec.Code, rec.Body.String())
+	kitchen("listo")
+	if orders = panel(firstPanel); len(orders) != 1 || orders[0].OrderStatus != "listo" || orders[0].PaymentConfirmed {
+		t.Fatalf("ready in panel: %#v", orders)
+	}
+	assertPaymentBlocked := func() {
+		t.Helper()
+		if orders := panel(firstPanel); len(orders) != 1 || orders[0].PaymentConfirmed {
+			t.Fatalf("payment must still be pending: %#v", orders)
+		}
+		if got := act(firstPanel, "pickup", offer); got != "payment_pending" {
+			t.Fatalf("pickup without full payment: %s", got)
+		}
+		if dispatch, order := status(orderID); dispatch != "accepted" || order != "listo" {
+			t.Fatalf("blocked pickup changed state: %s %s", dispatch, order)
 		}
 	}
-	if orders = panel(firstPanel); len(orders) != 1 || orders[0].OrderStatus != "listo" {
-		t.Fatalf("ready in panel: %#v", orders)
+	assertPaymentBlocked()
+	// Caja registra pagos reales: ningún abono parcial permite recoger.
+	grantCashManagementForPaymentTest(t, api, s)
+	var registerID string
+	if err := pool.QueryRow(ctx, `INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja de reparto',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID).Scan(&registerID); err != nil {
+		t.Fatal(err)
+	}
+	if rec := call(api.openCashShift, "POST", fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`, registerID), nil, s); rec.Code != 201 {
+		t.Fatalf("open cash: %d %s", rec.Code, rec.Body.String())
+	}
+	pay := func(amount int) string {
+		t.Helper()
+		rec := call(api.createPayment, "POST", fmt.Sprintf(`{"orderId":%q,"method":"card","amount":%d}`, orderID, amount), nil, s)
+		if rec.Code != 201 {
+			t.Fatalf("confirm payment: %d %s", rec.Code, rec.Body.String())
+		}
+		var payment struct{ ID string }
+		decode(rec, &payment)
+		return payment.ID
+	}
+	pay(20)
+	assertPaymentBlocked()
+	paymentID := pay(40)
+	if orders := panel(firstPanel); len(orders) != 1 || !orders[0].PaymentConfirmed {
+		t.Fatalf("full payment must enable pickup: %#v", orders)
+	}
+	// Una devolución previa a recoger vuelve a dejar saldo pendiente.
+	if rec := call(api.refundPayment, "POST", `{"amount":15,"reason":"Corrección de cobro"}`, map[string]string{"id": paymentID}, s); rec.Code != 204 {
+		t.Fatalf("refund: %d %s", rec.Code, rec.Body.String())
+	}
+	assertPaymentBlocked()
+	pay(15)
+	if orders := panel(firstPanel); len(orders) != 1 || !orders[0].PaymentConfirmed {
+		t.Fatalf("payment restored: %#v", orders)
 	}
 	if got := act(firstPanel, "pickup", offer); got != "picked_up" {
 		t.Fatalf("pickup: %s", got)

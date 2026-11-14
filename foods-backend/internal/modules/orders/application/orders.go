@@ -170,6 +170,9 @@ type OrderRepository interface {
 	DeleteItems(ctx context.Context, s scope, id string) (int64, error)
 	LockOrderStatus(ctx context.Context, s scope, id string) (string, string, string, float64, bool, string, error)
 	ServiceStarted(ctx context.Context, s scope, id string) (bool, bool, error)
+	// PartnerDeliveryAssigned indica si una central de Delivery Fudia tiene el reparto
+	// (aceptado, recogido o entregado). El delivery propio responde false.
+	PartnerDeliveryAssigned(ctx context.Context, s scope, id string) (bool, error)
 	SubmitServiceItems(ctx context.Context, s scope, id string) (int64, error)
 	PendingServiceItems(ctx context.Context, s scope, id string) (bool, error)
 	DeliverServiceItems(ctx context.Context, s scope, id string) (int64, error)

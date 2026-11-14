@@ -10,6 +10,8 @@ export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[
   case "stale_account":return [pageRoutes.diningRoom,pageRoutes.pos];
   // Ninguna central de Delivery Fudia aceptó: caja reintenta o usa su delivery propio desde el detalle.
   case "delivery_unassigned":return [pageRoutes.orders];
+  // El repartidor de la central no llega a recoger (8 min con el pedido listo): caja lo revisa en el detalle.
+  case "delivery_pickup_delayed":return [pageRoutes.orders];
   case "order_ready":return notice.tableId?[pageRoutes.diningRoom,pageRoutes.orders]:[pageRoutes.orders,pageRoutes.pos];
   // Mostrador, recojo y delivery del bot esperan «Enviar comanda» de caja: el detalle está en Pedidos.
   default:return [pageRoutes.orders,pageRoutes.pos];
@@ -30,7 +32,7 @@ export function noticeHref(target:string,notice:Pick<StaffNotice,"kind"|"orderId
  *  cuenta pedida y cuenta anterior sin cerrar = naranja tenue (Por cobrar), llamado = celeste; pedidos nuevos usan el índigo de la marca. */
 export type NoticeTone="primary"|"purple"|"peach"|"sky";
 export function noticeTone(kind:StaffNotice["kind"]):NoticeTone{
- return kind==="order_ready"?"purple":kind==="bill_requested"||kind==="stale_account"||kind==="delivery_unassigned"?"peach":kind==="assistance_requested"?"sky":"primary";
+ return kind==="order_ready"?"purple":kind==="bill_requested"||kind==="stale_account"||kind==="delivery_unassigned"||kind==="delivery_pickup_delayed"?"peach":kind==="assistance_requested"?"sky":"primary";
 }
 
 /** Avisos que llegaron después de la última lectura del feed y siguen sin leer, del más reciente al más antiguo. */

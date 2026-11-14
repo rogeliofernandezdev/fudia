@@ -334,7 +334,7 @@ paths:
     get:
       operationId: getDeliveryPartnerPanel
       summary: Panel web de la central de Delivery Fudia con sus pedidos ofrecidos y en reparto
-      description: "Sin sesión: el enlace privado identifica a la central. Devuelve las ofertas vigentes que esperan su respuesta, sus repartos en curso y los entregados en las últimas 12 horas. Mostrar una oferta por primera vez inicia sus 3 minutos, igual que enviarla por WhatsApp. Cache-Control: no-store."
+      description: "Sin sesión: el enlace privado identifica a la central. Devuelve las ofertas vigentes que esperan su respuesta, sus repartos en curso, los entregados y las entregas fallidas de las últimas 12 horas. Cuando cocina inicia la preparación, el pedido se ofrece a la vez a todas las centrales activas con cobertura; la primera que acepta se lo queda. Mostrar una oferta por primera vez inicia sus 3 minutos, igual que enviarla por WhatsApp. Cache-Control: no-store."
       responses:
         "200": { description: Panel de la central, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanel" } } } }
         "404": { description: "delivery_panel_not_found: enlace inexistente o reemplazado" }
@@ -343,8 +343,8 @@ paths:
       - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
     post:
       operationId: applyDeliveryPartnerPanelAction
-      summary: Acepta o rechaza una oferta, registra la recogida o confirma la entrega desde el panel
-      description: "Solo vale para ofertas de la central del enlace; la de otra central responde not_found. Comparte reglas y bloqueos con los botones de WhatsApp. pickup exige el pedido listo y lo pasa a en_camino; deliver exige el pedido recogido y lo pasa a entregado (la cuenta se cierra solo si ya estaba pagada). Repetir una acción aplicada devuelve el mismo resultado."
+      summary: Acepta, rechaza o libera una oferta, mantiene al motorizado o registra la entrega fallida desde el panel
+      description: "Solo vale para ofertas de la central del enlace; la de otra central responde not_found. Comparte reglas y bloqueos con los botones de WhatsApp y el enlace del motorizado. accept es exclusiva: la primera central gana y las demás reciben taken; repetirla da already_accepted. release (antes de recoger) invalida el enlace del motorizado, devuelve el envío al pedido y lo ofrece a las demás centrales en una vuelta nueva (la central que libera no lo vuelve a recibir automáticamente); con el pedido recogido da already_picked_up y con pagos registrados payment_conflict. keep registra que la central mantiene al motorizado en el nivel de alerta de recogida actual; Fudia nunca libera el pedido por tiempo. fail exige el reporte «No pude entregar» del motorizado (not_reported) y 10 minutos de espera desde ese reporte (too_soon); guarda datos y montos de la entrega fallida, cierra el pedido del local como entregado (ya cobró la comida) y cierra el reparto como cancelled sin estados nuevos. pickup y deliver siguen aceptándose por compatibilidad; ahora los registra el motorizado en su enlace. Repetir una acción aplicada devuelve el mismo resultado."
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanelActionInput" } } } }
       responses:
         "200": { description: Resultado de la acción, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionResult" } } } }
@@ -362,6 +362,52 @@ paths:
         "204": { description: Ubicación guardada }
         "400": { description: invalid_location }
         "404": { description: delivery_panel_not_found }
+  /v1/public/delivery-panel/{token}/courier:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+    post:
+      operationId: assignDeliveryCourier
+      summary: Asigna o cambia el motorizado de un reparto aceptado y devuelve su enlace
+      description: "La central escribe el nombre del motorizado antes de obtener el enlace. PostgreSQL genera courierToken. El mismo nombre conserva el enlace (doble clic). Otro nombre invalida el enlace anterior, genera uno nuevo y reinicia la espera de recogida, sin cambiar la etapa del reparto. El enlace vale hasta la entrega, la liberación, la entrega fallida o un cambio de motorizado."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierInput" } } } }
+      responses:
+        "200": { description: "courier_assigned, o taken/cancelled/delivered/not_found sin cambios", content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierResult" } } } }
+        "400": { description: "invalid_courier_name: 2 a 60 caracteres" }
+        "404": { description: delivery_panel_not_found }
+  /v1/public/delivery-courier/{token}:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" }, description: "Enlace del motorizado; lo genera PostgreSQL al asignarlo." }
+    get:
+      operationId: getDeliveryCourier
+      summary: Pedido que lleva el motorizado de este enlace
+      description: "Sin sesión. Solo abre mientras el reparto está aceptado o recogido por su central. order.token y order.courierToken vienen vacíos. Cache-Control: no-store."
+      responses:
+        "200": { description: Reparto del motorizado, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierView" } } } }
+        "404": { description: "delivery_courier_not_found: enlace reemplazado, liberado, entregado o cancelado" }
+  /v1/public/delivery-courier/{token}/actions:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+    post:
+      operationId: applyDeliveryCourierAction
+      summary: Recoger, entregar o «No pude entregar» desde el enlace del motorizado
+      description: "pickup exige el pedido listo y el pago completo registrado por caja (payment_pending, not_ready). deliver exige el pedido recogido. not_delivered (solo en camino) registra que el motorizado llegó, llamó al cliente y no lo ubicó: avisa a la central y, si el cliente pidió por el chat, deja el aviso delivery_contact_request para que se comunique. Repetirlo da issue_reported sin duplicar el aviso; «Entregado» sigue disponible si el cliente aparece."
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [action], properties: { action: { type: string, enum: [pickup, deliver, not_delivered] } } } } } }
+      responses:
+        "200": { description: Resultado de la acción, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionResult" } } } }
+        "400": { description: invalid_delivery_action }
+        "404": { description: delivery_courier_not_found }
+  /v1/public/delivery-courier/{token}/location:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+    post:
+      operationId: shareDeliveryCourierLocation
+      summary: Guarda la ubicación del motorizado en su reparto en curso
+      description: "El punto viaja en el cuerpo. Alimenta el seguimiento del cliente y la validación de una entrega fallida (distancia al destino al reportar)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierLocation" } } } }
+      responses:
+        "204": { description: Ubicación guardada }
+        "400": { description: invalid_location }
+        "404": { description: delivery_courier_not_found }
   /v1/integrations/concierge/notices/pending:
     get:
       operationId: claimConciergeCustomerNotices
@@ -392,9 +438,10 @@ paths:
       summary: Reclama mensajes pendientes para las centrales de Delivery Fudia
       description: >-
         Bandeja de salida global hacia las centrales de delivery (clave X-Fudia-Concierge-Key). Antes de reclamar,
-        el backend avanza la cascada: vence ofertas sin respuesta (3 min desde el envío, o 5 min si nunca se
-        pudo enviar), pasa a la siguiente central del orden global, avisa «listo para recoger» a la central que aceptó
-        y cancela despachos de pedidos cancelados. Tipos: offer (botones Aceptar/Rechazar, vence en
+        el backend avanza los despachos: ofrece a todas las centrales con cobertura los pedidos cuya preparación
+        empezó, vence ofertas sin respuesta (3 min desde el envío, o 5 min si nunca se pudo enviar), deja sin asignar
+        el pedido cuando ninguna oferta sigue pendiente, avisa «listo para recoger» a la central que aceptó, alerta al
+        restaurante a los 8 min de espera de recogida y cancela despachos de pedidos cancelados. Tipos: offer (botones Aceptar/Rechazar, vence en
         expiresInSeconds), ready (botón Recoger) y cancelled (sin botones). Los botones llevan actionToken.
         Cada consulta reserva hasta `limit` mensajes por 60 s (máximo 5 intentos, mensajes de las últimas 2 horas
         y aún vigentes). Concierge redacta el texto y deduplica por id.
@@ -423,8 +470,9 @@ paths:
         Solo responde a la central ofertada: phone debe ser su WhatsApp; un token desconocido o de otro número
         devuelve outcome=not_found. accept da accepted, already_accepted, taken (otra central lo tomó o ya no se le
         ofrece), expired o cancelled; si cocina ya terminó, se encola de inmediato «listo para recoger».
-        reject da rejected (pasa a la siguiente central) o taken. pickup da picked_up (el pedido pasa a en_camino;
-        repetirlo no cambia nada), not_ready o taken. La central cobra al cliente al entregar; Fudia no gestiona ese cobro.
+        reject da rejected (las demás centrales conservan su oferta) o taken. pickup da picked_up (el pedido pasa a en_camino;
+        repetirlo no cambia nada), not_ready, payment_pending (caja aún no registró el pago completo neto de devoluciones)
+        o taken. La central cobra al cliente al entregar; Fudia no gestiona ese cobro.
       security: [{ conciergeServiceKey: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionInput" } } } }
       responses:
@@ -2116,7 +2164,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOperationalOrderStatus
-      description: "Las mesas asignadas solo admiten acciones de atención de su mozo, además de orders.manage; otro usuario recibe 403 order_assigned_to_another_waiter. En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos; completedAt identifica ese cierre. Cancelar exige ausencia de pagos, preparación iniciada y productos entregados; Entrega directa lista sin servir sigue siendo cancelable. Pedidos históricos sin detalle de servicio solo se cancelan desde Nuevo/Confirmado. Cocina y Caja conservan sus permisos independientes."
+      description: "Las mesas asignadas solo admiten acciones de atención de su mozo, además de orders.manage; otro usuario recibe 403 order_assigned_to_another_waiter. En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos; completedAt identifica ese cierre. Cancelar exige ausencia de pagos, preparación iniciada y productos entregados; Entrega directa lista sin servir sigue siendo cancelable. Pedidos históricos sin detalle de servicio solo se cancelan desde Nuevo/Confirmado. Un delivery con central de Delivery Fudia asignada (aceptado, recogido o entregado) no se cancela una vez listo o en camino: 409 delivery_in_progress_not_cancellable; el delivery propio conserva sus reglas. Cocina y Caja conservan sus permisos independientes."
       summary: Aplica una transición operativa permitida del pedido
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, en_camino, entregado, cancelado] } } } } } }
@@ -2287,7 +2335,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOrderStatus
-      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos. Cancelar revierte cantidades solo sin pagos, preparación iniciada ni productos entregados; una Entrega directa lista pero sin servir es cancelable. Pedidos históricos sin detalle de servicio conservan la restricción a Nuevo/Confirmado. Cocina y Caja mantienen sus permisos independientes."
+      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos. Cancelar revierte cantidades solo sin pagos, preparación iniciada ni productos entregados; una Entrega directa lista pero sin servir es cancelable. Pedidos históricos sin detalle de servicio conservan la restricción a Nuevo/Confirmado. Un delivery con central de Delivery Fudia asignada no se cancela una vez listo o en camino (409 delivery_in_progress_not_cancellable). Cocina y Caja mantienen sus permisos independientes."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
       responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida }, "403": { $ref: "#/components/responses/Forbidden" } }
@@ -2312,8 +2360,8 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
       operationId: retryOrderDeliveryDispatch
-      summary: Vuelve a ofrecer el pedido desde la 1.ª central del orden global (nueva vuelta)
-      description: "Permitido si ninguna central aceptó (unassigned) o si el local había elegido su delivery propio (own), mientras el pedido de delivery siga confirmado, en preparación o listo. Exige orders.manage."
+      summary: Vuelve a ofrecer el pedido a todas las centrales con cobertura (nueva vuelta)
+      description: "Permitido si ninguna central aceptó (unassigned) o si el local había elegido su delivery propio (own), mientras el pedido de delivery siga en preparación o listo. Incluye a las centrales que lo habían liberado. Exige orders.manage."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Pedido ofrecido de nuevo, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryDispatch" } } } }
@@ -2426,7 +2474,7 @@ paths:
     patch:
       operationId: updateDeliveryPartner
       summary: Edita o desactiva una central de delivery
-      description: "Una central desactivada deja de recibir ofertas; conserva su lugar en el orden y la cascada la omite."
+      description: "Una central desactivada deja de recibir ofertas y sus ofertas pendientes se retiran; conserva su lugar en el orden."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerInput" } } } }
       responses:
@@ -2573,7 +2621,7 @@ components:
       properties:
         orderId: { type: string, format: uuid }
         status: { type: string, enum: [searching, accepted, unassigned, picked_up, delivered, own, cancelled], description: "delivered: la central confirmó la entrega al cliente desde su panel." }
-        round: { type: integer, minimum: 1, description: "Vuelta de ofertas; Reintentar abre una nueva desde la 1.ª central." }
+        round: { type: integer, minimum: 1, description: "Vuelta de ofertas; Reintentar o una liberación abren una nueva para todas las centrales." }
         partnerName: { type: string, description: "Central que aceptó o a la que se ofrece ahora." }
         acceptedAt: { type: string, format: date-time }
         pickedUpAt: { type: string, format: date-time }
@@ -2587,19 +2635,58 @@ components:
         panelToken: { type: string, pattern: "^[a-f0-9]{32}$" }
     DeliveryPartnerPanel:
       type: object
-      required: [partnerName, active, orders]
+      required: [partnerName, active, orders, failedDeliveries]
       properties:
         partnerName: { type: string }
         active: { type: boolean, description: "false: la central está desactivada y ya no recibe ofertas; conserva sus repartos en curso." }
         orders: { type: array, items: { $ref: "#/components/schemas/DeliveryPartnerPanelOrder" } }
+        failedDeliveries: { type: array, items: { $ref: "#/components/schemas/DeliveryFailedDelivery" } }
+    DeliveryFailedDelivery:
+      type: object
+      description: "Entrega fallida registrada por la central. La central reembolsa al motorizado el 100 % de la comida; la pérdida se reparte 50 % Fudia y 50 % central si la incidencia se valida (motorizado a 300 m o menos del destino con ubicación reciente al reportar y cliente avisado por el chat) y está dentro de los límites (3 incidencias cubiertas por central en 30 días y aporte de Fudia de hasta 100 por incidencia). Si no, la central asume el total."
+      required: [orderCode, customerName, address, courierName, currencySymbol, foodAmount, courierReimbursement, partnerShare, fudiaShare, fudiaShareEligible, validationNotes, registeredAt]
+      properties:
+        orderCode: { type: string }
+        customerName: { type: string }
+        address: { type: string }
+        courierName: { type: string }
+        currencySymbol: { type: string }
+        foodAmount: { type: string, description: "Lo que el motorizado pagó al local por la comida." }
+        courierReimbursement: { type: string, description: "Siempre igual a foodAmount; lo paga la central." }
+        partnerShare: { type: string }
+        fudiaShare: { type: string }
+        fudiaShareEligible: { type: boolean }
+        validationNotes: { type: array, items: { type: string }, description: "Motivos por los que Fudia no aporta o llegó a su tope." }
+        registeredAt: { type: string, format: date-time }
+    DeliveryCourierInput:
+      type: object
+      required: [token, courierName]
+      properties:
+        token: { type: string, format: uuid, description: "Token de la oferta aceptada." }
+        courierName: { type: string, minLength: 2, maxLength: 60 }
+    DeliveryCourierResult:
+      type: object
+      required: [outcome]
+      properties:
+        outcome: { type: string, enum: [courier_assigned, taken, cancelled, delivered, not_found] }
+        courierName: { type: string }
+        courierToken: { type: string, pattern: "^[a-f0-9]{32}$" }
+    DeliveryCourierView:
+      type: object
+      required: [partnerName, courierName, order]
+      properties:
+        partnerName: { type: string }
+        courierName: { type: string }
+        order: { $ref: "#/components/schemas/DeliveryPartnerPanelOrder" }
     DeliveryPartnerPanelOrder:
       type: object
-      required: [token, stage, orderCode, orderStatus, organizationName, locationName, locationAddress, customerName, customerPhone, address, reference, notes, items, currencySymbol, subtotal, deliveryFee, total, expiresInSeconds, createdAt]
+      required: [token, stage, orderCode, orderStatus, paymentConfirmed, organizationName, locationName, locationAddress, customerName, customerPhone, address, reference, notes, items, currencySymbol, subtotal, deliveryFee, total, expiresInSeconds, createdAt]
       properties:
         token: { type: string, format: uuid, description: "Identifica la oferta en las acciones del panel." }
         stage: { type: string, enum: [offer, accepted, picked_up, delivered], description: "offer: espera respuesta; accepted: confirmada, por recoger; picked_up: en camino; delivered: entregada." }
         orderCode: { type: string }
-        orderStatus: { type: string, description: "Estado del pedido en el local; listo permite registrar la recogida." }
+        orderStatus: { type: string, description: "La recogida exige el pedido listo y paymentConfirmed=true." }
+        paymentConfirmed: { type: boolean, description: "Caja registró el pago completo del pedido al local, neto de devoluciones. Un abono parcial no habilita la recogida. El envío de la central se cobra al cliente por separado." }
         organizationName: { type: string }
         locationName: { type: string }
         locationAddress: { type: string }
@@ -2623,11 +2710,18 @@ components:
         acceptedAt: { type: string, format: date-time }
         pickedUpAt: { type: string, format: date-time }
         deliveredAt: { type: string, format: date-time }
+        courierName: { type: string, description: "Motorizado responsable; vacío hasta que la central lo asigna." }
+        courierToken: { type: string, description: "Enlace del motorizado (/delivery-courier/{courierToken} en foods-admin-web); vacío si no hay." }
+        pickupWaitSeconds: { type: integer, description: "Espera con el pedido listo sin recoger, desde que cocina terminó o desde el último cambio de motorizado; 0 fuera de esa situación." }
+        pickupAlert: { type: string, enum: ["", warning, urgent, critical], description: "warning a los 3 min, urgent a los 5 y critical a los 8 (también avisa al restaurante con delivery_pickup_delayed). Nunca libera el pedido." }
+        pickupAlertAcknowledged: { type: boolean, description: "La central eligió mantener al motorizado en este nivel." }
+        issueReportedAt: { type: string, format: date-time, description: "El motorizado marcó «No pude entregar»." }
+        failAvailableInSeconds: { type: integer, description: "Segundos que faltan para poder registrar la entrega fallida (10 min desde el reporte); 0 si ya se puede o no aplica." }
     DeliveryPartnerPanelActionInput:
       type: object
       required: [action, token]
       properties:
-        action: { type: string, enum: [accept, reject, pickup, deliver] }
+        action: { type: string, enum: [accept, reject, release, keep, fail, pickup, deliver] }
         token: { type: string, format: uuid }
     DeliveryCourierLocation:
       type: object
@@ -2697,7 +2791,7 @@ components:
       type: object
       required: [outcome]
       properties:
-        outcome: { type: string, enum: [accepted, already_accepted, rejected, taken, expired, cancelled, not_ready, picked_up, not_found, payment_conflict] }
+        outcome: { type: string, enum: [accepted, already_accepted, rejected, taken, expired, cancelled, not_ready, payment_pending, picked_up, delivered, not_picked_up, not_found, payment_conflict, released, kept, already_picked_up, issue_reported, not_reported, too_soon, delivery_failed] }
         orderCode: { type: string }
         organizationName: { type: string }
         locationName: { type: string }
@@ -2706,7 +2800,7 @@ components:
       required: [id, kind, orderId, orderCode, fulfillment, customerPhone, conversationId, organizationName, locationName, createdAt]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [order_ready, order_sent, order_on_the_way], description: "order_sent: el personal envió a cocina lo que pidió (una vez por ronda y WhatsApp); order_ready: pedido de mostrador o recojo listo; order_on_the_way: el delivery salió del local (el personal lo despachó o la central de Delivery Fudia lo recogió), una vez por pedido" }
+        kind: { type: string, enum: [order_ready, order_sent, order_on_the_way, delivery_contact_request], description: "order_sent: el personal envió a cocina lo que pidió (una vez por ronda y WhatsApp); order_ready: pedido de mostrador o recojo listo; order_on_the_way: el delivery salió del local (el personal lo despachó o la central de Delivery Fudia lo recogió), una vez por pedido; delivery_contact_request: el motorizado llegó y no ubica al cliente, se le pide comunicarse, una vez por pedido" }
         orderId: { type: string, format: uuid }
         orderCode: { type: string, description: Código PED- del pedido }
         fulfillment: { type: string, enum: [counter, pickup, table, delivery], description: "counter: mostrador; pickup: recojo en el local; table y delivery solo en order_sent; order_on_the_way siempre es delivery" }
@@ -2720,7 +2814,7 @@ components:
       required: [id, kind, title, detail, createdAt, read]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned] }
+        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned, delivery_pickup_delayed], description: "delivery_pickup_delayed: el pedido de Delivery Fudia lleva 8 minutos listo y el motorizado no llega (una vez por motorizado); deja de mostrarse al recogerlo o liberarlo." }
         title: { type: string, maxLength: 120, description: Texto final redactado por el backend }
         detail: { type: string, maxLength: 240 }
         orderId: { type: string, format: uuid }

@@ -12,12 +12,12 @@ const SEND_EVERY_MS=8_000;
 const KEEP_ALIVE_MS=30_000;
 
 /**
- * Comparte la ubicación del dispositivo mientras `enabled` es true. El panel la
- * activa solo con un reparto en curso: sin pedidos no se pide ni se envía nada.
+ * Comparte la ubicación del dispositivo mientras `enabled` es true. El enlace del motorizado la
+ * activa solo con su reparto en curso: sin reparto no se pide ni se envía nada.
  * Mantiene la pantalla encendida mientras comparte, porque el navegador deja de
  * informar la ubicación con la pantalla apagada.
  */
-export function useCourierLocation(token:string,enabled:boolean){
+export function useCourierLocation(courierToken:string,enabled:boolean){
   // Solo los avisos del GPS cambian el estado; apagado, sin GPS o esperando se derivan.
   const [reading,setReading]=useState<{status:"active"|"denied"|"error";position:CourierPosition|null}|null>(null);
   const latest=useRef<CourierPosition|null>(null);
@@ -32,7 +32,7 @@ export function useCourierLocation(token:string,enabled:boolean){
       if(!point||(!force&&Date.now()-sentAt.current<SEND_EVERY_MS))return;
       sentAt.current=Date.now();
       // Un envío fallido no interrumpe el reparto: el siguiente punto lo corrige.
-      void sendCourierLocation(token,point).catch(()=>undefined);
+      void sendCourierLocation(courierToken,point).catch(()=>undefined);
     };
     const watch=navigator.geolocation.watchPosition(result=>{
       if(!active)return;
@@ -62,7 +62,7 @@ export function useCourierLocation(token:string,enabled:boolean){
       latest.current=null;
       setReading(null);
     };
-  },[token,enabled]);
+  },[courierToken,enabled]);
 
   const status:LocationStatus=!enabled?"off":!supported?"unsupported":reading?.status??"locating";
   return {status,position:enabled?reading?.position??null:null};

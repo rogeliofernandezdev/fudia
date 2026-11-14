@@ -1,9 +1,16 @@
 type OperationalOrder={channel:string;status:string;paymentStatus?:string;completedAt?:string;serviceItems?:{status:string}[]};
 type OrderAction={status:string;label:string;icon:"receipt"|"truck"|"check"};
-type CancellableOrder={status:string;completedAt?:string;paidAmount?:string;serviceItems?:{destination:string;status:string}[]};
+type CancellableOrder={status:string;completedAt?:string;paidAmount?:string;deliveryDispatchStatus?:string;serviceItems?:{destination:string;status:string}[]};
+
+/** Delivery Fudia con central asignada y pedido listo o en camino: ya está en proceso de entrega. */
+export function deliveryInProgress(order:Pick<CancellableOrder,"status"|"deliveryDispatchStatus">):boolean{
+  return ["accepted","picked_up","delivered"].includes(order.deliveryDispatchStatus??"")&&(order.status==="listo"||order.status==="en_camino");
+}
 
 export function canCancelOrder(order:CancellableOrder):boolean{
   if(order.completedAt||Number(order.paidAmount??0)>0.00001)return false;
+  // El backend responde delivery_in_progress_not_cancellable; el delivery propio no tiene central y no cambia.
+  if(deliveryInProgress(order))return false;
   if(!order.serviceItems?.length)return order.status==="nuevo"||order.status==="confirmado";
   if(!["nuevo","confirmado","preparando","listo"].includes(order.status))return false;
   return order.serviceItems.every(item=>item.status==="nuevo"||item.status==="confirmado"||(item.destination==="direct"&&item.status==="listo"));

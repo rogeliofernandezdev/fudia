@@ -39,6 +39,9 @@ test("Delivery Fudia: «Ninguna central aceptó» abre el pedido en Pedidos con 
  assert.equal(rules.noticeHref(routes.orders,{kind:"delivery_unassigned",orderId:"o-1"}),"/orders?orderId=o-1");
  assert.equal(rules.noticeTone("delivery_unassigned"),"peach");
  assert.match(read("src/modules/notifications/presentation/notification-bell.tsx"),/delivery_unassigned:"motorbike"/);
+ assert.deepEqual([...rules.noticeTargets({kind:"delivery_pickup_delayed"})],[routes.orders]);
+ assert.equal(rules.noticeTone("delivery_pickup_delayed"),"peach");
+ assert.match(read("src/modules/notifications/presentation/notification-bell.tsx"),/delivery_pickup_delayed:"clock"/);
 });
 
 test("Delivery Fudia: pantallas conectadas sin catálogos ni códigos en el frontend",()=>{

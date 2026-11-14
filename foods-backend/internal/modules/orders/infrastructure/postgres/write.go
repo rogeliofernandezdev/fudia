@@ -32,6 +32,7 @@ func (r *Orders) CustomerActive(ctx context.Context, s scope, in domain.OrderInp
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM customers WHERE id=$1 AND organization_id=$2 AND active)`, in.CustomerID, s.OrganizationID).Scan(&ok)
 	return ok, orderError(err)
 }
+
 // LockTable bloquea la mesa y devuelve su tipo de atención (table o counter).
 func (r *Orders) LockTable(ctx context.Context, s scope, in domain.OrderInput) (string, error) {
 	var serviceType string
@@ -91,6 +92,17 @@ func (r *Orders) LockOrderStatus(ctx context.Context, s scope, id string) (strin
 		FOR UPDATE`, id, s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total, &completed, &waiterID)
 	return current, channel, tableID, total, completed, waiterID, orderError(err)
 }
+
+// PartnerDeliveryAssigned lee el despacho de Delivery Fudia del pedido bloqueado.
+func (r *Orders) PartnerDeliveryAssigned(ctx context.Context, s scope, id string) (bool, error) {
+	var assigned bool
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM delivery_dispatches d
+		WHERE d.order_id=$1 AND d.organization_id=$2 AND d.location_id=$3
+		  AND d.status IN ('accepted','picked_up','delivered'))`, id, s.OrganizationID, s.LocationID).Scan(&assigned)
+	return assigned, err
+}
+
 func (r *Orders) ServiceStarted(ctx context.Context, s scope, id string) (bool, bool, error) {
 	var hasService bool
 	var started bool
@@ -109,6 +121,7 @@ func (r *Orders) PendingServiceItems(ctx context.Context, s scope, id string) (b
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2 AND status NOT IN ('listo','entregado'))`, id, s.OrganizationID).Scan(&pending)
 	return pending, orderError(err)
 }
+
 // DeliverServiceItems admite un alcance sin usuario: la entrega que confirma la
 // central de Delivery Fudia no tiene un usuario del restaurante.
 func (r *Orders) DeliverServiceItems(ctx context.Context, s scope, id string) (int64, error) {

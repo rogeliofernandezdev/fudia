@@ -1,17 +1,15 @@
 # Delivery Fudia: centrales de reparto por WhatsApp
 
 > **Desde 2026-11-14 el canal principal de la central es su panel web**
-> (`/reparto/{token}` en foods-admin-web; contrato en
+> (`/delivery-panel/{token}` en foods-admin-web; contrato en
 > `foods-backend/docs/15_DELIVERY_GEOGRAPHY.md`). Ahí recibe los pedidos,
 > confirma la atención, la recogida y la entrega, y comparte su ubicación. Los
 > mensajes por WhatsApp de este documento siguen funcionando solo si el país
 > conserva un transporte WhatsApp; con el chat propio (`FUDIA_WEB`) la central
 > atiende únicamente desde el panel.
 
-Fudia trabaja con centrales de delivery registradas por Plataforma en un orden
-global. Delivery Fudia se activa por empresa, y todos sus locales lo usan.
-El backend filtra ese orden por el departamento, provincia y distrito del local
-de origen. Fudia administra exclusivamente las centrales y sus coberturas;
+Fudia trabaja con centrales de delivery registradas por Plataforma. Delivery Fudia se activa por empresa, y todos sus locales lo usan.
+El backend filtra las centrales activas por el distrito del local de origen. Fudia administra exclusivamente las centrales y sus coberturas;
 ninguna empresa las registra. Sin distrito o cobertura el pedido avisa a caja.
 foods-backend decide a quién se ofrece cada pedido y en qué estado está
 (`foods-backend/docs/04_DATA_MODEL.md`, migración 000113). Concierge solo envía
@@ -19,22 +17,40 @@ los mensajes y aplica los botones que pulsa la central.
 
 ## Flujo
 
-1. El pedido de delivery (por llamada o por WhatsApp) se confirma en caja.
-   foods-backend lo ofrece a la 1.ª central del orden global.
+1. Cuando cocina inicia la preparación de un pedido de delivery (por llamada o
+   por WhatsApp), foods-backend lo ofrece a la vez a todas las centrales activas
+   con cobertura. La primera que acepta se lo queda; las demás ofertas se retiran.
 2. `PartnerMessageRelay` (en cada worker, cada `DELIVERY_PARTNER_POLL_SECONDS`,
    5 s por defecto) reclama `GET /v1/integrations/concierge/delivery-messages/pending`.
-   Esa misma consulta avanza la cascada en foods-backend.
+   Esa misma consulta avanza los despachos en foods-backend.
 3. La oferta llega al WhatsApp de la central con «Aceptar» y «Rechazar».
    Concierge confirma `/dispatched` y desde ese momento corren 3 minutos.
-4. «Rechazar», o 3 minutos sin respuesta, pasa el pedido a la siguiente central.
-   Si ninguna acepta, la campana del local avisa a caja, que puede reintentar o
-   usar su delivery propio.
+4. «Rechazar», o 3 minutos sin respuesta, retira solo la oferta de esa central;
+   las demás siguen vigentes. Si ninguna acepta, la campana del local avisa a
+   caja, que puede reintentar o usar su delivery propio. Un «Aceptar» simultáneo
+   o repetido no duplica la asignación: la segunda central recibe `taken` y la
+   misma central, `already_accepted`.
 5. Al aceptar, la central recibe «listo para recoger» con el botón «Recoger»
    cuando cocina termina. Si cocina ya había terminado, lo recibe de inmediato.
-6. «Recoger» pasa el pedido a «En camino». Si el cliente pidió por WhatsApp,
+6. Caja registra el pago completo de la central al local. «Recoger» exige esa
+   confirmación y cocina terminada; un abono parcial no basta. Sin pago completo,
+   incluso tras una devolución, responde `payment_pending` sin cambiar estados.
+   Con ambas condiciones, «Recoger» pasa el pedido a «En camino». Si el cliente pidió por WhatsApp,
    recibe el aviso `order_on_the_way` («🛵 Tu pedido … va en camino»).
 7. Si el pedido se cancela o el local pasa a delivery propio después de que una
    central aceptó, esa central recibe un aviso de cancelación sin botones.
+8. Si el repartidor marca «No pude entregar» en su enlace web (llegó, llamó al
+   número del pedido y no ubicó al cliente), el cliente recibe en su chat el
+   aviso `delivery_contact_request`: «🛵 El repartidor llegó con tu pedido … y
+   no logra ubicarte. Devuelve su llamada o contesta la próxima para recibir tu
+   pedido.». La entrega fallida, sus montos y el reparto de la pérdida los
+   gestiona la central en su panel (`foods-backend/docs/15_DELIVERY_GEOGRAPHY.md`).
+
+Con el pedido listo o en camino y una central asignada (despacho `accepted`,
+`picked_up` o `delivered`), el cliente ya no puede cancelarlo: el chat no
+ofrece ni acepta la cancelación (`check_order_status` devuelve
+`deliveryInProgress=true` y `prompts/service_agent.md` lo responde) y
+foods-backend la rechaza con `delivery_in_progress_not_cancellable`.
 
 La central paga al restaurante solo el costo del pedido (`subtotal`) al
 recogerlo. Al entregarlo cobra al cliente el pedido más su delivery (`total`),
@@ -55,10 +71,16 @@ ofertada, y responde con el resultado. Concierge redacta la respuesta:
   el mismo texto.
 - **rejected:** «Entendido, no tomarás el pedido …».
 - **taken:** otra central lo tomó o ya no se le ofrece.
-- **expired:** pasaron los 3 minutos.
+- **expired:** pasaron los 3 minutos; ya no puede tomarlo.
 - **cancelled:** el pedido ya no requiere delivery.
 - **not_ready:** cocina aún no termina.
+- **payment_pending:** esperar a que caja registre el pago completo antes de recoger.
 - **picked_up:** «🛵 Registramos que recogiste el pedido …».
+- **delivered / not_picked_up:** el pedido ya figura entregado, o falta registrar la recogida.
+
+Los demás resultados del panel web y del enlace del repartidor (`released`,
+`kept`, `delivery_failed`, `issue_reported`, `courier_assigned`, etc.) no llegan
+por botones de WhatsApp; si llegaran, se responde con el texto genérico.
 - **not_found:** el token no existe o el número no es el de la central.
 - **payment_conflict:** el local registró pagos antes de aceptar. El pedido queda
   para reparto propio; se indica no recoger ni cobrar al cliente y coordinar con
@@ -173,3 +195,9 @@ centrales: los pedidos quedarían ofrecidos sin mensaje hasta vencer.
 - Reintento ante fallo y confirmación ante envío incierto.
 - El webhook separa los botones de la central de las respuestas rápidas del comensal.
 - El servicio aplica el botón sin modelo ni sesión, y el reintento no vuelve a llamar al backend.
+- El aviso `delivery_contact_request` pide devolver la llamada del repartidor, sin ofrecer cancelar ni reembolsos.
+- Resultados exclusivos del panel web y `expired` sin referencia a una «siguiente central».
+
+`tests/test_delivery.py` verifica que `check_order_status` marca
+`deliveryInProgress` solo para un delivery listo o en camino con central
+asignada; el delivery propio no usa esta regla.

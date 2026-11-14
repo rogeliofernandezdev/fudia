@@ -132,10 +132,39 @@ def test_on_the_way_notice_text() -> None:
     assert notice_text(notice) == "🛵 Tu pedido PED-9 va en camino.\nPaga al recibirlo."
 
 
+def test_contact_request_notice_asks_the_customer_to_answer_the_courier() -> None:
+    notice = CustomerNotice(
+        id="n2", kind="delivery_contact_request", orderCode="PED-0142", fulfillment="delivery"
+    )
+    text = notice_text(notice)
+    assert text == (
+        "🛵 El repartidor llegó con tu pedido PED-0142 y no logra ubicarte.\n"
+        "Devuelve su llamada o contesta la próxima para recibir tu pedido."
+    )
+    assert "cancel" not in text.lower() and "reembols" not in text.lower()
+
+
+def test_web_panel_outcomes_and_expired_offer_replies() -> None:
+    expired = action_reply(DeliveryActionResult(outcome="expired", orderCode="PED-1"))
+    assert "Ya no puedes tomarlo" in expired and "otra central" not in expired
+    assert "entregado" in action_reply(DeliveryActionResult(outcome="delivered", orderCode="PED-1"))
+    assert "recogida" in action_reply(DeliveryActionResult(outcome="not_picked_up", orderCode="PED-1"))
+    # Resultados exclusivos del panel web no rompen la respuesta por WhatsApp.
+    for outcome in ("released", "kept", "delivery_failed", "issue_reported", "courier_assigned"):
+        assert action_reply(DeliveryActionResult(outcome=outcome))
+
+
 def test_paid_order_does_not_instruct_the_central_to_collect_again() -> None:
     reply = action_reply(DeliveryActionResult(outcome="payment_conflict", orderCode="PED-9"))
     assert "ya registró un pago" in reply
     assert "No lo recojas ni cobres al cliente" in reply
+
+
+def test_pickup_waits_for_cashier_payment_confirmation() -> None:
+    reply = action_reply(DeliveryActionResult(outcome="payment_pending", orderCode="PED-9"))
+    assert "PED-9" in reply
+    assert "caja registre el pago completo antes de recogerlo" in reply
+    assert "No encontramos" not in reply
 
 
 def test_endpoint_label() -> None:

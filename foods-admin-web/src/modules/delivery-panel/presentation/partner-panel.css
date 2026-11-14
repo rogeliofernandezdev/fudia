@@ -62,3 +62,18 @@
 .partner-panel-actions .button{width:100%;min-height:var(--size-48);justify-content:center}
 @media(hover:hover) and (pointer:fine){.partner-panel-toggle:hover{border-color:var(--primary-600)}}
 @media(prefers-reduced-motion:reduce){.partner-panel-toggle>i,.partner-panel-toggle>i::after{transition:none}}
+
+/* Motorizado, decisión ante la alerta de recogida y entregas fallidas. */
+.partner-panel-toggle:disabled{opacity:.55;cursor:not-allowed}
+.partner-panel-progress{display:grid;gap:var(--space-3);padding-top:var(--space-3);border-top:var(--stroke-1) solid var(--line)}
+.partner-panel-courier{display:grid;gap:var(--space-2-5)}
+.partner-panel-courier .button{width:100%;min-height:var(--size-48);justify-content:center}
+.partner-panel-courier .ds-input{min-height:var(--size-44);font-size:var(--font-size-sm);color:var(--ink-700)}
+.partner-panel-courier-name{display:flex;align-items:center;gap:var(--space-1-5);margin:0;font-size:var(--font-size-sm);min-width:0}
+.partner-panel-courier-name>svg{flex-shrink:0;color:var(--ink-500)}
+.partner-panel-courier-name>span{color:var(--ink-500)}
+.partner-panel-courier-name>b{font-weight:var(--weight-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.partner-panel-decision{display:grid;grid-template-columns:1fr;gap:var(--space-2)}
+.partner-panel-decision .button{width:100%;min-height:var(--size-48);justify-content:center}
+.partner-panel-validation{display:grid;gap:var(--space-1-5);margin:0;padding-left:var(--space-5);font-size:var(--font-size-sm);color:var(--ink-700);line-height:var(--line-height-snug)}
+@media(min-width:560px){.partner-panel-decision{grid-template-columns:repeat(3,1fr)}}

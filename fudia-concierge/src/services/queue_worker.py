@@ -397,7 +397,7 @@ class QueueWorker:
 
     async def _relay_partner_messages(self) -> None:
         """Envía los mensajes a centrales de Delivery Fudia. foods-backend
-        reserva cada mensaje y, al consultarlo, avanza la cascada de ofertas."""
+        reserva cada mensaje y, al consultarlo, avanza las ofertas pendientes."""
         assert self.partner_messages is not None
         while True:
             try:

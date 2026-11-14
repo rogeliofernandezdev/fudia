@@ -88,6 +88,14 @@ test("mozos ajenos no administran entrega ni cobro",()=>{
  assert.equal(canManageOrderService(ready,"other"),false);
  assert.doesNotMatch(renderDetail({order:ready,userId:"other"}),/Confirmar entrega|Agregar productos|Cobrar saldo/);
 });
+test("Delivery Fudia en proceso de entrega no se cancela; el delivery propio no cambia",()=>{
+ const unpaid={...ready,channel:"delivery",paidAmount:"0",serviceItems:ready.serviceItems.map(i=>({...i,destination:"direct"}))};
+ assert.equal(canCancelOrder(unpaid),true,"sin central sigue la regla de siempre");
+ assert.equal(canCancelOrder({...unpaid,deliveryDispatchStatus:"own"}),true,"delivery propio");
+ assert.equal(canCancelOrder({...unpaid,deliveryDispatchStatus:"searching"}),true,"aún sin central asignada");
+ for(const dispatch of ["accepted","picked_up","delivered"])assert.equal(canCancelOrder({...unpaid,deliveryDispatchStatus:dispatch}),false,dispatch);
+ assert.equal(canCancelOrder({...unpaid,status:"confirmado",deliveryDispatchStatus:"accepted",serviceItems:[]}),true,"antes de estar listo rige la regla de preparación");
+});
 test("un pago existente impide cancelar",()=>{
  assert.equal(canCancelOrder({...ready,paidAmount:"1"}),false);
  assert.equal(canCancelOrder({...exampleOrder,status:"nuevo",paidAmount:"0",serviceItems:[]}),true);

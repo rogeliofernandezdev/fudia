@@ -497,8 +497,8 @@ class FudiaClient:
     async def pending_delivery_messages(self, limit: int = 20) -> list[DeliveryPartnerMessage]:
         """Reclama mensajes para centrales de Delivery Fudia (reservados 60 s).
 
-        foods-backend avanza antes la cascada de centrales (ofertas vencidas,
-        pedidos listos o cancelados).
+        foods-backend avanza antes los despachos a centrales (ofertas vencidas,
+        pedidos en preparación, listos o cancelados).
         """
         data = await self._json(
             "GET",

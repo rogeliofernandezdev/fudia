@@ -1,5 +1,17 @@
 # Pruebas
 
+`delivery-panel.test.mjs` verifica que el motorizado recoge solo con pedido
+listo y `paymentConfirmed=true` (un campo ausente no habilita la acción), que en
+camino tiene «Entregado» y una sola vez «No pude entregar», el nombre y el enlace
+del motorizado, que liberar solo existe antes de recoger y pasa por
+confirmación, los niveles de la alerta de recogida y la decisión pendiente, la
+cuenta regresiva de la entrega fallida, qué suena en el panel y la respuesta de
+cada resultado nuevo. Comprueba además que la central ya no recoge, entrega ni
+comparte ubicación, y que `/delivery-courier/{token}` es privado, con carga, error y
+estado final. `order-delivery.test.mjs` cubre que un delivery con central
+asignada, listo o en camino, no muestra «Cancelar», sin cambiar el delivery
+propio; `delivery-fudia.test.mjs`, el aviso `delivery_pickup_delayed`.
+
 `number-input-behavior.test.mjs` verifica avances de una unidad, fracciones,
 límites y redondeo. `node tests/helpers/number-input-preview.mjs` permite probar
 las flechas nativas y de teclado con campos controlados y React Hook Form,

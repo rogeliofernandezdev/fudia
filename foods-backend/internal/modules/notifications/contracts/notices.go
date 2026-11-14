@@ -31,11 +31,15 @@ var (
 	StaleAccount        = domain.StaleAccount
 	OrderReady          = domain.OrderReady
 	DeliveryUnassigned  = domain.DeliveryUnassigned
-	Money               = domain.Money
+	// DeliveryPickupDelayed: alerta crítica al restaurante por recogida demorada.
+	DeliveryPickupDelayed = domain.DeliveryPickupDelayed
+	Money                 = domain.Money
 	// OrderReadyForCustomer devuelve false si el pedido no avisa al cliente.
 	OrderReadyForCustomer = domain.OrderReadyForCustomer
 	// OrderSentForCustomer devuelve false si falta el WhatsApp de la ronda.
 	OrderSentForCustomer = domain.OrderSentForCustomer
 	// OrderOnTheWayForCustomer devuelve false si el pedido no es delivery de WhatsApp.
 	OrderOnTheWayForCustomer = domain.OrderOnTheWayForCustomer
+	// DeliveryContactForCustomer devuelve false si el pedido no es delivery de Concierge.
+	DeliveryContactForCustomer = domain.DeliveryContactForCustomer
 )
