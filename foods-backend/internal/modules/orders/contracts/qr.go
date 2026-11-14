@@ -33,19 +33,21 @@ func NormalizeChannel(channel string) string { return domain.NormalizeChannel(ch
 // Concierge calcula DeliveryFee y DistanceKm con las tarifas del local antes
 // de enviarlo; Orders no recibe precios de productos desde el cliente.
 type ConciergeDeliveryInput struct {
-	Channel        string                  `json:"channel"`
-	CustomerName   string                  `json:"customerName"`
-	CustomerPhone  string                  `json:"customerPhone"`
-	ConversationID string                  `json:"conversationId"`
-	RequestID      string                  `json:"requestId"`
-	Address        string                  `json:"address"`
-	Reference      string                  `json:"reference"`
-	Notes          string                  `json:"notes"`
-	Latitude       *float64                `json:"latitude"`
-	Longitude      *float64                `json:"longitude"`
-	DistanceKm     *float64                `json:"distanceKm"`
-	DeliveryFee    float64                 `json:"deliveryFee"`
-	Items          []domain.OrderItemInput `json:"items"`
+	OrderID            string                  `json:"orderId,omitempty"`
+	ExpectedOrderTotal string                  `json:"expectedOrderTotal,omitempty"`
+	Channel            string                  `json:"channel"`
+	CustomerName       string                  `json:"customerName"`
+	CustomerPhone      string                  `json:"customerPhone"`
+	ConversationID     string                  `json:"conversationId"`
+	RequestID          string                  `json:"requestId"`
+	Address            string                  `json:"address"`
+	Reference          string                  `json:"reference"`
+	Notes              string                  `json:"notes"`
+	Latitude           *float64                `json:"latitude"`
+	Longitude          *float64                `json:"longitude"`
+	DistanceKm         *float64                `json:"distanceKm"`
+	DeliveryFee        float64                 `json:"deliveryFee"`
+	Items              []domain.OrderItemInput `json:"items"`
 	// CounterTableID es el mostrador del QR que originó una venta por mostrador; solo se audita.
 	CounterTableID string `json:"-"`
 }

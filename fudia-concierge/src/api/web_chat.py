@@ -82,6 +82,7 @@ WEB_REQUEST_DOC = request_document()
 
 
 class WebChatState(BaseModel):
+    registeredItems: list[dict[str, Any]]
     context: TableContext
     messages: list[dict[str, Any]]
     cart: dict[str, Any]
@@ -110,11 +111,12 @@ def order_summary(session: ConversationSession | None, service_type: str) -> Web
     known = fulfillment == "pickup" or (fulfillment == "delivery" and quoted)
     summary = delivery_summary(session) if session else {}
     return WebOrderSummary(
-        subtotal=subtotal,
+        subtotal=str(summary.get("subtotal", subtotal)),
         deliveryFee=str(summary["deliveryFee"]) if known else None,
         total=str(summary["total"]) if known else None,
         currencySymbol=symbol or (delivery.currency_symbol if delivery else ""),
         fulfillment=fulfillment,
+        addingToOrder=bool(session and session.confirmed_delivery),
     )
 
 
@@ -282,6 +284,7 @@ async def chat_state(request: Request) -> dict[str, Any]:
         "context": table.model_dump(mode="json"),
         "messages": messages,
         "cart": cart_payload(session) if session else {"items": [], "total": "0.00"},
+        "registeredItems": registered_items(session),
         "orderSummary": order_summary(session, table.serviceType).model_dump(mode="json"),
         "confirmationRef": session.pending_order_request_id
         if session and session.awaiting_confirmation
@@ -292,6 +295,17 @@ async def chat_state(request: Request) -> dict[str, Any]:
         "failed": failed,
         "active": active,
     }
+
+
+def registered_items(session: ConversationSession | None) -> list[dict[str, Any]]:
+    previous = session.confirmed_delivery if session else None
+    if previous is None:
+        return []
+    return [{
+        "productId": item.productId, "name": item.name, "quantity": float(item.qty),
+        "unitPrice": str(item.unitPrice), "lineTotal": f"{item.qty * item.unitPrice:.2f}",
+        "note": item.note, "modifiers": [], "selections": [{"name":name} for name in item.options],
+    } for item in previous.items]
 
 
 @router.post("/menu", openapi_extra=WEB_REQUEST_DOC)

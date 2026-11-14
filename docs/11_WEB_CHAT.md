@@ -46,6 +46,16 @@ resumen no registra un pedido. Si falta contacto, forma de entrega o ubicación,
 el chat los solicita antes de habilitar Confirmar. Una tarifa aún no cotizada
 o fuera de cobertura queda pendiente; no se presenta como delivery gratis.
 
+Si el comensal sigue pidiendo en la misma conversación de delivery/recojo, la
+confirmación añade los platos al pedido activo, conservando un solo envío.
+La tarjeta distingue «Ya registrado» (solo lectura) y «Por agregar». El
+asistente pregunta si desea algo más y espera su respuesta; no prepara otro
+resumen inmediatamente después de agregar por texto. El resumen web siempre
+se muestra en la tarjeta, también cuando la conversación se maneja por texto.
+Los pedidos que ya no admiten cambios dirigen al personal sin crear otro
+silenciosamente. Desplegar backend antes de Concierge y frontend; no requiere
+migración. Las versiones nuevas comprueban `supportsAdditions` del backend.
+
 El estado se consulta cada 1,2 s mientras el local responde, cada 4 s durante el
 minuto siguiente a la última actividad y cada 12 s con el chat quieto; al volver
 a la pestaña se consulta de inmediato. En Concierge esa consulta reutiliza por

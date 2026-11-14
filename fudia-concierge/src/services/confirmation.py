@@ -26,3 +26,14 @@ def explicit_confirmation(text: str) -> bool:
         "enviar el pedido",
     }
     return value in exact or value.startswith("si confirm")
+
+
+def checkout_requested(text: str) -> bool:
+    value = _normalized(text)
+    return value in {"mi pedido", "que llevo", "cuanto va", "resumen", "revisar"} or (
+        explicit_confirmation(text)
+    ) or any(phrase in value for phrase in (
+        "eso es todo", "nada mas", "no quiero mas", "terminar pedido", "terminar mi pedido",
+        "revisar mi pedido", "ver mi pedido", "ver el resumen", "ver resumen", "confirmar pedido",
+        "confirmar mi pedido", "proceder con el envio", "hacer el pedido", "envia el pedido",
+    ))

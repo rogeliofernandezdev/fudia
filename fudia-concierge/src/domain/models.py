@@ -218,7 +218,18 @@ class DeliveryQuote(BaseModel):
     currencySymbol: str = ""
 
 
+class RegisteredOrderItem(BaseModel):
+    options: list[str] = Field(default_factory=list)
+    productId: str
+    name: str
+    qty: Decimal
+    unitPrice: Decimal
+    note: str = ""
+
+
 class OrderStatus(BaseModel):
+    supportsAdditions: bool = False
+    items: list[RegisteredOrderItem] = Field(default_factory=list)
     orderId: str
     code: str
     channel: str
@@ -277,6 +288,7 @@ class ConversationSession(BaseModel):
     pending_order_request_id: str | None = None
     order_submission_started: bool | None = None
     last_order_id: str | None = None
+    confirmed_delivery: OrderStatus | None = None
     handoff_pending: bool = False
     # Consentimiento promocional: foods-backend recuerda si ya se preguntó en
     # esta empresa; la respuesta se espera en el siguiente mensaje sin

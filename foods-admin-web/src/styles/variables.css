@@ -435,6 +435,7 @@
   --elevation-side: 12px 0 32px -14px var(--navigation-900-alpha-24);
   --elevation-side-end: -12px 0 32px -14px var(--navigation-900-alpha-16);
   --elevation-primary: 0 1px 2px var(--primary-600-alpha-24), 0 6px 14px -6px var(--primary-600-alpha-48);
+  --elevation-primary-soft: 0 10px 22px var(--primary-600-alpha-16);
   --elevation-selected: 0 0 0 1px var(--primary-600), 0 8px 18px -8px var(--primary-600-alpha-32);
   --ring-focus: 0 0 0 3px var(--primary-600-alpha-10);
   --ring-focus-soft: 0 0 0 3px var(--primary-100);

@@ -42,6 +42,11 @@ def action_reply(
             )
         )
     if name == "confirm_order":
+        if result.get("order", {}).get("addedToOrder"):
+            return (
+                "Agregué los productos a tu pedido. "
+                "El personal revisará esta adición para enviarla a preparación."
+            )
         return "Tu pedido fue registrado. El personal del local lo revisará para enviarlo a preparación."
     if name == "request_human":
         return "El personal del local recibió tu solicitud de atención."
@@ -60,6 +65,8 @@ def action_reply(
         return "Actualicé la forma de entrega. Revisa el pedido antes de confirmarlo."
     cart = result.get("cart", {})
     if name in {"prepare_confirmation", "view_cart"}:
+        if web:
+            return "Tu pedido está listo para confirmar en «Mi pedido»."
         items = cart.get("items", [])
         lines = []
         for item in items:

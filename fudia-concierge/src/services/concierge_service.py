@@ -39,6 +39,7 @@ from src.metrics import (
 )
 from src.observability import fingerprint, log_event
 from src.services.carta import Carta, build_carta
+from src.services.confirmation import checkout_requested
 from src.services.consent import (
     asks_to_withdraw,
     consent_answer,
@@ -388,12 +389,27 @@ class ConciergeService:
             )
             fallback = ""
             action_attempted = False
+            web_reply: str | None = None
+            cart_changed = False
 
             async def execute(
                 name: str,
                 args: dict[str, Any],
             ) -> dict[str, Any]:
-                nonlocal fallback, action_attempted
+                nonlocal fallback, action_attempted, web_reply, cart_changed
+                if (
+                    session.provider == "FUDIA_WEB" and name == "prepare_confirmation"
+                    and cart_changed and not checkout_requested(user_message)
+                ):
+                    return {
+                        "ok": False, "code": "continue_ordering",
+                        "message": "Espera la respuesta del cliente antes de preparar la confirmación.",
+                    }
+                if (
+                    session.provider == "FUDIA_WEB" and name == "view_cart"
+                    and checkout_requested(user_message)
+                ):
+                    name = "prepare_confirmation"
                 result = await registry.execute_for(
                     intent,
                     name,
@@ -405,6 +421,11 @@ class ConciergeService:
                         journal.record.media = registry.menu.media
                 elif name not in READ_ONLY_TOOLS:
                     action_attempted = True
+                if result.get("ok") and (name.startswith("add_") or name == "remove_item"):
+                    cart_changed = True
+                if session.provider == "FUDIA_WEB" and name in {"prepare_confirmation", "confirm_order"}:
+                    if result.get("code") != "continue_ordering":
+                        web_reply = web_action_reply(name, result, session.currency_symbol)
                 return result
 
             # Tools keep the diner's literal words (explicit confirmation);
@@ -414,6 +435,11 @@ class ConciergeService:
                 agent_message(session, user_message),
                 execute,
             )
+            if session.provider == "FUDIA_WEB":
+                if cart_changed and not checkout_requested(user_message):
+                    return "Actualicé tu pedido. ¿Deseas agregar algo más?"
+                if web_reply is not None:
+                    return web_reply
             if fallback:
                 # Keep acknowledgements/errors for mixed requests with actions.
                 # A read-only miss always returns the canonical, unabridged carta.
@@ -896,6 +922,7 @@ class ConciergeService:
         session.awaiting_confirmation = False
         session.awaiting_contact_phone = False
         session.awaiting_customer_name = False
+        session.confirmed_delivery = None
         session.pending_order_request_id = None
         session.last_order_id = None
         session.consent_prompt_pending = False
@@ -1100,6 +1127,7 @@ class ConciergeService:
             session.awaiting_confirmation = False
             session.awaiting_contact_phone = False
             session.awaiting_customer_name = False
+            session.confirmed_delivery = None
             session.pending_order_request_id = None
             session.handoff_pending = False
             session.consent_checked = False
@@ -1610,6 +1638,7 @@ class ConciergeService:
         session.venue = venue
         session.awaiting_contact_phone = False
         session.awaiting_customer_name = False
+        session.confirmed_delivery = None
         session.delivery = DeliveryDetails(customer_name=customer_name)
         session.cart = []
         session.awaiting_confirmation = False
@@ -1743,6 +1772,8 @@ class ConciergeService:
                     session.awaiting_confirmation = False
                     session.pending_order_request_id = None
                     session.last_order_id = order.id
+                    session.confirmed_delivery = None
+                    session.order_submission_started = False
                 await journal.after_effect(
                     {
                         "order": {

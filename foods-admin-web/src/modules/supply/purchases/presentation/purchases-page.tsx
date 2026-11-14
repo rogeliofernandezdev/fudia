@@ -541,6 +541,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
         <section className="purchase-form-section purchase-order-lines-section" aria-labelledby="purchase-order-lines-title">
           <h3 className="purchase-form-heading" id="purchase-order-lines-title">Artículos{fields.length>0&&<span> · {fields.length}</span>}</h3>
           {!fields.length&&<p className="purchase-lines-help">Busca un artículo existente o crea uno nuevo para incluirlo en la orden.</p>}
+          {fields.length>0&&<div className="purchase-lines-header" aria-hidden="true"><span>Presentación de compra</span><span>Cantidad</span><span>Costo unitario</span><span>Subtotal</span></div>}
           {fields.length>0&&<ol className="purchase-lines">{fields.map((field,index)=>{
             // Recién agregado, useWatch aún no trae la línea: los valores del campo permiten pintar sus presentaciones y preseleccionar la predeterminada.
             const value=lines[index]??field;
@@ -557,8 +558,8 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
               </div>
               <div className="purchase-line-fields">
                 <FormField as="div" label="Presentación de compra" error={errors.items?.[index]?.presentationId?.message}><div className="purchase-reference-controls"><Select aria-label={"Presentación de compra de "+(selected?.name??"artículo")} {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit,presentation.name)}</option>)}</Select>{selected&&<IconButton icon="plus" label="Nueva presentación" accessibleLabel={"Nueva presentación de "+selected.name} onClick={()=>setPresentationTarget({item:selected,index})}/>}</div></FormField>
-                <FormField label="Cantidad" error={errors.items?.[index]?.quantity?.message}><Input type="number" min="0.001" step={requiresWholeQuantity(selected?.presentations.find(option=>option.id===value?.presentationId)?.presentationType??"unit")?"1":"0.001"} inputMode="decimal" {...register(`items.${index}.quantity`)}/></FormField>
-                <FormField label="Costo unitario" error={errors.items?.[index]?.unitCost?.message}><div className={"money-input"+(errors.items?.[index]?.unitCost?" has-error":"")}><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div></FormField>
+                <FormField label="Cantidad" error={errors.items?.[index]?.quantity?.message}><Input aria-label={"Cantidad de "+(selected?.name??"artículo")} type="number" min="0.001" step={requiresWholeQuantity(selected?.presentations.find(option=>option.id===value?.presentationId)?.presentationType??"unit")?"1":"0.001"} inputMode="decimal" {...register(`items.${index}.quantity`)}/></FormField>
+                <FormField label="Costo unitario" error={errors.items?.[index]?.unitCost?.message}><div className={"money-input"+(errors.items?.[index]?.unitCost?" has-error":"")}><span>{currencySymbol}</span><Input aria-label={"Costo unitario de "+(selected?.name??"artículo")} inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div></FormField>
                 <div className="purchase-line-total"><small>Subtotal</small><b>{money(purchaseLineTotal(value?.quantity??"",value?.unitCost??""))}</b></div>
               </div>
             </li>;

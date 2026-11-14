@@ -54,7 +54,7 @@ async def test_name_then_phone_preserves_the_order_until_confirmation(delivery: 
     assert len(session.cart) == 1
 
     summary = await service.process_inbound(message("phone", "987654321"))
-    assert "Ana María Quispe Huamán" in summary.reply and "Confirmar pedido" in summary.reply
+    assert "Mi pedido" in summary.reply and "Total:" not in summary.reply
     assert CUSTOMER_NAME_PROMPT not in summary.reply
     session = await store.get("browser-session", "web-route")
     assert session and session.awaiting_confirmation and session.pending_order_request_id
@@ -78,7 +78,7 @@ async def test_phone_then_name_resumes_checkout_without_repeating_phone_question
     phone = await service.process_inbound(message("phone", "987654321"))
     assert CUSTOMER_NAME_PROMPT in phone.reply
     named = await service.process_inbound(message("name", "Me llamo José Pérez"))
-    assert "José Pérez" in named.reply and "Confirmar pedido" in named.reply
+    assert "Mi pedido" in named.reply and "Total:" not in named.reply
     assert "9 dígitos" not in named.reply and not backend.delivery_orders
     session = await store.get("browser-session", "web-route")
     assert session and session.delivery.customer_name == "José Pérez"
@@ -101,5 +101,5 @@ async def test_old_single_name_summary_cannot_be_confirmed_without_surnames() ->
     ))
     assert rejected.reply == CUSTOMER_NAME_PROMPT and not backend.delivery_orders
     fixed = await service.process_inbound(message("full-name", "Ana Quispe"))
-    assert "Ana Quispe" in fixed.reply and "Confirmar pedido" in fixed.reply
+    assert "Mi pedido" in fixed.reply and "Total:" not in fixed.reply
     assert "9 dígitos" not in fixed.reply

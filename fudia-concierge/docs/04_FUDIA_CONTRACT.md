@@ -76,6 +76,15 @@ POST /v1/integrations/concierge/{token}/bill
 
 Devuelve el consumo acumulado real, moneda, productos, total, pagos registrados, saldo pendiente y estado de pago. Registra la solicitud de cuenta, pero no registra un pago. requestId identifica idempotentemente cada solicitud: repetirlo devuelve la cuenta vigente sin registrar otra solicitud; si se omite, cada llamada se registra.
 
+## Adiciones al pedido activo
+
+Delivery/recojo admite `orderId` y `expectedOrderTotal` opcionales: agregan solo
+los productos nuevos al pedido activo de la misma conversación y local. El
+backend conserva su envío original, verifica estado/cobros/reparto y compara el
+total previo bajo bloqueo. `order_changed` exige revisar otra vez; un rechazo
+nunca se resuelve creando otro pedido. El GET de estado incluye `items` y
+`supportsAdditions`; si falta esta capacidad, Concierge solicita ayuda al personal.
+
 ## Prerregistro del cliente
 
 Al crear un pedido de mesa (`/orders`) o de recojo/delivery, foods-backend usa el

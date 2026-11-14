@@ -170,6 +170,8 @@ def recovery_reply(
             )
         fulfillment = effect.payload.get("order", {}).get("fulfillment")
         if effect.payload.get("mode") == "delivery":
+            if effect.payload.get("order", {}).get("orderId"):
+                return "Agregué los productos a tu pedido. El personal revisará esta adición."
             how = (
                 "Te lo enviaremos con nuestro delivery y pagas al recibirlo."
                 if fulfillment == "delivery"
@@ -205,6 +207,8 @@ def recovery_reply(
         )
     cart = effect.result.get("cart", {})
     if effect.kind == "confirmation" and session.awaiting_confirmation:
+        if session.provider == "FUDIA_WEB":
+            return "Tu pedido está listo para confirmar en «Mi pedido»."
         return (
             f"🧾 Tu pedido:\n{_cart_lines(cart)}\n\n"
             "¿Confirmas este pedido? Responde «sí» para enviarlo."

@@ -64,15 +64,26 @@ type DeliveryQuote struct {
 
 // OrderStatusView indica a Concierge si la atención de su pedido sigue activa.
 type OrderStatusView struct {
-	OrderID       string `json:"orderId"`
-	Code          string `json:"code"`
-	Channel       string `json:"channel"`
-	Status        string `json:"status"`
-	Subtotal      string `json:"subtotal"`
-	DeliveryFee   string `json:"deliveryFee"`
-	Total         string `json:"total"`
-	PaymentStatus string `json:"paymentStatus"`
-	Active        bool   `json:"active"`
+	SupportsAdditions bool              `json:"supportsAdditions"`
+	Items             []OrderStatusItem `json:"items"`
+	OrderID           string            `json:"orderId"`
+	Code              string            `json:"code"`
+	Channel           string            `json:"channel"`
+	Status            string            `json:"status"`
+	Subtotal          string            `json:"subtotal"`
+	DeliveryFee       string            `json:"deliveryFee"`
+	Total             string            `json:"total"`
+	PaymentStatus     string            `json:"paymentStatus"`
+	Active            bool              `json:"active"`
+}
+
+type OrderStatusItem struct {
+	Options   []string `json:"options"`
+	ProductID string   `json:"productId"`
+	Name      string   `json:"name"`
+	Qty       string   `json:"qty"`
+	UnitPrice string   `json:"unitPrice"`
+	Note      string   `json:"note"`
 }
 
 // DeliveryFeesView es la configuración administrativa del local actual.

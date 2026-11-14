@@ -149,6 +149,24 @@ class OrderTools:
                 return {"ok": False, "code": "empty_cart"}
             delivery: dict[str, Any] | None = None
             if session.mode == "delivery":
+                if session.last_order_id:
+                    previous = await self.context.fudia.get_order_status(
+                        self.context.token(), session.last_order_id, session.conversation_id,
+                    )
+                    session.confirmed_delivery = previous if previous.active else None
+                    if not previous.active:
+                        session.last_order_id = None
+                    if previous.active and not previous.supportsAdditions:
+                        return {
+                            "ok": False, "code": "order_additions_unavailable",
+                            "message": "Para agregar platos a tu pedido actual, solicita ayuda al personal.",
+                        }
+                    if previous.active and previous.status not in {"nuevo", "confirmado", "preparando"}:
+                        return {
+                            "ok": False, "code": "order_not_appendable",
+                            "message": "Tu pedido ya está listo o salió del local. "
+                            "Solicita al personal agregar más productos.",
+                        }
                 delivery = delivery_summary(session)
                 if "customerName" in delivery["missing"]:
                     return await request_customer_name(self.context)
@@ -533,6 +551,9 @@ class OrderTools:
     ) -> dict[str, Any]:
         session = self.context.session
         summary = delivery_summary(session)
+        if session.last_order_id and session.confirmed_delivery is None:
+            self.context.invalidate_confirmation()
+            return {"ok": False, "code": "stale_confirmation"}
         if summary["missing"]:
             self.context.invalidate_confirmation()
             return {
@@ -541,6 +562,9 @@ class OrderTools:
                 "missing": summary["missing"],
             }
         order = delivery_order(session, request_id, lines)
+        if session.confirmed_delivery is not None:
+            order["orderId"] = session.confirmed_delivery.orderId
+            order["expectedOrderTotal"] = str(session.confirmed_delivery.total)
         await self.context.journal.before_effect(
             "create_order",
             request_id,
@@ -562,12 +586,19 @@ class OrderTools:
             await self.context.journal.effect_failed(exc.code, definitive)
             if exc.code == "delivery_fee_changed":
                 await self._requote()
+            elif exc.code in {
+                "order_changed", "order_not_appendable", "delivery_details_changed",
+                "paid_order_not_editable",
+            }:
+                self.context.invalidate_confirmation()
             raise
         session.cart = []
         session.awaiting_confirmation = False
         session.pending_order_request_id = None
         session.order_submission_started = False
         session.last_order_id = result.id
+        added = bool(order.get("orderId"))
+        session.confirmed_delivery = None
         confirmed = {
             "id": result.id,
             "code": result.code,
@@ -575,6 +606,7 @@ class OrderTools:
             "total": str(result.total),
             "fulfillment": summary["fulfillment"],
             "deliveryFee": summary["deliveryFee"],
+            "addedToOrder": added,
         }
         await self.context.journal.after_effect({"order": confirmed})
         return {

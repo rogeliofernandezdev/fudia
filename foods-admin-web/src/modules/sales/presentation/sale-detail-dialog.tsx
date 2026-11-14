@@ -30,8 +30,10 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
   const[tab,setTab]=useState<"products"|"payments">("products");
   const pending=remaining>0.00001;
   const hasDelivery=Number(data?.order.deliveryFee??0)>0;
-  // El resumen no repite el importe principal: el desglose solo aparece si suma delivery y «Pagado neto» solo con saldo.
-  const breakdown=hasDelivery||pending;
+  const hasPayments=paid>0.00001;
+  // El resumen no repite el importe principal: el desglose solo aparece cuando explica una diferencia
+  // (delivery, o pagos registrados que dejan saldo); sin nada que explicar queda solo la franja.
+  const breakdown=hasDelivery||(pending&&hasPayments);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal sales-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={loading}>
     {loading?<SaleDetailSkeleton close={close} withFooter={Boolean(ticket)} heading={head?{title}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
     <ModalHeader title={title} titleId={titleId} onClose={close} closeLabel="Cerrar detalle"/>
@@ -42,8 +44,8 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
       {breakdown&&<div className="modal-summary-lines">
         {hasDelivery&&<><div className="modal-summary-line"><span>Subtotal</span><b>{money(data.order.subtotal)}</b></div>
         <div className="modal-summary-line"><span>Delivery</span><b>{money(data.order.deliveryFee)}</b></div></>}
-        {pending&&<><div className="modal-summary-line"><span>Total</span><b>{money(data.order.total)}</b></div>
-        <div className={`modal-summary-line sales-detail-paid${paid>0.00001?" has-payment":""}`}><span>Pagado neto</span><b>{money(paid)}</b></div></>}
+        {pending&&hasPayments&&<><div className="modal-summary-line"><span>Total</span><b>{money(data.order.total)}</b></div>
+        <div className="modal-summary-line sales-detail-paid has-payment"><span>Pagado neto</span><b>{money(paid)}</b></div></>}
       </div>}
       <div className="modal-summary-total"><span>{pending?"Saldo pendiente":"Total pagado"}</span><strong>{money(pending?remaining:data.order.total)}</strong></div>
     </section>}>
@@ -72,7 +74,7 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
             {/* Estado real de preparación de la línea, igual que en el detalle de pedido. */}
             <IconTile className="modal-item-state" name={line.look.icon} tone={line.look.tone} appearance="vivid" size="sm"/><div className="modal-item-info"><span className="modal-item-name"><b className="modal-item-quantity">{Number(item.qty)}×</b>{item.name}</span>
             {item.note&&<ModalItemNote>{item.note}</ModalItemNote>}
-            <span className="modal-item-meta"><span>{money(item.unitPrice)} c/u</span>{line.destination&&<span>{line.destination}</span>}{line.label&&<span className="modal-item-status">{line.label}</span>}</span>
+            <span className="modal-item-meta">{Number(item.qty)>1&&<span>{money(item.unitPrice)} c/u</span>}{line.destination&&<span>{line.destination}</span>}{line.label&&<span className="modal-item-status">{line.label}</span>}</span>
             <ModalItemComponents label={`Detalle de ${item.name}`} items={[
               ...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{money(selection.surcharge??0)}</small>})),
               ...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name})),

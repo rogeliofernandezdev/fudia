@@ -221,6 +221,8 @@ Una sola fuente de luz superior y sombras teñidas de azul operativo:
 - `--elevation-up`: barras fijas inferiores; `--elevation-side`/`-side-end`:
   paneles laterales.
 - `--elevation-primary`: realce teñido de la acción primaria y la página activa.
+- `--elevation-primary-soft`: sombra amplia y suave bajo objetos de color pleno
+  (el plato de la mesa en Salón).
 - `--elevation-selected`: tarjeta seleccionada (contorno azul + realce).
 - Anillos: `--ring-focus` (foco de campos: halo tenue de 3 px al 10 % junto al borde
   `primary-600`, para que no se lea como doble borde), `--ring-danger` (foco con error),
@@ -641,7 +643,8 @@ Reglas de aplicación:
   configuración que no son estados, como el control de cantidad. El verde vivo queda
   reservado a lo operativo; una fila de catálogo no lleva más de un color suave.
 - Equilibrio por pantalla (crítica 2026-11-05, referencia Zillo): en Salón el
-  escenario de la mesa es blanco y el único color de la mesa ocupada es el plato; en
+  casetón de la mesa apenas se tiñe (`primary-100` al 50 %, aprobado en vivo el
+  2026-11-13) y el único color pleno de la mesa ocupada es el plato; en
   Caja los flujos (fondo, ingresos, egresos) usan `IconTile vivid` azul, verde y
   rojo, con fondos tenues menta y rosado para ingresos y egresos (reforzado por
   solicitud del usuario el 2026-11-06); los estados siguen suaves. En Cocina la cabecera y las cantidades
@@ -794,8 +797,10 @@ sección), con la misma geometría de modal y hoja inferior móvil:
    dentro de la sección de las pestañas, no en el borde del estado
    (confirmado 2026-11-06).
 5. **Resumen de venta** fijo al pie, como «Resumen de cuenta», sin repetir el
-   importe principal: Subtotal y Delivery solo si hay delivery; con saldo, Total
-   y «Pagado neto» (`amount-paid` si hay pagos) explican el pendiente. El importe
+   importe principal: el desglose solo aparece cuando explica una diferencia —
+   Subtotal y Delivery solo si hay delivery; Total y «Pagado neto» (`amount-paid`
+   si hay pagos) solo con pagos registrados que dejan saldo y explican el
+   pendiente; sin delivery ni pagos, la franja es lo único del resumen. El importe
    principal es «Saldo pendiente» o, saldada, «Total pagado» en `amount-paid`.
    El importe principal es siempre una franja a todo el ancho debajo del
    desglose (`modal-summary is-band` de `modal.css`, compartida con cobro y
@@ -819,10 +824,10 @@ pagos», el mismo nombre que en Ventas) y, en una línea (`pos-detail-meta`),
 fecha y «Canal · Atendido por»; tarjeta de cliente solo si existe; pestañas
 «Productos» y «Pagos» en azul `primary` (con «Devolver» en cada pago cuando
 corresponde), paneles con la misma sangría de 16 px (12 px en móvil), y «Resumen de cobro» fijo que no
-repite el importe principal: Total y «Pagado neto» solo con saldo; con propina,
-su línea (y Total si la propina se cobró, para explicar «Total pagado con
-propina»); el importe principal es la franja `is-band`, que saldado y sin
-propina queda sola con «Total pagado».
+repite el importe principal: el desglose solo aparece cuando explica una diferencia — Total y
+«Pagado neto» solo con pagos registrados que dejan saldo; con propina, su línea (y Total si la
+propina se cobró, para explicar «Total pagado con propina»); el importe principal es la franja
+`is-band`, que saldada y sin propina queda sola con «Total pagado».
 Excepción: el código `PED-…` se muestra como texto
 secundario junto al estado para relacionar el detalle con el pedido del listado. Mismo
 tamaño que el pedido y hoja inferior en móvil; el modal de registrar cobro
@@ -848,9 +853,11 @@ y por capas, sin franjas de metadatos.
    escritorio y 12 px a ≤600 px para que el contenido se lea dentro de la
    sección de la pestaña (confirmado 2026-11-06). No se añade otra tarjeta ni se
    cambian los radios.
-   El «Resumen de cuenta» sigue la regla de Venta: Subtotal y Delivery solo con
-   delivery, Total y «Pagado neto» solo con saldo, y el importe principal en la
-   franja `is-band` a todo el ancho (sola cuando no hay nada que desglosar).
+   El «Resumen de cuenta» sigue la regla de Venta: el desglose solo aparece cuando
+   explica una diferencia — Subtotal y Delivery solo con delivery; Total y
+   «Pagado neto» solo con pagos registrados que dejan saldo — y el importe
+   principal en la franja `is-band` a todo el ancho (sola cuando no hay nada que
+   desglosar).
 4. **Entrega** (`order-detail-context`): dirección, referencia y «Ver
    ubicación» bajo la tarjeta de contacto, solo en pedidos con entrega.
 5. **Seguimiento** («Progreso del pedido», `OrderTimeline`): hitos con círculo
@@ -1068,36 +1075,58 @@ de la grilla, con **como máximo cuatro por fila** (dos en móvil). De arriba ab
   13 px). Si no caben (tarjeta angosta o estado largo como «Por
   entregar»), el estado baja a la línea siguiente: nunca recorta el nombre por
   debajo de 96 px.
-- **El plato** (`salon-table-plate`, 76 px; 56 px en móvil) sobre un escenario
+- **El plato** (`salon-table-plate`, 88 px; 64 px en móvil) sobre un escenario
   (`salon-table-stage`) de 140 px de alto (104 px en móvil)
   muestra el nombre de la mesa sin el prefijo «Mesa». Su tamaño sigue al largo:
   hasta 3 caracteres grande, hasta 6 mediano y, si es más largo, pequeño en dos
-  líneas como máximo. **Ocupada:** plato lleno `primary-600` con texto blanco
-  sobre un escenario `primary-100`. **Libre:** plato vacío con borde punteado
-  `line-strong` sobre blanco. La diferencia se ve sin leer.
+  líneas como máximo. **Ocupada:** plato lleno `primary-600` con texto blanco y
+  sombra azul suave (`--elevation-primary-soft`: `0 10px 22px` de `primary-600`
+  al 16 %) sobre un casetón
+  apenas teñido (`primary-100` al 50 %) con filete azul tenue. **Libre:** plato
+  vacío punteado en azul (`primary-600` al 50 % sobre `line-strong`) y cifra
+  azul-gris sobre el casetón hundido en `cloud-50` teñido igual. La diferencia se
+  ve sin leer; el único color pleno de la tarjeta ocupada es su plato, según
+  «Equilibrio por pantalla» (2026-11-05).
 - **Bajo el plato** (`salon-table-caption`, 12 px seminegrita `ink-600`): «Mozo:
   Nombre Apellido» (nombre y primer apellido; el completo en `title`, «Mozo: sin
   asignar» si falta); si está libre, la capacidad («5 personas»).
 - **Pedido QR por WhatsApp** (canal `whatsapp`): un distintivo redondo
   `navigation-900` con el icono `whatsapp` sobre el plato y, bajo el plato,
   «Pedido por QR» con el icono en lugar del mozo.
-- **Pie sin banda:** el importe (`primary-800`) con el tiempo abierta debajo, o
-  bien «Abrir mesa». A la derecha, un botón redondo de
-  44 px: comanda tenue (icono `orders`, el de «Pedidos»; `primary-100`, icono `primary-700`) si está ocupada, para que
-  el plato sea el único círculo sólido; `+` `navigation-900` si está libre.
+- **Pie sin banda:** el importe (`ink-950`, 22 px, cifras tabulares) con el tiempo
+  abierta debajo, o bien «Abrir mesa» en azul profundo (`primary-700` al 50 % sobre
+  `navigation-900`). A la derecha, un botón redondo de 44 px: **macizo en la
+  libre** (mismo azul profundo con icono blanco desde el reposo, que se aviva en
+  `primary-700` al pasar el cursor) y **neutro en la ocupada** (`cloud-100` con
+  icono `navigation-900`, comanda `orders`), para que el plato siga siendo el único
+  círculo vivo de la mesa ocupada.
   El tiempo solo aparece si la hora de apertura es válida; con más de un día pasa
   a `warning-800`.
+
+La tarjeta usa `radius-card` y lleva el acento «Cobalto» aprobado en vivo
+(2026-11-13): borde teñido (`primary-600` al 17.5 % sobre `line`, que aviva al
+27.5 % al pasar el cursor) y `--elevation-1` como único apoyo (subiendo a
+`--elevation-3` al pasar el cursor): ni bandas ni filetes superiores ni
+flotantes ni doble borde.
 
 Sin rojo, sin verde fuera del `Status`, sin bandas superiores ni pseudo-elementos
 decorativos. «Libre» usa el tono positivo compartido `green`; los estados de
 pedido conservan sus mapeos. «Cobrado por» queda en el detalle de la mesa. El skeleton reproduce
 cabecera, plato y pie.
 
-El resumen sigue los KPI de la referencia: cuatro tarjetas blancas compactas
-(`dl.salon-overview-stats`: Mesas, Libres, Ocupadas y Consumo abierto) con etiqueta
-de 12 px / 600 en caja normal arriba («Libres» en `navigation-900`, «Ocupadas» en
-`primary-700`, como sus pies) y cifra de 22 px / 800 con su icono de línea al lado.
-En móvil (≤600 px) forman una cuadrícula de 2×2; debajo de 480 px se ocultan los iconos.
+El resumen es un tablero de cuatro tarjetas iguales (`dl.salon-overview-stats`:
+Mesas, Libres, Ocupadas y Consumo abierto) con el mismo borde `line`, `radius-card`
+y `--elevation-1` que el resto de paneles, separadas por un hueco de `space-3`: el
+ritmo de una app, no una banda apretada. Cada tarjeta pone su `IconTile` `vivid`
+de 32 px junto a la cifra de 22 px / 800 con cifras tabulares —misma fila,
+centrados— y el rótulo de 12 px / 600 debajo, alineado al eje izquierdo («Libres» en
+`navigation-900`, el tono de «Abrir mesa»; «Ocupadas» en `primary-700`, el del
+plato). Los tiles llevan la paleta compartida: `navy` para Mesas, `brand` (verde de
+«Libre») para Libres, `primary` para Ocupadas y `sky` para Consumo abierto (cuenta
+abierta). La cifra nunca se parte y remonta suave al refrescarse (polling de 10 s);
+es el único movimiento del salón y se apaga con `prefers-reduced-motion`.
+En móvil (≤600 px) el tablero pasa a 2×2 con hueco de `space-2`; las tarjetas
+conservan su icono.
 
 ### Ticket de pago para el comensal
 
@@ -1994,7 +2023,9 @@ y detalle; no se limita a apilar columnas de escritorio.
 ### Presentación del artículo en Compras
 
 Inventario ofrece «Editar artículo» desde el lápiz de cada fila, con Nombre,
-Stock mínimo y Stock óptimo. El nombre llega prellenado; si es vendible, la ayuda
+Stock mínimo y Stock óptimo. El editor usa el cuerpo y pie del modal compartido
+(`ModalForm`/`ModalBody`, sin CSS local) y el foco inicial cae en el Nombre. El
+nombre llega prellenado; si es vendible, la ayuda
 explica que también se usa en Carta y productos. Duplicados se marcan junto a
 Nombre y conservan lo escrito. Guardar actualiza el catálogo y los niveles sin
 modificar existencias ni documentos anteriores; se respeta `inventory.manage`.
@@ -2244,7 +2275,9 @@ distancia se muestra solo el enlace y, sin coordenadas, no se muestra nada. Desd
 
 Cada producto ocupa dos filas: cantidad, nombre e importe en la primera; en la
 segunda, a todo el ancho, «precio c/u · destino» y el estado de preparación
-alineado a la derecha, bajo el importe. Todos los productos (simples, menús y
+alineado a la derecha, bajo el importe. El precio c/u solo se muestra con cantidad
+mayor a uno: con una unidad repite el importe de la línea (misma regla de la
+comanda y del chat, 2026-11-14). Todos los productos (simples, menús y
 combos) siguen el mismo patrón: cantidad azul, nombre, nota, «precio c/u ·
 destino» y estado. La información secundaria es siempre neutra: fondo `cloud-50`,
 borde `line`, iconos de 14 px en `ink-500` y texto 12 px `ink-700`; no hay
@@ -2861,9 +2894,17 @@ son títulos de sección de 16 px / 700, sin icono ni frase de ayuda, separados 
 línea `cloud-100`; no hay tarjetas `cloud-50` anidadas. Sin líneas, bajo «Artículos»
 queda una sola frase de ayuda. Las líneas son una lista blanca con borde `line` y
 líneas finas entre filas, sin número, icono ni cabecera tintada: nombre 14 px / 600,
-«Se vende» o «Insumo» · unidad, la papelera a la derecha (tooltip anclado al borde,
-`standard-actions`, para no crear scroll horizontal) y debajo Presentación de compra,
-Cantidad, Costo unitario y Subtotal (16 px / 600 tabular, alineado a la derecha). En
+«Se vende» o «Insumo» · unidad y la X de quitar a la derecha (`RowActionButton
+remove` de tono peligro compartido, tooltip anclado al borde, `standard-actions`,
+para no crear scroll horizontal). Encima de la lista, una sola fila de rótulos de
+columna —Presentación de compra, Cantidad, Costo unitario y Subtotal— en 12 px / 600
+`ink-600` alinea las columnas (2026-11-14): en escritorio (>980 px) los campos no
+repiten rótulos y sus controles llevan `aria-label`; a ≤980 px la fila de rótulos
+desaparece y cada campo vuelve a mostrar el suyo. La presentación lleva junto al
+selector el botón suave «Nueva presentación» (`IconButton` +, patrón compartido con
+el alta de artículo) para crear una conversión sin salir de la orden. Debajo,
+Presentación de compra, Cantidad, Costo unitario y Subtotal (16 px / 600 tabular,
+alineado a la derecha). En
 móvil Presentación ocupa la fila, Cantidad y Costo comparten la siguiente y Subtotal
 va en una fila con etiqueta a la izquierda y monto a la derecha. Al agregar un
 artículo su presentación predeterminada queda seleccionada.
@@ -3305,6 +3346,11 @@ servidor; Total lleva 18 px / 700. Una tarifa aún no cotizada o fuera de cobert
 se muestra como «Pendiente de cotizar» y su total como «Por calcular», nunca
 como envío gratis. Para recojo no aparece Delivery; en mesa y mostrador se muestra
 solo Total.
+Al añadir a un delivery/recojo activo, la misma tarjeta muestra los platos
+«Ya registrado» sin botón de quitar y los nuevos «Por agregar», con sus notas
+y opciones. El total reúne ambos grupos y un solo costo de envío. La leyenda
+aclara que los nuevos productos se agregarán al pedido actual; no se ofrece
+crear otro pedido como consecuencia de un rechazo del servidor.
 Abrir «Mi pedido» prepara automáticamente el resumen sin enviar el pedido. Una
 confirmación nueva abre esta tarjeta con un único botón «Confirmar pedido» dentro;
 se elimina «Revisar para confirmar» y la tarjeta de confirmación separada

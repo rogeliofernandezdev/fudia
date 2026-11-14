@@ -92,8 +92,8 @@ async def test_contact_completes_checkout_without_losing_order(phone: str, deliv
     accepted = await service.process_inbound(contact_message)
     repeated = await service.process_inbound(contact_message)
     assert repeated.reply == accepted.reply
-    assert "Guardé tu número" in accepted.reply and "Confirmar pedido" in accepted.reply
-    assert "Lomo saltado" in accepted.reply and "Ana Quispe" in accepted.reply
+    assert "Guardé tu número" in accepted.reply and "Mi pedido" in accepted.reply
+    assert "Lomo saltado" not in accepted.reply and "Total:" not in accepted.reply
     assert OFF_SCOPE_REPLY not in accepted.reply and "¿Qué deseas pedir?" not in accepted.reply
     assert not backend.delivery_orders
     session = await store.get("browser-session", "web-route")
@@ -102,7 +102,7 @@ async def test_contact_completes_checkout_without_losing_order(phone: str, deliv
     assert session.awaiting_confirmation and session.pending_order_request_id
     assert session.delivery.customer_name == "Ana Quispe" and len(session.cart) == 1
     if delivery:
-        assert "Av. de prueba 100" in accepted.reply and "8.00" in accepted.reply
+        assert session.delivery.address == "Av. de prueba 100" and str(session.delivery.fee) == "8.00"
         assert session.delivery.reference == "Puerta azul" and session.delivery.location
     confirm = message(
         "confirm", "Sí, confirmo mi pedido",
@@ -135,7 +135,7 @@ async def test_old_prepared_order_requests_contact_without_starting_submission()
     session = await store.get("browser-session", "web-route")
     assert session and session.awaiting_contact_phone and not session.order_submission_started
     resumed = await service.process_inbound(message("phone", "+51987654321"))
-    assert "Confirmar pedido" in resumed.reply and "Lomo saltado" in resumed.reply
+    assert "Mi pedido" in resumed.reply and "Lomo saltado" not in resumed.reply
     assert not backend.delivery_orders
     stale = await service.process_inbound(message(
         "stale-confirm", "Sí, confirmo mi pedido",
@@ -148,7 +148,7 @@ async def test_old_prepared_order_requests_contact_without_starting_submission()
 async def test_pre_fix_phone_refusal_recovers_existing_cart_without_pending_flag() -> None:
     store, backend, service = await checkout()
     resumed = await service.process_inbound(message("phone", "+51987654321"))
-    assert "Confirmar pedido" in resumed.reply and not backend.delivery_orders
+    assert "Mi pedido" in resumed.reply and not backend.delivery_orders
     session = await store.get("browser-session", "web-route")
     assert session and session.awaiting_confirmation and session.contact_phone == "51987654321"
 
@@ -207,7 +207,7 @@ async def test_interrupted_contact_turn_recovers_the_summary_without_restarting_
     with pytest.raises(RuntimeError, match="Worker stopped"):
         await service.process_inbound(contact_message)
     resumed = await service.process_inbound(contact_message)
-    assert "Lomo saltado" in resumed.reply and "Confirmar pedido" in resumed.reply
+    assert "Lomo saltado" not in resumed.reply and "Mi pedido" in resumed.reply
     session = await store.get("browser-session", "web-route")
     assert session and session.awaiting_confirmation and session.contact_phone == "51987654321"
     assert not backend.delivery_orders

@@ -107,6 +107,13 @@ def delivery_summary(session: ConversationSession) -> dict[str, Any]:
         "payment": "Se paga al recibir o al recoger el pedido.",
         "missing": missing_details(session),
     }
+    previous = session.confirmed_delivery
+    if previous is not None:
+        summary["previousSubtotal"] = _money(previous.subtotal)
+        summary["subtotal"] = _money(previous.subtotal + subtotal)
+        summary["deliveryFee"] = _money(previous.deliveryFee)
+        summary["total"] = _money(previous.total + subtotal)
+        summary["addingToOrder"] = True
     if delivery.fulfillment == "delivery":
         summary.update(
             {

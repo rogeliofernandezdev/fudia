@@ -91,7 +91,8 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
     sendInput({requestId:newChatRequestId(),action:{name:"prepare_confirmation"}});
   },[showCart,disabled,state?.cart.items.length,state?.confirmationRef,reviewKey,sendInput]);
   const items=menu.data?.items.filter(item=>!search||`${item.name} ${item.categoryName??""}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()))??[];
-  const quantity=state?.cart.items.reduce((sum,item)=>sum+item.quantity,0)??0;
+  const summaryItems=[...(state?.registeredItems??[]).map(item=>({...item,registered:true})),...(state?.cart.items??[]).map(item=>({...item,registered:false}))];
+  const quantity=summaryItems.reduce((sum,item)=>sum+item.quantity,0);
   // La foto del plato sale de la carta ya cargada: el carrito solo trae nombres e importes.
   const photos=new Map(menu.data?.items.map(item=>[item.productId,item.imageUrl]));
   // Unidades de cada plato ya en el pedido (suma sus variantes): la tarjeta de la carta las muestra sobre la foto.
@@ -160,14 +161,15 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
       </section>}
       {showCart&&<section className="restaurant-chat-cart" aria-label="Resumen de tu pedido">
         <div className="restaurant-chat-section-heading"><h2>Tu pedido{quantity>0&&<span className="restaurant-chat-cart-count">{quantity} {quantity===1?"producto":"productos"}</span>}</h2><button className="restaurant-chat-icon" type="button" aria-label="Ocultar pedido" onClick={()=>setShowCart(false)}><IconX size={20}/></button></div>
-        {!state.cart.items.length?<div className="restaurant-chat-cart-empty"><IconShoppingBag size={32}/><strong>Tu pedido está vacío</strong><p>Elige algo de la carta para empezar.</p><button type="button" className="restaurant-chat-primary" onClick={()=>{following.current=true;setShowCart(false);setShowMenu(true)}}>Ver la carta</button></div>:<>
-          <ul>{state.cart.items.map((item,index)=>{
+        {!summaryItems.length?<div className="restaurant-chat-cart-empty"><IconShoppingBag size={32}/><strong>Tu pedido está vacío</strong><p>Elige algo de la carta para empezar.</p><button type="button" className="restaurant-chat-primary" onClick={()=>{following.current=true;setShowCart(false);setShowMenu(true)}}>Ver la carta</button></div>:<>
+          {orderSummary?.addingToOrder&&<p className="restaurant-chat-cart-hint">Los nuevos productos se agregarán a tu pedido actual.</p>}
+          <ul>{summaryItems.map((item,index)=>{
             const photo=photos.get(item.productId);
             const options=[...item.modifiers,...item.selections];
             return <li key={`${item.productId}-${index}`} className="restaurant-chat-cart-item">
               <div className="restaurant-chat-cart-thumb">{photo?<Image src={photo} alt="" width={56} height={56} unoptimized/>:<IconChefHat size={24}/>}<span className="restaurant-chat-cart-qty"><span className="sr-only">Cantidad: </span>{item.quantity}×</span></div>
-              <div className="restaurant-chat-cart-body"><strong>{item.name}</strong>{options.length>0&&<div className="restaurant-chat-cart-options">{options.map((option,i)=><span key={i}>{option.name}</span>)}</div>}{item.note&&<p className="restaurant-chat-cart-note"><IconNote size={14}/>{item.note}</p>}{item.quantity>1&&<small>{currency} {item.unitPrice} c/u</small>}</div>
-              <div className="restaurant-chat-cart-side"><span>{currency} {item.lineTotal}</span><button className="restaurant-chat-icon" type="button" disabled={disabled} aria-label={`Quitar ${item.name} y sus variantes`} onClick={()=>act({name:"remove_item",args:{productId:item.productId}},true)}><IconTrash size={20}/></button></div>
+              <div className="restaurant-chat-cart-body"><strong>{item.name}</strong>{orderSummary?.addingToOrder&&<small>{item.registered?"Ya registrado":"Por agregar"}</small>}{options.length>0&&<div className="restaurant-chat-cart-options">{options.map((option,i)=><span key={i}>{option.name}</span>)}</div>}{item.note&&<p className="restaurant-chat-cart-note"><IconNote size={14}/>{item.note}</p>}{item.quantity>1&&<small>{currency} {item.unitPrice} c/u</small>}</div>
+              <div className="restaurant-chat-cart-side"><span>{currency} {item.lineTotal}</span>{!item.registered&&<button className="restaurant-chat-icon" type="button" disabled={disabled} aria-label={`Quitar ${item.name} y sus variantes`} onClick={()=>act({name:"remove_item",args:{productId:item.productId}},true)}><IconTrash size={20}/></button>}</div>
             </li>;
           })}</ul>
           <div className="restaurant-chat-totals">

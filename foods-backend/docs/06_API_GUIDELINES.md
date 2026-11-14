@@ -1,5 +1,19 @@
 # API
 
+## Adiciones a delivery y recojo de Concierge
+
+`POST /v1/integrations/concierge/{token}/delivery-orders` acepta `orderId` y
+`expectedOrderTotal` para agregar exclusivamente platos nuevos al pedido de esa
+conversación. Bajo bloqueo de pedido se revalidan empresa/local, asociación a
+la conversación, estado Nuevo/Confirmado/En preparación, ausencia de pagos y
+de cierre o reparto coordinado. No se busca ni agrupa por teléfono.
+Conserva pedido, platos anteriores y tarifa de envío; cada adición tiene su
+propio `requestId` idempotente, ronda de cocina y auditoría. Solo sus platos
+quedan Sin enviar hasta revisión de caja. Un total previo cambiado responde
+`order_changed` y exige nuevo resumen, sin crear otro pedido como alternativa.
+El estado del pedido publica sus productos y `supportsAdditions`; Concierge
+no envía una adición a un backend que no declare esta capacidad.
+
 La creación de artículos desde Compras y las altas de catálogo desde entradas
 de Inventario rechazan nombres ya registrados en productos o insumos de la
 empresa, incluidos inactivos. Se ignoran mayúsculas y espacios repetidos;

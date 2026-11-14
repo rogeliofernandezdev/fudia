@@ -28,18 +28,20 @@ func (d DeliverySetup) deliveryAvailable() bool {
 // DeliveryOrderInput es el pedido de recojo o delivery que confirma el cliente.
 // QuotedFee es la tarifa que el cliente aceptó; si cambió, el pedido se rechaza.
 type DeliveryOrderInput struct {
-	Fulfillment    string                          `json:"fulfillment"`
-	CustomerName   string                          `json:"customerName"`
-	CustomerPhone  string                          `json:"customerPhone"`
-	ConversationID string                          `json:"conversationId"`
-	RequestID      string                          `json:"requestId"`
-	Address        string                          `json:"address"`
-	Reference      string                          `json:"reference"`
-	Notes          string                          `json:"notes"`
-	Latitude       *float64                        `json:"latitude"`
-	Longitude      *float64                        `json:"longitude"`
-	QuotedFee      string                          `json:"quotedFee"`
-	Items          []ordercontracts.OrderItemInput `json:"items"`
+	OrderID            string                          `json:"orderId,omitempty"`
+	ExpectedOrderTotal string                          `json:"expectedOrderTotal,omitempty"`
+	Fulfillment        string                          `json:"fulfillment"`
+	CustomerName       string                          `json:"customerName"`
+	CustomerPhone      string                          `json:"customerPhone"`
+	ConversationID     string                          `json:"conversationId"`
+	RequestID          string                          `json:"requestId"`
+	Address            string                          `json:"address"`
+	Reference          string                          `json:"reference"`
+	Notes              string                          `json:"notes"`
+	Latitude           *float64                        `json:"latitude"`
+	Longitude          *float64                        `json:"longitude"`
+	QuotedFee          string                          `json:"quotedFee"`
+	Items              []ordercontracts.OrderItemInput `json:"items"`
 }
 
 func money(value float64) string { return fmt.Sprintf("%.2f", value) }
@@ -158,15 +160,23 @@ func (a *Concierge) SubmitDelivery(ctx context.Context, token string, in Deliver
 		return ordercontracts.TableSubmission{Order: existing}, nil
 	}
 	order := ordercontracts.ConciergeDeliveryInput{
-		Channel:        "recojo",
-		CustomerName:   in.CustomerName,
-		CustomerPhone:  in.CustomerPhone,
-		ConversationID: in.ConversationID,
-		RequestID:      in.RequestID,
-		Notes:          in.Notes,
-		Items:          in.Items,
+		OrderID:            in.OrderID,
+		ExpectedOrderTotal: in.ExpectedOrderTotal,
+		Channel:            "recojo",
+		CustomerName:       in.CustomerName,
+		CustomerPhone:      in.CustomerPhone,
+		ConversationID:     in.ConversationID,
+		RequestID:          in.RequestID,
+		Notes:              in.Notes,
+		Items:              in.Items,
 	}
-	if in.Fulfillment == "delivery" {
+	if in.OrderID != "" {
+		// Adding dishes preserves the original delivery and its accepted fee.
+		// Orders validates ownership, state and the quoted total under its lock.
+		if in.Fulfillment == "delivery" {
+			order.Channel, order.Address = "delivery", in.Address
+		}
+	} else if in.Fulfillment == "delivery" {
 		setup, setupErr := a.deliverySetup(ctx, qr)
 		if setupErr != nil {
 			return result, setupErr
@@ -199,7 +209,12 @@ func (a *Concierge) SubmitDelivery(ctx context.Context, token string, in Deliver
 	out, err := a.orders.SubmitConciergeDelivery(ctx, qr.Scope, order)
 	if err == nil {
 		o := out.Order
-		a.notify(ctx, qr.Scope, noticecontracts.RemoteOrder(order.Channel, o.ID, o.Code, o.CustomerName, productCount(order.Items), noticecontracts.Money(qr.CurrencySymbol, o.Total)))
+		notice := noticecontracts.RemoteOrder(order.Channel, o.ID, o.Code, o.CustomerName, productCount(order.Items), noticecontracts.Money(qr.CurrencySymbol, o.Total))
+		if in.OrderID != "" {
+			notice.Title = "Productos adicionales para un pedido"
+			notice.DedupeKey = "addition:" + in.RequestID
+		}
+		a.notify(ctx, qr.Scope, notice)
 	}
 	return out, err
 }
@@ -214,16 +229,29 @@ func (a *Concierge) OrderStatus(ctx context.Context, token, orderID, conversatio
 		return domain.OrderStatusView{}, err
 	}
 	o := state.Order
+	items := make([]domain.OrderStatusItem, 0, len(o.Items))
+	for _, item := range o.Items {
+		options := make([]string, 0, len(item.Selections)+len(item.Modifiers))
+		for _, selected := range item.Selections {
+			options = append(options, selected.Name)
+		}
+		for _, modifier := range item.Modifiers {
+			options = append(options, modifier.Name)
+		}
+		items = append(items, domain.OrderStatusItem{ProductID: item.ProductID, Name: item.Name, Qty: item.Qty, UnitPrice: item.UnitPrice, Note: item.Note, Options: options})
+	}
 	return domain.OrderStatusView{
-		OrderID:       o.ID,
-		Code:          o.Code,
-		Channel:       o.Channel,
-		Status:        o.Status,
-		Subtotal:      o.Subtotal,
-		DeliveryFee:   o.DeliveryFee,
-		Total:         o.Total,
-		PaymentStatus: o.PaymentStatus,
-		Active:        state.Active,
+		SupportsAdditions: true,
+		Items:             items,
+		OrderID:           o.ID,
+		Code:              o.Code,
+		Channel:           o.Channel,
+		Status:            o.Status,
+		Subtotal:          o.Subtotal,
+		DeliveryFee:       o.DeliveryFee,
+		Total:             o.Total,
+		PaymentStatus:     o.PaymentStatus,
+		Active:            state.Active,
 	}, nil
 }
 

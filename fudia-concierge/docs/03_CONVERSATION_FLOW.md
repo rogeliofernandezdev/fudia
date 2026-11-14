@@ -335,6 +335,22 @@ elimina los emojis informales.
 
 ## Contacto del pedido en chat web
 
+### Continuar un pedido activo
+
+Reescanear el mismo QR conserva la conversación vigente. En delivery/recojo,
+preparar una nueva confirmación consulta el último pedido de esa conversación:
+si sigue activo, los platos se añaden a él con su `orderId` y total anterior,
+no crean otro pedido ni otro envío. El resumen incluye platos registrados y
+nuevos, con un solo delivery. El backend decide si todavía admite cambios;
+un rechazo se comunica sin crear un pedido independiente. Un pedido terminado
+permite comenzar otro. Un backend sin `supportsAdditions` dirige al personal.
+
+Al agregar por texto, el servicio web bloquea un `prepare_confirmation` que el
+modelo intente en el mismo turno sin una indicación explícita de que el cliente
+terminó. Pregunta si desea algo más y espera. Las confirmaciones del chat web
+usan la tarjeta «Mi pedido»; las respuestas del modelo y de recuperación no
+vuelven a dibujar el resumen como una burbuja de texto.
+
 Antes de confirmar delivery, recojo o mostrador se solicitan **nombres y
 apellidos**, además del celular cuando corresponde. Se conservan juntos en
 `customerName`, sin adivinar cómo separar nombres o apellidos compuestos.

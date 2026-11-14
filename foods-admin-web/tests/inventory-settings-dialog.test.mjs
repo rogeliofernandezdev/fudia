@@ -26,7 +26,7 @@ function mount({busy=false,save=async()=>{},close=()=>{},record=item}={}){
    control??=createFormControl(options);
    return {...control,formState:control.control._formState};
   }};
-  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon"};
+  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon",ModalForm:"form",ModalBody:"ModalBody"};
   if(name==="../domain/inventory-settings-schema")return schema;
   return require(name);
  });
@@ -42,8 +42,10 @@ function mount({busy=false,save=async()=>{},close=()=>{},record=item}={}){
 test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  const {dialog,form,nodes}=mount().render();
  assert.ok(dialog.props.children.includes(form));
- assert.equal(form.props.children[0].props.title,"Datos del artículo");
- assert.equal(form.props.children[0].props.children.props.className,"form-grid");
+ const body=form.props.children[0];
+ assert.equal(body.type,"ModalBody");
+ assert.equal(body.props.children.props.title,"Datos del artículo");
+ assert.equal(body.props.children.props.children.props.className,"form-grid");
  assert.equal(form.props.children[1].type,"ModalFooter");
  assert.equal(form.props.children[1].props.children.length,2);
  assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Nombre","Stock mínimo","Stock óptimo"]);
@@ -59,11 +61,10 @@ test("la estructura activa márgenes, acciones contiguas y una columna a 390 px 
  const rules=parse("styles/globals.css"),modal=parse("design-system/styles/modal.css");
  const value=(rule,prop)=>rule.nodes.find(node=>node.prop===prop)?.value;
  const desktop=(list,selector)=>list.find(rule=>rule.selector===selector&&rule.parent.type==="root");
-  assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-2) var(--space-6) 0");
+  assert.equal(value(desktop(modal,".modal-body"),"padding"),"var(--space-2) var(--space-6) var(--space-6)","el cuerpo usa el relleno del modal compartido");
  const footer=desktop(modal,".modal-footer,.crud-modal>footer,.crud-modal>form>footer");
  assert.equal(value(footer,"justify-content"),"flex-end");
  assert.equal(value(footer,"gap"),"var(--space-2-5)");
- assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)>footer"),"position"),"sticky","el pie queda visible mientras el cuerpo se desplaza");
  const mobile=rules.find(rule=>rule.selector===".form-grid"&&rule.parent.type==="atrule");
  const breakpoint=Number(mobile.parent.params.match(/width\s*<=\s*(\d+)px/)[1]);
  assert.ok(breakpoint>=390);

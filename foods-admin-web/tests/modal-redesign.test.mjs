@@ -120,6 +120,19 @@ test("se conservan detalle vacío, error recuperable, carga y cuenta pagada",()=
  assert.match(renderDetail({skeleton:true}),/ds-skeleton/);
  assert.match(renderDetail({order:{...exampleOrder,paidAmount:"30",remainingAmount:"0"}}),/Total pagado/);
 });
+test("el resumen y las líneas no repiten importes que ya se ven",()=>{
+ // Sin pagos ni delivery, la franja es el único importe: Total y «Pagado neto» no la repiten.
+ const plain=renderDetail();
+ assert.doesNotMatch(plain,/Pagado neto/);
+ assert.equal(plain.includes('class="modal-summary-lines"'),false,"sin delivery ni pagos no hay desglose");
+ // Con pagos y saldo, el desglose explica cómo se llega al pendiente.
+ const partial=renderDetail({order:{...exampleOrder,paidAmount:"10",remainingAmount:"20"}});
+ assert.match(partial,/Pagado neto/);assert.match(partial,/<span>Total<\/span>/);
+ // El precio c/u solo aparece con cantidad mayor a uno: con una unidad repite el importe de la línea.
+ assert.doesNotMatch(plain,/c\/u/);
+ const doubled=renderDetail({order:{...exampleOrder,items:exampleOrder.items.map(item=>({...item,qty:"2",unitPrice:"9"}))}});
+ assert.match(doubled,/c\/u/);
+});
 test("el resumen global es inferior en todos los tamaños y no usa vh estático",()=>{
  const css=read("design-system/styles/modal.css");
  assert.match(css,/\.crud-modal>\.modal-workspace\{display:flex;flex-direction:column/);
@@ -136,7 +149,9 @@ test("la cuenta distingue abierta, por cobrar y pagada sin cambiar el estado del
 });
 test("resumen agrupado y estado de cuenta destacado sin recolorear los demás estados",()=>{
  const css=read("design-system/styles/modal.css"),global=read("styles/globals.css"),html=renderDetail();
- const heading=html.slice(html.indexOf('class="modal-summary-heading"'),html.indexOf('class="modal-summary-lines"'));
+ // Sin desglose (nueva regla) el corte es la franja del importe; con desglose, el bloque de líneas.
+ const linesAt=html.indexOf('class="modal-summary-lines"');
+ const heading=html.slice(html.indexOf('class="modal-summary-heading"'),linesAt===-1?html.indexOf('class="modal-summary-total"'):linesAt);
  assert.match(heading,/Resumen de cuenta[\s\S]*Cuenta abierta/);
  assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-1\) solid var\(--line\)/,'el resumen abre con la misma línea fina que las secciones');
  assert.match(css,/\.modal-summary-lines\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);

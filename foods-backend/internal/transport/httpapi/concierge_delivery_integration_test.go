@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -146,6 +147,23 @@ func TestConciergeDeliveryAndPickupOrders(t *testing.T) {
 	if picked.Channel != "recojo" || picked.DeliveryFee != "0.00" || picked.Total != "30.00" || picked.Address != "" {
 		t.Fatalf("unexpected pickup order: %#v", picked)
 	}
+	// An addition before the first kitchen send still produces one notice for
+	// the initial send, and pickup never gains a delivery fee.
+	pickupAddition := fmt.Sprintf(`{
+	  "orderId":%q,"expectedOrderTotal":"30.00","fulfillment":"pickup",
+	  "customerName":"Ana Quispe","customerPhone":"51999999999",
+	  "conversationId":%q,"requestId":"pick-add-%d",
+	  "items":[{"productId":%q,"qty":1,"note":"","selections":[]}]
+	}`, picked.ID, conversation, nonce, productID)
+	var pickupExtended order
+	if rec = call("POST", "/delivery-orders", pickupAddition); rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &pickupExtended) != nil || pickupExtended.ID != picked.ID || pickupExtended.Total != "60.00" || pickupExtended.DeliveryFee != "0.00" {
+		t.Fatalf("append pending pickup: %d %s", rec.Code, rec.Body.String())
+	}
+	sendBotOrder(t, api, s, picked.ID)
+	var initialNoticeCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM customer_notices WHERE organization_id=$1 AND order_id=$2 AND kind='order_sent'`, s.OrganizationID, picked.ID).Scan(&initialNoticeCount); err != nil || initialNoticeCount != 1 {
+		t.Fatalf("first send with additions must notify once: %d %v", initialNoticeCount, err)
+	}
 
 	rec = call("GET", "/orders/"+created.ID+"?conversationId="+conversation, "")
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"active":true`) || !strings.Contains(rec.Body.String(), `"channel":"delivery"`) {
@@ -153,6 +171,87 @@ func TestConciergeDeliveryAndPickupOrders(t *testing.T) {
 	}
 	if rec = call("GET", "/orders/"+created.ID+"?conversationId=otra-conversacion", ""); rec.Code != 404 {
 		t.Fatalf("another conversation must not read the order: %d %s", rec.Code, rec.Body.String())
+	}
+	// New dishes belong to this exact active order/conversation, not to a new
+	// order matched by phone. The original delivery fee survives a tariff change.
+	if _, err := pool.Exec(ctx, `UPDATE orders SET status='preparando' WHERE id=$1`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE order_service_items SET status='preparando' WHERE order_id=$1`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	var originalServices int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM order_service_items WHERE order_id=$1 AND status='preparando'`, created.ID).Scan(&originalServices); err != nil {
+		t.Fatal(err)
+	}
+	addition := map[string]any{
+		"orderId": created.ID, "expectedOrderTotal": "69.00", "fulfillment": "delivery",
+		"customerName": "Ana Quispe", "customerPhone": "51999999999", "conversationId": conversation,
+		"requestId": fmt.Sprintf("add-%d", nonce), "address": "Av. Larco 123",
+		"items": []map[string]any{{"productId": productID, "qty": 1, "note": "Adición", "selections": []any{}}},
+	}
+	additionBody, _ := json.Marshal(addition)
+	var extended order
+	if rec = call("POST", "/delivery-orders", string(additionBody)); rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &extended) != nil {
+		t.Fatalf("append active delivery: %d %s", rec.Code, rec.Body.String())
+	}
+	if extended.ID != created.ID || extended.Total != "99.00" || extended.DeliveryFee != "9.00" {
+		t.Fatalf("addition must preserve order and charge delivery once: %#v", extended)
+	}
+	var additionNotices int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM staff_notices WHERE organization_id=$1 AND order_id=$2 AND title='Productos adicionales para un pedido'`, s.OrganizationID, created.ID).Scan(&additionNotices); err != nil || additionNotices != 1 {
+		t.Fatalf("cashier must see the addition once: %d %v", additionNotices, err)
+	}
+	var waiting, preserved int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FILTER(WHERE status='nuevo'),count(*) FILTER(WHERE status='preparando') FROM order_service_items WHERE order_id=$1`, created.ID).Scan(&waiting, &preserved); err != nil || waiting == 0 || preserved != originalServices {
+		t.Fatalf("only new dishes wait for staff; cooked dishes unchanged: %d %d %v", waiting, preserved, err)
+	}
+	var retries sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		retries.Add(1)
+		go func() {
+			defer retries.Done()
+			response := call("POST", "/delivery-orders", string(additionBody))
+			if response.Code != 200 {
+				t.Errorf("concurrent replay: %d %s", response.Code, response.Body.String())
+			}
+		}()
+	}
+	retries.Wait()
+	// Staff can send the new round without restarting the original preparation.
+	sendBotOrder(t, api, s, created.ID)
+	var sentNoticeCount int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM customer_notices WHERE organization_id=$1 AND order_id=$2 AND kind='order_sent'`, s.OrganizationID, created.ID).Scan(&sentNoticeCount); err != nil || sentNoticeCount != 1 {
+		t.Fatalf("addition must get its own preparation notice: %d %v", sentNoticeCount, err)
+	}
+	var total string
+	var orderCount int
+	if err := pool.QueryRow(ctx, `SELECT total::text FROM orders WHERE id=$1`, created.ID).Scan(&total); err != nil || total != "99.00" {
+		t.Fatalf("replay duplicated addition: %s %v", total, err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND channel IN ('delivery','recojo')`, s.OrganizationID, s.LocationID).Scan(&orderCount); err != nil || orderCount != 2 {
+		t.Fatalf("unexpected extra orders: %d %v", orderCount, err)
+	}
+	addition["requestId"] = fmt.Sprintf("stale-add-%d", nonce)
+	staleBody, _ := json.Marshal(addition)
+	if rec = call("POST", "/delivery-orders", string(staleBody)); rec.Code != 409 || !strings.Contains(rec.Body.String(), "order_changed") {
+		t.Fatalf("changed total must require a new summary: %d %s", rec.Code, rec.Body.String())
+	}
+	addition["expectedOrderTotal"] = "99.00"
+	addition["conversationId"] = "another-conversation"
+	addition["requestId"] = fmt.Sprintf("foreign-add-%d", nonce)
+	foreignBody, _ := json.Marshal(addition)
+	if rec = call("POST", "/delivery-orders", string(foreignBody)); rec.Code != 409 {
+		t.Fatalf("another conversation cannot add: %d %s", rec.Code, rec.Body.String())
+	}
+	addition["conversationId"] = conversation
+	addition["requestId"] = fmt.Sprintf("departed-add-%d", nonce)
+	departedBody, _ := json.Marshal(addition)
+	if _, err := pool.Exec(ctx, `UPDATE orders SET status='en_camino' WHERE id=$1`, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	if rec = call("POST", "/delivery-orders", string(departedBody)); rec.Code != 409 || !strings.Contains(rec.Body.String(), "order_not_appendable") {
+		t.Fatalf("departed order cannot change or create another: %d %s", rec.Code, rec.Body.String())
 	}
 	if _, err := pool.Exec(ctx, `UPDATE orders SET status='cancelado' WHERE id=$1`, created.ID); err != nil {
 		t.Fatal(err)

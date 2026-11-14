@@ -16,6 +16,11 @@ const pending=mode==='unquoted',pickup=mode==='pickup',table=mode==='table';
 const dish={productId:'p1',name:'Lomo Saltado Criollo',description:'Con arroz y papas.',price:'20.00',imageUrl:null,categoryName:'Fondos',status:'available',isCombo:false,hasModifiers:false,remaining:null};
 const state={context:{organizationName:'Restaurante de prueba',locationName:'Local principal',name:'Mesa 1',serviceType:table?'table':'delivery'},messages:[{id:'hello',role:'assistant',text:'Tu pedido está listo para revisar.',createdAt:1794540000}],cart:{items:[{productId:'p1',name:dish.name,quantity:1,unitPrice:'20.00',lineTotal:'20.00',note:'',modifiers:[],selections:[]}],total:'20.00'},orderSummary:{subtotal:'20.00',deliveryFee:pending?null:pickup||table?'0.00':'8.00',total:pending?null:pickup||table?'20.00':'28.00',currencySymbol:'S/',fulfillment:table?'table':pickup?'pickup':'delivery'},confirmationRef:mode==='draft'||pending?null:'ready-1',mode:table?'table':'delivery',customerName:'Ana Quispe',pending:false,failed:false,active:true};
 let prepared=0,confirmed=0;const seen=new Set();
+if(mode==='addition'){
+ state.registeredItems=structuredClone(state.cart.items);
+ state.cart.items[0]={...state.cart.items[0],productId:'p2',name:'Tallarín Saltado de Carne',unitPrice:'14.00',lineTotal:'14.00'};
+ state.cart.total='14.00';state.orderSummary={...state.orderSummary,addingToOrder:true,subtotal:'34.00',total:'42.00'};
+}
 window.fetch=async(url,options)=>{
  const operation=String(url).split('/').pop();
  if(operation==='session')return Response.json({ready:true});

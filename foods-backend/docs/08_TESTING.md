@@ -196,6 +196,12 @@ horario y ausencia de cupo del día. Conserva la descripción para editar.
 
 ## Delivery y recojo de Concierge
 
+`TestConciergeDeliveryAndPickupOrders` también agrega platos al mismo pedido
+En preparación, conserva el envío aunque cambien las tarifas, mantiene los
+platos anteriores en su estado y deja solo los nuevos Sin enviar. Cuatro
+reintentos concurrentes conservan total y número de pedidos. Rechaza total
+desactualizado, otra conversación y pedido En camino sin crear otro registro.
+
 `pickup_channels_integration_test.go` verifica que el alias histórico
 `mostrador` y `recojo` comparten filtros y conteos de Pedidos/Cocina, lectura de
 POS y altas canónicas, sin reescribir los pedidos antiguos ni mezclar empresas

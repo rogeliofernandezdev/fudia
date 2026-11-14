@@ -25,6 +25,7 @@ function load(path){
   if(name.endsWith(".css"))return {};
   if(name==="react"&&file.endsWith("feedback-provider.tsx"))return {...React,useState:()=>[feedbackSlot++===0?{id:1,tone:"success",title:"Producto actualizado",message:"Los cambios ya están disponibles en el catálogo."}:false,noop]};
   if(name==="next/link")return {__esModule:true,default:({children,...props})=>h("a",props,children)};
+ if(name==="next/navigation")return {useRouter:()=>({replace:noop,push:noop}),usePathname:()=>"/salon",useSearchParams:()=>new URLSearchParams()};
   if(name==="@tanstack/react-query")return {useQueryClient:()=>({invalidateQueries:noop}),useMutation:()=>({mutate:disabled,mutateAsync:disabled}),useQuery:options=>({data:options.queryKey[0]==="salon-floor"?{items:tables}:undefined,isLoading:false,isError:false,refetch:disabled})};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:disabled})};
   if(name==="@/providers/session-context")return {useSession:()=>({can:()=>true,user:{id:"preview"}})};

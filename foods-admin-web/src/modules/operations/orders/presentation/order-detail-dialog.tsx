@@ -64,8 +64,9 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const hasPayments=paid>0.00001;
   const pending=remaining>0.00001;
   const hasDelivery=Number(order?.deliveryFee??0)>0;
-  // El resumen no repite el importe principal: el desglose solo aparece si suma delivery y «Pagado neto» solo con saldo.
-  const breakdown=hasDelivery||pending;
+  // El resumen no repite el importe principal: el desglose solo aparece cuando explica una diferencia
+  // (delivery, o pagos registrados que dejan saldo); sin nada que explicar queda solo la franja.
+  const breakdown=hasDelivery||(pending&&hasPayments);
   const canCharge=Boolean(order&&canCollectOrder(order,user?.id,can("cash.manage"),cashCollection)&&canChargeAccount(order)&&remaining>0.00001);
   const canCancel=Boolean(order&&canCancelOrder(order));
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
@@ -89,8 +90,8 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
           {breakdown&&<div className="modal-summary-lines">
             {hasDelivery&&<><div className="modal-summary-line"><span>Subtotal</span><b>{money(order.subtotal)}</b></div>
             <div className="modal-summary-line"><span>Delivery</span><b>{money(order.deliveryFee)}</b></div></>}
-            {pending&&<><div className="modal-summary-line"><span>Total</span><b>{money(order.total)}</b></div>
-            <div className={`modal-summary-line order-detail-paid${hasPayments?" has-payment":""}`}><span>Pagado neto</span><b>{money(paid)}</b></div></>}
+            {pending&&hasPayments&&<><div className="modal-summary-line"><span>Total</span><b>{money(order.total)}</b></div>
+            <div className="modal-summary-line order-detail-paid has-payment"><span>Pagado neto</span><b>{money(paid)}</b></div></>}
           </div>}
           <div className="modal-summary-total"><span>{pending?"Saldo pendiente":"Total pagado"}</span><strong>{money(pending?remaining:order.total)}</strong></div>
         </section>
@@ -178,10 +179,11 @@ function comboComponents(item:OrderItem,services:ServiceItem[]){
   });
 }
 
-/** Fila de producto: cantidad, nombre e importe; debajo precio c/u y, en combos, el bloque neutro de componentes a modo de carta (grupo | plato, destino si difiere y estado). */
+/** Fila de producto: cantidad, nombre e importe; debajo el destino (y el precio c/u solo con cantidad mayor a uno: con una unidad repite el importe de la línea); en combos, el bloque neutro de componentes a modo de carta (grupo | plato, destino si difiere y estado). */
 function OrderDetailLine({order,item}:{order:Order;item:OrderItem}){
   // El estado de cada línea siempre se ve: icono sólido de color y su etiqueta en texto a la derecha.
   const money=useMoney();
+  const qty=Number(item.qty);
   const components=item.itemType==="combo"?comboComponents(item,order.serviceItems??[]):[];
   const shown=new Set(components.flatMap(component=>component.service?[component.service.id]:[]));
   const combo=components.length>0;
@@ -190,13 +192,14 @@ function OrderDetailLine({order,item}:{order:Order;item:OrderItem}){
   const sharedDestination=combo&&destinations.size===1&&!destinations.has(undefined)?components[0].service?.destinationLabel:undefined;
   const state=lineServiceStatus((order.serviceItems??[]).filter(service=>service.orderItemId===item.id).map(service=>service.status),order.status);
   const look=serviceStateLook(state);
-  // Fila 1: estado sólido · «1× nombre» · importe. Fila 2: precio c/u · destino · estado en texto.
+  const hasLead=qty>1||Boolean(sharedDestination);
+  // Fila 1: estado sólido · «1× nombre» · importe. Fila 2: precio c/u (solo con cantidad > 1) · destino · estado en texto.
   return <div className="modal-item-row has-state order-detail-line" role="listitem">
     <IconTile className="modal-item-state" name={look.icon} tone={look.tone} appearance="vivid" size="sm"/>
     <div className="order-detail-line-info">
-      <span><b className="modal-item-quantity order-detail-qty">{Number(item.qty)}×</b>{item.name}</span>
+      <span><b className="modal-item-quantity order-detail-qty">{qty}×</b>{item.name}</span>
       {item.note&&<ModalItemNote>{item.note}</ModalItemNote>}
-      <OrderItemService order={order} itemId={item.id} lead={<><small>{money(item.unitPrice)} c/u</small>{sharedDestination&&<small>{sharedDestination}</small>}</>} exclude={shown}/>
+      <OrderItemService order={order} itemId={item.id} lead={hasLead?<>{qty>1&&<small>{money(item.unitPrice)} c/u</small>}{sharedDestination&&<small>{sharedDestination}</small>}</>:undefined} exclude={shown}/>
       <ModalItemComponents label={`Componentes de ${item.name}`} items={components.map(({selection,service})=>({
         key:selection.groupId+selection.productId,
         group:selection.groupName,

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class WebOrderSummary(BaseModel):
+    addingToOrder: bool = False
     subtotal: str
     deliveryFee: str | None
     total: str | None

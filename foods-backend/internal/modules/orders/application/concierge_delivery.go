@@ -8,6 +8,8 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
+	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -35,6 +37,9 @@ func (a *Orders) SubmitConciergeDelivery(ctx context.Context, s scope, in Concie
 	var result TableSubmission
 	if message := normalizeConciergeDelivery(&in); message != "" {
 		return result, orderFailure(apperror.Invalid, "invalid_order", message)
+	}
+	if in.OrderID != "" {
+		return a.appendConciergeDelivery(ctx, s, in)
 	}
 	return a.submitWithoutTable(ctx, s, in, nil)
 }
@@ -206,6 +211,16 @@ func normalizeConciergeDelivery(in *ConciergeDeliveryInput) string {
 	}
 	if message := validateOrderWithoutTable(in); message != "" {
 		return message
+	}
+	if in.OrderID != "" {
+		if matched, _ := regexp.MatchString(`^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$`, in.OrderID); !matched {
+			return "El pedido de origen no es válido."
+		}
+		quoted, err := strconv.ParseFloat(in.ExpectedOrderTotal, 64)
+		if err != nil || math.IsNaN(quoted) || math.IsInf(quoted, 0) || quoted < 0 {
+			return "Revisa el total del pedido antes de agregar productos."
+		}
+		return ""
 	}
 	if in.Channel == "recojo" {
 		if len(in.CustomerPhone) > 32 {

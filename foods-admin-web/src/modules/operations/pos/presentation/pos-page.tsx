@@ -286,10 +286,12 @@ export function POSDetailDialog({loading,error,data,preview,canManage,hasShift,f
   const remaining=Number(data?.remainingAmount??0);
   const[tab,setTab]=useState<"products"|"payments">("products");
   const pending=remaining>0.00001;
+  const hasPayments=paid>0.00001;
   const tip=data?.tip;
   const tipCharged=Boolean(tip&&!tip.directToStaff);
-  // El resumen no repite el importe principal: Total y Pagado neto solo explican un saldo o una propina cobrada.
-  const breakdown=pending||Boolean(tip);
+  // El resumen no repite el importe principal: el desglose solo aparece cuando explica una diferencia
+  // (pagos registrados que dejan saldo, o una propina cobrada); sin nada que explicar queda solo la franja.
+  const breakdown=Boolean(tip)||(pending&&hasPayments);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title" aria-busy={loading}>
     {loading?<POSDetailLoading close={close} withFooter={Boolean(ticket)} heading={head?{title}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
     <ModalHeader title={title} titleId="pos-detail-title" onClose={close} closeLabel="Cerrar detalle"/>
@@ -298,9 +300,9 @@ export function POSDetailDialog({loading,error,data,preview,canManage,hasShift,f
     :<ModalWorkspace summary={<section className={`modal-summary pos-detail-totals is-band${pending?"":" is-paid"}`} aria-labelledby="pos-detail-summary-title">
       <div className="modal-summary-heading"><h3 id="pos-detail-summary-title" className="modal-section-title">Resumen de cobro</h3></div>
       {breakdown&&<div className="modal-summary-lines">
-        {(pending||tipCharged)&&<div className="modal-summary-line"><span>Total</span><b>{formatMoney(Number(data.order.total))}</b></div>}
+        {(tipCharged||(pending&&hasPayments))&&<div className="modal-summary-line"><span>Total</span><b>{formatMoney(Number(data.order.total))}</b></div>}
         {tip&&<div className="modal-summary-line"><span>{tip.directToStaff?"Propina directa al personal":"Propina cobrada"}</span><b>{formatMoney(Number(tip.amount))}</b></div>}
-        {pending&&<div className={`modal-summary-line pos-detail-paid${paid>0.00001?" has-payment":""}`}><span>Pagado neto</span><b>{formatMoney(paid)}</b></div>}
+        {pending&&hasPayments&&<div className="modal-summary-line pos-detail-paid has-payment"><span>Pagado neto</span><b>{formatMoney(paid)}</b></div>}
       </div>}
       <div className="modal-summary-total"><span>{pending?"Saldo pendiente":tipCharged?"Total pagado con propina":"Total pagado"}</span><strong>{formatMoney(pending?remaining:Number(data.order.total)+(tipCharged?Number(tip!.amount):0))}</strong></div>
     </section>}>
@@ -326,7 +328,7 @@ export function POSDetailDialog({loading,error,data,preview,canManage,hasShift,f
 
         <section className="detail-panel pos-detail-panel" role="tabpanel" aria-labelledby="pos-detail-products-title" hidden={tab!=="products"}>
           <h3 id="pos-detail-products-title" className="sr-only">Productos del pedido</h3>
-          {data.order.items?.length?<ModalItemList>{data.order.items.map(item=>{const line=lineServiceState(data.order.serviceItems??[],item.id,data.order.status);return <div className="modal-item-row has-state" role="listitem" key={item.id}><IconTile className="modal-item-state" name={line.look.icon} tone={line.look.tone} appearance="vivid" size="sm"/><div className="modal-item-info"><span className="modal-item-name"><b className="modal-item-quantity">{Number(item.qty)}×</b>{item.name}</span>{item.note&&<ModalItemNote>{item.note}</ModalItemNote>}<span className="modal-item-meta"><span>{formatMoney(Number(item.unitPrice))} c/u</span>{line.destination&&<span>{line.destination}</span>}{line.label&&<span className="modal-item-status">{line.label}</span>}</span><ModalItemComponents label={`Detalle de ${item.name}`} items={[...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{formatMoney(Number(selection.surcharge))}</small>})),...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name}))]}/></div><strong className="modal-item-total">{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>})}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
+          {data.order.items?.length?<ModalItemList>{data.order.items.map(item=>{const line=lineServiceState(data.order.serviceItems??[],item.id,data.order.status);return <div className="modal-item-row has-state" role="listitem" key={item.id}><IconTile className="modal-item-state" name={line.look.icon} tone={line.look.tone} appearance="vivid" size="sm"/><div className="modal-item-info"><span className="modal-item-name"><b className="modal-item-quantity">{Number(item.qty)}×</b>{item.name}</span>{item.note&&<ModalItemNote>{item.note}</ModalItemNote>}<span className="modal-item-meta">{Number(item.qty)>1&&<span>{formatMoney(Number(item.unitPrice))} c/u</span>}{line.destination&&<span>{line.destination}</span>}{line.label&&<span className="modal-item-status">{line.label}</span>}</span><ModalItemComponents label={`Detalle de ${item.name}`} items={[...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{formatMoney(Number(selection.surcharge))}</small>})),...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name}))]}/></div><strong className="modal-item-total">{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>})}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
         </section>
         <section className="detail-panel pos-detail-panel" role="tabpanel" aria-labelledby="pos-detail-payments-title" hidden={tab!=="payments"}>
           <h3 id="pos-detail-payments-title" className="sr-only">Pagos registrados</h3>

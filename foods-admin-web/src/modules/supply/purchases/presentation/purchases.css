@@ -14,7 +14,7 @@
 .purchase-order-modal>form>.purchase-form-body{flex:1;min-height:0}
 .purchase-order-modal>form>footer{flex:0 0 auto}
 .purchase-order-modal>.modal-busy{inset:0;z-index:20;border-radius:inherit;pointer-events:auto}
-.purchase-form-body{display:grid;align-content:start;gap:var(--space-5);padding:var(--space-5);overflow-y:auto;overscroll-behavior:contain;background:var(--surface)}
+.purchase-form-body{display:grid;align-content:start;gap:var(--space-5);padding:var(--space-5);overflow-y:auto;overscroll-behavior:contain;background:var(--surface);scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 /* Orden de compra: secciones tipográficas separadas por una línea fina, sin tarjetas anidadas. */
 .purchase-form-section{display:grid;gap:var(--space-3);min-width:0}
 .purchase-form-section+.purchase-form-section{padding-top:var(--space-5);border-top:var(--stroke-1) solid var(--cloud-100)}
@@ -27,6 +27,13 @@
 .purchase-section-title b{font-size:var(--font-size-control)}
 .purchase-section-title small{color:var(--ink-400);font-size:var(--font-size-label)}
 .purchase-lines{display:grid;margin:0;padding:0;list-style:none;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface)}
+/* Rótulos de columna una sola vez: la fila arriba alinea las columnas y los campos no repiten etiquetas en escritorio. */
+.purchase-lines-header{display:none}
+@media(min-width:981px){
+ .purchase-lines-header{display:grid;grid-template-columns:minmax(var(--size-190),1.35fr) minmax(var(--size-90),.55fr) minmax(var(--size-130),.75fr) minmax(var(--size-110),.65fr);gap:var(--space-3);padding:0 calc(var(--space-4) + var(--stroke-1)) var(--space-1);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+ .purchase-lines-header>span:last-child{text-align:right}
+ .purchase-line-fields .form-field-label,.purchase-line-total small{display:none}
+}
 .purchase-line{display:grid;gap:var(--space-3);min-width:0;padding:var(--space-3-5) var(--space-4)}
 .purchase-line+.purchase-line{border-top:var(--stroke-1) solid var(--cloud-100)}
 .purchase-line-head{display:flex;align-items:center;gap:var(--space-3);min-width:0}
@@ -56,7 +63,7 @@
 .purchase-reference-controls :is(.button,.ds-icon-button){flex-shrink:0}
 .purchase-reference-loading{height:var(--control-height);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);padding:var(--space-2);display:flex;align-items:center}
 .purchase-detail-modal{display:flex;flex-direction:column;width:min(var(--size-900),calc(100vw - var(--size-32)));max-height:min(var(--size-820),calc(100dvh - var(--size-32)));overflow:hidden}
-.purchase-detail-body{display:grid;grid-auto-rows:max-content;gap:var(--space-3-5);padding:var(--space-5);overflow-y:auto;background:var(--cloud-50)}
+.purchase-detail-body{display:grid;grid-auto-rows:max-content;gap:var(--space-3-5);padding:var(--space-5);overflow-y:auto;background:var(--cloud-50);scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .purchase-detail-summary{display:grid;grid-template-columns:1.5fr 1fr .7fr auto;align-items:center;gap:var(--space-3);padding:var(--space-3-5) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .purchase-detail-summary>div,.purchase-detail-meta>div{display:grid;gap:var(--space-1-5);min-width:0}
 .purchase-detail-summary small,.purchase-detail-meta small,.purchase-detail-actions small{color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--modal-label-weight);letter-spacing:var(--letter-spacing-caps)}

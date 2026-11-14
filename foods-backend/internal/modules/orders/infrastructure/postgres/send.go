@@ -41,7 +41,18 @@ func (r *Orders) UnsentRecipients(ctx context.Context, s scope, orderID string) 
 		FROM concierge_delivery_requests d
 		JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id
 		WHERE d.organization_id=$1 AND d.location_id=$2 AND d.order_id=$3
-		  AND o.status='nuevo'`, s.OrganizationID, s.LocationID, orderID)
+		  AND o.status='nuevo'
+		UNION
+		SELECT d.conversation_id,o.customer_phone,r.id::text
+		FROM concierge_delivery_requests d
+		JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id
+		JOIN order_kitchen_rounds r ON r.order_id=o.id AND r.organization_id=o.organization_id
+		  AND r.location_id=d.location_id AND r.request_key=d.request_id
+		WHERE d.organization_id=$1 AND d.location_id=$2 AND d.order_id=$3
+		  AND o.status<>'nuevo'
+		  AND EXISTS(SELECT 1 FROM order_items i
+		    JOIN order_service_items si ON si.order_item_id=i.id AND si.organization_id=i.organization_id
+		    WHERE i.kitchen_round_id=r.id AND i.organization_id=r.organization_id AND si.status='nuevo')`, s.OrganizationID, s.LocationID, orderID)
 	if err != nil {
 		return nil, err
 	}

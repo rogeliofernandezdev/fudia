@@ -6,7 +6,7 @@ import "../../styles/salon.css";
 import {useState,useCallback,useEffect} from "react";
 import {formatTableOccupation} from "../domain/occupation-time";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,SearchField,Skeleton,Status} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconTile,PageHeader,SearchField,Skeleton,Status} from "@/design-system";
 import {ComandaView} from "../../orders/presentation/comanda-view";
 import type {Draft,Order} from "../domain/types";
 import {createSalonOrder,getSalonFloor,getSalonOrder,sendSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
@@ -18,7 +18,7 @@ import {canManageOrderService} from "../../orders/domain/order-actions";
 import {addOrderConsumption} from "../../orders/infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "../../orders/presentation/order-detail-dialog";
 import {useOrderDeepLink} from "../../orders/presentation/use-order-deep-link";
-import {isEditableOrder,parseIsoDate,statusMeta} from "../../orders/presentation/order-meta";
+import {isEditableOrder,statusMeta} from "../../orders/presentation/order-meta";
 
 /* ── helpers ── */
 const tableOrder=new Intl.Collator("es",{numeric:true,sensitivity:"base"});
@@ -179,12 +179,12 @@ export function SalonManager({initialOrderId}:{initialOrderId?:string}={}){
     <>
       <PageHeader title="Salón" description="Consulta el estado de las mesas y gestiona las comandas activas desde un solo lugar."/>
 
-      {/* KPI al estilo de la referencia: etiqueta pequeña arriba (en el tono de su estado) y cifra con icono de línea. */}
+      {/* Resumen como tablero de app: cuatro tarjetas iguales con IconTile vivid, cifra y rótulo alineados a la izquierda; la cifra remonta al cambiar. */}
       <dl className="salon-overview-stats" aria-label="Resumen del salón">
-        <div><dt>Mesas</dt><dd><Icon name="grid" size={20}/>{floor.isLoading?countSkeleton:tables.length}</dd></div>
-        <div className="free"><dt>Libres</dt><dd><Icon name="check" size={20}/>{floor.isLoading?countSkeleton:freeCount}</dd></div>
-        <div className="occupied"><dt>Ocupadas</dt><dd><Icon name="utensils" size={20}/>{floor.isLoading?countSkeleton:occupiedCount}</dd></div>
-        <div><dt>Consumo abierto</dt><dd><Icon name="wallet" size={20}/>{floor.isLoading?countSkeleton:money(openTotal)}</dd></div>
+        <div><dt>Mesas</dt><dd><IconTile name="grid" tone="navy" appearance="vivid"/>{floor.isLoading?countSkeleton:<b key={tables.length}>{tables.length}</b>}</dd></div>
+        <div className="free"><dt>Libres</dt><dd><IconTile name="check" tone="brand" appearance="vivid"/>{floor.isLoading?countSkeleton:<b key={freeCount}>{freeCount}</b>}</dd></div>
+        <div className="occupied"><dt>Ocupadas</dt><dd><IconTile name="utensils" tone="primary" appearance="vivid"/>{floor.isLoading?countSkeleton:<b key={occupiedCount}>{occupiedCount}</b>}</dd></div>
+        <div><dt>Consumo abierto</dt><dd><IconTile name="wallet" tone="sky" appearance="vivid"/>{floor.isLoading?countSkeleton:<b key={money(openTotal)}>{money(openTotal)}</b>}</dd></div>
       </dl>
 
       <section className="salon-controls" aria-label="Controles del salón">
@@ -317,7 +317,7 @@ function SalonTableSkeleton(){
         <Skeleton width="var(--size-72)" height="var(--size-24)" radius="var(--radius-pill)"/>
       </div>
       <div className="salon-table-stage">
-        <Skeleton width="var(--size-56)" height="var(--size-56)" radius="var(--radius-pill)"/>
+        <Skeleton width="var(--size-88)" height="var(--size-88)" radius="var(--radius-pill)"/>
       </div>
       <div className="salon-table-foot">
         <Skeleton width="var(--size-86)" height="var(--size-16)"/>
