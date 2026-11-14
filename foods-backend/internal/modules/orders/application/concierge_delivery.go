@@ -171,7 +171,11 @@ func (a *Orders) ConciergeOrder(ctx context.Context, s scope, conversationID, or
 	if err != nil {
 		return result, err
 	}
-	return ConciergeOrderState{Order: out, Active: active}, nil
+	canRequestBill, err := a.canRequestTableBill(ctx, s, out)
+	if err != nil {
+		return result, err
+	}
+	return ConciergeOrderState{Order: out, Active: active, CanRequestBill: active && canRequestBill}, nil
 }
 
 func (a *Orders) conciergeOrderView(ctx context.Context, s scope, id string) (domain.Order, error) {

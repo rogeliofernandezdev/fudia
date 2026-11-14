@@ -69,6 +69,10 @@ func (h orderHandoff) MarkOnTheWay(ctx context.Context, s requestscope.Scope, or
 	return h.orders.MarkDeliveryOnTheWayInTransaction(ctx, s, orderID)
 }
 
+func (h orderHandoff) MarkDelivered(ctx context.Context, s requestscope.Scope, orderID string) error {
+	return h.orders.MarkDeliveryDeliveredInTransaction(ctx, s, orderID)
+}
+
 func (h orderHandoff) ReleaseDeliveryFee(ctx context.Context, s requestscope.Scope, orderID string) error {
 	return h.orders.ReleaseDeliveryFeeInTransaction(ctx, s, orderID)
 }
@@ -93,7 +97,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	notices := noticeapp.New(noticepg.New(db), identityService)
 	orders := orderapp.New(orderpg.New(db), work, audit, stock).WithNotices(notices)
 	deliveryRepo := deliverypg.New(db)
-	dispatcher := deliveryapp.NewDispatcher(deliveryRepo, work).WithNotices(notices).WithHandoff(orderHandoff{orders})
+	dispatcher := deliveryapp.NewDispatcher(deliveryRepo, work).WithNotices(notices).WithHandoff(orderHandoff{orders}).WithPanel(deliveryRepo)
 	orders.WithDispatch(dispatcher)
 
 	accessRepo := subscriptionpg.NewAccess(db)
@@ -119,6 +123,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 
 	concierge := conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers).WithNotices(notices)
 	concierge.WithDirectory(conciergepg.New(db), platform, work)
+	concierge.WithDeliveryTracking(dispatcher)
 	return httpapi.NewWithHandlers(httpapi.Handlers{
 		Delivery:               deliveryhttp.New(deliveryapp.NewPartners(deliveryRepo, work), dispatcher),
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),

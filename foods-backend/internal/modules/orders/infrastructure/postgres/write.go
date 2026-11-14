@@ -109,8 +109,10 @@ func (r *Orders) PendingServiceItems(ctx context.Context, s scope, id string) (b
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2 AND status NOT IN ('listo','entregado'))`, id, s.OrganizationID).Scan(&pending)
 	return pending, orderError(err)
 }
+// DeliverServiceItems admite un alcance sin usuario: la entrega que confirma la
+// central de Delivery Fudia no tiene un usuario del restaurante.
 func (r *Orders) DeliverServiceItems(ctx context.Context, s scope, id string) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `UPDATE order_service_items SET status='entregado',delivered_at=now(),delivered_by=(SELECT id FROM users WHERE id=$3 AND organization_id=$2),updated_at=now() WHERE order_id=$1 AND organization_id=$2 AND status='listo'`, id, s.OrganizationID, s.UserID)
+	tag, err := r.db(ctx).Exec(ctx, `UPDATE order_service_items SET status='entregado',delivered_at=now(),delivered_by=(SELECT id FROM users WHERE id=NULLIF($3,'')::uuid AND organization_id=$2),updated_at=now() WHERE order_id=$1 AND organization_id=$2 AND status='listo'`, id, s.OrganizationID, s.UserID)
 	return tag.RowsAffected(), orderError(err)
 }
 func (r *Orders) SetStatus(ctx context.Context, s scope, id string, in application.OrderStatusInput) (int64, error) {

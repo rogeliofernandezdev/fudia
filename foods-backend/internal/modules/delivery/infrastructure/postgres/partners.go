@@ -45,18 +45,18 @@ func duplicatePhone(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
-const partnerColumns = `id::text,name,whatsapp_phone,active,priority,created_at,updated_at`
+const partnerColumns = `id::text,name,whatsapp_phone,active,priority,panel_token,created_at,updated_at`
 
 func scanPartner(row pgx.Row) (domain.Partner, error) {
 	var p domain.Partner
 	var created, updated time.Time
-	err := row.Scan(&p.ID, &p.Name, &p.WhatsAppPhone, &p.Active, &p.Priority, &created, &updated)
+	err := row.Scan(&p.ID, &p.Name, &p.WhatsAppPhone, &p.Active, &p.Priority, &p.PanelToken, &created, &updated)
 	p.CreatedAt, p.UpdatedAt = stamp(created), stamp(updated)
 	return p, err
 }
 
 func (r *Repository) ListPartners(ctx context.Context) ([]domain.Partner, error) {
-	rows, err := r.db(ctx).Query(ctx, `SELECT p.id::text,p.name,p.whatsapp_phone,p.active,p.priority,p.created_at,p.updated_at,
+	rows, err := r.db(ctx).Query(ctx, `SELECT p.id::text,p.name,p.whatsapp_phone,p.active,p.priority,p.panel_token,p.created_at,p.updated_at,
       ARRAY(SELECT c.area_code FROM delivery_partner_coverage c WHERE c.partner_id=p.id ORDER BY c.area_code),
       ARRAY(SELECT concat_ws(' · ',g.name,pr.name,dp.name)
         FROM delivery_partner_coverage c JOIN geographic_areas g ON g.code=c.area_code
@@ -72,7 +72,7 @@ func (r *Repository) ListPartners(ctx context.Context) ([]domain.Partner, error)
 	for rows.Next() {
 		var p domain.Partner
 		var created, updated time.Time
-		err := rows.Scan(&p.ID, &p.Name, &p.WhatsAppPhone, &p.Active, &p.Priority, &created, &updated, &p.CoverageCodes, &p.CoverageLabels)
+		err := rows.Scan(&p.ID, &p.Name, &p.WhatsAppPhone, &p.Active, &p.Priority, &p.PanelToken, &created, &updated, &p.CoverageCodes, &p.CoverageLabels)
 		p.CreatedAt, p.UpdatedAt = stamp(created), stamp(updated)
 		if err != nil {
 			return nil, err
@@ -230,5 +230,17 @@ func (r *Repository) RotateDeliveryLink(ctx context.Context, s scope, locationID
 		SET qr_token=replace(gen_random_uuid()::text,'-',''),active=true,updated_at=now()
 		RETURNING qr_token,active,updated_at`, s.OrganizationID, locationID).Scan(&out.Token, &out.Active, &updated)
 	out.UpdatedAt = stamp(updated)
+	return out, err
+}
+
+// RotatePanelToken reemplaza el enlace privado del panel; el anterior deja de abrir.
+func (r *Repository) RotatePanelToken(ctx context.Context, id string) (domain.PanelLink, error) {
+	out := domain.PanelLink{PartnerID: id}
+	err := r.db(ctx).QueryRow(ctx, `
+		UPDATE delivery_partners SET panel_token=replace(gen_random_uuid()::text,'-',''),updated_at=now()
+		WHERE id=$1 RETURNING panel_token`, id).Scan(&out.PanelToken)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, application.ErrNotFound
+	}
 	return out, err
 }

@@ -1,0 +1,15 @@
+/* Mapa de seguimiento de un reparto (RouteMap): lienzo, marcadores y estados. */
+.route-map-shell{position:relative}
+.route-map-canvas{height:var(--size-240);width:100%;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--cloud-100)}
+.route-map-loading{position:absolute;inset:0;border-radius:var(--radius-tile);background:var(--cloud-100);animation:route-map-pulse var(--duration-ambient) ease-in-out infinite;pointer-events:none}
+@keyframes route-map-pulse{50%{opacity:.55}}
+.route-map-unavailable{min-height:var(--size-96);display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);border:var(--stroke-1) dashed var(--line);border-radius:var(--radius-tile);background:var(--cloud-25);color:var(--ink-500);font-size:var(--font-size-sm);text-align:center}
+.route-map-unavailable p{margin:0}
+/* Marcadores: local en navy, entrega en verde de marca y repartidor en azul operativo, con icono blanco. */
+.route-map-marker{width:var(--size-36);height:var(--size-36);display:grid;place-items:center;border-radius:50%;border:var(--stroke-2) solid var(--surface);color:var(--surface);box-shadow:var(--elevation-2)}
+.route-map-marker.is-origin{background:var(--navigation-900)}
+.route-map-marker.is-destination{background:var(--brand-700)}
+.route-map-marker.is-courier{background:var(--primary-600);z-index:1}
+@media(prefers-reduced-motion:reduce){.route-map-loading{animation:none}}
+/* Táctil y móvil: el zoom conserva el área táctil de 44 px. */
+@media (width<=600px),(any-pointer:coarse){.route-map-canvas .mapboxgl-ctrl-group button{width:var(--size-44);height:var(--size-44)}}

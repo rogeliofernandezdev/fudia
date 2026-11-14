@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 	"errors"
-	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
+	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
 	"strconv"
@@ -257,6 +257,13 @@ func (a *Orders) TableBill(ctx context.Context, s scope, tableID string) (domain
 	if err != nil {
 		return o, orderFailure(apperror.Unavailable, "bill_unavailable", "No pudimos cargar la cuenta de la mesa.")
 	}
+	available, err := a.canRequestTableBill(ctx, s, o)
+	if err != nil {
+		return o, err
+	}
+	if !available {
+		return o, orderFailure(apperror.Conflict, "products_not_delivered", "Podrás pedir la cuenta cuando el mozo haya entregado todos los productos de tu pedido.")
+	}
 	o.Items, err = a.repo.Items(ctx, s, o.ID, "")
 	if err != nil {
 		return o, orderFailure(apperror.Unavailable, "bill_unavailable", "No pudimos cargar el detalle de la cuenta.")
@@ -265,4 +272,17 @@ func (a *Orders) TableBill(ctx context.Context, s scope, tableID string) (domain
 		return o, orderFailure(apperror.Unavailable, "bill_unavailable", "No pudimos calcular el saldo pendiente.")
 	}
 	return o, nil
+}
+
+// El estado agregado incluye todas las rondas; los platos se verifican también
+// para no habilitar la cuenta si queda alguna entrega pendiente.
+func (a *Orders) canRequestTableBill(ctx context.Context, s scope, o domain.Order) (bool, error) {
+	if o.TableID == "" || o.CompletedAt != "" || o.Status != "entregado" {
+		return false, nil
+	}
+	pending, err := a.repo.UndeliveredItems(ctx, s, o.ID)
+	if err != nil {
+		return false, orderFailure(apperror.Unavailable, "bill_unavailable", "No pudimos verificar la entrega de tu pedido.")
+	}
+	return !pending, nil
 }

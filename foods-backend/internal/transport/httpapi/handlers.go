@@ -61,6 +61,11 @@ type Handlers struct {
 		OrderDispatch(http.ResponseWriter, *http.Request)
 		RetryDispatch(http.ResponseWriter, *http.Request)
 		UseOwnDelivery(http.ResponseWriter, *http.Request)
+		// Panel web de la central: enlace privado, pedidos, acciones y ubicación.
+		RotatePanelLink(http.ResponseWriter, *http.Request)
+		Panel(http.ResponseWriter, *http.Request)
+		PanelAction(http.ResponseWriter, *http.Request)
+		PanelLocation(http.ResponseWriter, *http.Request)
 		ClaimMessages(http.ResponseWriter, *http.Request)
 		MarkMessageDispatched(http.ResponseWriter, *http.Request)
 		PartnerAction(http.ResponseWriter, *http.Request)

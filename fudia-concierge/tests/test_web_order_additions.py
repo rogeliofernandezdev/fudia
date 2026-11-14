@@ -128,7 +128,7 @@ async def test_rescan_waits_then_confirms_into_the_same_order_with_one_delivery_
     assert session and session.last_order_id == backend.id and not session.awaiting_confirmation
     assert backend.created == 1 and len(backend.delivery_orders) == 1
     reviewed = await service.process_inbound(message("done", "No, eso es todo"))
-    assert reviewed.reply == "Tu pedido está listo para confirmar en «Mi pedido»."
+    assert reviewed.reply == "Revisa tu pedido y toca **Confirmar pedido** para enviarlo."
     session = await store.get("browser-session", "web-route")
     assert session and session.pending_order_request_id
     summary = order_summary(session, "delivery")

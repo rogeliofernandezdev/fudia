@@ -81,9 +81,11 @@ type Partner struct {
 	CoverageCodes  []string `json:"coverageCodes"`
 	CoverageLabels []string `json:"coverageLabels"`
 	// Priority es el orden global: la 1 recibe primero cada pedido.
-	Priority  int    `json:"priority"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	Priority int `json:"priority"`
+	// PanelToken abre el panel web de la central; solo lo ve Plataforma.
+	PanelToken string `json:"panelToken"`
+	CreatedAt  string `json:"createdAt"`
+	UpdatedAt  string `json:"updatedAt"`
 }
 
 // PartnerInput crea o edita una central.
@@ -140,6 +142,7 @@ type Dispatch struct {
 	PartnerName string          `json:"partnerName,omitempty"`
 	AcceptedAt  string          `json:"acceptedAt,omitempty"`
 	PickedUpAt  string          `json:"pickedUpAt,omitempty"`
+	DeliveredAt string          `json:"deliveredAt,omitempty"`
 	Offers      []DispatchOffer `json:"offers"`
 }
 

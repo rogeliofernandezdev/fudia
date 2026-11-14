@@ -348,8 +348,8 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		billReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
 		billRec := httptest.NewRecorder()
 		api.Routes().ServeHTTP(billRec, billReq)
-		if billRec.Code != 200 || !strings.Contains(billRec.Body.String(), `"total":"105.50"`) {
-			t.Fatalf("bill must return backend total: %d %s", billRec.Code, billRec.Body.String())
+		if billRec.Code != 409 || !strings.Contains(billRec.Body.String(), "products_not_delivered") {
+			t.Fatalf("bill must wait for delivery: %d %s", billRec.Code, billRec.Body.String())
 		}
 	}
 	billRequests := func() int {
@@ -364,16 +364,15 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		}
 		return count
 	}
-	// A repeated requestId (Concierge recovering after a crash) returns the
-	// bill again without recording a second request; a new one is recorded.
+	// Ninguna solicitud anticipada, nueva o repetida, registra una cuenta.
 	requestBill(fmt.Sprintf("bill-%d-1", nonce))
 	requestBill(fmt.Sprintf("bill-%d-1", nonce))
-	if got := billRequests(); got != 1 {
-		t.Fatalf("repeated bill requestId must be recorded once, got %d", got)
+	if got := billRequests(); got != 0 {
+		t.Fatalf("premature bill request must not be recorded, got %d", got)
 	}
 	requestBill(fmt.Sprintf("bill-%d-2", nonce))
-	if got := billRequests(); got != 2 {
-		t.Fatalf("a new bill requestId must be recorded, got %d", got)
+	if got := billRequests(); got != 0 {
+		t.Fatalf("new premature bill request must not be recorded, got %d", got)
 	}
 
 	deliverReq := httptest.NewRequest("PATCH", "/v1/admin/orders/"+created.ID+"/status", bytes.NewReader([]byte(`{"status":"entregado"}`)))

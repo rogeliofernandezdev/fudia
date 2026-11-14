@@ -231,12 +231,20 @@ func (r *Repository) MarkPickedUp(ctx context.Context, s scope, dispatchID strin
 	return err
 }
 
+// MarkDelivered cierra el reparto cuando la central confirma la entrega.
+func (r *Repository) MarkDelivered(ctx context.Context, s scope, dispatchID string) error {
+	_, err := r.db(ctx).Exec(ctx, `
+		UPDATE delivery_dispatches SET status='delivered',delivered_at=COALESCE(delivered_at,now()),updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND status IN ('picked_up','delivered')`, dispatchID, s.OrganizationID)
+	return err
+}
+
 func (r *Repository) Dispatch(ctx context.Context, s scope, orderID string) (domain.Dispatch, error) {
 	out := domain.Dispatch{Offers: []domain.DispatchOffer{}}
 	var id string
-	var accepted, picked *time.Time
+	var accepted, picked, delivered *time.Time
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT d.id::text,d.order_id::text,d.status,d.round,COALESCE(ap.name,current.name,''),d.accepted_at,d.picked_up_at
+		SELECT d.id::text,d.order_id::text,d.status,d.round,COALESCE(ap.name,current.name,''),d.accepted_at,d.picked_up_at,d.delivered_at
 		FROM delivery_dispatches d
 		LEFT JOIN delivery_partners ap ON ap.id=d.accepted_partner_id
 		LEFT JOIN LATERAL (
@@ -244,14 +252,14 @@ func (r *Repository) Dispatch(ctx context.Context, s scope, orderID string) (dom
 		  WHERE f.dispatch_id=d.id AND f.status='pending' ORDER BY f.created_at DESC LIMIT 1
 		) current ON true
 		WHERE d.order_id=$1 AND d.organization_id=$2 AND d.location_id=$3`,
-		orderID, s.OrganizationID, s.LocationID).Scan(&id, &out.OrderID, &out.Status, &out.Round, &out.PartnerName, &accepted, &picked)
+		orderID, s.OrganizationID, s.LocationID).Scan(&id, &out.OrderID, &out.Status, &out.Round, &out.PartnerName, &accepted, &picked, &delivered)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, application.ErrNotFound
 	}
 	if err != nil {
 		return out, err
 	}
-	out.AcceptedAt, out.PickedUpAt = optionalStamp(accepted), optionalStamp(picked)
+	out.AcceptedAt, out.PickedUpAt, out.DeliveredAt = optionalStamp(accepted), optionalStamp(picked), optionalStamp(delivered)
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.name,f.round,f.priority,f.status,f.created_at,f.expires_at,f.responded_at
 		FROM delivery_dispatch_offers f JOIN delivery_partners p ON p.id=f.partner_id
@@ -315,8 +323,8 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		  FROM delivery_dispatches d
 		  JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id
 		  WHERE o.completed_at IS NULL AND o.status<>'cancelado' AND (
-		    (d.status IN ('accepted','picked_up') AND NOT d.fee_released AND COALESCE(d.partner_fee,0)>0)
-		    OR (d.status NOT IN ('accepted','picked_up') AND d.fee_released))
+		    (d.status IN ('accepted','picked_up','delivered') AND NOT d.fee_released AND COALESCE(d.partner_fee,0)>0)
+		    OR (d.status NOT IN ('accepted','picked_up','delivered') AND d.fee_released))
 		) due
 		LIMIT $1`, limit, domain.UndeliveredOfferTimeout.Seconds())
 	if err != nil {

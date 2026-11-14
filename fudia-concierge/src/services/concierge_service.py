@@ -51,7 +51,7 @@ from src.services.contact_phone import contact_phone_prompt, normalize_contact_p
 from src.services.customer_notices import CUSTOMER_WINDOW_SECONDS, notice_text
 from src.services.delivery_partners import action_reply
 from src.services.delivery_tools import apply_quote, delivery_summary
-from src.services.formatting import whatsapp_text
+from src.services.formatting import whatsapp_text, without_reference_quotes
 from src.services.menu_tools import unavailable_carta_reply
 from src.services.ports import (
     CONVERSATION_LIMIT_CODE,
@@ -1016,6 +1016,7 @@ class ConciergeService:
     ) -> ProcessingRecord:
         session = journal.session
         record = journal.record
+        reply = without_reference_quotes(reply)
         if change == "transcript":
             session.messages.extend(
                 [
@@ -1403,7 +1404,7 @@ class ConciergeService:
                 "journal": journal,
             }
         )
-        reply = whatsapp_text(str(result["reply"]))
+        reply = whatsapp_text(str(result["reply"]), allow_bold=session.provider == "FUDIA_WEB")
         question = await self._consent_question(session, journal)
         if question:
             reply = f"{reply}\n\n{question}"

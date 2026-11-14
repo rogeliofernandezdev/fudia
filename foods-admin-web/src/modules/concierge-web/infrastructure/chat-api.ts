@@ -1,4 +1,4 @@
-import type {ChatInput,ChatMenu,ChatState,ProductOptions} from "../domain/types";
+import type {ChatInput,ChatMenu,ChatState,ChatTracking,ProductOptions} from "../domain/types";
 
 async function call<T>(qr:string,operation:string,payload:unknown={}):Promise<T> {
   const response=await fetch(`/api/public/chat/${encodeURIComponent(qr)}/${operation}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),cache:"no-store"});
@@ -8,6 +8,8 @@ async function call<T>(qr:string,operation:string,payload:unknown={}):Promise<T>
 }
 export const openChat=(qr:string,scan="")=>call<{ready:boolean}>(qr,"session",scan?{scan}:{});
 export const loadChat=(qr:string)=>call<ChatState>(qr,"state");
+/** Estado y recorrido del pedido registrado en este chat; la sesión decide cuál es. */
+export const loadChatTracking=(qr:string)=>call<ChatTracking>(qr,"tracking");
 export const loadChatMenu=(qr:string)=>call<ChatMenu>(qr,"menu");
 export const loadProductOptions=(qr:string,productId:string)=>call<ProductOptions>(qr,"options",{productId});
 export const sendChatInput=(qr:string,input:ChatInput)=>call<{accepted:boolean}>(qr,"messages",input);

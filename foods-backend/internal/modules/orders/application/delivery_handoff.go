@@ -81,3 +81,39 @@ func (a *Orders) MarkDeliveryOnTheWayInTransaction(ctx context.Context, s scope,
 	a.noticeOnTheWay(ctx, s, o)
 	return nil
 }
+
+// MarkDeliveryDeliveredInTransaction registra la entrega que confirma la
+// central de Delivery Fudia. El cobro sigue su curso en caja: la cuenta se
+// cierra aquí solo si ya estaba pagada.
+func (a *Orders) MarkDeliveryDeliveredInTransaction(ctx context.Context, s scope, id string) error {
+	status, channel, _, _, completed, _, err := a.repo.LockOrderStatus(ctx, s, id)
+	if err != nil {
+		return err
+	}
+	if status == "entregado" {
+		return nil
+	}
+	if channel != "delivery" || completed {
+		return orderFailure(apperror.Conflict, "order_closed", "El pedido ya está cerrado.")
+	}
+	if status != "en_camino" {
+		return orderFailure(apperror.Conflict, "delivery_not_picked_up", "El pedido aún no salió del local.")
+	}
+	pending, err := a.repo.PendingServiceItems(ctx, s, id)
+	if err != nil {
+		return err
+	}
+	if pending {
+		return orderFailure(apperror.Conflict, "items_not_ready", "Todavía hay productos en preparación.")
+	}
+	if _, err = a.repo.DeliverServiceItems(ctx, s, id); err != nil {
+		return err
+	}
+	if _, err = a.repo.SetStatus(ctx, s, id, OrderStatusInput{Status: "entregado"}); err != nil {
+		return err
+	}
+	if _, err = a.repo.CompleteDeliveredAccount(ctx, s, id); err != nil {
+		return err
+	}
+	return a.audit.Record(ctx, s, "order.delivered", "order", id)
+}

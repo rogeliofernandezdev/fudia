@@ -65,6 +65,7 @@ type DispatchRepository interface {
 	EnqueueMessage(ctx context.Context, s scope, dispatchID, offerID, kind string) error
 	MarkReadyNotified(ctx context.Context, s scope, dispatchID string) error
 	MarkPickedUp(ctx context.Context, s scope, dispatchID string) error
+	MarkDelivered(ctx context.Context, s scope, dispatchID string) error
 	FeeState(ctx context.Context, s scope, orderID string) (FeeState, bool, error)
 	MarkFeeReleased(ctx context.Context, s scope, dispatchID string, released bool) error
 	Dispatch(ctx context.Context, s scope, orderID string) (domain.Dispatch, error)
@@ -76,10 +77,12 @@ type DispatchRepository interface {
 }
 
 // OrderHandoff conecta el despacho con Orders (la composición lo implementa
-// con sus casos de uso): «en camino» al recoger y el envío que pasa a la
-// central al aceptar (y vuelve si el local usa su delivery propio).
+// con sus casos de uso): «en camino» al recoger, «entregado» al confirmar la
+// entrega y el envío que pasa a la central al aceptar (y vuelve si el local
+// usa su delivery propio).
 type OrderHandoff interface {
 	MarkOnTheWay(ctx context.Context, s scope, orderID string) error
+	MarkDelivered(ctx context.Context, s scope, orderID string) error
 	ReleaseDeliveryFee(ctx context.Context, s scope, orderID string) error
 	RestoreDeliveryFee(ctx context.Context, s scope, orderID string, fee float64) error
 }
@@ -97,6 +100,7 @@ type Dispatcher struct {
 	work    unitofwork.Manager
 	notices noticecontracts.Publisher
 	handoff OrderHandoff
+	panel   PanelRepository
 }
 
 func NewDispatcher(repo DispatchRepository, work unitofwork.Manager) *Dispatcher {
@@ -174,7 +178,7 @@ func (a *Dispatcher) settleFee(ctx context.Context, s scope, orderID string) err
 	if err != nil || !found {
 		return err
 	}
-	withPartner := state.Status == domain.DispatchAccepted || state.Status == domain.DispatchPickedUp
+	withPartner := domain.WithPartner(state.Status)
 	switch {
 	case withPartner && !state.Released && state.PartnerFee > 0:
 		if err := a.handoff.ReleaseDeliveryFee(ctx, s, orderID); err != nil {
@@ -434,7 +438,7 @@ func (a *Dispatcher) UseOwn(ctx context.Context, s scope, orderID string) (domai
 			return fail(err)
 		}
 	case d.Status == domain.DispatchOwn:
-	case d.Status == domain.DispatchPickedUp:
+	case d.Status == domain.DispatchPickedUp || d.Status == domain.DispatchDelivered:
 		return domain.Dispatch{}, failure(apperror.Conflict, "delivery_already_picked_up", "La central ya recogió este pedido.")
 	case d.Status == domain.DispatchCancelled:
 		return domain.Dispatch{}, failure(apperror.Conflict, "order_closed", "El pedido está cancelado.")
@@ -481,12 +485,30 @@ func (a *Dispatcher) MarkDispatched(ctx context.Context, id string) error {
 	return nil
 }
 
-// Act aplica el botón que pulsó la central (Aceptar, Rechazar o Recoger).
+// Act aplica el botón de WhatsApp que pulsó la central (Aceptar, Rechazar o Recoger).
 func (a *Dispatcher) Act(ctx context.Context, in domain.ActionInput) (domain.ActionResult, error) {
 	if !domain.ValidAction(in.Action) {
 		return domain.ActionResult{}, failure(apperror.Invalid, "invalid_delivery_action", "La acción no es válida.")
 	}
-	if !uuidPattern.MatchString(in.Token) {
+	// Solo el WhatsApp de la central ofertada puede responder.
+	phone := domain.NormalizePhone(in.Phone)
+	return a.act(ctx, in.Action, in.Token, func(st OfferState) bool { return phone != "" && phone == st.PartnerPhone })
+}
+
+// handoffFailure conserva el motivo de negocio que da Orders (por ejemplo, el
+// pedido aún no está listo) y registra la causa de cualquier otro fallo.
+func handoffFailure(err error) (domain.ActionResult, error) {
+	var known *apperror.Error
+	if errors.As(err, &known) {
+		return domain.ActionResult{}, err
+	}
+	return domain.ActionResult{}, unavailable("delivery_action_unavailable", "No pudimos actualizar el pedido.", err)
+}
+
+// act aplica una acción sobre la oferta del token si authorized reconoce a su
+// central. Lo comparten los botones de WhatsApp y el panel web.
+func (a *Dispatcher) act(ctx context.Context, action, token string, authorized func(OfferState) bool) (domain.ActionResult, error) {
+	if !uuidPattern.MatchString(token) {
 		return domain.ActionResult{Outcome: domain.OutcomeNotFound}, nil
 	}
 	fail := func(err error) (domain.ActionResult, error) {
@@ -498,43 +520,53 @@ func (a *Dispatcher) Act(ctx context.Context, in domain.ActionInput) (domain.Act
 	}
 	defer tx.Rollback(ctx)
 	tctx := tx.Context()
-	st, err := a.repo.LockOfferByToken(tctx, in.Token)
+	st, err := a.repo.LockOfferByToken(tctx, token)
 	if errors.Is(err, ErrNotFound) {
 		return domain.ActionResult{Outcome: domain.OutcomeNotFound}, nil
 	}
 	if err != nil {
 		return fail(err)
 	}
-	// Solo el WhatsApp de la central ofertada puede responder.
-	if phone := domain.NormalizePhone(in.Phone); phone == "" || phone != st.PartnerPhone {
+	if !authorized(st) {
 		return domain.ActionResult{Outcome: domain.OutcomeNotFound}, nil
 	}
 	s := scope{OrganizationID: st.OrganizationID, LocationID: st.LocationID}
 	result := domain.ActionResult{OrderCode: st.OrderCode, OrganizationName: st.OrganizationName, LocationName: st.LocName}
 	var notice *noticecontracts.Notice
-	pickup := false
-	switch in.Action {
+	pickup, deliver := false, false
+	switch action {
 	case domain.ActionAccept:
 		result.Outcome, notice, err = a.accept(tctx, s, st)
 	case domain.ActionReject:
 		result.Outcome, notice, err = a.reject(tctx, s, st)
 	case domain.ActionPickup:
 		result.Outcome, pickup, err = a.checkPickup(tctx, s, st)
+	case domain.ActionDeliver:
+		result.Outcome, deliver, err = a.checkDeliver(tctx, s, st)
 	}
 	if err != nil {
 		return fail(err)
 	}
+	if (pickup || deliver) && a.handoff == nil {
+		return fail(errors.New("order handoff is not configured"))
+	}
 	if pickup {
-		if a.handoff == nil {
-			return fail(errors.New("order handoff is not configured"))
-		}
 		if err = a.handoff.MarkOnTheWay(tctx, s, st.OrderID); err != nil {
-			return domain.ActionResult{}, err
+			return handoffFailure(err)
 		}
 		if err = a.repo.MarkPickedUp(tctx, s, st.DispatchID); err != nil {
 			return fail(err)
 		}
 		result.Outcome = domain.OutcomePickedUp
+	}
+	if deliver {
+		if err = a.handoff.MarkDelivered(tctx, s, st.OrderID); err != nil {
+			return handoffFailure(err)
+		}
+		if err = a.repo.MarkDelivered(tctx, s, st.DispatchID); err != nil {
+			return fail(err)
+		}
+		result.Outcome = domain.OutcomeDelivered
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return fail(err)
@@ -549,7 +581,7 @@ func (a *Dispatcher) accept(ctx context.Context, s scope, st OfferState) (string
 		return domain.OutcomeCancelled, nil, nil
 	case !st.CurrentRound:
 		return domain.OutcomeTaken, nil, nil
-	case st.OfferStatus == domain.OfferAccepted && st.Assigned && (st.DispatchStatus == domain.DispatchAccepted || st.DispatchStatus == domain.DispatchPickedUp):
+	case st.OfferStatus == domain.OfferAccepted && st.Assigned && domain.WithPartner(st.DispatchStatus):
 		return domain.OutcomeAlreadyAccepted, nil, nil
 	case st.OfferStatus == domain.OfferExpired:
 		return domain.OutcomeExpired, nil, nil
@@ -591,7 +623,7 @@ func (a *Dispatcher) reject(ctx context.Context, s scope, st OfferState) (string
 		return domain.OutcomeCancelled, nil, nil
 	case !st.CurrentRound:
 		return domain.OutcomeTaken, nil, nil
-	case st.OfferStatus == domain.OfferAccepted && st.Assigned && (st.DispatchStatus == domain.DispatchAccepted || st.DispatchStatus == domain.DispatchPickedUp):
+	case st.OfferStatus == domain.OfferAccepted && st.Assigned && domain.WithPartner(st.DispatchStatus):
 		return domain.OutcomeAlreadyAccepted, nil, nil
 	case st.OfferStatus != domain.OfferPending || st.DispatchStatus != domain.DispatchSearching:
 		return domain.OutcomeTaken, nil, nil
@@ -635,7 +667,7 @@ func (a *Dispatcher) checkPickup(ctx context.Context, s scope, st OfferState) (s
 		return domain.OutcomeTaken, false, nil
 	case !st.CurrentRound || !st.Assigned:
 		return domain.OutcomeTaken, false, nil
-	case st.DispatchStatus == domain.DispatchPickedUp:
+	case st.DispatchStatus == domain.DispatchPickedUp || st.DispatchStatus == domain.DispatchDelivered:
 		return domain.OutcomePickedUp, false, nil
 	case st.DispatchStatus != domain.DispatchAccepted:
 		return domain.OutcomeTaken, false, nil
@@ -648,4 +680,26 @@ func (a *Dispatcher) checkPickup(ctx context.Context, s scope, st OfferState) (s
 		return domain.OutcomePickedUp, false, a.repo.MarkPickedUp(ctx, s, st.DispatchID)
 	}
 	return domain.OutcomeNotReady, false, nil
+}
+
+// checkDeliver valida «Entregado»; true indica que hay que pasar el pedido a «entregado».
+func (a *Dispatcher) checkDeliver(ctx context.Context, s scope, st OfferState) (string, bool, error) {
+	switch {
+	case st.DispatchStatus == domain.DispatchCancelled:
+		return domain.OutcomeCancelled, false, nil
+	case st.OfferStatus != domain.OfferAccepted || !st.CurrentRound || !st.Assigned:
+		return domain.OutcomeTaken, false, nil
+	case st.DispatchStatus == domain.DispatchDelivered:
+		return domain.OutcomeDelivered, false, nil
+	case st.DispatchStatus != domain.DispatchPickedUp:
+		return domain.OutcomeNotPickedUp, false, nil
+	}
+	switch st.OrderStatus {
+	case "en_camino":
+		return "", true, nil
+	case "entregado":
+		// El local ya registró la entrega: solo se cierra el reparto.
+		return domain.OutcomeDelivered, false, a.repo.MarkDelivered(ctx, s, st.DispatchID)
+	}
+	return domain.OutcomeNotPickedUp, false, nil
 }

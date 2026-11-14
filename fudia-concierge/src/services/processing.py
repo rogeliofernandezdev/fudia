@@ -19,6 +19,7 @@ from src.domain.models import (
     ProcessingRecord,
 )
 from src.services.ports import ConversationLease, ConversationStore
+from src.services.web_chat import WEB_CONFIRMATION_REPLY
 
 
 class TurnJournal:
@@ -208,9 +209,9 @@ def recovery_reply(
     cart = effect.result.get("cart", {})
     if effect.kind == "confirmation" and session.awaiting_confirmation:
         if session.provider == "FUDIA_WEB":
-            return "Tu pedido está listo para confirmar en «Mi pedido»."
+            return WEB_CONFIRMATION_REPLY
         return (
             f"🧾 Tu pedido:\n{_cart_lines(cart)}\n\n"
-            "¿Confirmas este pedido? Responde «sí» para enviarlo."
+            "¿Confirmas este pedido? Responde sí para enviarlo."
         )
     return f"🧾 Actualicé tu pedido:\n{_cart_lines(cart)}\n\n¿Deseas algo más?"

@@ -235,7 +235,7 @@ def test_unreadable_carta_sends_only_the_greeting() -> None:
     assert reply == "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n¿Qué deseas pedir?"
 
 
-WEB_HINT = "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
+WEB_HINT = "Toca **Carta** para ver los platos o escríbeme lo que deseas pedir."
 
 
 def test_web_welcome_does_not_repeat_the_header_or_list_the_carta() -> None:

@@ -12,10 +12,20 @@ import React from 'react';import {createRoot} from 'react-dom/client';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {RestaurantChat} from './src/modules/concierge-web/presentation/restaurant-chat';
 const mode=new URLSearchParams(location.search).get('case')||'delivery';
-const pending=mode==='unquoted',pickup=mode==='pickup',table=mode==='table';
+const pending=mode==='unquoted',pickup=mode==='pickup',table=mode==='table'||mode==='delivered';
 const dish={productId:'p1',name:'Lomo Saltado Criollo',description:'Con arroz y papas.',price:'20.00',imageUrl:null,categoryName:'Fondos',status:'available',isCombo:false,hasModifiers:false,remaining:null};
-const state={context:{organizationName:'Restaurante de prueba',locationName:'Local principal',name:'Mesa 1',serviceType:table?'table':'delivery'},messages:[{id:'hello',role:'assistant',text:'Tu pedido está listo para revisar.',createdAt:1794540000}],cart:{items:[{productId:'p1',name:dish.name,quantity:1,unitPrice:'20.00',lineTotal:'20.00',note:'',modifiers:[],selections:[]}],total:'20.00'},orderSummary:{subtotal:'20.00',deliveryFee:pending?null:pickup||table?'0.00':'8.00',total:pending?null:pickup||table?'20.00':'28.00',currencySymbol:'S/',fulfillment:table?'table':pickup?'pickup':'delivery'},confirmationRef:mode==='draft'||pending?null:'ready-1',mode:table?'table':'delivery',customerName:'Ana Quispe',pending:false,failed:false,active:true};
+const state={context:{organizationName:'Restaurante de prueba',locationName:'Local principal',name:'Mesa 1',serviceType:table?'table':'delivery'},messages:[{id:'hello',role:'assistant',text:'Revisa tu pedido y toca **Confirmar pedido** para enviarlo.',createdAt:1794540000}],cart:{items:[{productId:'p1',name:dish.name,quantity:1,unitPrice:'20.00',lineTotal:'20.00',note:'',modifiers:[],selections:[]}],total:'20.00'},orderSummary:{subtotal:'20.00',deliveryFee:pending?null:pickup||table?'0.00':'8.00',total:pending?null:pickup||table?'20.00':'28.00',currencySymbol:'S/',fulfillment:table?'table':pickup?'pickup':'delivery'},confirmationRef:mode==='draft'||pending?null:'ready-1',mode:table?'table':'delivery',customerName:'Ana Quispe',pending:false,failed:false,active:true};
 let prepared=0,confirmed=0;const seen=new Set();
+state.canRequestBill=mode==='delivered';
+if(mode==='delivered'){
+ state.cart={items:[],total:'0.00'};state.confirmationRef=null;
+ state.messages=[{id:'delivered',role:'assistant',text:'El mozo ha entregado tu pedido.',createdAt:1794540000}];
+}
+if(mode==='tracking'){
+ state.cart={items:[],total:'0.00'};state.confirmationRef=null;state.trackable=true;
+ state.messages=[{id:'done',role:'assistant',text:'Tu pedido fue registrado. El personal del local lo revisará para enviarlo a preparación.',createdAt:1794540000}];
+}
+const tracking={available:true,code:'PED-0142',status:'en_camino',channel:'delivery',delivery:{dispatchStatus:'picked_up',partnerName:'Rayo Delivery',originName:'Local principal',originAddress:'Av. Larco 345, Miraflores',origin:{latitude:-12.12153,longitude:-77.02962},destinationAddress:'Av. Pardo 610, Miraflores · Edificio azul, dpto. 402',destination:{latitude:-12.1159,longitude:-77.0402},courier:{latitude:-12.1188,longitude:-77.0351},courierLocatedAt:new Date(Date.now()-20_000).toISOString()}};
 if(mode==='addition'){
  state.registeredItems=structuredClone(state.cart.items);
  state.cart.items[0]={...state.cart.items[0],productId:'p2',name:'Tallarín Saltado de Carne',unitPrice:'14.00',lineTotal:'14.00'};
@@ -25,6 +35,7 @@ window.fetch=async(url,options)=>{
  const operation=String(url).split('/').pop();
  if(operation==='session')return Response.json({ready:true});
  if(operation==='state')return Response.json(state);
+ if(operation==='tracking')return Response.json(tracking);
  if(operation==='menu')return Response.json({restaurantLogoUrl:null,currencySymbol:'S/',items:[dish]});
  if(operation==='messages'){
   const input=JSON.parse(options.body);if(seen.has(input.requestId))return Response.json({accepted:true});seen.add(input.requestId);
@@ -41,7 +52,7 @@ window.fetch=async(url,options)=>{
 };
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={new QueryClient()}><RestaurantChat qr={'a'.repeat(32)}/></QueryClientProvider>);
 `},
- bundle:true,outfile:resolve(out,"bundle.js"),jsx:"automatic",define:{"process.env.NODE_ENV":'"development"'},
+ bundle:true,outfile:resolve(out,"bundle.js"),jsx:"automatic",define:{"process.env.NODE_ENV":'"development"',"process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN":JSON.stringify(process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN??"")},
  plugins:[{name:"preview-adapters",setup(b){
   b.onResolve({filter:/^next\/image$/},()=>({path:"image",namespace:"preview"}));
   b.onResolve({filter:/^next\/link$/},()=>({path:"link",namespace:"preview"}));
@@ -49,10 +60,10 @@ createRoot(document.getElementById('root')).render(<QueryClientProvider client={
   b.onLoad({filter:/.*/,namespace:"preview"},args=>({loader:"tsx",resolveDir:root,contents:args.path==="image"?
    "import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}":
    args.path==="link"?"import React from 'react';export default function Link({href,children,...props}){return <a href={href} {...props}>{children}</a>}":
-   `export {Button,Input} from './src/design-system/page-header';export {ModalBody,ModalFooter,ModalHeader} from './src/design-system/modal';export {Skeleton} from './src/design-system/skeleton';`}));
+   `export {Button,Input} from './src/design-system/page-header';export {ModalBody,ModalFooter,ModalHeader} from './src/design-system/modal';export {Skeleton} from './src/design-system/skeleton';export {MapboxRouteMap as RouteMap} from './src/design-system/maps/mapbox-route-provider';`}));
  }}],logLevel:"warning",
 });
-const cssFiles=["src/styles/variables.css","src/styles/globals.css","src/modules/concierge-web/presentation/restaurant-chat.css"];
+const cssFiles=["src/styles/variables.css","src/styles/globals.css","src/modules/concierge-web/presentation/restaurant-chat.css","src/design-system/styles/route-map.css"];
 const css=(await Promise.all(cssFiles.map(path=>readFile(resolve(root,path),"utf8")))).join("\n").replace(/^@import[^;]+;/gm,"");
 const builtCss=(await Promise.all((await readdir(resolve(root,".next/static/css"))).filter(name=>name.endsWith(".css")).map(name=>readFile(resolve(root,".next/static/css",name),"utf8")))).join("\n");
 const font=builtCss.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
@@ -62,4 +73,4 @@ createServer(async(req,res)=>{
  if(req.url==="/bundle.js"){res.setHeader("content-type","text/javascript");res.end(await readFile(resolve(out,"bundle.js")));return;}
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(fontBytes);return;}
  res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resumen del chat · Prueba local</title><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}body{margin:0}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);
-}).listen(5199,"127.0.0.1",()=>console.log("Chat QA: http://127.0.0.1:5199 (?case=draft|unquoted|pickup|table)"));
+}).listen(5199,"127.0.0.1",()=>console.log("Chat QA: http://127.0.0.1:5199 (?case=draft|unquoted|pickup|table|tracking)"));

@@ -17,7 +17,9 @@ const status=compile("src/modules/delivery/domain/dispatch-status.ts");
 const rules=compile("src/modules/notifications/domain/notice-rules.ts");
 
 test("Delivery Fudia: cada estado del despacho tiene etiqueta y tono suave de la matriz",()=>{
- assert.deepEqual(Object.keys(status.dispatchStatusMeta).sort(),["accepted","cancelled","own","picked_up","searching","unassigned"]);
+ assert.deepEqual(Object.keys(status.dispatchStatusMeta).sort(),["accepted","cancelled","delivered","own","picked_up","searching","unassigned"]);
+ assert.equal(status.dispatchStatusMeta.delivered.label,"Entregado por la central");
+ assert.equal(status.dispatchStatusMeta.picked_up.tone,"green","«Recogido» conserva su tono aprobado");
  assert.equal(status.dispatchStatusMeta.unassigned.label,"Sin central");
  assert.equal(status.dispatchStatusMeta.unassigned.tone,"orange");
  assert.equal(status.dispatchStatusMeta.searching.tone,"violet");
@@ -28,8 +30,8 @@ test("Delivery Fudia: cada estado del despacho tiene etiqueta y tono suave de la
 });
 
 test("Delivery Fudia: caja reintenta sin central o desde delivery propio, y deja de usar centrales antes de recoger",()=>{
- assert.deepEqual(["searching","accepted","unassigned","picked_up","own","cancelled"].filter(status.canRetryDispatch),["unassigned","own"]);
- assert.deepEqual(["searching","accepted","unassigned","picked_up","own","cancelled"].filter(status.canUseOwnDelivery),["searching","accepted","unassigned"]);
+ assert.deepEqual(["searching","accepted","unassigned","picked_up","delivered","own","cancelled"].filter(status.canRetryDispatch),["unassigned","own"]);
+ assert.deepEqual(["searching","accepted","unassigned","picked_up","delivered","own","cancelled"].filter(status.canUseOwnDelivery),["searching","accepted","unassigned"]);
 });
 
 test("Delivery Fudia: «Ninguna central aceptó» abre el pedido en Pedidos con tono de atención",()=>{

@@ -82,6 +82,44 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 		t.Fatalf("server catalog price must win, got total %q", created.Total)
 	}
 
+	// La cuenta pedida desde el chat espera la entrega del mozo, no solo Cocina.
+	t.Setenv("FUDIA_CONCIERGE_API_KEY", "concierge-test-key")
+	var qrToken string
+	if err := pool.QueryRow(ctx, `UPDATE tables SET qr_enabled=true WHERE id=$1 RETURNING qr_token`, tableID).Scan(&qrToken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO organization_modules(organization_id,module_key,active) VALUES($1,'whatsapp_bot',true) ON CONFLICT(organization_id,module_key) DO UPDATE SET active=true`, s.OrganizationID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO concierge_order_requests(organization_id,location_id,table_id,order_id,conversation_id,request_id) VALUES($1,$2,$3,$4,'bill-workflow','bill-round')`, s.OrganizationID, s.LocationID, tableID, created.ID); err != nil {
+		t.Fatal(err)
+	}
+	checkChatBill := func(wantAvailable bool) {
+		t.Helper()
+		statusReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+qrToken+"/orders/"+created.ID+"?conversationId=bill-workflow", nil)
+		statusReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
+		statusRec := httptest.NewRecorder()
+		api.Routes().ServeHTTP(statusRec, statusReq)
+		var state struct {
+			CanRequestBill bool `json:"canRequestBill"`
+		}
+		if statusRec.Code != 200 || json.Unmarshal(statusRec.Body.Bytes(), &state) != nil || state.CanRequestBill != wantAvailable {
+			t.Fatalf("bill availability want=%v: %d %s", wantAvailable, statusRec.Code, statusRec.Body.String())
+		}
+		billReq := httptest.NewRequest("POST", "/v1/integrations/concierge/"+qrToken+"/bill", strings.NewReader(`{"conversationId":"bill-workflow","requestId":"bill-workflow-1"}`))
+		billReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
+		billRec := httptest.NewRecorder()
+		api.Routes().ServeHTTP(billRec, billReq)
+		if wantAvailable {
+			if billRec.Code != 200 || !strings.Contains(billRec.Body.String(), `"total":"25.00"`) {
+				t.Fatalf("delivered bill: %d %s", billRec.Code, billRec.Body.String())
+			}
+		} else if billRec.Code != 409 || !strings.Contains(billRec.Body.String(), "products_not_delivered") {
+			t.Fatalf("premature bill: %d %s", billRec.Code, billRec.Body.String())
+		}
+	}
+	checkChatBill(false)
+
 	earlyDeliveryReq := httptest.NewRequest("PATCH", "/v1/admin/orders/"+created.ID+"/status", bytes.NewReader([]byte(`{"status":"entregado"}`)))
 	earlyDeliveryReq.SetPathValue("id", created.ID)
 	earlyDeliveryReq = earlyDeliveryReq.WithContext(context.WithValue(earlyDeliveryReq.Context(), scopeKey{}, s))
@@ -136,6 +174,7 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	if kitchenReadyRec.Code != 204 {
 		t.Fatalf("kitchen ready: %d %s", kitchenReadyRec.Code, kitchenReadyRec.Body.String())
 	}
+	checkChatBill(false)
 
 	// The waiter may record service before payment without releasing the table.
 	unpaidDeliverReq := httptest.NewRequest("PATCH", "/v1/admin/orders/"+created.ID+"/status", bytes.NewReader([]byte(`{"status":"entregado"}`)))
@@ -152,6 +191,12 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	}
 	if delivered.Status != "entregado" || delivered.CompletedAt != "" || delivered.PaymentStatus != "pending" {
 		t.Fatalf("service must retain an open balance: %#v", delivered)
+	}
+	checkChatBill(true)
+	checkChatBill(true)
+	var billRequests int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE organization_id=$1 AND entity_id=$2 AND action='concierge.bill.requested'`, s.OrganizationID, created.ID).Scan(&billRequests); err != nil || billRequests != 1 {
+		t.Fatalf("only the delivered request is recorded once: count=%d err=%v", billRequests, err)
 	}
 	assertOccupied := func() {
 		t.Helper()

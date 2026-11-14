@@ -17,6 +17,7 @@ export {MoneyInput, NumberStepper, InlineNotice, FormDisclosure} from "./form-co
 export {FormField} from "./form-field";
 export {Tooltip} from "./tooltip";
 export {LocationMap, type Coordinates} from "./location-map";
+export {RouteMap} from "./route-map";
 
 export {RemoteModalSkeleton} from "./remote-modal-skeleton";
 

@@ -80,6 +80,10 @@ func (h testOrderHandoff) MarkOnTheWay(ctx context.Context, s requestscope.Scope
 	return h.orders.MarkDeliveryOnTheWayInTransaction(ctx, s, orderID)
 }
 
+func (h testOrderHandoff) MarkDelivered(ctx context.Context, s requestscope.Scope, orderID string) error {
+	return h.orders.MarkDeliveryDeliveredInTransaction(ctx, s, orderID)
+}
+
 func (h testOrderHandoff) ReleaseDeliveryFee(ctx context.Context, s requestscope.Scope, orderID string) error {
 	return h.orders.ReleaseDeliveryFeeInTransaction(ctx, s, orderID)
 }
@@ -93,7 +97,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	notices := noticeapp.New(noticepg.New(db), identityService)
 	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))).WithNotices(notices)
-	dispatcher := deliveryapp.NewDispatcher(deliverypg.New(db), database.NewUnitOfWork(db)).WithNotices(notices).WithHandoff(testOrderHandoff{orders})
+	dispatcher := deliveryapp.NewDispatcher(deliverypg.New(db), database.NewUnitOfWork(db)).WithNotices(notices).WithHandoff(testOrderHandoff{orders}).WithPanel(deliverypg.New(db))
 	orders.WithDispatch(dispatcher)
 	tips := billingapp.NewTips(billingpg.NewPayments(db), database.NewUnitOfWork(db))
 	access := subscriptionapp.NewAccess(subscriptionpg.NewAccess(db))
@@ -106,7 +110,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 	fiscalSettings := einvoicingapp.NewSettings(einvoicingpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), access, registry).WithCipher(keyring)
 	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscal)
 	platform := platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{}).WithTips(tips)
-	concierge := conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)).WithCustomers(customerapp.New(customerpg.New(db))).WithNotices(notices).WithDirectory(conciergepg.New(db), platform, database.NewUnitOfWork(db))
+	concierge := conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)).WithCustomers(customerapp.New(customerpg.New(db))).WithNotices(notices).WithDirectory(conciergepg.New(db), platform, database.NewUnitOfWork(db)).WithDeliveryTracking(dispatcher)
 	return &integrationAPI{db: db, fiscal: fiscal, dispatcher: dispatcher, API: NewWithHandlers(Handlers{
 		Delivery:               deliveryhttp.New(deliveryapp.NewPartners(deliverypg.New(db), database.NewUnitOfWork(db)), dispatcher),
 		Tips:                   billinghttp.NewTips(tips),

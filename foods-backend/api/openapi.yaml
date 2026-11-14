@@ -328,6 +328,40 @@ paths:
       responses:
         "200": { description: Mesa activa, content: { application/json: { schema: { $ref: "#/components/schemas/PublicTableContext" } } } }
         "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/public/delivery-panel/{token}:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" }, description: "Enlace privado del panel de la central; lo genera PostgreSQL y lo entrega Plataforma." }
+    get:
+      operationId: getDeliveryPartnerPanel
+      summary: Panel web de la central de Delivery Fudia con sus pedidos ofrecidos y en reparto
+      description: "Sin sesión: el enlace privado identifica a la central. Devuelve las ofertas vigentes que esperan su respuesta, sus repartos en curso y los entregados en las últimas 12 horas. Mostrar una oferta por primera vez inicia sus 3 minutos, igual que enviarla por WhatsApp. Cache-Control: no-store."
+      responses:
+        "200": { description: Panel de la central, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanel" } } } }
+        "404": { description: "delivery_panel_not_found: enlace inexistente o reemplazado" }
+  /v1/public/delivery-panel/{token}/actions:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+    post:
+      operationId: applyDeliveryPartnerPanelAction
+      summary: Acepta o rechaza una oferta, registra la recogida o confirma la entrega desde el panel
+      description: "Solo vale para ofertas de la central del enlace; la de otra central responde not_found. Comparte reglas y bloqueos con los botones de WhatsApp. pickup exige el pedido listo y lo pasa a en_camino; deliver exige el pedido recogido y lo pasa a entregado (la cuenta se cierra solo si ya estaba pagada). Repetir una acción aplicada devuelve el mismo resultado."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanelActionInput" } } } }
+      responses:
+        "200": { description: Resultado de la acción, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionResult" } } } }
+        "400": { description: invalid_delivery_action }
+        "404": { description: delivery_panel_not_found }
+  /v1/public/delivery-panel/{token}/location:
+    parameters:
+      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+    post:
+      operationId: shareDeliveryPartnerLocation
+      summary: Guarda la ubicación del repartidor en los repartos en curso de la central
+      description: "El punto viaja en el cuerpo, nunca en la URL. Se guarda en los repartos aceptados o recogidos de la central y el cliente lo ve en el seguimiento de su pedido mientras el reparto sigue en curso y la ubicación tiene menos de 15 minutos."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierLocation" } } } }
+      responses:
+        "204": { description: Ubicación guardada }
+        "400": { description: invalid_location }
+        "404": { description: delivery_panel_not_found }
   /v1/integrations/concierge/notices/pending:
     get:
       operationId: claimConciergeCustomerNotices
@@ -488,7 +522,7 @@ paths:
     post:
       operationId: requestConciergeBill
       summary: Solicita la cuenta y devuelve el consumo acumulado real de la mesa con pagos y saldo pendiente
-      description: "Un QR de mostrador no tiene cuenta abierta: responde 409 counter_has_no_bill y cada pedido se paga en caja."
+      description: "Solo permite solicitar la cuenta cuando todos los productos de todas las rondas fueron entregados por el mozo; de lo contrario responde 409 products_not_delivered sin registrar la solicitud ni avisar al personal. Un QR de mostrador responde 409 counter_has_no_bill."
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
@@ -502,6 +536,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inválido o mesa sin cuenta abierta }
+        "409": { description: Hay productos sin entregar o el QR no tiene cuenta, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /v1/integrations/concierge/{token}/handoffs:
     post:
       operationId: requestConciergeHandoff
@@ -2375,6 +2410,17 @@ paths:
         "200": { description: Estado guardado, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationDelivery" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { description: Empresa inexistente }
+  /v1/platform/delivery-partners/{id}/panel-link:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: rotateDeliveryPartnerPanelLink
+      summary: Reemplaza el enlace privado del panel web de una central
+      description: "Solo administrador de plataforma. El enlace anterior deja de abrir el panel de inmediato."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Enlace vigente, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanelLink" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Central inexistente }
   /v1/platform/delivery-partners/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
@@ -2481,13 +2527,14 @@ components:
         label: { type: string, description: Nombre y sus ámbitos superiores }
     DeliveryPartner:
       type: object
-      required: [id, name, whatsappPhone, active, priority, coverageCodes, coverageLabels, createdAt, updatedAt]
+      required: [id, name, whatsappPhone, active, priority, panelToken, coverageCodes, coverageLabels, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         whatsappPhone: { type: string, pattern: "^[1-9][0-9]{7,14}$", description: "WhatsApp con código de país, solo dígitos." }
         active: { type: boolean }
         priority: { type: integer, minimum: 1, description: "Orden global entre centrales con cobertura del local. Una central nueva queda al final." }
+        panelToken: { type: string, pattern: "^[a-f0-9]{32}$", description: "Enlace privado del panel web de la central (/v1/public/delivery-panel/{token}). Solo lo ve Plataforma." }
         coverageCodes: { type: array, items: { type: string }, description: "Distritos INEI marcados explícitamente por Fudia. Vacío nunca representa cobertura nacional." }
         coverageLabels: { type: array, items: { type: string }, description: Nombres de las zonas en el mismo orden que coverageCodes }
         createdAt: { type: string, format: date-time }
@@ -2525,12 +2572,92 @@ components:
       required: [orderId, status, round, offers]
       properties:
         orderId: { type: string, format: uuid }
-        status: { type: string, enum: [searching, accepted, unassigned, picked_up, own, cancelled] }
+        status: { type: string, enum: [searching, accepted, unassigned, picked_up, delivered, own, cancelled], description: "delivered: la central confirmó la entrega al cliente desde su panel." }
         round: { type: integer, minimum: 1, description: "Vuelta de ofertas; Reintentar abre una nueva desde la 1.ª central." }
         partnerName: { type: string, description: "Central que aceptó o a la que se ofrece ahora." }
         acceptedAt: { type: string, format: date-time }
         pickedUpAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
         offers: { type: array, items: { type: object, required: [partnerName, round, priority, status, createdAt], properties: { partnerName: { type: string }, round: { type: integer }, priority: { type: integer }, status: { type: string, enum: [pending, accepted, rejected, expired, withdrawn] }, createdAt: { type: string, format: date-time }, expiresAt: { type: string, format: date-time }, respondedAt: { type: string, format: date-time } } } }
+    DeliveryPartnerPanelLink:
+      type: object
+      required: [partnerId, panelToken]
+      properties:
+        partnerId: { type: string, format: uuid }
+        panelToken: { type: string, pattern: "^[a-f0-9]{32}$" }
+    DeliveryPartnerPanel:
+      type: object
+      required: [partnerName, active, orders]
+      properties:
+        partnerName: { type: string }
+        active: { type: boolean, description: "false: la central está desactivada y ya no recibe ofertas; conserva sus repartos en curso." }
+        orders: { type: array, items: { $ref: "#/components/schemas/DeliveryPartnerPanelOrder" } }
+    DeliveryPartnerPanelOrder:
+      type: object
+      required: [token, stage, orderCode, orderStatus, organizationName, locationName, locationAddress, customerName, customerPhone, address, reference, notes, items, currencySymbol, subtotal, deliveryFee, total, expiresInSeconds, createdAt]
+      properties:
+        token: { type: string, format: uuid, description: "Identifica la oferta en las acciones del panel." }
+        stage: { type: string, enum: [offer, accepted, picked_up, delivered], description: "offer: espera respuesta; accepted: confirmada, por recoger; picked_up: en camino; delivered: entregada." }
+        orderCode: { type: string }
+        orderStatus: { type: string, description: "Estado del pedido en el local; listo permite registrar la recogida." }
+        organizationName: { type: string }
+        locationName: { type: string }
+        locationAddress: { type: string }
+        locationLatitude: { type: number, nullable: true }
+        locationLongitude: { type: number, nullable: true }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address: { type: string }
+        reference: { type: string }
+        latitude: { type: number, nullable: true, description: Punto de entrega }
+        longitude: { type: number, nullable: true }
+        distanceKm: { type: number, nullable: true }
+        notes: { type: string }
+        items: { type: array, items: { type: object, required: [quantity, name], properties: { quantity: { type: number }, name: { type: string }, note: { type: string } } } }
+        currencySymbol: { type: string }
+        subtotal: { type: string, description: "Lo que la central paga al local al recoger." }
+        deliveryFee: { type: string, description: "Precio del delivery: lo cobra y se lo queda la central." }
+        total: { type: string, description: "Lo que la central cobra al cliente al entregar." }
+        expiresInSeconds: { type: integer, description: "Segundos que quedan para responder la oferta; 0 fuera de la oferta." }
+        createdAt: { type: string, format: date-time }
+        acceptedAt: { type: string, format: date-time }
+        pickedUpAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
+    DeliveryPartnerPanelActionInput:
+      type: object
+      required: [action, token]
+      properties:
+        action: { type: string, enum: [accept, reject, pickup, deliver] }
+        token: { type: string, format: uuid }
+    DeliveryCourierLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+    DeliveryTrackingPoint:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude: { type: number }
+        longitude: { type: number }
+    DeliveryTracking:
+      type: object
+      description: "Seguimiento del reparto para el cliente. dispatchStatus vacío: delivery propio del local, sin central."
+      required: [dispatchStatus, partnerName, originName, originAddress, destinationAddress]
+      properties:
+        dispatchStatus: { type: string, enum: ["", searching, accepted, unassigned, picked_up, delivered, own, cancelled] }
+        partnerName: { type: string, description: "Central que tiene el reparto; vacío si ninguna lo tiene." }
+        originName: { type: string }
+        originAddress: { type: string }
+        origin: { allOf: [{ $ref: "#/components/schemas/DeliveryTrackingPoint" }], nullable: true }
+        destinationAddress: { type: string }
+        destination: { allOf: [{ $ref: "#/components/schemas/DeliveryTrackingPoint" }], nullable: true }
+        courier: { allOf: [{ $ref: "#/components/schemas/DeliveryTrackingPoint" }], nullable: true, description: "Última ubicación del repartidor. Solo mientras el reparto sigue en curso y tiene menos de 15 minutos." }
+        courierLocatedAt: { type: string, format: date-time }
+        acceptedAt: { type: string, format: date-time }
+        pickedUpAt: { type: string, format: date-time }
+        deliveredAt: { type: string, format: date-time }
     DeliveryPartnerMessage:
       type: object
       required: [id, kind, partnerName, partnerPhone, actionToken, expiresInSeconds, orderCode, organizationName, locationName, locationAddress, customerName, customerPhone, address, reference, notes, items, currencySymbol, subtotal, deliveryFee, total, createdAt]
@@ -3336,7 +3463,7 @@ components:
     ConciergeDeliveryQuoteInput: { type: object, required: [latitude, longitude], properties: { latitude: { type: number, minimum: -90, maximum: 90 }, longitude: { type: number, minimum: -180, maximum: 180 } } }
     ConciergeDeliveryQuote: { type: object, required: [covered, distanceKm, fee, maxDistanceKm, currencySymbol], properties: { covered: { type: boolean }, distanceKm: { type: string, description: "Distancia en línea recta redondeada a 0.01 km" }, fee: { type: string }, maxDistanceKm: { type: string }, currencySymbol: { type: string } } }
     ConciergeDeliveryOrderInput: { type: object, required: [fulfillment, customerName, customerPhone, conversationId, requestId, items], description: "Al crear delivery exige address, latitude, longitude y quotedFee. Una adición exige orderId y expectedOrderTotal y conserva el envío original; delivery debe mantener address. pickup ignora dirección, ubicación y tarifa.", properties: { orderId: { type: string, format: uuid, description: "Pedido activo de esta conversación al que se agregan solo ítems nuevos, sin crear otro pedido." }, expectedOrderTotal: { type: string, description: "Total previo aceptado; obligatorio con orderId. Si cambió responde 409 order_changed." }, fulfillment: { type: string, enum: [delivery, pickup] }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, notes: { type: string, maxLength: 240 }, latitude: { type: number }, longitude: { type: number }, quotedFee: { type: string }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
-    ConciergeOrderStatus: { type: object, required: [orderId, code, channel, status, subtotal, deliveryFee, total, paymentStatus, active], properties: { supportsAdditions: { type: boolean }, items: { type: array, items: { type: object, properties: { productId: { type: string }, name: { type: string }, qty: { type: string }, unitPrice: { type: string }, note: { type: string }, options: { type: array, items: { type: string } } } } }, orderId: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, paymentStatus: { type: string }, active: { type: boolean } } }
+    ConciergeOrderStatus: { type: object, required: [orderId, code, channel, status, subtotal, deliveryFee, total, paymentStatus, active, canRequestBill], properties: { delivery: { allOf: [{ $ref: "#/components/schemas/DeliveryTracking" }], description: "Seguimiento del reparto; solo en pedidos de delivery." }, canRequestBill: { type: boolean, description: "Cuenta de mesa vigente con todos sus productos entregados; el backend vuelve a validarlo al solicitarla." }, supportsAdditions: { type: boolean }, items: { type: array, items: { type: object, properties: { productId: { type: string }, name: { type: string }, qty: { type: string }, unitPrice: { type: string }, note: { type: string }, options: { type: array, items: { type: string } } } } }, orderId: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, paymentStatus: { type: string }, active: { type: boolean } } }
     ConciergeDeliveryFees: { type: object, required: [locationName, hasCoordinates, currencySymbol, tiers], properties: { locationName: { type: string }, hasCoordinates: { type: boolean }, currencySymbol: { type: string }, tiers: { type: array, items: { $ref: "#/components/schemas/ConciergeFeeTier" } } } }
     ConciergeDeliveryFeesInput: { type: object, required: [tiers], properties: { tiers: { type: array, maxItems: 10, items: { type: object, required: [maxDistanceKm, fee], properties: { maxDistanceKm: { type: number, exclusiveMinimum: 0, maximum: 50 }, fee: { type: number, minimum: 0, maximum: 999 } } } } } }
     ConciergeHandoffInput: { type: object, required: [conversationId, customerPhone, reason], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, reason: { type: string, maxLength: 240 } } }

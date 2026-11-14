@@ -3,19 +3,28 @@
 import Image from "next/image";
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {IconAdjustmentsHorizontal,IconCheck,IconChecks,IconChefHat,IconDotsVertical,IconMapPin,IconMenu2,IconNote,IconPlus,IconReceipt,IconSend2,IconShoppingBag,IconTrash,IconX} from "@tabler/icons-react";
+import {IconAdjustmentsHorizontal,IconCheck,IconChecks,IconChefHat,IconDotsVertical,IconMapPin,IconMenu2,IconNote,IconPlus,IconReceipt,IconRoute,IconSend2,IconShoppingBag,IconTrash,IconX} from "@tabler/icons-react";
 import {Button,Input,ModalBody,ModalFooter,ModalHeader,Skeleton} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import type {ChatAction,ChatInput,ChatMessage,ChatProduct,ProductOptions} from "../domain/types";
 import {loadChat,loadChatMenu,loadProductOptions,newChatRequestId,openChat,sendChatInput} from "../infrastructure/chat-api";
+import {OrderTracking} from "./order-tracking";
 import "./restaurant-chat.css";
+
+// Solo énfasis de texto: React escapa el contenido y nunca interpreta HTML.
+// Los mensajes históricos conservan su lectura sin las comillas anteriores.
+export function ChatMessageText({text,assistant}:{text:string;assistant:boolean}) {
+  if (!assistant) return <>{text}</>;
+  const content=text.replace(/«(Carta|Mi pedido|Confirmar pedido)»/g,"**$1**").replace(/[«»]/g,"");
+  return <>{content.split(/(\*\*[^*\n]+\*\*)/g).map((part,index)=>part.startsWith("**")&&part.endsWith("**")&&part.length>4?<strong key={index}>{part.slice(2,-2)}</strong>:part.replace(/\*/g,""))}</>;
+}
 
 // `first` marca el primer mensaje de un grupo del mismo emisor: solo ese lleva la punta de la burbuja.
 function Message({message,first}:{message:ChatMessage;first:boolean}) {
   const outgoing=message.role==="user";
   return <article className={`restaurant-chat-message ${outgoing?"is-outgoing":"is-incoming"}${first?" is-first":""}`} aria-label={outgoing?"Tu mensaje":"Mensaje del restaurante"}>
     {message.imageUrl&&<Image className="restaurant-chat-message-image" src={message.imageUrl} alt={message.text||"Imagen compartida por el restaurante"} width={480} height={320} unoptimized/>}
-    {message.text&&<p>{message.text}</p>}
+    {message.text&&<p><ChatMessageText text={message.text} assistant={!outgoing}/></p>}
     <footer><time dateTime={new Date(message.createdAt*1000).toISOString()}>{new Date(message.createdAt*1000).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}</time>{outgoing&&(message.status==="sent"?<IconChecks className="restaurant-chat-read" size={16} aria-label="Procesado"/>:<IconCheck size={16} aria-label="Recibido"/>)}</footer>
   </article>;
 }
@@ -57,6 +66,8 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   const [showMenu,setShowMenu]=useState(false);
   const [cartPanel,setCartPanel]=useState<{open:boolean;seenConfirmation:string|null}>({open:false,seenConfirmation:null});
   const [showInfo,setShowInfo]=useState(false);
+  // Seguimiento del pedido registrado: se abre con el atajo «Seguir pedido» y consulta solo mientras está a la vista.
+  const [showTracking,setShowTracking]=useState(false);
   const [product,setProduct]=useState<ChatProduct|null>(null);
   const [failed,setFailed]=useState<ChatInput|null>(null);
   const [locating,setLocating]=useState(false);
@@ -101,9 +112,9 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
   useEffect(()=>{
     activeAt.current=Date.now();
     if (following.current) bottom.current?.scrollIntoView({block:"end"});
-  },[messages.length,state?.pending,showMenu,showCart]);
+  },[messages.length,state?.pending,showMenu,showCart,showTracking]);
   // Armar el pedido no cierra el panel abierto: se agregan varios platos seguidos desde la carta y se quitan desde «Mi pedido».
-  const submit=(input:ChatInput,keepPanel=false)=>{following.current=true;if(!keepPanel){setShowMenu(false);setShowCart(false)}else if(showCart){setShowCart(true)}send.mutate(input)};
+  const submit=(input:ChatInput,keepPanel=false)=>{following.current=true;if(!keepPanel){setShowMenu(false);setShowCart(false);setShowTracking(false)}else if(showCart){setShowCart(true)}send.mutate(input)};
   const act=(action:ChatAction,keepPanel=false)=>submit({requestId:newChatRequestId(),action},keepPanel);
   const add=(item:ChatProduct)=>{
     if (item.isCombo||item.hasModifiers) setProduct(item);
@@ -183,13 +194,14 @@ export function RestaurantChat({qr,scan=""}:{qr:string;scan?:string}) {
           <button type="button" className="restaurant-chat-primary" disabled={disabled||!state.confirmationRef||(state.mode==="delivery"&&orderSummary?.total==null)} onClick={()=>act({name:"confirm_order",confirmation_ref:state.confirmationRef!})}>Confirmar pedido</button>
         </>}
       </section>}
+      {showTracking&&!showCart&&state.trackable&&<OrderTracking qr={qr} onClose={()=>setShowTracking(false)}/>}
       <div ref={bottom}/>
     </div>
     {error&&<p className="restaurant-chat-alert" role="alert">{error.message} <button type="button" onClick={()=>void chat.refetch()}>Reintentar</button></p>}
     {!state.active&&<p className="restaurant-chat-alert" role="alert">El canal cambió. Vuelve a escanear el QR para continuar.</p>}
     {locationError&&<p className="restaurant-chat-alert" role="alert">{locationError}</p>}
     {failed&&<div className="restaurant-chat-alert" role="alert"><span>No se pudo enviar. Puedes reintentar el mismo mensaje sin duplicarlo.</span><button type="button" disabled={send.isPending} onClick={()=>send.mutate(failed)}>Reintentar envío</button></div>}
-    <nav className="restaurant-chat-shortcuts" aria-label="Acciones del chat"><button type="button" aria-expanded={showMenu&&!showCart} onClick={()=>{following.current=true;setShowMenu(!showMenu||showCart);setShowCart(false)}}><IconMenu2 size={16}/>Carta</button><button type="button" aria-expanded={showCart} onClick={()=>{following.current=true;setShowCart(!showCart);setShowMenu(false)}}><IconShoppingBag size={16}/>Mi pedido{quantity>0&&<span>{quantity}</span>}</button>{state.mode==="table"&&<button type="button" disabled={disabled} onClick={()=>act({name:"request_bill"})}><IconReceipt size={16}/>Pedir cuenta</button>}{state.mode==="delivery"&&<button type="button" disabled={disabled} aria-label={locating?"Obteniendo tu ubicación":"Compartir ubicación"} onClick={shareLocation}><IconMapPin size={16}/>{locating?"Ubicando…":"Ubicación"}</button>}</nav>
+    <nav className="restaurant-chat-shortcuts" aria-label="Acciones del chat"><button type="button" aria-expanded={showMenu&&!showCart} onClick={()=>{following.current=true;setShowMenu(!showMenu||showCart);setShowCart(false);setShowTracking(false)}}><IconMenu2 size={16}/>Carta</button><button type="button" aria-expanded={showCart} onClick={()=>{following.current=true;setShowCart(!showCart);setShowMenu(false);setShowTracking(false)}}><IconShoppingBag size={16}/>Mi pedido{quantity>0&&<span>{quantity}</span>}</button>{state.trackable&&<button type="button" aria-expanded={showTracking&&!showCart} onClick={()=>{following.current=true;setShowTracking(!showTracking||showCart);setShowCart(false);setShowMenu(false)}}><IconRoute size={16}/>Seguir pedido</button>}{state.mode==="table"&&state.canRequestBill===true&&state.cart.items.length===0&&!disabled&&<button type="button" onClick={()=>act({name:"request_bill"})}><IconReceipt size={16}/>Pedir cuenta</button>}{/* Con el pedido registrado la entrega ya está fija: «Seguir pedido» toma el lugar de «Ubicación». */}{state.mode==="delivery"&&!state.trackable&&<button type="button" disabled={disabled} aria-label={locating?"Obteniendo tu ubicación":"Compartir ubicación"} onClick={shareLocation}><IconMapPin size={16}/>{locating?"Ubicando…":"Ubicación"}</button>}</nav>
     <form className="restaurant-chat-composer" onSubmit={event=>{event.preventDefault();sendText()}}>
       <Input ref={composer} aria-label="Escribe un mensaje" placeholder="Escribe un mensaje" value={text} onChange={event=>setText(event.target.value)} maxLength={2000} disabled={!state.active} autoComplete="off"/>
       <button type="submit" className="restaurant-chat-send" aria-label="Enviar mensaje" disabled={disabled||!text.trim()}><IconSend2 size={24}/></button>

@@ -2804,7 +2804,10 @@ se gestiona globalmente (decisión del 2026-11-06):
 - **Plataforma › Centrales de delivery** (`/platform/delivery-partners`, menú
   de plataforma con icono `motorbike`). Usa el mismo patrón que Países y
   WhatsApp:
-  - Tabla «ORDEN | CENTRAL | WHATSAPP | ESTADO | ACCIONES» y tarjetas en móvil.
+  - Tabla «ORDEN | CENTRAL | TELÉFONO | COBERTURA | ESTADO | ACCIONES» y tarjetas en móvil.
+  - Acción de fila «Panel de reparto» (`IconButton` `link`): modal de solo
+    lectura (sin pie) con el enlace privado, «Copiar enlace», «Abrir panel» y
+    «Generar enlace nuevo» (`danger-outline` con `ConfirmDialog`).
   - La columna Orden muestra la posición en cifras tabulares, con «Subir en el
     orden» y «Bajar en el orden» (`IconButton` chevron rotado). Cada cambio
     guarda al instante el orden completo. Una central nueva queda al final.
@@ -2848,9 +2851,10 @@ se gestiona globalmente (decisión del 2026-11-06):
 
   | Estado | Etiqueta | Tono |
   | --- | --- | --- |
-  | searching | Buscando central | violet (proceso digital por WhatsApp) |
+  | searching | Buscando central | violet (oferta en curso en el panel de la central) |
   | accepted | Central asignada | blue |
   | picked_up | Recogido por la central | green |
+  | delivered | Entregado por la central | green (icono `circleCheck`; la etiqueta lo distingue de recogido) |
   | unassigned | Sin central | orange (requiere acción de caja) |
   | own | Delivery propio | gray |
   | cancelled | Despacho cancelado | gray |
@@ -3358,3 +3362,51 @@ se elimina «Revisar para confirmar» y la tarjeta de confirmación separada
 solicita completarlos. Cambiar el pedido vuelve a preparar su resumen con una
 referencia nueva. Vacío: icono, «Tu pedido está vacío» y el botón
 «Ver la carta».
+
+## Texto de acciones en el chat del comensal (2026-11-14)
+
+Los mensajes del asistente no encierran acciones, opciones ni respuestas
+sugeridas entre comillas angulares. Usan instrucciones breves y destacan en
+negrita solo el nombre exacto de la acción indicada, sin color adicional ni
+apariencia de enlace. Al preparar la confirmación el resumen ya está abierto:
+Revisa tu pedido y toca **Confirmar pedido** para enviarlo. **Mi pedido** se
+menciona solo cuando corresponde abrir el resumen. Los mensajes históricos
+limpian las comillas al mostrarse; las palabras del cliente se conservan.
+
+### Panel de reparto del proveedor (2026-11-14)
+
+`/reparto/{token}` (`src/modules/delivery-panel`): pantalla pública, sin sesión
+ni menú, para el proveedor de Delivery Fudia. Mobile-first, validada a 390 y
+427 px; todos los controles miden al menos 44 px y las acciones principales 48 px.
+
+- Cabecera fija `navigation-900` con el nombre del proveedor y «Panel de reparto
+  · Delivery Fudia»; color de la barra del navegador igual.
+- Dos interruptores de dispositivo (fila blanca de 56 px, pista `primary-600`
+  encendida): «Avisos con sonido» (dos tonos, vibración, título de pestaña
+  «(n) Pedido nuevo» y notificación del sistema si se permitió) y «Compartir
+  ubicación», que solo envía mientras hay un reparto en curso y mantiene la
+  pantalla encendida. Se recuerdan en el dispositivo.
+- Secciones «Pedidos nuevos», «En curso» y «Entregados hoy» (plegada), con
+  contador `navigation-900`. Sin pedidos: `EmptyState` «Sin pedidos por ahora».
+  Carga con `Skeleton`; error con `ErrorState` y reintento; sin conexión, aviso
+  sobre los últimos datos.
+- Tarjeta del pedido: código y empresa; etapa con `Status` suave (Nuevo
+  `orange`, Por recoger `blue`, En camino `navy` como el pedido, Entregado
+  `green`); en la oferta, cuenta regresiva en franja `warning-50`; «Recoge en»,
+  «Entrega en» y «Cliente» con «Cómo llegar» y «Llamar al …»; productos con
+  notas; «Pagas al local» y «Cobras al cliente»; «Ver mapa» con `RouteMap`.
+- Acciones: oferta con «Rechazar» (secundario, con `ConfirmDialog`) y
+  «Aceptar» (primario). En curso, una sola acción primaria: «Recogí el pedido»
+  (deshabilitada con la explicación mientras el local prepara) y luego
+  «Entregado» (con `ConfirmDialog` de éxito). Cada respuesta del backend se
+  muestra con `FeedbackProvider` y su texto; nada se infiere en el navegador.
+
+### Seguimiento del pedido en el chat web (2026-11-14)
+
+Atajo «Seguir pedido» (`IconRoute`) en la barra de atajos del chat, solo con un
+pedido de delivery o recojo registrado; reemplaza a «Ubicación». La tarjeta usa
+el mismo marco que «Tu pedido» (`chat-incoming`, `radius-card`) con el código
+en la insignia `chat-outgoing`, una frase de estado en 16 px semibold, cuatro
+pasos con círculos de 22 px y conector de 2 px (`chat-action` hecho o actual,
+`chat-line` pendiente; etiquetas de una línea), `RouteMap` y los datos «Sale
+de», «Entrega en» y «Reparto». Notas en `chat-muted`.

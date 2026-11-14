@@ -171,3 +171,32 @@ un teléfono físico.
 - No se enviaron mensajes a números reales, no se llamó a Gemini en la fixture,
   no se desplegó y no se modificó la base habitual. Falta la prueba con teclado
   y áreas seguras en un teléfono físico.
+
+### Solicitud de cuenta y entrega (2026-11-14)
+
+La solicitud de cuenta exige que el mozo haya entregado todos los productos de
+la mesa, incluidas las rondas adicionales. «Listo» en Cocina no es entrega.
+foods-backend responde `409 products_not_delivered` antes de registrar la
+solicitud o avisar al personal si queda algo por entregar. El estado del pedido
+publica `canRequestBill`; el chat web lo consulta en sus sondeos y oculta «Pedir
+cuenta» mientras sea falso, falte el estado vigente o haya carrito sin confirmar.
+La misma validación del backend protege la solicitud escrita y los botones antiguos.
+
+### Seguir pedido (2026-11-14)
+
+Cuando el chat de delivery o recojo ya registró un pedido, `state` publica
+`trackable` y aparece el atajo «Seguir pedido» (icono de ruta). Ocupa el lugar
+de «Ubicación», porque la entrega del pedido registrado ya está fija. Abre una
+tarjeta con el código del pedido, una frase con lo que pasa ahora y cuatro
+pasos («Recibido, Preparando, En camino, Entregado»; en recojo «Listo» en vez
+de «En camino»). En delivery muestra además el mapa: local, punto de entrega,
+ruta por calles (línea recta si Mapbox no responde) y el repartidor, que se
+desliza a cada ubicación nueva, más «Sale de», «Entrega en» y el proveedor.
+
+La tarjeta consulta `POST /internal/web-chat/tracking` cada 5 s solo mientras
+está abierta, no en cada sondeo del chat. Concierge lee el pedido guardado en la
+sesión (`last_order_id`); el cuerpo del navegador no elige el pedido. La
+ubicación del repartidor solo llega mientras el reparto sigue en curso y tiene
+menos de 15 minutos; si no hay, el chat lo dice («El repartidor aún no comparte
+su ubicación») sin inventar una posición. Sin cambios de migración en
+Concierge; desplegar backend (000125) antes que Concierge y frontend.

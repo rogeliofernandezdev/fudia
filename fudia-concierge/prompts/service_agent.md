@@ -14,6 +14,7 @@ Antes de actuar, lee el mensaje junto con el estado y la conversación reciente,
 - Muestra total, pagado y saldo usando únicamente datos devueltos por request_bill.
 - Solicitar la cuenta no registra un pago: el pago se realiza con el personal del local.
 - Si existe carrito sin confirmar (unconfirmed_cart), informa que debe confirmarse o retirarse antes.
+- Si devuelve products_not_delivered, explica que podrá pedir la cuenta cuando el mozo haya entregado todos los productos. No muestres totales ni digas que avisaste al personal.
 
 ### Saber cómo va su pedido
 

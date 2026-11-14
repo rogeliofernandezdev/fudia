@@ -392,6 +392,15 @@ Reglas:
   un estado real, p. ej. «Registrada»). Estilo único en `form-controls.css`;
   los módulos no redeclaran el toggle. Dentro de una sección «Opcional» los
   campos no repiten la marca `optional`.
+- `RouteMap({origin,destination,courier,label})` (`@/design-system/route-map`,
+  Mapbox, carga diferida): mapa de seguimiento de un reparto, sin elegir puntos.
+  Marcadores circulares de 36 px con icono blanco: local `navigation-900`,
+  entrega `brand-700` y repartidor `primary-600`. Ruta por calles (Directions)
+  en `primary-600`; si no responde, línea recta. El encuadre solo cambia cuando
+  aparece o desaparece un punto, y el repartidor se desliza 900 ms a su nueva
+  posición (salto directo con movimiento reducido). Lienzo de 240 px; sin token
+  o sin puntos muestra un aviso, nunca un mapa vacío. Lo usan el panel de
+  reparto y «Seguir pedido» del chat web.
 - `LocationMap({latitude,longitude,address,onAddressChange,onChange,onPlaceChange,addressLabel,mapLabel})`
   (`@/design-system/location-map`, Mapbox): buscador con sugerencias, mapa con pin
   arrastrable y aviso «Ubicación definida». Lo usan Locales (etiqueta por defecto

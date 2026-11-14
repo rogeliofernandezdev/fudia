@@ -240,7 +240,22 @@ func (a *Concierge) OrderStatus(ctx context.Context, token, orderID, conversatio
 		}
 		items = append(items, domain.OrderStatusItem{ProductID: item.ProductID, Name: item.Name, Qty: item.Qty, UnitPrice: item.UnitPrice, Note: item.Note, Options: options})
 	}
+	// El seguimiento es informativo: si falla, el estado del pedido se entrega igual.
+	var delivery *domain.DeliveryTracking
+	if a.tracking != nil && o.Channel == "delivery" {
+		if t, found, err := a.tracking.DeliveryTracking(ctx, qr.Scope, o.ID); err == nil && found {
+			delivery = &domain.DeliveryTracking{
+				DispatchStatus: t.DispatchStatus, PartnerName: t.PartnerName,
+				OriginName: t.OriginName, OriginAddress: t.OriginAddress, Origin: trackingPoint(t.Origin),
+				DestinationAddress: t.DestinationAddress, Destination: trackingPoint(t.Destination),
+				Courier: trackingPoint(t.Courier), CourierLocatedAt: t.CourierLocatedAt,
+				AcceptedAt: t.AcceptedAt, PickedUpAt: t.PickedUpAt, DeliveredAt: t.DeliveredAt,
+			}
+		}
+	}
 	return domain.OrderStatusView{
+		Delivery:          delivery,
+		CanRequestBill:    state.CanRequestBill,
 		SupportsAdditions: true,
 		Items:             items,
 		OrderID:           o.ID,
@@ -277,4 +292,11 @@ func (a *Concierge) SaveDeliveryFees(ctx context.Context, s scope, in domain.Del
 	}
 	_ = a.audit.Record(ctx, s, "concierge.delivery_fees.updated", "location", s.LocationID)
 	return a.DeliveryFees(ctx, s)
+}
+
+func trackingPoint(p *deliverycontracts.TrackingPoint) *domain.TrackingPoint {
+	if p == nil {
+		return nil
+	}
+	return &domain.TrackingPoint{Latitude: p.Latitude, Longitude: p.Longitude}
 }

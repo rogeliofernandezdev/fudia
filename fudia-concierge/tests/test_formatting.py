@@ -35,3 +35,15 @@ def test_markdown_headings_and_playful_icons_are_removed() -> None:
     assert whatsapp_text(reply) == (
         "Postres:\n- Suspiro limeño: S/ 12.00\n\n¡Gracias!"
     )
+
+
+def test_reference_quotes_are_removed_and_web_keeps_action_emphasis() -> None:
+    reply = "Revisa tu pedido y toca **Confirmar pedido** para enviarlo."
+    assert whatsapp_text(reply, allow_bold=True) == reply
+    assert whatsapp_text(reply) == "Revisa tu pedido y toca Confirmar pedido para enviarlo."
+    assert whatsapp_text("Abre «Mi pedido». Responde «sí».", allow_bold=True) == (
+        "Abre Mi pedido. Responde sí."
+    )
+    assert whatsapp_text("## Opciones\n* Agua\nToca **Carta**. *incompleto", allow_bold=True) == (
+        "Opciones:\n- Agua\nToca **Carta**. incompleto"
+    )

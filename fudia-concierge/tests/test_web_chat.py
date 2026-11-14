@@ -61,9 +61,10 @@ async def test_web_buttons_use_fenced_tools_explicit_confirmation_and_idempotenc
     assert session and len(session.cart) == 1 and session.cart[0].quantity == 1
     assert str(session.cart[0].unit_price) == "32.50"
     assert not backend.order_calls
-    await service.process_inbound(
+    review = await service.process_inbound(
         message("review", "Revisar mi pedido", WebAction(name="prepare_confirmation"))
     )
+    assert review.reply == "Revisa tu pedido y toca **Confirmar pedido** para enviarlo."
     session = await store.get("browser-session", "web-route")
     assert session and session.pending_order_request_id
     ref = session.pending_order_request_id
@@ -139,7 +140,7 @@ async def test_web_welcome_is_a_short_greeting_without_logo_or_carta() -> None:
     welcome = await service.process_inbound(message("start", "FUDIA:" + QR))
     assert welcome.reply == (
         "Bienvenido a Restaurante Demo.\n\n"
-        "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
+        "Toca **Carta** para ver los platos o escríbeme lo que deseas pedir."
     )
     assert welcome.media == []
 

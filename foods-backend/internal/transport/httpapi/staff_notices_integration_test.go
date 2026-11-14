@@ -166,6 +166,13 @@ func TestStaffNoticesEndToEnd(t *testing.T) {
 	}
 
 	// La cuenta avisa a mozos y caja; el reintento no duplica. El llamado al mozo solo a mozos.
+	// Esta prueba de avisos parte de una cuenta ya entregada por el personal.
+	if _, err := pool.Exec(ctx, `UPDATE orders SET channel='salon',status='entregado' WHERE organization_id=$1 AND location_id=$2 AND table_id=$3`, s.OrganizationID, s.LocationID, tableID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE order_service_items SET status='entregado',delivered_by=$3,delivered_at=now() WHERE organization_id=$1 AND order_id IN (SELECT id FROM orders WHERE table_id=$2 AND organization_id=$1)`, s.OrganizationID, tableID, waiter.UserID); err != nil {
+		t.Fatal(err)
+	}
 	for range 2 {
 		if rec = concierge(tableToken, "/bill", `{"conversationId":"ntc-table","requestId":"ntc-bill-1"}`); rec.Code != 200 {
 			t.Fatalf("bill: %d %s", rec.Code, rec.Body.String())

@@ -62,3 +62,39 @@ func TestRetryableAndActive(t *testing.T) {
 		t.Fatal("active states")
 	}
 }
+
+func TestPanelActionsAndTokens(t *testing.T) {
+	for _, action := range []string{ActionAccept, ActionReject, ActionPickup, ActionDeliver} {
+		if !ValidPanelAction(action) {
+			t.Fatalf("panel action %q rejected", action)
+		}
+	}
+	// La entrega solo existe en el panel web, no en los botones de WhatsApp.
+	if ValidAction(ActionDeliver) || ValidPanelAction("cancel") {
+		t.Fatal("unexpected action accepted")
+	}
+	if !ValidPanelToken("0123456789abcdef0123456789abcdef") {
+		t.Fatal("valid panel token rejected")
+	}
+	for _, token := range []string{"", "0123456789ABCDEF0123456789ABCDEF", "0123456789abcdef0123456789abcde", "0123456789abcdef0123456789abcdef0", "../0123456789abcdef0123456789abc"} {
+		if ValidPanelToken(token) {
+			t.Fatalf("panel token %q accepted", token)
+		}
+	}
+}
+
+func TestWithPartnerKeepsTheFeeAfterDelivery(t *testing.T) {
+	for _, status := range []string{DispatchAccepted, DispatchPickedUp, DispatchDelivered} {
+		if !WithPartner(status) {
+			t.Fatalf("%s must stay with the partner", status)
+		}
+	}
+	for _, status := range []string{DispatchSearching, DispatchUnassigned, DispatchOwn, DispatchCancelled} {
+		if WithPartner(status) {
+			t.Fatalf("%s is not with a partner", status)
+		}
+	}
+	if ActiveDispatch(DispatchDelivered) || Retryable(DispatchDelivered) {
+		t.Fatal("a delivered dispatch is final")
+	}
+}

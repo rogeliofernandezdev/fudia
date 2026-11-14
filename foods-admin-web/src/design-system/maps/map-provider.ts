@@ -23,6 +23,18 @@ export type LocationMapProps = {
   addressError?: string;
 };
 
+/** Mapa de seguimiento de un reparto: origen, destino y, si se conoce, el repartidor. */
+export type RouteMapProps = {
+  /** Local de donde sale el pedido. */
+  origin: Coordinates | null;
+  /** Punto de entrega. */
+  destination: Coordinates | null;
+  /** Última ubicación del repartidor; null si aún no la comparte. */
+  courier: Coordinates | null;
+  /** Nombre accesible del mapa. */
+  label: string;
+};
+
 export function getMapProvider(): MapProviderName {
   return process.env.NEXT_PUBLIC_MAP_PROVIDER?.toLowerCase() === "google"
     ? "google"

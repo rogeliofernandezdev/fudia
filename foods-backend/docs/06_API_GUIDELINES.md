@@ -382,3 +382,13 @@ INEI de solo lectura para la sesión autenticada. Selección por cobertura,
   `marketingConsentUpdatedAt`.
 - `POST /v1/admin/payments` (y el cobro dividido) cobran una venta por mostrador
   en cualquier estado activo; el resto de reglas de cobro no cambia.
+
+### Solicitud de cuenta y entrega (2026-11-14)
+
+La solicitud de cuenta exige que el mozo haya entregado todos los productos de
+la mesa, incluidas las rondas adicionales. «Listo» en Cocina no es entrega.
+foods-backend responde `409 products_not_delivered` antes de registrar la
+solicitud o avisar al personal si queda algo por entregar. El estado del pedido
+publica `canRequestBill`; el chat web lo consulta en sus sondeos y oculta «Pedir
+cuenta» mientras sea falso, falte el estado vigente o haya carrito sin confirmar.
+La misma validación del backend protege la solicitud escrita y los botones antiguos.

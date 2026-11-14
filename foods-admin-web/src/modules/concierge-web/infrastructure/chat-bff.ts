@@ -1,7 +1,7 @@
 import {createHmac, randomBytes, timingSafeEqual} from "node:crypto";
 import {NextRequest, NextResponse} from "next/server";
 
-const operations = new Set(["session", "state", "menu", "options", "messages"]);
+const operations = new Set(["session", "state", "menu", "options", "messages", "tracking"]);
 const cookieName = (qr:string) => `fudia_chat_${qr}`;
 const visitorName = "fudia_chat_visitor";
 

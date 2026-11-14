@@ -9,8 +9,9 @@ import type {DeliveryPartner,DeliveryPartnerDraft} from "../domain/types";
 import {listDeliveryPartners,reorderDeliveryPartners,saveDeliveryPartner} from "../infrastructure/platform-api";
 import "./platform-delivery-partners.css";
 import {DeliveryCoverageFields} from "./delivery-coverage-fields";
+import {DeliveryPartnerPanelLink} from "./delivery-partner-panel-link";
 
-const columns=["Orden","Central","WhatsApp","Cobertura","Estado","Acciones"];
+const columns=["Orden","Central","Teléfono","Cobertura","Estado","Acciones"];
 const blank:DeliveryPartnerDraft={name:"",whatsappPhone:"51",coverageCodes:[],coverageLabels:[]};
 const queryKey=["platform-delivery-partners"];
 
@@ -32,13 +33,15 @@ export function PlatformDeliveryPartnersPage(){
  const[draft,setDraft]=useState<DeliveryPartnerDraft|null>(null);
  const[editingId,setEditingId]=useState<string|undefined>();
  const[target,setTarget]=useState<DeliveryPartner|null>(null);
+ // Central cuyo enlace de panel se muestra; se lee de la lista para reflejar un enlace regenerado.
+ const[panelId,setPanelId]=useState<string|undefined>();
  const close=()=>{setDraft(null);setEditingId(undefined)};
  const save=useMutation({
   mutationFn:({value,id}:{value:DeliveryPartnerDraft;id?:string})=>saveDeliveryPartner(value,id),
   onSuccess:(_,{id})=>{
    close();
    void client.invalidateQueries({queryKey});
-   notify({tone:"success",title:id?"Central actualizada":"Central registrada",message:id?"La cobertura y el estado se aplican a las ofertas pendientes.":"Quedó al final del orden; súbela si debe recibir antes."});
+   notify({tone:"success",title:id?"Central actualizada":"Central registrada",message:id?"La cobertura y el estado se aplican a las ofertas pendientes.":"Quedó al final del orden. Envíale el enlace de su panel de reparto para que reciba pedidos."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
@@ -66,12 +69,13 @@ export function PlatformDeliveryPartnersPage(){
  const start=()=>{setEditingId(undefined);setDraft({...blank})};
  const edit=(item:DeliveryPartner)=>{setEditingId(item.id);setDraft({name:item.name,whatsappPhone:item.whatsappPhone,coverageCodes:item.coverageCodes,coverageLabels:item.coverageLabels})};
  const items=partners.data?.items??[];
+ const panelPartner=items.find(item=>item.id===panelId);
  const status=(item:DeliveryPartner)=><Status active={item.active}>{item.active?"Activa":"Inactiva"}</Status>;
  const order=(index:number)=><div className="partner-order"><b>{index+1}</b><IconButton icon="chevron" className="partner-order-up" label="Subir en el orden" disabled={index===0||reorder.isPending} onClick={()=>move(index,-1)}/><IconButton icon="chevron" className="partner-order-down" label="Bajar en el orden" disabled={index===items.length-1||reorder.isPending} onClick={()=>move(index,1)}/></div>;
- const actions=(item:DeliveryPartner)=><><RowActionButton action="edit" label={`Editar central ${item.name}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de la central ${item.name}`} onClick={()=>setTarget(item)}/></>;
+ const actions=(item:DeliveryPartner)=><><IconButton icon="link" label={`Panel de reparto de ${item.name}`} onClick={()=>setPanelId(item.id)}/><RowActionButton action="edit" label={`Editar central ${item.name}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de la central ${item.name}`} onClick={()=>setTarget(item)}/></>;
 
  return <>
-  <PageHeader title="Centrales de delivery" description="Reciben por WhatsApp los pedidos de las empresas con Delivery Fudia, según el departamento, provincia y distrito del local, en este orden." action={<Button icon="plus" onClick={start}>Nueva central</Button>}/>
+  <PageHeader title="Centrales de delivery" description="Reciben en su panel de reparto los pedidos de las empresas con Delivery Fudia, según el departamento, provincia y distrito del local, en este orden." action={<Button icon="plus" onClick={start}>Nueva central</Button>}/>
   <section className="panel management standardized-management platform-partners-panel">
    {partners.isLoading?<TableSkeleton columns={columns} rows={4} label="Cargando centrales de delivery"/>:
     partners.isError?<ErrorState title="No pudimos cargar las centrales" text={partners.error.message} retrying={partners.isFetching} onRetry={()=>void partners.refetch()}/>:
@@ -86,11 +90,12 @@ export function PlatformDeliveryPartnersPage(){
    <ModalForm onSubmit={event=>{event.preventDefault();save.mutate({value:draft,id:editingId})}}>
     <ModalBody><div className="form-sections-flow"><div className="form-grid platform-partner-fields">
      <FormField className="span-2" label="Nombre"><Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Central Norte" autoFocus required/></FormField>
-     <FormField className="span-2" label="WhatsApp" help="Con código de país. Aquí llegan los pedidos con Aceptar y Rechazar."><Input value={draft.whatsappPhone} onChange={e=>setDraft({...draft,whatsappPhone:e.target.value})} inputMode="tel" placeholder="51 987 654 321" required/></FormField>
+     <FormField className="span-2" label="Teléfono" help="Con código de país. Los pedidos llegan a su panel de reparto; este número es su contacto."><Input value={draft.whatsappPhone} onChange={e=>setDraft({...draft,whatsappPhone:e.target.value})} inputMode="tel" placeholder="51 987 654 321" required/></FormField>
     </div><DeliveryCoverageFields codes={draft.coverageCodes} labels={draft.coverageLabels??[]} disabled={save.isPending} onChange={(coverageCodes,coverageLabels)=>setDraft({...draft,coverageCodes,coverageLabels})}/></div></ModalBody>
     <ModalFooter><Button type="button" action="cancel" disabled={save.isPending} onClick={close}>Cancelar</Button><Button type="submit" disabled={save.isPending||!draft.coverageCodes.length} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></ModalFooter>
    </ModalForm>
   </Dialog></div>}
+  {panelPartner&&<DeliveryPartnerPanelLink partner={panelPartner} queryKey={queryKey} onClose={()=>setPanelId(undefined)}/>}
   <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar central":"Activar central"} subject={target?{label:"Central",name:target.name}:undefined} description={target?.active?"Las ofertas pendientes pasarán a la siguiente central con cobertura. Los pedidos ya aceptados conservan su central.":"Volverá a recibir pedidos en su lugar del orden."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
  </>;
 }

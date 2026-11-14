@@ -55,8 +55,9 @@ type ConciergeDeliveryInput struct {
 // ConciergeOrderState indica si el pedido de una conversación sigue en
 // atención (mesa abierta o delivery/recojo no entregado ni cancelado).
 type ConciergeOrderState struct {
-	Order  domain.Order
-	Active bool
+	Order          domain.Order
+	Active         bool
+	CanRequestBill bool
 }
 
 // Origin publica el origen del pedido ("counter" para la venta por mostrador).

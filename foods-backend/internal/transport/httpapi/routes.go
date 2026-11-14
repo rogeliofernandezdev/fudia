@@ -23,6 +23,11 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("PATCH /v1/platform/delivery-partners/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.UpdatePartner))))
 		// Orden global: la primera central recibe primero cada pedido de todos los locales.
 		m.Handle("PUT /v1/platform/delivery-partners/order", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.ReorderPartners))))
+		m.Handle("POST /v1/platform/delivery-partners/{id}/panel-link", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.RotatePanelLink))))
+		// Panel web de la central: el enlace privado de la ruta la identifica.
+		m.Handle("GET /v1/public/delivery-panel/{token}", http.HandlerFunc(d.Panel))
+		m.Handle("POST /v1/public/delivery-panel/{token}/actions", http.HandlerFunc(d.PanelAction))
+		m.Handle("POST /v1/public/delivery-panel/{token}/location", http.HandlerFunc(d.PanelLocation))
 		// Delivery Fudia se activa por empresa desde la plataforma.
 		m.Handle("GET /v1/platform/organizations/{id}/delivery", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.OrganizationDelivery))))
 		m.Handle("PUT /v1/platform/organizations/{id}/delivery", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.SetOrganizationDelivery))))

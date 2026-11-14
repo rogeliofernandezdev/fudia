@@ -19,7 +19,14 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field, ValidationError
 
 from src.api.whatsapp_providers import manager, private_body
-from src.domain.models import TERMINAL_STAGES, ConversationSession, GeoPoint, InboundMessage, TableContext
+from src.domain.models import (
+    TERMINAL_STAGES,
+    ConversationSession,
+    DeliveryTracking,
+    GeoPoint,
+    InboundMessage,
+    TableContext,
+)
 from src.domain.web_chat import WebAction, WebOrderSummary
 from src.services.delivery_tools import delivery_summary
 from src.services.ports import FudiaError
@@ -82,6 +89,8 @@ WEB_REQUEST_DOC = request_document()
 
 
 class WebChatState(BaseModel):
+    trackable: bool
+    canRequestBill: bool
     registeredItems: list[dict[str, Any]]
     context: TableContext
     messages: list[dict[str, Any]]
@@ -280,7 +289,22 @@ async def chat_state(request: Request) -> dict[str, Any]:
     # needs stable display keys, never the capability hidden by its HttpOnly cookie.
     for entry in messages:
         entry["id"] = hashlib.sha256(entry["id"].encode()).hexdigest()
+    can_request_bill = False
+    if active and session and session.mode == "table" and session.last_order_id and not session.cart:
+        # La entrega cambia fuera del chat: consultar Go en cada sondeo, sin
+        # inferirla del historial ni guardar la capacidad en la sesión efímera.
+        try:
+            order = await request.app.state.fudia.get_order_status(
+                data.qr, session.last_order_id, session.conversation_id,
+            )
+            can_request_bill = order.canRequestBill
+        except FudiaError:
+            # Sin un estado vigente no se ofrece pedir la cuenta. La lectura
+            # del chat sigue disponible y el siguiente sondeo vuelve a probar.
+            pass
     return {
+        "trackable": trackable(session),
+        "canRequestBill": can_request_bill,
         "context": table.model_dump(mode="json"),
         "messages": messages,
         "cart": cart_payload(session) if session else {"items": [], "total": "0.00"},
@@ -295,6 +319,40 @@ async def chat_state(request: Request) -> dict[str, Any]:
         "failed": failed,
         "active": active,
     }
+
+
+def trackable(session: ConversationSession | None) -> bool:
+    """A registered delivery or pickup order of this chat can be followed."""
+    return bool(session and session.mode == "delivery" and session.last_order_id)
+
+
+class WebOrderTracking(BaseModel):
+    available: bool
+    code: str = ""
+    status: str = ""
+    channel: str = ""
+    delivery: DeliveryTracking | None = None
+
+
+@router.post("/tracking", response_model=WebOrderTracking, openapi_extra=WEB_REQUEST_DOC)
+async def chat_tracking(request: Request) -> WebOrderTracking:
+    """Status and courier position of the order registered in this chat.
+
+    Only the order bound to the session is read; the browser never names one.
+    The chat asks while its tracking panel is open, not on every state poll.
+    """
+    data = await body(request)
+    bound = await context(request, data)
+    session = await request.app.state.conversation_store.get(data.capability, bound["channel"])
+    if session is None or not trackable(session):
+        return WebOrderTracking(available=False)
+    order = await request.app.state.fudia.get_order_status(
+        data.qr, session.last_order_id, session.conversation_id,
+    )
+    return WebOrderTracking(
+        available=True, code=order.code, status=order.status, channel=order.channel,
+        delivery=order.delivery,
+    )
 
 
 def registered_items(session: ConversationSession | None) -> list[dict[str, Any]]:

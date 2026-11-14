@@ -7,7 +7,7 @@ from src.services.start_codes import service_label
 
 CLOSING = "¿Qué deseas pedir?"
 # Web chat: points at the shortcut of the page instead of listing the carta.
-WEB_CLOSING = "Toca «Carta» para ver los platos o escríbeme lo que deseas pedir."
+WEB_CLOSING = "Toca **Carta** para ver los platos o escríbeme lo que deseas pedir."
 NONE_AVAILABLE_CLOSING = "Si necesitas ayuda, puedo avisar al personal del local."
 # A new diner at the counter is asked for the name the cashier calls out.
 COUNTER_NAME_CLOSING = "Para empezar, escríbeme tus nombres y apellidos."

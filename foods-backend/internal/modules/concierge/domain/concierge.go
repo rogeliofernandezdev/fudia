@@ -64,6 +64,7 @@ type DeliveryQuote struct {
 
 // OrderStatusView indica a Concierge si la atención de su pedido sigue activa.
 type OrderStatusView struct {
+	CanRequestBill    bool              `json:"canRequestBill"`
 	SupportsAdditions bool              `json:"supportsAdditions"`
 	Items             []OrderStatusItem `json:"items"`
 	OrderID           string            `json:"orderId"`
@@ -75,6 +76,32 @@ type OrderStatusView struct {
 	Total             string            `json:"total"`
 	PaymentStatus     string            `json:"paymentStatus"`
 	Active            bool              `json:"active"`
+	// Delivery es el seguimiento del reparto; solo en pedidos de delivery.
+	Delivery *DeliveryTracking `json:"delivery,omitempty"`
+}
+
+// TrackingPoint es una coordenada del seguimiento.
+type TrackingPoint struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+// DeliveryTracking es el seguimiento del reparto que el cliente ve en el chat:
+// de dónde sale el pedido, a dónde va y, si el repartidor comparte su
+// ubicación, por dónde va. DispatchStatus vacío: delivery propio del local.
+type DeliveryTracking struct {
+	DispatchStatus     string         `json:"dispatchStatus"`
+	PartnerName        string         `json:"partnerName"`
+	OriginName         string         `json:"originName"`
+	OriginAddress      string         `json:"originAddress"`
+	Origin             *TrackingPoint `json:"origin"`
+	DestinationAddress string         `json:"destinationAddress"`
+	Destination        *TrackingPoint `json:"destination"`
+	Courier            *TrackingPoint `json:"courier"`
+	CourierLocatedAt   string         `json:"courierLocatedAt,omitempty"`
+	AcceptedAt         string         `json:"acceptedAt,omitempty"`
+	PickedUpAt         string         `json:"pickedUpAt,omitempty"`
+	DeliveredAt        string         `json:"deliveredAt,omitempty"`
 }
 
 type OrderStatusItem struct {

@@ -38,8 +38,10 @@ queda `unassigned` y se publica el aviso `delivery_unassigned` a caja.
 «Reintentar» abre otra vuelta desde la 1.ª central; «Usar delivery propio» lo deja
 en `own` y retira las ofertas. Al aceptar, se retiran las demás ofertas; si cocina
 ya terminó, la central recibe de inmediato «listo para recoger». «Recoger» pasa el
-pedido a `en_camino` por el caso de uso de Orders y el despacho a `picked_up`. Un
-pedido cancelado cierra el despacho y avisa a la central que había aceptado.
+pedido a `en_camino` por el caso de uso de Orders y el despacho a `picked_up`.
+«Entregado» (solo en el panel web, migración 000125) pasa el pedido a
+`entregado` y el despacho a `delivered`; la cuenta se cierra solo si ya estaba
+pagada. Un pedido cancelado cierra el despacho y avisa a la central que había aceptado.
 
 `delivery_partner_messages` es la bandeja de salida hacia las centrales (`offer`,
 `ready`, `cancelled`, uno por oferta y tipo), reclamada por Concierge como

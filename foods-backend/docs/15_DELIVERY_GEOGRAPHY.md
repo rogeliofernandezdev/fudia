@@ -72,3 +72,39 @@ pendiente y coincidencia exacta con distritos marcados, zonas múltiples y falta
 permite leer el catálogo y rechaza administrar centrales, orden y activación de
 Delivery Fudia. Verifica también distrito válido, desconocido y provincia
 enviada como distrito, sin modificar el local ante el rechazo.
+
+## Panel web de la central y seguimiento (migración 000125)
+
+Desde 2026-11-14 la central de reparto atiende sus pedidos en un panel web
+propio, sin WhatsApp ni sesión: `delivery_partners.panel_token` (32 hex,
+generado por PostgreSQL, único) abre `/reparto/{token}` en foods-admin-web.
+Plataforma lo copia o lo reemplaza con
+`POST /v1/platform/delivery-partners/{id}/panel-link`; el anterior deja de abrir.
+
+- `GET /v1/public/delivery-panel/{token}`: ofertas vigentes de esa central,
+  repartos en curso y entregados de las últimas 12 horas. Mostrar una oferta
+  por primera vez inicia sus 3 minutos (`expires_at`), igual que enviarla por
+  WhatsApp; la cascada no cambia.
+- `POST …/actions` (`accept`, `reject`, `pickup`, `deliver`): comparte con los
+  botones de WhatsApp los mismos bloqueos y resultados (`Dispatcher.act`). La
+  autorización compara la central del enlace con la de la oferta; la de otra
+  central responde `not_found`. `deliver` exige el despacho `picked_up` y el
+  pedido `en_camino`; lo pasa a `entregado` y el despacho a `delivered`
+  (`not_picked_up` si aún no se recoge). Es idempotente.
+- `POST …/location`: guarda la última ubicación del repartidor
+  (`delivery_dispatches.courier_*`) en los repartos `accepted` y `picked_up` de
+  la central. El punto viaja en el cuerpo, nunca en la URL.
+
+`delivered` conserva el envío con la central (`WithPartner`): el barrido no lo
+devuelve al pedido. La entrega confirmada por la central no tiene usuario del
+restaurante: `DeliverServiceItems` admite un alcance sin `UserID`.
+
+El seguimiento del cliente (`delivery/contracts.TrackingReader`) se agrega a
+`ConciergeOrderStatus.delivery`: local de origen y punto de entrega con sus
+coordenadas, estado del despacho, central y, solo mientras el reparto sigue en
+curso y la ubicación tiene menos de 15 minutos, la posición del repartidor.
+Concierge lo publica al chat web; el navegador nunca elige el pedido.
+
+`TestDeliveryPartnerPanel` recorre enlace inválido o reemplazado, oferta ajena,
+acciones fuera de orden, ubicación inválida, vencida o de otra central,
+seguimiento de otro local y la conservación del envío tras entregar.

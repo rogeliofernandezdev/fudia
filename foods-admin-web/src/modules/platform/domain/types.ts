@@ -91,7 +91,7 @@ export type WhatsAppConnection={provider:WhatsAppProvider;countryCode:string;ses
 export type WhatsAppChannelHistory={action:string;createdAt:string;before:Partial<PlatformWhatsAppChannel>|null;after:Partial<PlatformWhatsAppChannel>};
 export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;displayName:string;active:boolean;provider:WhatsAppProvider;sessionRef?:string;revision?:number};
 /** Central de Delivery Fudia (WhatsApp con código de país, solo dígitos). */
-export type DeliveryPartner={coverageCodes:string[];coverageLabels:string[];id:string;name:string;whatsappPhone:string;active:boolean;/** Orden global: la 1 recibe primero cada pedido. */priority:number;createdAt:string;updatedAt:string};
+export type DeliveryPartner={coverageCodes:string[];coverageLabels:string[];id:string;name:string;whatsappPhone:string;active:boolean;/** Orden global: la 1 recibe primero cada pedido. */priority:number;/** Enlace privado del panel web de la central. */panelToken:string;createdAt:string;updatedAt:string};
 /** Delivery Fudia activo para todos los locales de una empresa. */
 export type OrganizationDelivery={organizationId:string;enabled:boolean;updatedAt?:string};
 export type DeliveryPartnerDraft={coverageCodes:string[];coverageLabels?:string[];name:string;whatsappPhone:string;active?:boolean};

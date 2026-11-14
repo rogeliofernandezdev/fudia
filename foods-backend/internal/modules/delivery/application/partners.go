@@ -45,6 +45,8 @@ type PartnerRepository interface {
 	SetCoverage(ctx context.Context, id string, codes []string) error
 	// ReorderPartners devuelve ErrOrderMismatch si ids no son todas las centrales.
 	ReorderPartners(ctx context.Context, ids []string) error
+	// RotatePanelToken reemplaza el enlace del panel web de la central.
+	RotatePanelToken(ctx context.Context, id string) (domain.PanelLink, error)
 	OrganizationDelivery(ctx context.Context, organizationID string) (domain.OrganizationDelivery, error)
 	SetOrganizationDelivery(ctx context.Context, organizationID string, enabled bool) (domain.OrganizationDelivery, error)
 	DeliveryLink(ctx context.Context, s scope, locationID string) (domain.DeliveryLink, error)
@@ -226,6 +228,22 @@ func (a *Partners) RotateLink(ctx context.Context, s scope, locationID string) (
 	}
 	if err != nil {
 		return out, unavailable("delivery_link_unavailable", "No pudimos generar el enlace de delivery.", err)
+	}
+	return out, nil
+}
+
+// RotatePanel reemplaza el enlace privado del panel web de la central; quien
+// tenga el enlace anterior deja de ver sus pedidos.
+func (a *Partners) RotatePanel(ctx context.Context, id string) (domain.PanelLink, error) {
+	if !uuidPattern.MatchString(id) {
+		return domain.PanelLink{}, errPartnerNotFound
+	}
+	out, err := a.repo.RotatePanelToken(ctx, id)
+	if errors.Is(err, ErrNotFound) {
+		return out, errPartnerNotFound
+	}
+	if err != nil {
+		return out, unavailable("delivery_partners_unavailable", "No pudimos generar el enlace del panel.", err)
 	}
 	return out, nil
 }

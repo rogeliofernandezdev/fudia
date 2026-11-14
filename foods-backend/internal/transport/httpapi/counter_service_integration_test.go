@@ -163,7 +163,7 @@ func TestCounterServiceEndToEnd(t *testing.T) {
 	if w := patch(table.ID, fmt.Sprintf(`{"name":"Mesa CNT %d","seats":4,"serviceType":"counter"}`, nonce)); w.Code != 409 || !strings.Contains(w.Body.String(), "table_in_use") {
 		t.Fatalf("a table with an open account cannot become a counter: %d %s", w.Code, w.Body.String())
 	}
-	if rec = concierge(table.QrToken, "/bill", fmt.Sprintf(`{"conversationId":%q,"requestId":"bill-1"}`, tableConversation)); rec.Code != 200 {
+	if rec = concierge(table.QrToken, "/bill", fmt.Sprintf(`{"conversationId":%q,"requestId":"bill-1"}`, tableConversation)); rec.Code != 409 || !strings.Contains(rec.Body.String(), "products_not_delivered") {
 		t.Fatalf("table bill: %d %s", rec.Code, rec.Body.String())
 	}
 

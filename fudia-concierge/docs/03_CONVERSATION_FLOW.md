@@ -298,10 +298,17 @@ como ejemplo y en `evals/` como caso, para que no se repita.
 
 ## Formato de los mensajes
 
-Todas las respuestas son texto plano de WhatsApp, con la misma estructura en las
-respuestas fijas del código y en las del modelo (`prompts/system.md`):
+Las respuestas fijas y las del modelo (`prompts/system.md`) usan mensajes
+breves y directos, adaptados al canal:
 
-- Sin asteriscos, guiones bajos, almohadillas ni negritas.
+- Sin comillas angulares o decorativas en acciones, opciones o respuestas sugeridas.
+- WhatsApp conserva texto plano, sin marcas de Markdown.
+- Chat web admite negrita solo en el nombre de la acción indicada. El resumen
+  se abre automáticamente al preparar la confirmación: Revisa tu pedido y toca
+  **Confirmar pedido** para enviarlo. La bienvenida destaca **Carta**; **Mi pedido**
+  se menciona solo cuando corresponde abrir un resumen cerrado. El renderer
+  interpreta únicamente énfasis de texto, nunca HTML, y limpia las comillas de
+  mensajes históricos sin alterar los mensajes del cliente.
 - Varios elementos: una línea de título que termina en «:» y debajo un elemento
   por línea con «- ». Producto: «- Nombre (S/ 0.00)». Línea de pedido:
   «- 2 × Nombre». Carta con menú: «Menú (S/ 12.00)» con sus platos por
@@ -397,3 +404,13 @@ Los mensajes, avisos y recibos conservan el transporte de origen, incluso despu�
 de editar el país. Meta mantiene su ventana de mensajería, distinta de las tres
 horas de mesa. El gateway aplica una espera aleatoria de 2,5–5 segundos antes de
 enviar cada respuesta nueva preparada por Gemini, sin ejecutar IA en Go.
+
+### Solicitud de cuenta y entrega (2026-11-14)
+
+La solicitud de cuenta exige que el mozo haya entregado todos los productos de
+la mesa, incluidas las rondas adicionales. «Listo» en Cocina no es entrega.
+foods-backend responde `409 products_not_delivered` antes de registrar la
+solicitud o avisar al personal si queda algo por entregar. El estado del pedido
+publica `canRequestBill`; el chat web lo consulta en sus sondeos y oculta «Pedir
+cuenta» mientras sea falso, falte el estado vigente o haya carrito sin confirmar.
+La misma validación del backend protege la solicitud escrita y los botones antiguos.

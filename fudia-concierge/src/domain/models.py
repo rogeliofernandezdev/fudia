@@ -227,7 +227,35 @@ class RegisteredOrderItem(BaseModel):
     note: str = ""
 
 
+class TrackingPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class DeliveryTracking(BaseModel):
+    """Where a delivery order leaves from, where it goes and where the courier is.
+
+    foods-backend owns every value. An empty dispatchStatus means the restaurant
+    delivers by itself; the courier is present only while its location is live.
+    """
+
+    dispatchStatus: str = ""
+    partnerName: str = ""
+    originName: str = ""
+    originAddress: str = ""
+    origin: TrackingPoint | None = None
+    destinationAddress: str = ""
+    destination: TrackingPoint | None = None
+    courier: TrackingPoint | None = None
+    courierLocatedAt: str = ""
+    acceptedAt: str = ""
+    pickedUpAt: str = ""
+    deliveredAt: str = ""
+
+
 class OrderStatus(BaseModel):
+    delivery: DeliveryTracking | None = None
+    canRequestBill: bool = False
     supportsAdditions: bool = False
     items: list[RegisteredOrderItem] = Field(default_factory=list)
     orderId: str

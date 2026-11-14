@@ -24,6 +24,7 @@
 .restaurant-chat-message.is-first.is-outgoing::before{content:"";position:absolute;top:0;left:100%;border-top:var(--size-10) solid var(--chat-outgoing);border-right:var(--size-8) solid transparent}
 /* El texto fluye en línea y la hora flota a la derecha: comparte la última línea si cabe y baja sola si no. */
 .restaurant-chat-message p{display:inline;white-space:pre-wrap;margin:0}
+.restaurant-chat-message strong{font-weight:var(--weight-bold)}
 .restaurant-chat-message footer{float:right;display:flex;align-items:center;gap:var(--space-1);margin:var(--space-1-5) 0 calc(var(--space-0-5) * -1) var(--space-3);font-size:var(--font-size-xs);line-height:var(--line-height-none);font-variant-numeric:tabular-nums;color:var(--chat-muted)}
 .restaurant-chat-read{color:var(--chat-read)}
 .restaurant-chat-message-image{display:block;width:100%;max-width:var(--size-320);height:auto;margin-bottom:var(--space-1);border-radius:var(--radius-control);object-fit:contain}
@@ -127,3 +128,21 @@
 @media(hover:hover) and (pointer:fine){.restaurant-chat-header .restaurant-chat-icon:hover{background:var(--chat-header-hover)}.restaurant-chat-feed .restaurant-chat-icon:hover{background:var(--chat-panel)}.restaurant-chat-shortcuts button:hover{box-shadow:var(--elevation-2)}.restaurant-chat-add:not(:disabled):hover,.restaurant-chat-send:not(:disabled):hover,.restaurant-chat-primary:hover{filter:brightness(1.12)}}
 @media(width<=600px){.restaurant-chat-message{max-width:86%}}
 @media(prefers-reduced-motion:no-preference){.restaurant-chat-dot{animation:chat-typing var(--duration-ambient) ease-in-out infinite}.restaurant-chat-dot:nth-child(3){animation-delay:var(--duration-fast)}.restaurant-chat-dot:nth-child(4){animation-delay:calc(var(--duration-fast) * 2)}/* La insignia de cantidad rebota al aparecer y cada vez que cambia. */.restaurant-chat-food-qty{animation:chat-pop var(--duration-slow) var(--easing-spring)}@keyframes chat-pop{from{opacity:0;transform:scale(.6)}}@keyframes chat-typing{0%,60%,100%{opacity:.45;transform:translateY(0)}30%{opacity:1;transform:translateY(calc(var(--size-4) * -1))}}}
+/* Seguimiento del pedido: tarjeta con el paso actual, el mapa del recorrido y los datos del reparto. */
+.restaurant-chat-tracking{width:min(100%,var(--size-520));display:grid;gap:var(--space-3);background:var(--chat-incoming);padding:var(--space-4);border-radius:var(--radius-card);box-shadow:var(--elevation-1);margin-block:var(--space-3)}
+.restaurant-chat-tracking-loading{display:grid;gap:var(--space-3)}
+.restaurant-chat-tracking-map-skeleton{height:var(--size-240);border-radius:var(--radius-tile)}
+.restaurant-chat-tracking-headline{margin:0;font-size:var(--font-size-md);font-weight:var(--weight-semibold);line-height:var(--line-height-snug)}
+.restaurant-chat-tracking-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;padding:0;list-style:none}
+.restaurant-chat-tracking-steps li{position:relative;display:grid;justify-items:center;gap:var(--space-1-5);font-size:var(--font-size-xs);color:var(--chat-muted);text-align:center;white-space:nowrap}
+.restaurant-chat-tracking-steps li+li::before{content:"";position:absolute;top:calc(var(--size-11) - var(--space-px));right:50%;width:100%;height:var(--stroke-2);background:var(--chat-line)}
+.restaurant-chat-tracking-steps li:is(.is-done,.is-current)::before{background:var(--chat-action)}
+.restaurant-chat-tracking-steps i{position:relative;z-index:1;width:var(--size-22);height:var(--size-22);display:grid;place-items:center;border-radius:50%;border:var(--stroke-2) solid var(--chat-line);background:var(--chat-incoming);color:var(--chat-action-ink)}
+.restaurant-chat-tracking-steps .is-done i{border-color:var(--chat-action);background:var(--chat-action)}
+.restaurant-chat-tracking-steps .is-current i{border-color:var(--chat-action);box-shadow:inset 0 0 0 var(--space-1) var(--chat-incoming);background:var(--chat-action)}
+.restaurant-chat-tracking-steps :is(.is-done,.is-current) span{color:var(--chat-ink);font-weight:var(--weight-semibold)}
+.restaurant-chat-tracking-facts{display:grid;gap:var(--space-2);margin:0}
+.restaurant-chat-tracking-facts>div{display:grid;grid-template-columns:var(--size-88) minmax(0,1fr);gap:var(--space-2);font-size:var(--font-size-sm)}
+.restaurant-chat-tracking-facts dt{color:var(--chat-muted)}
+.restaurant-chat-tracking-facts dd{margin:0;overflow-wrap:anywhere}
+.restaurant-chat-tracking>.restaurant-chat-cart-hint{margin:0}

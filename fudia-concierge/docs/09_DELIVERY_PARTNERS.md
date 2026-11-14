@@ -1,5 +1,13 @@
 # Delivery Fudia: centrales de reparto por WhatsApp
 
+> **Desde 2026-11-14 el canal principal de la central es su panel web**
+> (`/reparto/{token}` en foods-admin-web; contrato en
+> `foods-backend/docs/15_DELIVERY_GEOGRAPHY.md`). Ahí recibe los pedidos,
+> confirma la atención, la recogida y la entrega, y comparte su ubicación. Los
+> mensajes por WhatsApp de este documento siguen funcionando solo si el país
+> conserva un transporte WhatsApp; con el chat propio (`FUDIA_WEB`) la central
+> atiende únicamente desde el panel.
+
 Fudia trabaja con centrales de delivery registradas por Plataforma en un orden
 global. Delivery Fudia se activa por empresa, y todos sus locales lo usan.
 El backend filtra ese orden por el departamento, provincia y distrito del local

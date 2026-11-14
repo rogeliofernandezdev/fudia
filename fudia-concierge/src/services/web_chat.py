@@ -6,6 +6,7 @@ from typing import Any
 
 from src.services.contact_name import CUSTOMER_NAME_PROMPT
 
+WEB_CONFIRMATION_REPLY = "Revisa tu pedido y toca **Confirmar pedido** para enviarlo."
 
 def cart_line(cart: dict[str, Any], currency: str) -> str:
     """What the order holds after a cart button, in one line."""
@@ -66,7 +67,7 @@ def action_reply(
     cart = result.get("cart", {})
     if name in {"prepare_confirmation", "view_cart"}:
         if web:
-            return "Tu pedido está listo para confirmar en «Mi pedido»."
+            return WEB_CONFIRMATION_REPLY
         items = cart.get("items", [])
         lines = []
         for item in items:
@@ -89,8 +90,8 @@ def action_reply(
         summary = "\n".join(lines)
         total = result.get("delivery", {}).get("total", cart.get("total", "0.00"))
         confirmation = (
-            "\nRevisa el resumen y pulsa «Confirmar pedido» para enviarlo."
-            if web else "\n¿Confirmas este pedido? Responde «sí» para enviarlo."
+            "\nRevisa el resumen y toca **Confirmar pedido** para enviarlo."
+            if web else "\n¿Confirmas este pedido? Responde sí para enviarlo."
         )
         return f"Tu pedido\n{summary}\n\nTotal: {currency} {total}" + (
             confirmation if name == "prepare_confirmation" else ""

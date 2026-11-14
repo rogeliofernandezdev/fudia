@@ -17,14 +17,25 @@ BULLET = re.compile(r"^\s*(?:[*•·+▪◦–]|-)\s+")
 HEADING = re.compile(r"^\s*#{1,6}\s+")
 
 
-def whatsapp_text(text: str) -> str:
+def without_reference_quotes(text: str) -> str:
+    """Action names and suggested replies read naturally without guillemets."""
+    return text.translate(str.maketrans("", "", "«»"))
+
+
+def whatsapp_text(text: str, *, allow_bold: bool = False) -> str:
     """Model replies as plain WhatsApp text: no markdown marks, «- » bullets,
     list headings ending in «:» and no playful emoji."""
     lines: list[str] = []
-    for raw in text.replace("\r\n", "\n").split("\n"):
+    for raw in without_reference_quotes(text).replace("\r\n", "\n").split("\n"):
         bullet = bool(BULLET.match(raw))
         line = BULLET.sub("", raw) if bullet else HEADING.sub("", raw)
-        line = line.replace("*", "").replace("__", "")
+        parts = re.split(r"(\*\*[^*\n]+\*\*)", line) if allow_bold else [line]
+        line = "".join(
+            part
+            if allow_bold and re.fullmatch(r"\*\*[^*\n]+\*\*", part)
+            else part.replace("*", "").replace("__", "")
+            for part in parts
+        )
         cleaned = PLAYFUL_EMOJI.sub("", line)
         if cleaned != line:
             # A removed icon must not leave a gap before punctuation.

@@ -21,7 +21,7 @@ export function OrderDispatchBlock({order,canManage,money,disabled}:{order:Dispa
   };
   const retry=useMutation({
     mutationFn:()=>retryDeliveryDispatch(order.id),
-    onSuccess:()=>{refresh();notify({tone:"success",title:"Pedido ofrecido de nuevo",message:"La 1.ª central lo recibe ahora por WhatsApp."});},
+    onSuccess:()=>{refresh();notify({tone:"success",title:"Pedido ofrecido de nuevo",message:"La 1.ª central lo recibe ahora en su panel de reparto."});},
     onError:e=>notify({tone:"danger",title:"No se pudo reintentar",message:e.message}),
   });
   const own=useMutation({

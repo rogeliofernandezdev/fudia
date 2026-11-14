@@ -60,6 +60,13 @@ type Concierge struct {
 	branding  orgcontracts.BrandingReader
 	customers Customers
 	notices   noticecontracts.Publisher
+	tracking  deliverycontracts.TrackingReader
+}
+
+// WithDeliveryTracking agrega el seguimiento del reparto al estado del pedido.
+func (a *Concierge) WithDeliveryTracking(reader deliverycontracts.TrackingReader) *Concierge {
+	a.tracking = reader
+	return a
 }
 
 func New(repo Repository, menu Menu, orders Orders, audit audit.Repository) *Concierge {
