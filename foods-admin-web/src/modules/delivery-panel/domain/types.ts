@@ -77,3 +77,5 @@ export type PanelActionResult={outcome:PanelOutcome;orderCode?:string};
 export type CourierAssignment={outcome:PanelOutcome;courierName?:string;courierToken?:string};
 export type CourierView={partnerName:string;courierName:string;order:PanelOrder};
 export type CourierPosition={latitude:number;longitude:number};
+/** Sesión del operador de la central: quién entró y a qué central pertenece. */
+export type PartnerSession={operator:{name:string;email:string;mustChangePassword:boolean};partner:{name:string;active:boolean}};

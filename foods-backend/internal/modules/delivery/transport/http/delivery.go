@@ -15,12 +15,21 @@ import (
 )
 
 type Handler struct {
-	partners   *application.Partners
-	dispatcher *application.Dispatcher
+	partners     *application.Partners
+	dispatcher   *application.Dispatcher
+	operators    *application.Operators
+	secureCookie bool
 }
 
 func New(partners *application.Partners, dispatcher *application.Dispatcher) *Handler {
 	return &Handler{partners: partners, dispatcher: dispatcher}
+}
+
+// WithOperators conecta el acceso de las centrales a su panel (operadores y sesiones).
+func (h *Handler) WithOperators(operators *application.Operators, secureCookie bool) *Handler {
+	h.operators = operators
+	h.secureCookie = secureCookie
+	return h
 }
 
 func requestScope(r *http.Request) requestscope.Scope {

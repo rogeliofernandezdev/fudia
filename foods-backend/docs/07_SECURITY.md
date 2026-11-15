@@ -149,3 +149,20 @@ transiciones de atención validan `orders.waiter_id` bajo bloqueo de fila, junto
 al alcance de empresa/local. No existe una excepción silenciosa por permiso
 amplio. La lectura autorizada se conserva; Cocina y Caja tienen flujos separados
 con sus permisos y no transfieren la asignación al preparar o cobrar.
+
+## Centrales de Delivery Fudia
+
+El panel de la central exige la sesión de un operador (migración 000128): no
+existe acceso por enlace. La sesión vive en la cookie HttpOnly
+`fudia_partner_session` (12 horas, solo el SHA-256 del token en
+`delivery_partner_sessions`), independiente de `foods_session`: un operador no
+es usuario de ninguna empresa ni obtiene permisos del restaurante. La central se
+deriva siempre de la sesión y cada oferta se vuelve a comprobar contra ella.
+
+Plataforma crea operadores con una contraseña temporal que se devuelve una sola
+vez y que el operador debe cambiar antes de operar el panel. Cinco intentos
+fallidos seguidos bloquean el acceso 15 minutos; restablecer la contraseña quita
+el bloqueo y cierra sus sesiones, igual que desactivarlo. El enlace del
+motorizado sigue siendo público porque vale para un solo reparto y deja de
+funcionar al entregar, liberar, registrar la entrega fallida o cambiar de
+motorizado. Detalle en `15_DELIVERY_GEOGRAPHY.md`.

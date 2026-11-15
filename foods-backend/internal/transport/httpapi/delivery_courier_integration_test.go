@@ -55,9 +55,9 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 		if rec.Code != 201 {
 			t.Fatalf("create partner: %d %s", rec.Code, rec.Body.String())
 		}
-		var out struct{ PanelToken string }
+		var out struct{ ID string }
 		decode(rec, &out)
-		return out.PanelToken
+		return operatorSession(t, d, s, out.ID, fmt.Sprintf("op-%s-%d@courier.test", prefix, index))
 	}
 	northPanel, southPanel := partner("Motos Norte", 1), partner("Motos Sur", 2)
 	if _, err := pool.Exec(ctx, `UPDATE delivery_partners SET active=false WHERE whatsapp_phone NOT LIKE $1`, prefix+"%"); err != nil {
@@ -79,7 +79,7 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	}
 	panel := func(token string) ([]panelOrder, []failed) {
 		t.Helper()
-		rec := call(d.Panel, "GET", "", map[string]string{"token": token}, scope{})
+		rec := panelCall(d, d.Panel, "GET", "", token)
 		if rec.Code != 200 {
 			t.Fatalf("panel: %d %s", rec.Code, rec.Body.String())
 		}
@@ -92,7 +92,7 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	}
 	act := func(panelToken, action, token string) string {
 		t.Helper()
-		rec := call(d.PanelAction, "POST", fmt.Sprintf(`{"action":%q,"token":%q}`, action, token), map[string]string{"token": panelToken}, scope{})
+		rec := panelCall(d, d.PanelAction, "POST", fmt.Sprintf(`{"action":%q,"token":%q}`, action, token), panelToken)
 		if rec.Code != 200 {
 			t.Fatalf("%s: %d %s", action, rec.Code, rec.Body.String())
 		}
@@ -102,7 +102,7 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	}
 	assign := func(panelToken, offer, name string) (int, string, string) {
 		t.Helper()
-		rec := call(d.PanelCourier, "POST", fmt.Sprintf(`{"token":%q,"courierName":%q}`, offer, name), map[string]string{"token": panelToken}, scope{})
+		rec := panelCall(d, d.PanelCourier, "POST", fmt.Sprintf(`{"token":%q,"courierName":%q}`, offer, name), panelToken)
 		var out struct{ Outcome, CourierToken string }
 		if rec.Code == 200 {
 			decode(rec, &out)

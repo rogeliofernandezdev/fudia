@@ -3,13 +3,13 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,RowActionButton,Status,TableSkeleton,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,RowActionButton,Status,TableSkeleton,Tabs,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {formatPartnerPhone} from "@/modules/delivery/domain/board";
 import {useFeedback} from "@/providers";
 import type {DeliveryPartner,DeliveryPartnerDraft} from "../domain/types";
 import {listDeliveryPartners,reorderDeliveryPartners,saveDeliveryPartner} from "../infrastructure/platform-api";
 import "./platform-delivery-partners.css";
-import {DeliveryPartnerPanelLink} from "./delivery-partner-panel-link";
+import {DeliveryPartnerOperators} from "./delivery-partner-operators";
 
 const columns=["Orden","Central","Teléfono","Estado","Acciones"];
 const blank:DeliveryPartnerDraft={name:"",whatsappPhone:"51"};
@@ -19,7 +19,8 @@ const queryKey=["platform-delivery-partners"];
  * Administración de las centrales de Delivery Fudia (solo Plataforma), dentro
  * de Delivery › Proveedores. Cuando cocina inicia la preparación, el pedido se
  * ofrece a la vez a todas las centrales activas; la primera que acepta se lo
- * queda. El orden prioriza el listado.
+ * queda. El orden prioriza el listado. Al editar una central, la pestaña
+ * «Operadores» da de alta a las personas que entran a su panel de reparto.
  */
 export function DeliveryPartnersAdmin(){
  const{notify}=useFeedback();
@@ -28,15 +29,15 @@ export function DeliveryPartnersAdmin(){
  const[draft,setDraft]=useState<DeliveryPartnerDraft|null>(null);
  const[editingId,setEditingId]=useState<string|undefined>();
  const[target,setTarget]=useState<DeliveryPartner|null>(null);
- // Central cuyo enlace de panel se muestra; se lee de la lista para reflejar un enlace regenerado.
- const[panelId,setPanelId]=useState<string|undefined>();
- const close=()=>{setDraft(null);setEditingId(undefined)};
+ const[tab,setTab]=useState<"data"|"operators">("data");
+ const close=()=>{setDraft(null);setEditingId(undefined);setTab("data")};
  const save=useMutation({
   mutationFn:({value,id}:{value:DeliveryPartnerDraft;id?:string})=>saveDeliveryPartner(value,id),
-  onSuccess:(_,{id})=>{
-   close();
+  onSuccess:(partner,{id})=>{
    void client.invalidateQueries({queryKey});
-   notify({tone:"success",title:id?"Central actualizada":"Central registrada",message:id?"Se guardaron los datos de contacto de la central.":"Envíale el enlace de su panel de reparto para que reciba pedidos."});
+   // Una central nueva sigue en su ficha, en «Operadores», para darle acceso al panel.
+   if(!id){setEditingId(partner.id);setTab("operators")}else close();
+   notify({tone:"success",title:id?"Central actualizada":"Central registrada",message:id?"Se guardaron los datos de contacto de la central.":"Agrega a sus operadores para que entren al panel de reparto."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
@@ -62,12 +63,12 @@ export function DeliveryPartnersAdmin(){
   reorder.mutate(ids);
  };
  const start=()=>{setEditingId(undefined);setDraft({...blank})};
- const edit=(item:DeliveryPartner)=>{setEditingId(item.id);setDraft({name:item.name,whatsappPhone:item.whatsappPhone})};
+ const edit=(item:DeliveryPartner,next:"data"|"operators"="data")=>{setEditingId(item.id);setTab(next);setDraft({name:item.name,whatsappPhone:item.whatsappPhone})};
  const items=partners.data?.items??[];
- const panelPartner=items.find(item=>item.id===panelId);
+ const editing=items.find(item=>item.id===editingId);
  const status=(item:DeliveryPartner)=><Status active={item.active}>{item.active?"Activa":"Inactiva"}</Status>;
  const order=(index:number)=><div className="partner-order"><b>{index+1}</b><IconButton icon="chevron" className="partner-order-up" label="Subir en el orden" disabled={index===0||reorder.isPending} onClick={()=>move(index,-1)}/><IconButton icon="chevron" className="partner-order-down" label="Bajar en el orden" disabled={index===items.length-1||reorder.isPending} onClick={()=>move(index,1)}/></div>;
- const actions=(item:DeliveryPartner)=><><IconButton icon="link" label={`Panel de reparto de ${item.name}`} onClick={()=>setPanelId(item.id)}/><RowActionButton action="edit" label={`Editar central ${item.name}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de la central ${item.name}`} onClick={()=>setTarget(item)}/></>;
+ const actions=(item:DeliveryPartner)=><><RowActionButton action="edit" label={`Editar central ${item.name}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de la central ${item.name}`} onClick={()=>setTarget(item)}/></>;
 
  return <>
   <section className="panel management standardized-management platform-partners-panel" aria-label="Centrales de delivery">
@@ -82,15 +83,15 @@ export function DeliveryPartnersAdmin(){
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal platform-partner-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="delivery-partner-title" aria-busy={save.isPending}><ModalHeader title={editingId?"Editar central":"Nueva central"} titleId="delivery-partner-title" onClose={close} busy={save.isPending} closeLabel="Cerrar"/>
-   <ModalForm onSubmit={event=>{event.preventDefault();save.mutate({value:draft,id:editingId})}}>
+   {editingId&&<div className="platform-partner-tabs"><Tabs label="Secciones de la central" value={tab} onChange={setTab} items={[{value:"data",label:"Datos",icon:"motorbike"},{value:"operators",label:"Operadores",icon:"users"}]}/></div>}
+   {editingId&&tab==="operators"?<ModalBody>{editing?<DeliveryPartnerOperators partner={editing}/>:null}</ModalBody>:<ModalForm onSubmit={event=>{event.preventDefault();save.mutate({value:draft,id:editingId})}}>
     <ModalBody><div className="form-sections-flow"><div className="form-grid platform-partner-fields">
      <FormField className="span-2" label="Nombre"><Input value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Central Norte" minLength={2} maxLength={120} autoFocus required/></FormField>
-     <FormField className="span-2" label="Teléfono" help="Con código de país. Los pedidos llegan a su panel de reparto; este número es su contacto."><Input value={draft.whatsappPhone} onChange={e=>setDraft({...draft,whatsappPhone:e.target.value})} inputMode="tel" placeholder="51 987 654 321" required/></FormField>
+     <FormField className="span-2" label="Teléfono" help="Con código de país. Es su número de contacto; los pedidos llegan a su panel de reparto."><Input value={draft.whatsappPhone} onChange={e=>setDraft({...draft,whatsappPhone:e.target.value})} inputMode="tel" placeholder="51 987 654 321" required/></FormField>
     </div></div></ModalBody>
     <ModalFooter><Button type="button" action="cancel" disabled={save.isPending} onClick={close}>Cancelar</Button><Button type="submit" appearance="strong" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></ModalFooter>
-   </ModalForm>
+   </ModalForm>}
   </Dialog></div>}
-  {panelPartner&&<DeliveryPartnerPanelLink partner={panelPartner} queryKey={queryKey} onClose={()=>setPanelId(undefined)}/>}
   <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar central":"Activar central"} subject={target?{label:"Central",name:target.name}:undefined} description={target?.active?"Sus ofertas pendientes se retiran; las demás centrales conservan las suyas. Los pedidos ya aceptados conservan su central.":"Volverá a recibir los pedidos de los locales con Delivery Fudia."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
  </>;
 }

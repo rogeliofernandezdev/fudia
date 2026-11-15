@@ -9,7 +9,7 @@ const require=createRequire(import.meta.url);
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
 function compile(path){
  const exports={};
- vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,require,URLSearchParams,Date,Math});
+ vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,require,URLSearchParams,Date,Math,TextEncoder});
  return exports;
 }
 const panel=compile("src/modules/delivery-panel/domain/panel.ts");
@@ -130,12 +130,18 @@ test("panel de reparto: etapas con etiqueta de una línea y tonos de la matriz, 
  for(const meta of Object.values(panel.stageMeta))assert.ok(meta.label.length<=12,meta.label);
 });
 
-test("panel de reparto y enlace del motorizado: pantallas públicas, sin sesión, con confirmación de lo irreversible",()=>{
- const page=read("src/app/delivery-panel/[token]/page.tsx");
- assert.match(page,/referrer:"no-referrer"/,"el enlace privado no viaja como referencia a los mapas");
+test("panel de la central con sesión; enlace del motorizado público; lo irreversible pide confirmación",()=>{
+ const page=read("src/app/delivery-panel/page.tsx");
+ assert.match(page,/referrer:"no-referrer"/,"el panel no viaja como referencia a los mapas");
  assert.match(page,/index:false/);
- assert.match(page,/\^\[a-f0-9\]\{32\}\$/);
+ assert.match(page,/fudia_partner_session[\s\S]*redirect\("\/delivery-panel\/login"\)/,"sin cookie de sesión va al acceso");
+ assert.match(read("src/app/delivery-panel/[token]/page.tsx"),/redirect\("\/delivery-panel\/login"\)/,"los enlaces privados antiguos llevan al acceso");
+ assert.match(read("src/app/delivery-panel/login/page.tsx"),/<PartnerLogin hasSession=\{hasSession\}\/>/);
  const view=read("src/modules/delivery-panel/presentation/partner-panel.tsx");
+ assert.match(view,/export function PartnerPanel\(\)\{/,"el panel ya no recibe un enlace privado");
+ assert.match(view,/needsLogin\(panel\.error\)\|\|needsPasswordChange\(panel\.error\)/,"sesión vencida o contraseña temporal vuelven al acceso");
+ assert.match(view,/router\.replace\("\/delivery-panel\/login"\)/);
+ assert.match(view,/logoutPartner\(\)/,"el operador cierra su sesión");
  assert.match(view,/refetchIntervalInBackground:true/,"los pedidos nuevos llegan con el panel en segundo plano");
  assert.match(view,/onConfirm\("reject"\)/,"rechazar pide confirmación");
  assert.doesNotMatch(view,/useCourierLocation/,"la central ya no comparte ubicación: lo hace el motorizado");
@@ -159,23 +165,54 @@ test("panel de reparto y enlace del motorizado: pantallas públicas, sin sesión
  assert.match(courier,/<EmptyState icon="circleCheck" title="Entrega registrada"/);
  assert.match(courier,/<Skeleton /);
  const api=read("src/modules/delivery-panel/infrastructure/panel-api.ts");
- assert.match(api,/\/api\/public\/delivery-panel\//);
- assert.match(api,/\/api\/public\/delivery-courier\//);
- assert.match(api,/\$\{panelBase\(token\)\}\/courier/);
+ assert.doesNotMatch(api,/\/api\/public\/delivery-panel/,"el panel de la central ya no es público");
+ assert.match(api,/const partnerBase="\/api\/delivery-partner"/);
+ assert.match(api,/\$\{partnerBase\}\/panel\/courier/);
+ assert.match(api,/\/api\/public\/delivery-courier\//,"el enlace del motorizado sigue público");
+ const proxy=read("src/app/api/delivery-partner/[...path]/route.ts");
+ assert.match(proxy,/\/v1\/delivery-partner\//);
+ assert.match(proxy,/const SESSION_COOKIE="fudia_partner_session"/);
+ assert.match(proxy,/next\.headers\.set\("set-cookie",cookie\)/,"el BFF devuelve la cookie HttpOnly del backend");
+ assert.match(proxy,/if\(logout&&session\)failed\.headers\.set\("set-cookie",CLEAR_COOKIE\)/,"cerrar sesión borra la cookie aunque el backend no responda");
+ assert.match(read("src/modules/delivery-panel/presentation/dispatch-workspace.css"),/@media\(max-width:600px\)\{\.dispatch-app-logout\{[^}]*width:var\(--size-44\)[^}]*\}\.dispatch-app-logout>span\{display:none\}/,"en móvil «Salir» es solo icono para no partir «Avisos con sonido»");
  assert.match(read("src/modules/delivery-panel/presentation/use-courier-location.ts"),/wakeLock/);
  const css=read("src/modules/delivery-panel/presentation/partner-panel.css");
  assert.match(css,/\.partner-panel-toggle\{[^}]*min-height:var\(--size-56\)/);
  assert.match(css,/\.partner-panel-actions \.button\{[^}]*min-height:var\(--size-48\)/);
 });
 
-test("Plataforma: cada central tiene su enlace de panel, copiable y regenerable con confirmación",()=>{
+test("acceso de la central: correo y contraseña, y la temporal se reemplaza antes de entrar",()=>{
+ assert.equal(panel.passwordChangeProblem("","clave-nueva","clave-nueva"),"Ingresa la contraseña temporal.");
+ assert.match(panel.passwordChangeProblem("Temp12345678","corta","corta"),/al menos 8/);
+ assert.match(panel.passwordChangeProblem("Temp12345678","Temp12345678","Temp12345678"),/distinta/);
+ assert.match(panel.passwordChangeProblem("Temp12345678","clave-nueva","clave-nuevo"),/no coinciden/);
+ assert.match(panel.passwordChangeProblem("Temp12345678","x".repeat(73),"x".repeat(73)),/demasiado larga/);
+ assert.equal(panel.passwordChangeProblem("Temp12345678","clave-nueva","clave-nueva"),"");
+ const login=read("src/modules/delivery-panel/presentation/partner-login.tsx");
+ assert.match(login,/autoComplete="username"/);
+ assert.match(login,/autoComplete="new-password"/);
+ assert.match(login,/<h1 id="partner-login-title">Crea tu contraseña<\/h1>/);
+ assert.match(login,/session\.operator\.mustChangePassword/);
+ assert.doesNotMatch(login,/localStorage|sessionStorage/,"la sesión vive solo en la cookie HttpOnly");
+});
+
+test("Plataforma: la central se edita con pestañas Datos y Operadores; la contraseña temporal se ve una vez",()=>{
  const page=read("src/modules/platform/presentation/delivery-partners-admin.tsx");
- assert.match(page,/<IconButton icon="link" label=\{`Panel de reparto de \$\{item\.name\}`\}/);
- const link=read("src/modules/platform/presentation/delivery-partner-panel-link.tsx");
- assert.match(link,/publicPartnerPanelPath\(partner\.panelToken\)/);
- assert.match(link,/<ConfirmDialog open=\{confirm\} title="Generar enlace nuevo"/);
- assert.doesNotMatch(link,/ModalFooter/,"modal de solo lectura: la X es el único cierre");
- assert.match(read("src/modules/platform/infrastructure/platform-api.ts"),/delivery-partners\/\$\{encodeURIComponent\(id\)\}\/panel-link/);
+ assert.match(page,/\{value:"data",label:"Datos",icon:"motorbike"\},\{value:"operators",label:"Operadores",icon:"users"\}/);
+ assert.match(page,/<DeliveryPartnerOperators partner=\{editing\}\/>/);
+ assert.doesNotMatch(page,/panelToken|panel-link|icon="link"/,"ya no hay enlace privado de la central");
+ const operators=read("src/modules/platform/presentation/delivery-partner-operators.tsx");
+ assert.match(operators,/title="Contraseña temporal"/);
+ assert.match(operators,/Se muestra una sola vez/);
+ assert.match(operators,/<ConfirmDialog open=\{Boolean\(resetTarget\)\} tone="danger" title="Nueva contraseña temporal"/);
+ assert.match(operators,/action=\{operator\.active\?"deactivate":"activate"\}/);
+ assert.match(operators,/<EmptyState icon="users" title="Sin operadores"/);
+ assert.match(operators,/<ErrorState title="No pudimos cargar los operadores"/);
+ assert.match(operators,/<Skeleton /);
+ const api=read("src/modules/platform/infrastructure/platform-api.ts");
+ assert.match(api,/\/operators`/);
+ assert.match(api,/\/password-reset`/);
+ assert.doesNotMatch(api,/panel-link/);
 });
 
 const chatTracking=(overrides={})=>({available:true,code:"PED-7",status:"preparando",channel:"delivery",delivery:{dispatchStatus:"",partnerName:"",originName:"Local",originAddress:"",origin:{latitude:-12.04,longitude:-77.04},destinationAddress:"Av. Perú 100",destination:{latitude:-12.12,longitude:-77.03},courier:null},...overrides});

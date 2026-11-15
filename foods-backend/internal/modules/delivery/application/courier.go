@@ -54,11 +54,7 @@ func assignedOutcome(st OfferState) string {
 // PanelCourier asigna o cambia el motorizado de un reparto aceptado. El mismo
 // nombre conserva el enlace (doble clic); otro nombre invalida el anterior y
 // genera uno nuevo sin cambiar la etapa del reparto.
-func (a *Dispatcher) PanelCourier(ctx context.Context, token string, in domain.CourierInput) (domain.CourierResult, error) {
-	partner, err := a.panelPartner(ctx, token)
-	if err != nil {
-		return domain.CourierResult{}, err
-	}
+func (a *Dispatcher) PanelCourier(ctx context.Context, partner PanelPartner, in domain.CourierInput) (domain.CourierResult, error) {
 	name, ok := domain.NormalizeCourierName(in.CourierName)
 	if !ok {
 		return domain.CourierResult{}, errCourierName

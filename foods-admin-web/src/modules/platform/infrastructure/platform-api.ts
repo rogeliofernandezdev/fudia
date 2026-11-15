@@ -1,7 +1,7 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
 import type {SpecialTaxRegime,SpecialTaxStatus} from "@/shared/fiscal/special-tax";
-import type {ConciergeLimitOverride,ConciergeUsageDetail,ConciergeUsagePage,ConciergeUsageSettings,ConciergeUsageSettingsInput,Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,PlatformSubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft,WhatsAppProviderOption,WhatsAppConnection,WhatsAppChannelHistory,DeliveryPartner,DeliveryPartnerDraft,OrganizationDelivery} from "../domain/types";
+import type {ConciergeLimitOverride,ConciergeUsageDetail,ConciergeUsagePage,ConciergeUsageSettings,ConciergeUsageSettingsInput,Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,PlatformSubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft,WhatsAppProviderOption,WhatsAppConnection,WhatsAppChannelHistory,DeliveryPartner,DeliveryPartnerDraft,DeliveryOperator,DeliveryOperatorDraft,DeliveryOperatorCredentials,OrganizationDelivery} from "../domain/types";
 import {optionalLimit} from "../domain/concierge-usage";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
@@ -122,8 +122,14 @@ export async function recordSubscriptionPayment(input:{amount:string;currency:st
 export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[];providerOptions:WhatsAppProviderOption[]}>("whatsapp-channels",{cache:"no-store"});}
 export async function listDeliveryPartners(){return platformFetch<{items:DeliveryPartner[]}>("delivery-partners");}
 export async function saveDeliveryPartner(draft:DeliveryPartnerDraft,id?:string){return platformFetch<DeliveryPartner>(id?`delivery-partners/${encodeURIComponent(id)}`:"delivery-partners",{method:id?"PATCH":"POST",body:JSON.stringify({name:draft.name,whatsappPhone:draft.whatsappPhone,active:draft.active})});}
-/** Reemplaza el enlace privado del panel de la central; el anterior deja de abrir. */
-export async function rotateDeliveryPartnerPanel(id:string){return platformFetch<{partnerId:string;panelToken:string}>(`delivery-partners/${encodeURIComponent(id)}/panel-link`,{method:"POST"});}
+const operatorsPath=(partnerId:string)=>`delivery-partners/${encodeURIComponent(partnerId)}/operators`;
+export async function listDeliveryOperators(partnerId:string){return platformFetch<{items:DeliveryOperator[]}>(operatorsPath(partnerId),{cache:"no-store"});}
+/** Da de alta a un operador; la respuesta trae su contraseña temporal una sola vez. */
+export async function createDeliveryOperator(partnerId:string,draft:DeliveryOperatorDraft){return platformFetch<DeliveryOperatorCredentials>(operatorsPath(partnerId),{method:"POST",body:JSON.stringify(draft)});}
+/** Desactivar cierra sus sesiones abiertas. */
+export async function updateDeliveryOperator(partnerId:string,operator:DeliveryOperator,active:boolean){return platformFetch<DeliveryOperator>(`${operatorsPath(partnerId)}/${encodeURIComponent(operator.id)}`,{method:"PATCH",body:JSON.stringify({fullName:operator.fullName,email:operator.email,active})});}
+/** Nueva contraseña temporal: quita el bloqueo y cierra sus sesiones. */
+export async function resetDeliveryOperatorPassword(partnerId:string,operatorId:string){return platformFetch<DeliveryOperatorCredentials>(`${operatorsPath(partnerId)}/${encodeURIComponent(operatorId)}/password-reset`,{method:"POST"});}
 export async function reorderDeliveryPartners(partnerIds:string[]){return platformFetch<{items:DeliveryPartner[]}>("delivery-partners/order",{method:"PUT",body:JSON.stringify({partnerIds})});}
 export async function getOrganizationDelivery(organizationId:string){return platformFetch<OrganizationDelivery>(`organizations/${encodeURIComponent(organizationId)}/delivery`);}
 export async function setOrganizationDelivery(organizationId:string,enabled:boolean){return platformFetch<OrganizationDelivery>(`organizations/${encodeURIComponent(organizationId)}/delivery`,{method:"PUT",body:JSON.stringify({enabled})});}

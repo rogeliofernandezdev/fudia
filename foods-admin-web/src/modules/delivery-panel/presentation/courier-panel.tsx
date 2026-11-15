@@ -11,6 +11,7 @@ import {useCourierLocation,type LocationStatus} from "./use-courier-location";
 import {useStoredFlag} from "./use-stored-flag";
 import {OrderDetails} from "./order-details";
 import "./partner-panel.css";
+import "./dispatch-workspace.css";
 
 const POLL_MS=5_000;
 
@@ -25,18 +26,20 @@ const locationCopy:Record<LocationStatus,string>={
 
 /** Barra de contexto: interruptor de ubicación del dispositivo. */
 function LocationToggle({enabled,onToggle,disabled,status}:{enabled:boolean;onToggle:()=>void;disabled:boolean;status:LocationStatus}){
-  return <button type="button" className="partner-panel-toggle" aria-pressed={enabled} disabled={disabled} onClick={onToggle}>
-    <IconTile name="mapPin" tone={enabled?"primary":"neutral"}/>
+  return <button type="button" className="partner-panel-toggle is-location" aria-pressed={enabled} disabled={disabled} onClick={onToggle}>
+    <IconTile name="mapPin" tone={enabled?"primary":"neutral"} appearance={enabled?"vivid":"soft"}/>
     <span><b>Compartir ubicación</b><small>{enabled?locationCopy[status]:locationCopy.off}</small></span>
     <i aria-hidden="true"/>
   </button>;
 }
 
 function Frame({title,subtitle,busy,children}:{title:string;subtitle:string;busy?:boolean;children:React.ReactNode}){
-  return <main className="partner-panel-stage"><div className="partner-panel-content" aria-busy={busy||undefined}>
-    <PageHeader title={title} description={subtitle}/>
-    <div className="partner-panel-body">{children}</div>
-  </div></main>;
+  return <main className="partner-panel-stage">
+    <div className="dispatch-app-header"><div className="dispatch-app-header-inner courier-app-header">
+      <div className="dispatch-app-identity"><IconTile name="motorbike" tone="primary" appearance="vivid" size="lg"/><PageHeader title={title} description={subtitle}/></div>
+    </div></div>
+    <div className="partner-panel-content is-courier" aria-busy={busy||undefined}><div className="partner-panel-body">{children}</div></div>
+  </main>;
 }
 
 /**
@@ -89,7 +92,7 @@ export function CourierPanel({token}:{token:string}){
     {toggle}
     {view.isError&&<p className="partner-panel-banner is-danger" role="alert"><Icon name="alert" size={18}/>Sin conexión con Fudia. El pedido puede estar desactualizado; reintentando…</p>}
     <article className="panel" aria-label={`Pedido ${order.orderCode}`}>
-      <header><div><h2 className="partner-panel-code">{order.orderCode}</h2><small>{order.organizationName}</small></div><Status tone={meta.tone} icon={meta.icon}>{meta.label}</Status></header>
+      <header><div><h2 className="partner-panel-code">{order.orderCode}</h2><small>{order.organizationName}</small></div><Status tone={meta.tone} icon={meta.icon} solid>{meta.label}</Status></header>
       <div className="partner-panel-sheet-body">
         {order.issueReportedAt&&<InlineNotice tone="warning" title="Avisamos a tu central y al cliente"/>}
         <OrderDetails order={order} courier={location.position}/>

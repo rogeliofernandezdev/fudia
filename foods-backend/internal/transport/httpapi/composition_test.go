@@ -116,7 +116,8 @@ func New(db *pgxpool.Pool) *integrationAPI {
 	platform := platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{}).WithTips(tips)
 	concierge := conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)).WithCustomers(customerapp.New(customerpg.New(db))).WithNotices(notices).WithDirectory(conciergepg.New(db), platform, database.NewUnitOfWork(db)).WithDeliveryTracking(dispatcher)
 	return &integrationAPI{db: db, fiscal: fiscal, dispatcher: dispatcher, API: NewWithHandlers(Handlers{
-		Delivery:               deliveryhttp.New(deliveryapp.NewPartners(deliverypg.New(db), database.NewUnitOfWork(db)), dispatcher),
+		Delivery: deliveryhttp.New(deliveryapp.NewPartners(deliverypg.New(db), database.NewUnitOfWork(db)), dispatcher).
+			WithOperators(deliveryapp.NewOperators(deliverypg.New(db), database.NewUnitOfWork(db), credentials.Credentials{}), false),
 		Tips:                   billinghttp.NewTips(tips),
 		Notices:                noticehttp.New(notices),
 		RestaurantProfile:      orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))).WithProfiles(orgapp.NewRestaurantProfiles(orgpg.NewRestaurantProfiles(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}).RestaurantMedia())),

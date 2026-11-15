@@ -73,18 +73,17 @@ enviada como distrito, sin modificar el local ante el rechazo.
 ## Panel web de la central y seguimiento (migración 000125)
 
 Desde 2026-11-14 la central de reparto atiende sus pedidos en un panel web
-propio, sin WhatsApp ni sesión: `delivery_partners.panel_token` (32 hex,
-generado por PostgreSQL, único) abre `/delivery-panel/{token}` en foods-admin-web.
-Plataforma lo copia o lo reemplaza con
-`POST /v1/platform/delivery-partners/{id}/panel-link`; el anterior deja de abrir.
+propio, sin WhatsApp: `/delivery-panel` en foods-admin-web. Desde 2026-11-15
+(migración 000128) el panel exige iniciar sesión; el enlace privado de la central
+(`panel_token`) dejó de existir (ver «Acceso de la central» abajo).
 
-- `GET /v1/public/delivery-panel/{token}`: ofertas vigentes de esa central,
+- `GET /v1/delivery-partner/panel`: ofertas vigentes de la central de la sesión,
   repartos en curso y entregados de las últimas 12 horas. Mostrar una oferta
   por primera vez inicia sus 3 minutos (`expires_at`), igual que enviarla por
   WhatsApp.
 - `POST …/actions` (`accept`, `reject`, `pickup`, `deliver`): comparte con los
   botones de WhatsApp los mismos bloqueos y resultados (`Dispatcher.act`). La
-  autorización compara la central del enlace con la de la oferta; la de otra
+  autorización compara la central de la sesión con la de la oferta; la de otra
   central responde `not_found`. `deliver` exige el despacho `picked_up` y el
   pedido `en_camino`; lo pasa a `entregado` y el despacho a `delivered`
   (`not_picked_up` si aún no se recoge). Es idempotente.
@@ -122,7 +121,7 @@ pedido en sus estados de siempre. Los hechos del reparto son columnas de
   centrales activas. La primera que acepta se lo queda; la
   aceptación bloquea pedido → despacho → central, así que dos clics o dos
   centrales a la vez no pueden tomarlo dos veces.
-- **Motorizado.** `POST /v1/public/delivery-panel/{token}/courier` exige el nombre
+- **Motorizado.** `POST /v1/delivery-partner/panel/courier` exige el nombre
   (2 a 60 caracteres) antes de entregar el enlace `/delivery-courier/{courierToken}`
   (32 hex generados por PostgreSQL). El mismo nombre conserva el enlace; otro
   nombre lo reemplaza, el anterior responde 404 y la etapa no cambia. El enlace
@@ -198,3 +197,37 @@ fallida, y las tres lecturas del local, incluido que otro local no ve nada.
 `TestDeliveryPartnerPanel` recorre enlace inválido o reemplazado, oferta ajena,
 acciones fuera de orden, ubicación inválida, vencida o de otra central,
 seguimiento de otro local y la conservación del envío tras entregar.
+
+## Acceso de la central: operadores con sesión (migración 000128)
+
+Desde 2026-11-15 el panel de la central no es público. Cada persona de la
+central es un operador (`delivery_partner_operators`) con correo único (en
+minúsculas) y contraseña bcrypt. El enlace del motorizado sigue siendo público:
+vale para un solo reparto y vence solo.
+
+- **Alta (Plataforma).** `POST /v1/platform/delivery-partners/{id}/operators`
+  crea al operador con una contraseña temporal de 12 caracteres sin 0/O/1/l/I,
+  generada con `crypto/rand`. Solo viaja en esa respuesta (`no-store`) y nunca
+  se lista. `…/{operatorId}/password-reset` genera otra, quita el bloqueo y
+  cierra sus sesiones. `PATCH …/{operatorId}` edita nombre, correo o estado;
+  desactivar cierra sus sesiones.
+- **Inicio de sesión.** `POST /v1/delivery-partner/auth/login` abre una sesión de
+  12 horas en la cookie HttpOnly `fudia_partner_session` (SameSite=Lax, Secure con
+  `FOODS_COOKIE_SECURE`), separada de `foods_session`. La tabla
+  `delivery_partner_sessions` guarda solo el SHA-256 del token. Un correo
+  desconocido compara contra un hash ficticio para no revelar si existe.
+  Cinco intentos fallidos seguidos bloquean 15 minutos (`delivery_operator_locked`,
+  403); tras vencer el bloqueo la cuenta empieza de nuevo. Un operador inactivo
+  recibe `delivery_operator_inactive` solo con la contraseña correcta.
+- **Contraseña temporal.** Con `must_change_password` el operador puede ver su
+  sesión (`GET /v1/delivery-partner/session`) y cambiarla
+  (`POST /v1/delivery-partner/password`: actual + nueva de 8 caracteres a 72
+  bytes, distinta). El panel y sus acciones responden 403
+  `password_change_required` hasta entonces. Cambiarla cierra sus otras sesiones.
+- **Panel.** `GET /v1/delivery-partner/panel` y `POST …/panel/actions`,
+  `…/panel/location` y `…/panel/courier` toman la central de la sesión
+  (`OperatorReady`); sin sesión responden 401 y el BFF borra la cookie. Cada
+  acción aplicada queda en `delivery_partner_operator_actions` (operador, acción,
+  resultado y código del pedido); el registro no interrumpe la acción si falla.
+- **Cerrar sesión.** `POST /v1/delivery-partner/auth/logout` revoca la sesión y
+  borra la cookie.

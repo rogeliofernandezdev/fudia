@@ -61,8 +61,18 @@ type Handlers struct {
 		OrderDispatch(http.ResponseWriter, *http.Request)
 		RetryDispatch(http.ResponseWriter, *http.Request)
 		UseOwnDelivery(http.ResponseWriter, *http.Request)
-		// Panel web de la central: enlace privado, pedidos, acciones y ubicación.
-		RotatePanelLink(http.ResponseWriter, *http.Request)
+		// Operadores de la central (Plataforma) y su acceso al panel.
+		ListOperators(http.ResponseWriter, *http.Request)
+		CreateOperator(http.ResponseWriter, *http.Request)
+		UpdateOperator(http.ResponseWriter, *http.Request)
+		ResetOperatorPassword(http.ResponseWriter, *http.Request)
+		OperatorAuth(http.Handler) http.Handler
+		OperatorReady(http.Handler) http.Handler
+		PartnerLogin(http.ResponseWriter, *http.Request)
+		PartnerLogout(http.ResponseWriter, *http.Request)
+		PartnerSession(http.ResponseWriter, *http.Request)
+		PartnerPassword(http.ResponseWriter, *http.Request)
+		// Panel web de la central: pedidos, acciones y ubicación (con sesión del operador).
 		Panel(http.ResponseWriter, *http.Request)
 		PanelAction(http.ResponseWriter, *http.Request)
 		PanelLocation(http.ResponseWriter, *http.Request)

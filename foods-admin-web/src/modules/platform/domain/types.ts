@@ -91,7 +91,12 @@ export type WhatsAppConnection={provider:WhatsAppProvider;countryCode:string;ses
 export type WhatsAppChannelHistory={action:string;createdAt:string;before:Partial<PlatformWhatsAppChannel>|null;after:Partial<PlatformWhatsAppChannel>};
 export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;displayName:string;active:boolean;provider:WhatsAppProvider;sessionRef?:string;revision?:number};
 /** Central de Delivery Fudia (WhatsApp con código de país, solo dígitos). */
-export type DeliveryPartner={id:string;name:string;whatsappPhone:string;active:boolean;/** Orden del listado; todas las centrales activas reciben la oferta simultáneamente. */priority:number;/** Enlace privado del panel web de la central. */panelToken:string;createdAt:string;updatedAt:string};
+export type DeliveryPartner={id:string;name:string;whatsappPhone:string;active:boolean;/** Orden del listado; todas las centrales activas reciben la oferta simultáneamente. */priority:number;createdAt:string;updatedAt:string};
+/** Persona de la central que entra al panel de reparto con su correo. */
+export type DeliveryOperator={id:string;partnerId:string;fullName:string;email:string;active:boolean;/** Aún usa la contraseña temporal que le entregó Fudia. */mustChangePassword:boolean;lastLoginAt?:string;createdAt:string};
+export type DeliveryOperatorDraft={fullName:string;email:string};
+/** La contraseña temporal solo llega en la respuesta que la crea. */
+export type DeliveryOperatorCredentials={operator:DeliveryOperator;temporaryPassword:string};
 /** Delivery Fudia activo para todos los locales de una empresa. */
 export type OrganizationDelivery={organizationId:string;enabled:boolean;updatedAt?:string};
 export type DeliveryPartnerDraft={name:string;whatsappPhone:string;active?:boolean};

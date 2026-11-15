@@ -1,12 +1,13 @@
 "use client";
 
 import {useEffect,useId,useState,type ReactNode} from "react";
+import {useRouter} from "next/navigation";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,ErrorState,FormField,Icon,IconTile,InlineNotice,Input,PageHeader,Skeleton,Status,Tag} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {canRelease,courierLink,courierNameValue,failCountdown,formatCountdown,groupOrders,needsPickupDecision,outcomeFeedback,pickupAlertMeta,readyForPickup,remainingSeconds,stageMeta,waitLabel} from "../domain/panel";
 import type {FailedDelivery,PanelAction,PanelOrder} from "../domain/types";
-import {assignCourier,loadPartnerPanel,sendPanelAction} from "../infrastructure/panel-api";
+import {assignCourier,loadPartnerPanel,loadPartnerSession,logoutPartner,needsLogin,needsPasswordChange,sendPanelAction} from "../infrastructure/panel-api";
 import {requestAlertPermission,useOfferAlert} from "./use-offer-alert";
 import {useStoredFlag} from "./use-stored-flag";
 import {OrderDetails,hour} from "./order-details";
@@ -17,12 +18,15 @@ const POLL_MS=5_000;
 
 type Confirming={order:PanelOrder;kind:"reject"|"release"|"fail"|"change"};
 
-function DispatchAppHeader({partnerName,status,sound}:{partnerName?:string;status?:ReactNode;sound:ReactNode}){
+function DispatchAppHeader({partnerName,operatorName,status,sound,onLogout,leaving}:{partnerName?:string;operatorName?:string;status?:ReactNode;sound:ReactNode;onLogout:()=>void;leaving:boolean}){
+  const description=[partnerName||"Delivery Fudia",operatorName].filter(Boolean).join(" · ");
   return <div className="dispatch-app-header"><div className="dispatch-app-header-inner">
     <div className="dispatch-app-identity"><IconTile name="motorbike" tone="primary" appearance="vivid" size="lg"/>
-      <PageHeader title="Panel de reparto" description={partnerName?`Delivery Fudia · ${partnerName}`:"Delivery Fudia"}/>
+      <PageHeader title="Panel de reparto" description={description}/>
     </div>
-    <div className="dispatch-app-header-actions">{status}{sound}</div>
+    <div className="dispatch-app-header-actions">{status}{sound}
+      <button type="button" className="dispatch-app-logout" disabled={leaving} aria-label={operatorName?`Cerrar sesión de ${operatorName}`:"Cerrar sesión"} onClick={onLogout}><Icon name="logout" size={18}/><span>{leaving?"Saliendo…":"Salir"}</span></button>
+    </div>
   </div></div>;
 }
 
@@ -139,17 +143,36 @@ function FailedCard({item}:{item:FailedDelivery}){
 }
 
 /**
- * Panel del proveedor de Delivery Fudia. La central lo abre con su enlace
- * privado: recibe los pedidos, los acepta, registra al motorizado (que recoge y
+ * Panel del proveedor de Delivery Fudia. El operador de la central entra con
+ * su cuenta (la sesión vence a las 12 horas): recibe los pedidos, los acepta, registra al motorizado (que recoge y
  * entrega desde su propio enlace), decide ante las alertas de recogida y
  * registra las entregas fallidas. Sigue las plantillas de la aplicación:
  * `PageHeader`, barra de contexto con los avisos y paneles por sección.
  */
-export function PartnerPanel({token}:{token:string}){
+export function PartnerPanel(){
   const {notify}=useFeedback();
   const client=useQueryClient();
-  const queryKey=["delivery-partner-panel",token];
-  const panel=useQuery({queryKey,queryFn:()=>loadPartnerPanel(token),retry:false,staleTime:0,refetchIntervalInBackground:true,refetchInterval:query=>query.state.error?POLL_MS*6:POLL_MS});
+  const router=useRouter();
+  const queryKey=["delivery-partner-panel"];
+  const panel=useQuery({queryKey,queryFn:loadPartnerPanel,retry:false,staleTime:0,refetchIntervalInBackground:true,refetchInterval:query=>query.state.error?POLL_MS*6:POLL_MS});
+  // Tras un corte de conexión se reintenta junto con el panel para recuperar el nombre del operador.
+  const session=useQuery({queryKey:["delivery-partner-session"],queryFn:loadPartnerSession,retry:false,staleTime:60_000,refetchInterval:query=>query.state.error?POLL_MS*6:false});
+  const [leaving,setLeaving]=useState(false);
+  // Sesión vencida, cerrada en otro dispositivo o con contraseña temporal: vuelve al acceso.
+  const signedOut=needsLogin(panel.error)||needsPasswordChange(panel.error)||needsLogin(session.error);
+  useEffect(()=>{
+    if(!signedOut)return;
+    client.removeQueries({queryKey});
+    router.replace("/delivery-panel/login");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[signedOut]);
+  const logout=async()=>{
+    setLeaving(true);
+    try{await logoutPartner()}catch{/* La cookie se borra igual al volver al acceso. */}
+    client.clear();
+    router.replace("/delivery-panel/login");
+    router.refresh();
+  };
   const [alerts,setAlerts]=useStoredFlag("fudia-panel-alerts");
   const [confirming,setConfirming]=useState<Confirming|null>(null);
   const [nextCourier,setNextCourier]=useState("");
@@ -174,14 +197,18 @@ export function PartnerPanel({token}:{token:string}){
     notify({tone:feedback.tone==="warning"?"info":feedback.tone,title:feedback.title,message:feedback.message});
     void client.invalidateQueries({queryKey});
   };
-  const onError=(error:Error)=>{setConfirming(null);notify({tone:"danger",title:"No se pudo registrar",message:error.message})};
+  const onError=(error:Error)=>{
+    setConfirming(null);
+    if(needsLogin(error)||needsPasswordChange(error)){void client.invalidateQueries({queryKey});return}
+    notify({tone:"danger",title:"No se pudo registrar",message:error.message});
+  };
   const act=useMutation({
-    mutationFn:({order,action}:{order:PanelOrder;action:PanelAction})=>sendPanelAction(token,action,order.token),
+    mutationFn:({order,action}:{order:PanelOrder;action:PanelAction})=>sendPanelAction(action,order.token),
     onSuccess:(result,{order,action})=>done(result.outcome,order,action),
     onError,
   });
   const assign=useMutation({
-    mutationFn:({order,name}:{order:PanelOrder;name:string})=>assignCourier(token,order.token,name),
+    mutationFn:({order,name}:{order:PanelOrder;name:string})=>assignCourier(order.token,name),
     onSuccess:(result,{order})=>done(result.outcome,order),
     onError,
   });
@@ -194,14 +221,15 @@ export function PartnerPanel({token}:{token:string}){
     onAct={action=>act.mutate({order,action})}
     onAssign={name=>assign.mutate({order,name})}
     onConfirm={kind=>{setNextCourier("");setConfirming({order,kind})}}/>;
+  const operatorName=session.data?.operator.name;
   const soundToggle=<SoundToggle enabled={alerts} onToggle={()=>{if(!alerts)requestAlertPermission();setAlerts(!alerts)}}/>;
 
-  if(panel.isPending)return <main className="partner-panel-stage is-dispatch-app"><DispatchAppHeader sound={soundToggle}/><div className="partner-panel-content is-dispatch" aria-busy="true">
+  if(panel.isPending||signedOut)return <main className="partner-panel-stage is-dispatch-app"><DispatchAppHeader sound={soundToggle} operatorName={operatorName} onLogout={()=>void logout()} leaving={leaving}/><div className="partner-panel-content is-dispatch" aria-busy="true">
     <div className="partner-panel-body">
       <Skeleton height="var(--size-48)" radius="var(--radius-pill)"/><div className="dispatch-columns"><Skeleton height="var(--size-480)" radius="var(--radius-card)"/><Skeleton height="var(--size-480)" radius="var(--radius-card)"/></div><span className="sr-only">Cargando pedidos</span>
     </div>
   </div></main>;
-  if(!panel.data)return <main className="partner-panel-stage is-dispatch-app"><DispatchAppHeader sound={soundToggle}/><div className="partner-panel-content is-dispatch">
+  if(!panel.data)return <main className="partner-panel-stage is-dispatch-app"><DispatchAppHeader sound={soundToggle} operatorName={operatorName} onLogout={()=>void logout()} leaving={leaving}/><div className="partner-panel-content is-dispatch">
     <div className="partner-panel-body">
       <section className="panel"><ErrorState title="No pudimos abrir el panel" text={panel.error?.message} retrying={panel.isFetching} onRetry={()=>void panel.refetch()}/></section>
     </div>
@@ -211,7 +239,7 @@ export function PartnerPanel({token}:{token:string}){
   const live=!data.active?{label:"Pausado",tone:"paused"}:panel.isError?{label:"Reconectando…",tone:"offline"}:{label:"Conectado",tone:"active"};
   const target=confirming?.order;
   const changeName=courierNameValue(nextCourier);
-  return <main className="partner-panel-stage is-dispatch-app"><DispatchAppHeader partnerName={data.partnerName} sound={soundToggle}
+  return <main className="partner-panel-stage is-dispatch-app"><DispatchAppHeader partnerName={data.partnerName} operatorName={operatorName} onLogout={()=>void logout()} leaving={leaving} sound={soundToggle}
     status={<span className={`partner-panel-live is-${live.tone}`}><i aria-hidden="true"/>{live.label}</span>}/><div className="partner-panel-content is-dispatch">
     <div className="partner-panel-body">
       {!data.active&&<p className="partner-panel-banner" role="status"><Icon name="info" size={18}/>Tu cuenta está pausada: no recibirás pedidos nuevos. Puedes terminar los que ya tienes.</p>}

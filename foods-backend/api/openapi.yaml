@@ -328,52 +328,89 @@ paths:
       responses:
         "200": { description: Mesa activa, content: { application/json: { schema: { $ref: "#/components/schemas/PublicTableContext" } } } }
         "404": { description: QR inexistente, inactivo o deshabilitado }
-  /v1/public/delivery-panel/{token}:
-    parameters:
-      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" }, description: "Enlace privado del panel de la central; lo genera PostgreSQL y lo entrega Plataforma." }
+  /v1/delivery-partner/auth/login:
+    post:
+      operationId: loginDeliveryPartnerOperator
+      summary: Inicia la sesión de un operador de una central de Delivery Fudia
+      description: "El operador entra con su correo y contraseña. La sesión dura 12 horas y viaja en la cookie HttpOnly fudia_partner_session (separada de la sesión del restaurante). Cinco intentos fallidos seguidos bloquean el acceso 15 minutos. Con la contraseña temporal entregada por Plataforma, mustChangePassword=true y el panel responde password_change_required hasta cambiarla. Cache-Control: no-store."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorLoginInput" } } } }
+      responses:
+        "200": { description: Sesión abierta; fija la cookie fudia_partner_session, content: { application/json: { schema: { allOf: [{ $ref: "#/components/schemas/DeliveryOperatorSession" }, { type: object, required: [expiresIn], properties: { expiresIn: { type: integer, example: 43200 } } }] } } } }
+        "400": { description: invalid_request }
+        "401": { description: "invalid_credentials: correo o contraseña incorrectos" }
+        "403": { description: "delivery_operator_locked (5 intentos fallidos, 15 minutos) o delivery_operator_inactive" }
+  /v1/delivery-partner/auth/logout:
+    post:
+      operationId: logoutDeliveryPartnerOperator
+      summary: Cierra la sesión del operador y borra su cookie
+      security: [{ partnerSessionCookie: [] }]
+      responses:
+        "204": { description: Sesión cerrada }
+  /v1/delivery-partner/session:
+    get:
+      operationId: getDeliveryPartnerOperatorSession
+      summary: Operador y central de la sesión vigente
+      security: [{ partnerSessionCookie: [] }]
+      responses:
+        "200": { description: Sesión vigente, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorSession" } } } }
+        "401": { description: "unauthenticated o session_expired: sin sesión, vencida, revocada o con el operador desactivado" }
+  /v1/delivery-partner/password:
+    post:
+      operationId: changeDeliveryPartnerOperatorPassword
+      summary: Cambia la contraseña del operador de la sesión
+      description: "Exige la contraseña actual (la temporal en el primer ingreso). La nueva tiene de 8 caracteres a 72 bytes y debe ser distinta. Quita mustChangePassword y cierra las otras sesiones del operador; la actual sigue abierta."
+      security: [{ partnerSessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorPasswordInput" } } } }
+      responses:
+        "200": { description: Contraseña cambiada, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorSession" } } } }
+        "400": { description: "invalid_current_password o invalid_password" }
+        "401": { description: session_expired }
+  /v1/delivery-partner/panel:
     get:
       operationId: getDeliveryPartnerPanel
+      security: [{ partnerSessionCookie: [] }]
       summary: Panel web de la central de Delivery Fudia con sus pedidos ofrecidos y en reparto
-      description: "Sin sesión: el enlace privado identifica a la central. Devuelve las ofertas vigentes que esperan su respuesta, sus repartos en curso, los entregados y las entregas fallidas de las últimas 12 horas. Cuando cocina inicia la preparación, el pedido se ofrece a la vez a todas las centrales activas; la primera que acepta se lo queda. Mostrar una oferta por primera vez inicia sus 3 minutos, igual que enviarla por WhatsApp. Cache-Control: no-store."
+      description: "Con la sesión del operador: la sesión identifica a la central. Devuelve las ofertas vigentes que esperan su respuesta, sus repartos en curso, los entregados y las entregas fallidas de las últimas 12 horas. Cuando cocina inicia la preparación, el pedido se ofrece a la vez a todas las centrales activas; la primera que acepta se lo queda. Mostrar una oferta por primera vez inicia sus 3 minutos, igual que enviarla por WhatsApp. Cache-Control: no-store."
       responses:
         "200": { description: Panel de la central, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanel" } } } }
-        "404": { description: "delivery_panel_not_found: enlace inexistente o reemplazado" }
-  /v1/public/delivery-panel/{token}/actions:
-    parameters:
-      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+        "401": { description: "unauthenticated o session_expired" }
+        "403": { description: "password_change_required: el operador aún usa su contraseña temporal" }
+  /v1/delivery-partner/panel/actions:
     post:
       operationId: applyDeliveryPartnerPanelAction
+      security: [{ partnerSessionCookie: [] }]
       summary: Acepta, rechaza o libera una oferta, mantiene al motorizado o registra la entrega fallida desde el panel
-      description: "Solo vale para ofertas de la central del enlace; la de otra central responde not_found. Comparte reglas y bloqueos con los botones de WhatsApp y el enlace del motorizado. accept es exclusiva: la primera central gana y las demás reciben taken; repetirla da already_accepted. release (antes de recoger) invalida el enlace del motorizado, devuelve el envío al pedido y lo ofrece a las demás centrales en una vuelta nueva (la central que libera no lo vuelve a recibir automáticamente); con el pedido recogido da already_picked_up y con pagos registrados payment_conflict. keep registra que la central mantiene al motorizado en el nivel de alerta de recogida actual; Fudia nunca libera el pedido por tiempo. fail exige el reporte «No pude entregar» del motorizado (not_reported) y 10 minutos de espera desde ese reporte (too_soon); guarda datos y montos de la entrega fallida, cierra el pedido del local como entregado (ya cobró la comida) y cierra el reparto como cancelled sin estados nuevos. pickup y deliver siguen aceptándose por compatibilidad; ahora los registra el motorizado en su enlace. Repetir una acción aplicada devuelve el mismo resultado."
+      description: "Solo vale para ofertas de la central de la sesión; queda registrada con el operador que la hizo; la de otra central responde not_found. Comparte reglas y bloqueos con los botones de WhatsApp y el enlace del motorizado. accept es exclusiva: la primera central gana y las demás reciben taken; repetirla da already_accepted. release (antes de recoger) invalida el enlace del motorizado, devuelve el envío al pedido y lo ofrece a las demás centrales en una vuelta nueva (la central que libera no lo vuelve a recibir automáticamente); con el pedido recogido da already_picked_up y con pagos registrados payment_conflict. keep registra que la central mantiene al motorizado en el nivel de alerta de recogida actual; Fudia nunca libera el pedido por tiempo. fail exige el reporte «No pude entregar» del motorizado (not_reported) y 10 minutos de espera desde ese reporte (too_soon); guarda datos y montos de la entrega fallida, cierra el pedido del local como entregado (ya cobró la comida) y cierra el reparto como cancelled sin estados nuevos. pickup y deliver siguen aceptándose por compatibilidad; ahora los registra el motorizado en su enlace. Repetir una acción aplicada devuelve el mismo resultado."
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanelActionInput" } } } }
       responses:
         "200": { description: Resultado de la acción, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerActionResult" } } } }
         "400": { description: invalid_delivery_action }
-        "404": { description: delivery_panel_not_found }
-  /v1/public/delivery-panel/{token}/location:
-    parameters:
-      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+        "401": { description: "unauthenticated o session_expired" }
+        "403": { description: password_change_required }
+  /v1/delivery-partner/panel/location:
     post:
       operationId: shareDeliveryPartnerLocation
+      security: [{ partnerSessionCookie: [] }]
       summary: Guarda la ubicación del repartidor en los repartos en curso de la central
       description: "El punto viaja en el cuerpo, nunca en la URL. Se guarda en los repartos aceptados o recogidos de la central y el cliente lo ve en el seguimiento de su pedido mientras el reparto sigue en curso y la ubicación tiene menos de 15 minutos."
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierLocation" } } } }
       responses:
         "204": { description: Ubicación guardada }
         "400": { description: invalid_location }
-        "404": { description: delivery_panel_not_found }
-  /v1/public/delivery-panel/{token}/courier:
-    parameters:
-      - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" } }
+        "401": { description: "unauthenticated o session_expired" }
+        "403": { description: password_change_required }
+  /v1/delivery-partner/panel/courier:
     post:
       operationId: assignDeliveryCourier
+      security: [{ partnerSessionCookie: [] }]
       summary: Asigna o cambia el motorizado de un reparto aceptado y devuelve su enlace
       description: "La central escribe el nombre del motorizado antes de obtener el enlace. PostgreSQL genera courierToken. El mismo nombre conserva el enlace (doble clic). Otro nombre invalida el enlace anterior, genera uno nuevo y reinicia la espera de recogida, sin cambiar la etapa del reparto. El enlace vale hasta la entrega, la liberación, la entrega fallida o un cambio de motorizado."
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierInput" } } } }
       responses:
         "200": { description: "courier_assigned, o taken/cancelled/delivered/not_found sin cambios", content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierResult" } } } }
         "400": { description: "invalid_courier_name: 2 a 60 caracteres" }
-        "404": { description: delivery_panel_not_found }
+        "401": { description: "unauthenticated o session_expired" }
+        "403": { description: password_change_required }
   /v1/public/delivery-courier/{token}:
     parameters:
       - { in: path, name: token, required: true, schema: { type: string, pattern: "^[a-f0-9]{32}$" }, description: "Enlace del motorizado; lo genera PostgreSQL al asignarlo." }
@@ -2486,17 +2523,58 @@ paths:
         "200": { description: Estado guardado, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationDelivery" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { description: Empresa inexistente }
-  /v1/platform/delivery-partners/{id}/panel-link:
+  /v1/platform/delivery-partners/{id}/operators:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
-    post:
-      operationId: rotateDeliveryPartnerPanelLink
-      summary: Reemplaza el enlace privado del panel web de una central
-      description: "Solo administrador de plataforma. El enlace anterior deja de abrir el panel de inmediato."
+    get:
+      operationId: listDeliveryPartnerOperators
+      summary: Operadores de una central con acceso a su panel de reparto
+      description: "Solo administrador de plataforma. Nunca incluye contraseñas ni su hash."
       security: [{ sessionCookie: [] }]
       responses:
-        "200": { description: Enlace vigente, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryPartnerPanelLink" } } } }
+        "200": { description: Operadores, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/DeliveryOperator" } } } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { description: Central inexistente }
+        "404": { description: delivery_partner_not_found }
+    post:
+      operationId: createDeliveryPartnerOperator
+      summary: Da de alta a un operador con una contraseña temporal
+      description: "Solo administrador de plataforma. El correo es único entre todos los operadores. La contraseña temporal (12 caracteres sin 0/O/1/l/I) solo viaja en esta respuesta; el operador debe cambiarla en su primer ingreso. Cache-Control: no-store."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorInput" } } } }
+      responses:
+        "201": { description: Operador creado, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorCredentials" } } } }
+        "400": { description: invalid_delivery_operator }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: delivery_partner_not_found }
+        "409": { description: delivery_operator_email_taken }
+  /v1/platform/delivery-partners/{id}/operators/{operatorId}:
+    parameters:
+      - { $ref: "#/components/parameters/EntityId" }
+      - { in: path, name: operatorId, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateDeliveryPartnerOperator
+      summary: Edita nombre, correo o estado de un operador
+      description: "Solo administrador de plataforma. Desactivar cierra sus sesiones abiertas."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorInput" } } } }
+      responses:
+        "200": { description: Operador actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperator" } } } }
+        "400": { description: invalid_delivery_operator }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: "delivery_partner_not_found o delivery_operator_not_found" }
+        "409": { description: delivery_operator_email_taken }
+  /v1/platform/delivery-partners/{id}/operators/{operatorId}/password-reset:
+    parameters:
+      - { $ref: "#/components/parameters/EntityId" }
+      - { in: path, name: operatorId, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: resetDeliveryPartnerOperatorPassword
+      summary: Genera una contraseña temporal nueva para un operador
+      description: "Solo administrador de plataforma. La contraseña anterior deja de funcionar, se quita el bloqueo por intentos y se cierran sus sesiones. Cache-Control: no-store."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Contraseña temporal nueva, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryOperatorCredentials" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: "delivery_partner_not_found o delivery_operator_not_found" }
   /v1/platform/delivery-partners/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
@@ -2585,7 +2663,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: Conflicto por auto-desactivación o último administrador; plan_limit_reached si reactivar supera el máximo de usuarios activos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: No se pudo validar el usuario o la capacidad de la suscripción } } }
 components:
-  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key }, workerKey: { type: apiKey, in: header, name: X-Fudia-Worker-Key } }
+  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, partnerSessionCookie: { type: apiKey, in: cookie, name: fudia_partner_session, description: "Sesión de 12 horas del operador de una central de Delivery Fudia." }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key }, workerKey: { type: apiKey, in: header, name: X-Fudia-Worker-Key } }
   parameters:
     EntityId: { in: path, name: id, required: true, schema: { type: string, format: uuid } }
   responses:
@@ -2603,14 +2681,13 @@ components:
         label: { type: string, description: Nombre y sus ámbitos superiores }
     DeliveryPartner:
       type: object
-      required: [id, name, whatsappPhone, active, priority, panelToken, coverageCodes, coverageLabels, createdAt, updatedAt]
+      required: [id, name, whatsappPhone, active, priority, coverageCodes, coverageLabels, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         whatsappPhone: { type: string, pattern: "^[1-9][0-9]{7,14}$", description: "WhatsApp con código de país, solo dígitos." }
         active: { type: boolean }
         priority: { type: integer, minimum: 1, description: "Orden del listado global. Todas las centrales activas reciben la oferta simultáneamente; la primera que acepta se queda con el pedido." }
-        panelToken: { type: string, pattern: "^[a-f0-9]{32}$", description: "Enlace privado del panel web de la central (/v1/public/delivery-panel/{token}). Solo lo ve Plataforma." }
         coverageCodes: { type: array, deprecated: true, items: { type: string }, description: "Distritos históricos. No restringen la recepción de ofertas; todas las centrales activas reciben los pedidos." }
         coverageLabels: { type: array, deprecated: true, items: { type: string }, description: Nombres históricos en el mismo orden que coverageCodes }
         createdAt: { type: string, format: date-time }
@@ -2687,12 +2764,49 @@ components:
         pickedUpAt: { type: string, format: date-time }
         deliveredAt: { type: string, format: date-time }
         offers: { type: array, items: { type: object, required: [partnerName, round, priority, status, createdAt], properties: { partnerName: { type: string }, round: { type: integer }, priority: { type: integer }, status: { type: string, enum: [pending, accepted, rejected, expired, withdrawn] }, createdAt: { type: string, format: date-time }, expiresAt: { type: string, format: date-time }, respondedAt: { type: string, format: date-time } } } }
-    DeliveryPartnerPanelLink:
+    DeliveryOperator:
       type: object
-      required: [partnerId, panelToken]
+      required: [id, partnerId, fullName, email, active, mustChangePassword, createdAt]
       properties:
+        id: { type: string, format: uuid }
         partnerId: { type: string, format: uuid }
-        panelToken: { type: string, pattern: "^[a-f0-9]{32}$" }
+        fullName: { type: string, minLength: 2, maxLength: 80 }
+        email: { type: string, format: email, description: En minúsculas; es su usuario de acceso }
+        active: { type: boolean }
+        mustChangePassword: { type: boolean, description: Aún usa la contraseña temporal entregada por Plataforma }
+        lastLoginAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    DeliveryOperatorInput:
+      type: object
+      required: [fullName, email]
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 80 }
+        email: { type: string, format: email, maxLength: 180 }
+        active: { type: boolean, description: Solo al editar }
+    DeliveryOperatorCredentials:
+      type: object
+      required: [operator, temporaryPassword]
+      properties:
+        operator: { $ref: "#/components/schemas/DeliveryOperator" }
+        temporaryPassword: { type: string, minLength: 12, maxLength: 12, description: Se muestra una sola vez }
+    DeliveryOperatorLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    DeliveryOperatorPasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 8, description: Hasta 72 bytes; distinta de la actual }
+    DeliveryOperatorSession:
+      type: object
+      required: [operator, partner]
+      properties:
+        operator: { type: object, required: [name, email, mustChangePassword], properties: { name: { type: string }, email: { type: string, format: email }, mustChangePassword: { type: boolean } } }
+        partner: { type: object, required: [name, active], properties: { name: { type: string }, active: { type: boolean } } }
     DeliveryPartnerPanel:
       type: object
       required: [partnerName, active, orders, failedDeliveries]

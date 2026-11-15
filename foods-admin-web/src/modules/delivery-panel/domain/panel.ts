@@ -156,3 +156,13 @@ export function dialablePhone(phone:string){
   const digits=phone.replace(/[^\d+]/g,"");
   return /^\+?\d{6,15}$/.test(digits)?digits:"";
 }
+
+/** Problema de la contraseña nueva del operador, con el mismo criterio del backend (8 caracteres). */
+export function passwordChangeProblem(current:string,next:string,repeat:string){
+  if(!current)return "Ingresa la contraseña temporal.";
+  if(Array.from(next).length<8)return "La contraseña debe tener al menos 8 caracteres.";
+  if(new TextEncoder().encode(next).length>72)return "La contraseña es demasiado larga.";
+  if(next===current)return "La contraseña nueva debe ser distinta de la temporal.";
+  if(next!==repeat)return "Las contraseñas no coinciden.";
+  return "";
+}

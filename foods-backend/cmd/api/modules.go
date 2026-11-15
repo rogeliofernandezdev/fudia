@@ -129,7 +129,8 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	concierge.WithDirectory(conciergepg.New(db), platform, work)
 	concierge.WithDeliveryTracking(dispatcher)
 	return httpapi.NewWithHandlers(httpapi.Handlers{
-		Delivery:               deliveryhttp.New(deliveryapp.NewPartners(deliveryRepo, work), dispatcher),
+		Delivery: deliveryhttp.New(deliveryapp.NewPartners(deliveryRepo, work), dispatcher).
+			WithOperators(deliveryapp.NewOperators(deliveryRepo, work, credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
 		Tips:                   billinghttp.NewTips(tips),
 		SpecialTaxes:           orghttp.NewSpecialTaxes(orgapp.NewSpecialTaxes(taxRepository, audit)),

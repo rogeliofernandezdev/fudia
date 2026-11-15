@@ -17,7 +17,10 @@ Delivery Fudia se gestiona globalmente:
 
 - La plataforma registra las centrales de reparto en `delivery_partners`: nombre,
   WhatsApp con código de país (solo dígitos, único) y `priority`, el orden global.
-  Una central nueva queda al final.
+  Una central nueva queda al final. Sus operadores (`delivery_partner_operators`,
+  correo único y contraseña bcrypt) entran a su panel con sesiones de 12 horas
+  (`delivery_partner_sessions`, solo el hash del token); sus acciones quedan en
+  `delivery_partner_operator_actions` (migración 000128).
 - La plataforma activa Delivery Fudia por empresa en
   `organization_delivery_settings.enabled`. Todos los locales de la empresa lo
   usan. Sin fila equivale a delivery propio: Fudia solo recibe el pedido.

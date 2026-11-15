@@ -25,32 +25,32 @@ export function OrderDetails({order,courier}:{order:PanelOrder;courier:CourierPo
   const delivered=order.stage==="delivered";
   return <>
     <ol className="partner-panel-route">
-      {!delivered&&<li className="partner-panel-stop is-linked">
-        <span className="partner-panel-stop-mark"><IconTile name="store" tone="primary" size="sm"/></span>
+      {!delivered&&<li className="partner-panel-stop is-linked is-pickup">
+        <span className="partner-panel-stop-mark"><IconTile name="store" tone="indigo" appearance="vivid"/></span>
         <div className="partner-panel-stop-copy">
           <p className="partner-panel-stop-label">Recoge en</p>
           <b>{order.locationName}</b>
           {order.locationAddress&&<span>{order.locationAddress}</span>}
-          {pickupUrl&&<a href={pickupUrl} target="_blank" rel="noreferrer noopener">Cómo llegar</a>}
+          {pickupUrl&&<a href={pickupUrl} target="_blank" rel="noreferrer noopener"><Icon name="arrowUpRight" size={16}/>Cómo llegar</a>}
         </div>
       </li>}
-      <li className="partner-panel-stop">
-        <span className="partner-panel-stop-mark"><IconTile name="mapPin" tone="primary" size="sm"/></span>
+      <li className="partner-panel-stop is-drop">
+        <span className="partner-panel-stop-mark"><IconTile name="mapPin" tone="brand" appearance="vivid"/></span>
         <div className="partner-panel-stop-copy">
           <p className="partner-panel-stop-label">Entrega en</p>
           <b>{order.address||"Dirección por confirmar"}</b>
           {order.reference&&<span>Ref.: {order.reference}</span>}
-          {!delivered&&order.distanceKm!==null&&<span>{order.distanceKm.toFixed(1)} km desde el local</span>}
-          {!delivered&&dropUrl&&<a href={dropUrl} target="_blank" rel="noreferrer noopener">Cómo llegar</a>}
+          {!delivered&&order.distanceKm!==null&&<span className="partner-panel-distance"><Icon name="route" size={14}/>{order.distanceKm.toFixed(1)} km desde el local</span>}
+          {!delivered&&dropUrl&&<a href={dropUrl} target="_blank" rel="noreferrer noopener"><Icon name="arrowUpRight" size={16}/>Cómo llegar</a>}
         </div>
       </li>
     </ol>
     <div className="partner-panel-contact">
-      <IconTile name="user" tone="neutral" size="sm"/>
+      <IconTile name="user" tone="primary" appearance="vivid"/>
       <div>
         <p>Cliente</p>
         <b>{order.customerName||"Sin nombre"}</b>
-        {!delivered&&(phone?<a className="partner-panel-link" href={`tel:${phone}`}><Icon name="phone" size={16}/>Llamar al {order.customerPhone}</a>:order.customerPhone&&<span>{order.customerPhone}</span>)}
+        {!delivered&&(phone?<a className="partner-panel-call" href={`tel:${phone}`}><Icon name="phone" size={16}/>Llamar al {order.customerPhone}</a>:order.customerPhone&&<span>{order.customerPhone}</span>)}
         {delivered&&order.deliveredAt&&<span>Entregado a las {hour(order.deliveredAt)}</span>}
       </div>
     </div>
@@ -63,7 +63,7 @@ export function OrderDetails({order,courier}:{order:PanelOrder;courier:CourierPo
       <div className="partner-panel-money-main"><dt>Cobras al cliente</dt><dd>{money(order.total)}</dd></div>
     </dl>
     {!delivered&&(origin||destination)&&<div className="partner-panel-map">
-      <button type="button" className="partner-panel-link" aria-expanded={showMap} onClick={()=>setShowMap(!showMap)}><Icon name="route" size={16}/>{showMap?"Ocultar mapa":"Ver mapa"}</button>
+      <button type="button" className="partner-panel-link is-map" aria-expanded={showMap} onClick={()=>setShowMap(!showMap)}><Icon name="route" size={16}/>{showMap?"Ocultar mapa":"Ver mapa"}</button>
       {showMap&&<RouteMap origin={origin} destination={destination} courier={courier?{lat:courier.latitude,lng:courier.longitude}:null} label={`Ruta del pedido ${order.orderCode}`}/>}
     </div>}
   </>;

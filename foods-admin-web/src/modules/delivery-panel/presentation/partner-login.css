@@ -1,0 +1,3 @@
+/* Acceso de la central: reutiliza la tarjeta del acceso de la aplicación (login.css). */
+.partner-login-page .admin-auth-heading p{margin:0;color:var(--ink-500);font-size:var(--font-size-sm);line-height:var(--line-height-normal)}
+.partner-login-rule{margin:calc(var(--space-2)*-1) 0 0;color:var(--ink-500);font-size:var(--font-size-xs);line-height:var(--line-height-snug)}

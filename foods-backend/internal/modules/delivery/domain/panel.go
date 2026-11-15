@@ -1,9 +1,7 @@
 package domain
 
-import "regexp"
-
-// Panel web del proveedor de Delivery Fudia. La central abre su panel con un
-// enlace privado: ve los pedidos que se le ofrecen, confirma la atención, la
+// Panel web del proveedor de Delivery Fudia. Los operadores de la central entran
+// con su cuenta: ve los pedidos que se le ofrecen, confirma la atención, la
 // recogida y la entrega, y comparte la ubicación del repartidor.
 
 // DispatchDelivered: la central confirmó la entrega al cliente.
@@ -32,11 +30,6 @@ const PanelHistoryHours = 12
 // CourierLocationMaxAgeMinutes: una ubicación más antigua ya no se muestra al cliente.
 const CourierLocationMaxAgeMinutes = 15
 
-var panelTokenPattern = regexp.MustCompile(`^[a-f0-9]{32}$`)
-
-// ValidPanelToken valida la forma del enlace privado antes de consultar la base.
-func ValidPanelToken(token string) bool { return panelTokenPattern.MatchString(token) }
-
 // ValidPanelAction acepta las acciones del panel: las de la oferta, la entrega
 // (compatibles con versiones anteriores), liberar, mantener y entrega fallida.
 func ValidPanelAction(action string) bool {
@@ -46,12 +39,6 @@ func ValidPanelAction(action string) bool {
 // WithPartner indica si el reparto está en manos de una central.
 func WithPartner(status string) bool {
 	return status == DispatchAccepted || status == DispatchPickedUp || status == DispatchDelivered
-}
-
-// PanelLink es el enlace privado del panel de una central.
-type PanelLink struct {
-	PartnerID  string `json:"partnerId"`
-	PanelToken string `json:"panelToken"`
 }
 
 // PanelOrder es un pedido ofrecido o en reparto, con lo que la central

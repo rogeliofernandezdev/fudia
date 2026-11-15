@@ -71,14 +71,6 @@ func TestPanelActionsAndTokens(t *testing.T) {
 	if ValidAction(ActionDeliver) || ValidPanelAction("cancel") {
 		t.Fatal("unexpected action accepted")
 	}
-	if !ValidPanelToken("0123456789abcdef0123456789abcdef") {
-		t.Fatal("valid panel token rejected")
-	}
-	for _, token := range []string{"", "0123456789ABCDEF0123456789ABCDEF", "0123456789abcdef0123456789abcde", "0123456789abcdef0123456789abcdef0", "../0123456789abcdef0123456789abc"} {
-		if ValidPanelToken(token) {
-			t.Fatalf("panel token %q accepted", token)
-		}
-	}
 }
 
 func TestWithPartnerKeepsTheFeeAfterDelivery(t *testing.T) {

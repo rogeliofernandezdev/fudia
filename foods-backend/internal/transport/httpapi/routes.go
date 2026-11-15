@@ -23,12 +23,20 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("PATCH /v1/platform/delivery-partners/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.UpdatePartner))))
 		// Orden global: la primera central recibe primero cada pedido de todos los locales.
 		m.Handle("PUT /v1/platform/delivery-partners/order", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.ReorderPartners))))
-		m.Handle("POST /v1/platform/delivery-partners/{id}/panel-link", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.RotatePanelLink))))
-		// Panel web de la central: el enlace privado de la ruta la identifica.
-		m.Handle("GET /v1/public/delivery-panel/{token}", http.HandlerFunc(d.Panel))
-		m.Handle("POST /v1/public/delivery-panel/{token}/actions", http.HandlerFunc(d.PanelAction))
-		m.Handle("POST /v1/public/delivery-panel/{token}/location", http.HandlerFunc(d.PanelLocation))
-		m.Handle("POST /v1/public/delivery-panel/{token}/courier", http.HandlerFunc(d.PanelCourier))
+		// Operadores de cada central: Plataforma los da de alta y restablece su contraseña.
+		m.Handle("GET /v1/platform/delivery-partners/{id}/operators", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.ListOperators))))
+		m.Handle("POST /v1/platform/delivery-partners/{id}/operators", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.CreateOperator))))
+		m.Handle("PATCH /v1/platform/delivery-partners/{id}/operators/{operatorId}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.UpdateOperator))))
+		m.Handle("POST /v1/platform/delivery-partners/{id}/operators/{operatorId}/password-reset", a.auth(a.requirePlatformAdmin(http.HandlerFunc(d.ResetOperatorPassword))))
+		// Panel web de la central: el operador entra con su cuenta (sesión en cookie propia).
+		m.Handle("POST /v1/delivery-partner/auth/login", http.HandlerFunc(d.PartnerLogin))
+		m.Handle("POST /v1/delivery-partner/auth/logout", http.HandlerFunc(d.PartnerLogout))
+		m.Handle("GET /v1/delivery-partner/session", d.OperatorAuth(http.HandlerFunc(d.PartnerSession)))
+		m.Handle("POST /v1/delivery-partner/password", d.OperatorAuth(http.HandlerFunc(d.PartnerPassword)))
+		m.Handle("GET /v1/delivery-partner/panel", d.OperatorReady(http.HandlerFunc(d.Panel)))
+		m.Handle("POST /v1/delivery-partner/panel/actions", d.OperatorReady(http.HandlerFunc(d.PanelAction)))
+		m.Handle("POST /v1/delivery-partner/panel/location", d.OperatorReady(http.HandlerFunc(d.PanelLocation)))
+		m.Handle("POST /v1/delivery-partner/panel/courier", d.OperatorReady(http.HandlerFunc(d.PanelCourier)))
 		m.Handle("GET /v1/public/delivery-courier/{token}", http.HandlerFunc(d.Courier))
 		m.Handle("POST /v1/public/delivery-courier/{token}/actions", http.HandlerFunc(d.CourierAction))
 		m.Handle("POST /v1/public/delivery-courier/{token}/location", http.HandlerFunc(d.CourierLocation))

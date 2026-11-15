@@ -84,10 +84,8 @@ type Partner struct {
 	CoverageLabels []string `json:"coverageLabels"`
 	// Priority ordena el listado; las ofertas se reciben simultáneamente.
 	Priority int `json:"priority"`
-	// PanelToken abre el panel web de la central; solo lo ve Plataforma.
-	PanelToken string `json:"panelToken"`
-	CreatedAt  string `json:"createdAt"`
-	UpdatedAt  string `json:"updatedAt"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
 }
 
 // PartnerInput crea o edita una central.

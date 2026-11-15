@@ -27,7 +27,12 @@ confirmación, los niveles de la alerta de recogida y la decisión pendiente, la
 cuenta regresiva de la entrega fallida, qué suena en el panel y la respuesta de
 cada resultado nuevo. Comprueba además que la central ya no recoge, entrega ni
 comparte ubicación, y que `/delivery-courier/{token}` es privado, con carga, error y
-estado final. `order-delivery.test.mjs` cubre que un delivery con central
+estado final. También cubre el acceso de la central: la página exige la cookie
+`fudia_partner_session`, el BFF reenvía y devuelve la cookie HttpOnly, el
+panel vuelve al acceso ante 401 o contraseña temporal, las reglas de la
+contraseña nueva (`passwordChangeProblem`) y la pestaña «Operadores» de
+Plataforma (contraseña temporal visible una sola vez, restablecer con
+confirmación y activar/desactivar). `order-delivery.test.mjs` cubre que un delivery con central
 asignada, listo o en camino, no muestra «Cancelar», sin cambiar el delivery
 propio; `delivery-fudia.test.mjs`, el aviso `delivery_pickup_delayed`.
 

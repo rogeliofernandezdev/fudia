@@ -472,10 +472,17 @@ peticiones adicionales ni geocodificación en el cliente.
 
 ## Panel de reparto y enlace del motorizado
 
-Ambas pantallas son públicas y usan el proxy `/api/public/[...path]`, sin sesión:
-`delivery-panel/{token}` (central) y `delivery-courier/{courierToken}`
-(motorizado). TanStack Query consulta cada 5 s (30 s tras un error), también en
-segundo plano: `["delivery-partner-panel",token]` y `["delivery-courier",token]`.
+El panel de la central (`/delivery-panel`) exige la sesión de un operador: el
+proxy `/api/delivery-partner/[...path]` reenvía solo la cookie HttpOnly
+`fudia_partner_session` a `/v1/delivery-partner/*`, devuelve la que fije el
+backend y la borra ante un 401 o al cerrar sesión, aunque el backend no responda. La página redirige a `/delivery-panel/login` sin
+cookie; en el cliente, un 401 o `password_change_required` (`needsLogin`,
+`needsPasswordChange`) también vuelven al acceso. `/delivery-panel/{token}`
+(enlaces antiguos) redirige al acceso. El enlace del motorizado
+`delivery-courier/{courierToken}` sigue público por `/api/public/[...path]`.
+TanStack Query consulta cada 5 s (30 s tras un error), también en segundo plano:
+`["delivery-partner-panel"]`, `["delivery-partner-session"]` (nombre del
+operador, 60 s) y `["delivery-courier",token]`.
 Cada acción invalida su consulta y muestra el resultado (`outcome`) con
 `outcomeFeedback`; el navegador no calcula estados ni montos.
 

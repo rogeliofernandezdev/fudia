@@ -2832,11 +2832,21 @@ se gestiona globalmente (decisión del 2026-11-06):
   en el menú de plataforma). Usa el mismo patrón que Países y WhatsApp, con una
   barra superior que explica la oferta simultánea y «Nueva central»:
   - Tabla «ORDEN | CENTRAL | TELÉFONO | ESTADO | ACCIONES».
-  - Acción de fila «Panel de reparto» (`IconButton` `link`): modal de solo
-    lectura (sin pie), con identidad de la central y aviso de acceso sin contraseña.
-    No muestra la URL. «Copiar enlace» azul y «Abrir panel» marino usan
-    `appearance="strong"`; «Generar enlace nuevo» queda en una sección separada
-    «Renovar acceso» (`danger-outline` fuerte con `ConfirmDialog`).
+  - Sin enlace privado (2026-11-15): «Editar central» tiene `Tabs` «Datos»
+    (`motorbike`) y «Operadores» (`users`) bajo la cabecera; «Nueva central»
+    solo muestra Datos y, al guardar, sigue en la ficha en «Operadores».
+    «Operadores» (`DeliveryPartnerOperators`, sin pie: cada acción guarda al
+    instante): texto breve y «Agregar operador» (secundario fuerte), alta en
+    línea en franja `primary-50` con Nombre y Correo, y lista con filete:
+    `row-icon` usuario, nombre, correo y «Último ingreso: …»/«Aún no ingresa»,
+    `Tag` neutro «Clave temporal» mientras no la cambie, `Status active`
+    «Activo/Inactivo», `IconButton` `key` «Nueva contraseña temporal» (con
+    `ConfirmDialog` danger) y activar/desactivar (con `ConfirmDialog`). Carga con
+    `Skeleton`, error con `ErrorState` y vacío «Sin operadores».
+  - Al crear o restablecer, el modal «Contraseña temporal» muestra operador,
+    correo y dirección de acceso, la contraseña en una franja `primary-600` con
+    texto blanco monoespaciado de 28 px, y «Se muestra una sola vez». Pie:
+    «Listo» y «Copiar acceso» (copia dirección, correo y contraseña).
   - La columna Orden muestra la posición en cifras tabulares, con «Subir en el
     orden» y «Bajar en el orden» (`IconButton` chevron rotado). Cada cambio
     guarda al instante el orden completo. Una central nueva queda al final.
@@ -3405,8 +3415,9 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Panel de reparto del proveedor (2026-11-14)
 
-`/delivery-panel/{token}` (`src/modules/delivery-panel`): pantalla pública, sin sesión
-ni menú, para el proveedor de Delivery Fudia. Sigue las plantillas de la
+`/delivery-panel` (`src/modules/delivery-panel`): pantalla sin menú para el
+proveedor de Delivery Fudia; desde 2026-11-15 exige la sesión de un operador
+(«Acceso de la central» abajo). Sigue las plantillas de la
 aplicación: cabecera de app con `PageHeader`, avisos integrados y paneles por sección.
 Mobile-first, validada a 390 y 427 px; todos los controles miden al menos 44 px y
 las acciones principales 48 px.
@@ -3478,12 +3489,22 @@ las acciones principales 48 px.
   `Status` suave (Nuevo `orange`, Por recoger `blue`, En camino `navy` como el
   pedido, Entregado `green`); la oferta entra con la gramática de entrada del
   sistema (12 px abajo y `scale(.98)`) y muestra la cuenta regresiva en franja
-  `warning-100` con la cifra en 22 px/800. La ruta es una línea de tiempo:
-  «Recoge en» y «Entrega en» con `IconTile` y conector de 2 px `line-strong`,
-  «Cómo llegar» por parada y el cliente en su franja `cloud-25` con «Llamar al …».
-  Productos con notas sobre `cloud-25`; «Pagas al local» y «Cobras al cliente» en
-  panel `cloud-25`, con la cifra del cliente en 22 px/800; «Ver mapa» con
-  `RouteMap`.
+  `warning-100` con la cifra en 22 px/800. `OrderDetails` (compartido con el
+  enlace del motorizado) usa colores de dominio, blanco sobre relleno vivo
+  (2026-11-15): la ruta es una línea de tiempo con «Recoge en» en índigo
+  (`IconTile` vivo `indigo`, etiqueta `indigo-700`, como «Por recoger») y
+  «Entrega en» en verde (`IconTile` vivo `brand`, etiqueta `brand-700`, canal
+  delivery), unidos por un conector de 2 px degradado `indigo-600` → `brand-600`.
+  Dirección en 16 px bold; la distancia es una etiqueta neutra (`cloud-100`,
+  icono `route`). «Cómo llegar» es una píldora sólida de 44 px del tono de su
+  parada (`indigo-600` / `brand-600`, icono `arrowUpRight`, sin subrayado). El
+  cliente va en franja `primary-50` con borde `primary-100`, `IconTile` vivo
+  `primary` y «Llamar al …» como píldora sólida `primary-600`. Productos en
+  bloque blanco con filete y la cantidad en insignia sólida `warning-500`
+  (naranja de Productos); la nota del cliente en franja `warning-50`. Montos en
+  dos fichas: «Pagas al local» `indigo-100` y «Cobras al cliente» sólida
+  `brand-600` con la cifra blanca en 22 px/800 (etiquetas en una línea). «Ver
+  mapa» es una píldora `primary-100` con `RouteMap`.
 - Oferta: «Rechazar» (secundario, con `ConfirmDialog`) y «Aceptar» (primario).
 - En curso, sin botones de recoger ni entregar (los registra el motorizado):
   asignación al inicio del detalle, antes de la ruta, y avance en una nota
@@ -3516,14 +3537,36 @@ las acciones principales 48 px.
 - Cada respuesta del backend se muestra con `FeedbackProvider` y su texto; nada
   se infiere en el navegador.
 
+### Acceso de la central (2026-11-15)
+
+`/delivery-panel/login` (`PartnerLogin`) reutiliza la tarjeta del acceso de la
+aplicación (`login.css`: fondo marino, franja verde-azul, marca, campos con
+icono de 44 px y botón azul a todo el ancho). Título «Panel de reparto» con
+«Ingresa con la cuenta de tu central.», Correo y Contraseña (mostrar/ocultar) e
+«Ingresar». Con la contraseña temporal pasa, en la misma tarjeta, a «Crea tu
+contraseña»: «{nombre}, reemplaza la contraseña temporal…», Contraseña nueva,
+Repite la contraseña (y la temporal solo si se recargó la página), la regla
+«Mínimo 8 caracteres, distinta de la temporal.» y «Guardar y entrar». El pie
+dice «¿Olvidaste tu contraseña? Pide a Fudia una temporal.». Errores en la
+franja `danger-50` del acceso; carga con `FullScreenLoader`.
+
+En el panel, la descripción de la cabecera es «{central} · {operador}» y la
+cabecera suma «Salir» (`logout`, control translúcido de 44 px como «Avisos con
+sonido»). Hasta 600 px queda solo el icono (44×44, nombre accesible «Cerrar
+sesión de {operador}») para que «Avisos con sonido» siga en una línea. Una
+sesión vencida o cerrada vuelve al acceso sin mensaje de error.
+
 ### Enlace del motorizado (2026-11-14)
 
 `/delivery-courier/{token}` (mismo módulo, `CourierPanel`): pantalla pública de un solo
-reparto que la central genera con el nombre del motorizado. Misma plantilla:
-`PageHeader` con el nombre del motorizado y «Motorizado · {central}», barra de
-contexto con el interruptor «Compartir ubicación» (solo con el reparto por
-recoger o en camino; mantiene la pantalla encendida) y el pedido como panel del
-sistema: cabecera con el código, la central y `Status`, y el contenido con
+reparto que la central genera con el nombre del motorizado. Cabecera fija
+`navigation-900` como la central (`dispatch-app-header`, ancho de 860 px) con
+`IconTile` vivo `motorbike`, el nombre del motorizado y «Motorizado · {central}»;
+barra de contexto con el interruptor «Compartir ubicación» (solo con el reparto
+por recoger o en camino; mantiene la pantalla encendida), que encendido se
+rellena en `primary-600` con texto e icono blancos y pista blanca; y el pedido
+como panel del sistema: cabecera con el código, la central y `Status` sólido
+(estado operativo del pedido), y el contenido con
 `OrderDetails` y una acción primaria: «Recogí el
 pedido» (deshabilitada con el motivo hasta que cocina termina y caja confirma el
 pago) y luego «Entregado» (`ConfirmDialog` success). En camino, «No pude
