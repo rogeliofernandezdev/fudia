@@ -134,19 +134,6 @@ func (h *Handler) PanelAction(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, out, err)
 }
 
-func (h *Handler) PanelLocation(w http.ResponseWriter, r *http.Request) {
-	var in domain.CourierLocation
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&in) != nil {
-		shared.Fail(w, http.StatusBadRequest, "invalid_location", "La ubicación no es válida.")
-		return
-	}
-	if err := h.dispatcher.PanelLocation(r.Context(), application.PanelPartnerOf(operatorFrom(r.Context())), in); err != nil {
-		shared.WriteError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
 // PanelCourier asigna o cambia el motorizado de un reparto y devuelve su enlace.
 func (h *Handler) PanelCourier(w http.ResponseWriter, r *http.Request) {
 	var in domain.CourierInput

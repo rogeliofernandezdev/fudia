@@ -194,6 +194,8 @@ test("acceso de la central: correo y contraseña, y la temporal se reemplaza ant
  assert.match(login,/<h1 id="partner-login-title">Crea tu contraseña<\/h1>/);
  assert.match(login,/session\.operator\.mustChangePassword/);
  assert.doesNotMatch(login,/localStorage|sessionStorage/,"la sesión vive solo en la cookie HttpOnly");
+ assert.match(login,/queryClient\.setQueryData\(\["delivery-partner-session"\],session\)/,"el panel reutiliza la sesión del acceso sin pedirla otra vez");
+ assert.match(login,/enter\(await changePartnerPassword\(current,next\)\)/);
 });
 
 test("Plataforma: la central se edita con pestañas Datos y Operadores; la contraseña temporal se ve una vez",()=>{

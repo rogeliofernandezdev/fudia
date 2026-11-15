@@ -95,9 +95,10 @@ propio, sin WhatsApp: `/delivery-panel` en foods-admin-web. Desde 2026-11-15
   `payment_pending` sin modificar pedido ni despacho, también desde WhatsApp y si
   el local ya lo puso en camino. La validación usa el bloqueo del pedido compartido
   con cobros y devoluciones. Repetir una recogida ya aplicada conserva su resultado.
-- `POST …/location`: guarda la última ubicación del repartidor
-  (`delivery_dispatches.courier_*`) en los repartos `accepted` y `picked_up` de
-  la central. El punto viaja en el cuerpo, nunca en la URL.
+- La ubicación del repartidor (`delivery_dispatches.courier_*`) la comparte el
+  motorizado desde su enlace (`POST /v1/public/delivery-courier/{token}/location`).
+  El endpoint de ubicación de la central se retiró el 2026-11-15 (migración 000129):
+  la interfaz ya no lo usaba.
 
 `delivered` conserva el envío con la central (`WithPartner`): el barrido no lo
 devuelve al pedido. La entrega confirmada por la central no tiene usuario del
@@ -224,10 +225,34 @@ vale para un solo reparto y vence solo.
   (`POST /v1/delivery-partner/password`: actual + nueva de 8 caracteres a 72
   bytes, distinta). El panel y sus acciones responden 403
   `password_change_required` hasta entonces. Cambiarla cierra sus otras sesiones.
-- **Panel.** `GET /v1/delivery-partner/panel` y `POST …/panel/actions`,
-  `…/panel/location` y `…/panel/courier` toman la central de la sesión
+- **Panel.** `GET /v1/delivery-partner/panel` y `POST …/panel/actions` y
+  `…/panel/courier` toman la central de la sesión
   (`OperatorReady`); sin sesión responden 401 y el BFF borra la cookie. Cada
   acción aplicada queda en `delivery_partner_operator_actions` (operador, acción,
   resultado y código del pedido); el registro no interrumpe la acción si falla.
 - **Cerrar sesión.** `POST /v1/delivery-partner/auth/logout` revoca la sesión y
   borra la cookie.
+- **Limpieza.** El barrido de la API (cada 20 s) borra, como mucho una vez por
+  hora, las sesiones vencidas o revocadas hace más de 30 días
+  (`delivery_partner_sessions_expires_idx`).
+
+## Rendimiento del panel (migración 000129)
+
+El panel se consulta cada 5 s por operador conectado. Las ofertas aceptadas
+conservan `status='accepted'` para siempre, así que la consulta no parte de las
+ofertas: `panelOrdersQuery` une con `UNION ALL` tres partes, cada una con su
+índice parcial, y ordena el resultado (ofertas, en curso, entregados):
+
+- ofertas pendientes de la central: `delivery_dispatch_offers_partner_pending_idx`
+  (`partner_id` donde `status='pending'`);
+- repartos en curso: `delivery_dispatches_partner_active_idx`
+  (`accepted_partner_id` donde `status IN ('accepted','picked_up')`);
+- entregados de las últimas 12 horas: `delivery_dispatches_partner_delivered_idx`
+  (`accepted_partner_id, delivered_at DESC` donde `status='delivered'`).
+
+Medido el 2026-11-15 con historial sintético (60 013 despachos, 300 013 ofertas,
+5 centrales, 6 meses): antes, un seq scan sobre todos los despachos de la
+plataforma (11,2 ms y 2 583 bloques por consulta, creciente con el historial);
+después, solo lecturas por índice (3,2 ms y 654 bloques, constante con el
+historial). El inicio de sesión crea la sesión y devuelve operador y central en
+una sola consulta.

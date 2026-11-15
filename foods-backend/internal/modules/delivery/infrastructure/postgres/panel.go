@@ -34,7 +34,7 @@ func (r *Repository) StartOfferTimers(ctx context.Context, partnerID string) err
 // panelOrderSelect arma un pedido del panel con su oferta, despacho, local y
 // motorizado. Lo comparten el panel de la central y el enlace del motorizado.
 const panelOrderSelect = `
-		SELECT f.action_token::text,
+		SELECT f.action_token::text AS token,
 		       CASE WHEN f.status='pending' THEN 'offer'
 		            WHEN d.status='delivered' OR o.status='entregado' THEN 'delivered'
 		            WHEN d.status='picked_up' THEN 'picked_up'
@@ -51,7 +51,7 @@ const panelOrderSelect = `
 		       COALESCE(fp.currency_symbol,''),o.subtotal::text,
 		       COALESCE(d.partner_fee,o.delivery_fee)::text,(o.subtotal+COALESCE(d.partner_fee,o.delivery_fee))::text,
 		       CASE WHEN f.status='pending' THEN GREATEST(0,ceil(EXTRACT(EPOCH FROM f.expires_at-now())))::int ELSE 0 END,
-		       f.created_at,d.accepted_at,d.picked_up_at,d.delivered_at,
+		       f.created_at AS offer_created_at,d.accepted_at,d.picked_up_at,d.delivered_at,
 		       COALESCE(d.courier_name,''),COALESCE(d.courier_token,''),
 		       CASE WHEN f.status='accepted' AND d.status='accepted' AND o.status='listo' AND d.ready_notified_at IS NOT NULL
 		            THEN GREATEST(0,floor(EXTRACT(EPOCH FROM now()-` + pickupWaitSinceSQL + `)))::int ELSE 0 END,
@@ -104,20 +104,33 @@ func scanPanelOrders(rows pgx.Rows) ([]domain.PanelOrder, error) {
 // PanelOrders lista, para una central: las ofertas vigentes que aún esperan su
 // respuesta, sus repartos en curso y los entregados en las últimas horas.
 func (r *Repository) PanelOrders(ctx context.Context, partnerID string) ([]domain.PanelOrder, error) {
-	rows, err := r.db(ctx).Query(ctx, panelOrderSelect+`
-		WHERE f.partner_id=$1 AND f.round=d.round AND (
-		  (f.status='pending' AND d.status='searching' AND f.expires_at>now() AND p.active AND `+partnerLocationEligibilitySQL+`
-		     AND o.paid_amount=0 AND o.completed_at IS NULL AND o.status IN ('preparando','listo'))
-		  OR (f.status='accepted' AND d.accepted_partner_id=f.partner_id AND (
-		       (d.status IN ('accepted','picked_up') AND o.status<>'cancelado'
-		          AND (o.status<>'entregado' OR d.updated_at>now()-make_interval(hours => $3)))
-		       OR (d.status='delivered' AND d.delivered_at>now()-make_interval(hours => $3)))))
-		ORDER BY CASE WHEN f.status='pending' THEN 0 WHEN d.status='delivered' OR o.status='entregado' THEN 2 ELSE 1 END,
-		         f.created_at DESC,f.id`, partnerID, domain.FailedDeliveryMinWait.Seconds(), domain.PanelHistoryHours)
+	sql, args := panelOrdersQuery(partnerID)
+	rows, err := r.db(ctx).Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
 	return scanPanelOrders(rows)
+}
+
+// panelOrdersQuery arma la consulta del panel en tres partes, cada una con su
+// índice parcial, para no recorrer el historial: las ofertas aceptadas quedan
+// en 'accepted' para siempre y el panel se consulta cada 5 s.
+//   - ofertas pendientes de la central (delivery_dispatch_offers_partner_pending_idx);
+//   - repartos en curso (delivery_dispatches_partner_active_idx);
+//   - entregados de las últimas horas (delivery_dispatches_partner_delivered_idx).
+func panelOrdersQuery(partnerID string) (string, []any) {
+	accepted := `
+		WHERE d.accepted_partner_id=$1 AND f.partner_id=$1 AND f.status='accepted' AND f.round=d.round AND `
+	return `SELECT * FROM (` + panelOrderSelect + `
+		WHERE f.partner_id=$1 AND f.status='pending' AND f.round=d.round AND d.status='searching' AND f.expires_at>now()
+		  AND p.active AND ` + partnerLocationEligibilitySQL + `
+		  AND o.paid_amount=0 AND o.completed_at IS NULL AND o.status IN ('preparando','listo')
+		UNION ALL` + panelOrderSelect + accepted + `d.status IN ('accepted','picked_up') AND o.status<>'cancelado'
+		  AND (o.status<>'entregado' OR d.updated_at>now()-make_interval(hours => $3))
+		UNION ALL` + panelOrderSelect + accepted + `d.status='delivered' AND d.delivered_at>now()-make_interval(hours => $3)
+		) panel
+		ORDER BY CASE stage WHEN 'offer' THEN 0 WHEN 'delivered' THEN 2 ELSE 1 END,offer_created_at DESC,token`,
+		[]any{partnerID, domain.FailedDeliveryMinWait.Seconds(), domain.PanelHistoryHours}
 }
 
 // CourierView carga el reparto que lleva el motorizado. El enlace solo abre
@@ -188,15 +201,6 @@ func (r *Repository) FailedDeliveries(ctx context.Context, partnerID string) ([]
 		out = append(out, f)
 	}
 	return out, rows.Err()
-}
-
-// SetCourierLocation guarda la ubicación en los repartos que la central tiene
-// en curso. Un reparto entregado o cancelado ya no la recibe.
-func (r *Repository) SetCourierLocation(ctx context.Context, partnerID string, latitude, longitude float64) error {
-	_, err := r.db(ctx).Exec(ctx, `
-		UPDATE delivery_dispatches SET courier_latitude=$2,courier_longitude=$3,courier_located_at=now()
-		WHERE accepted_partner_id=$1 AND status IN ('accepted','picked_up')`, partnerID, latitude, longitude)
-	return err
 }
 
 // Tracking arma el seguimiento del pedido de delivery. La ubicación del

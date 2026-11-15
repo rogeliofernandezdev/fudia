@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS delivery_partner_sessions_expires_idx;
+DROP INDEX IF EXISTS delivery_dispatch_offers_partner_pending_idx;
+DROP INDEX IF EXISTS delivery_dispatches_partner_delivered_idx;
+DROP INDEX IF EXISTS delivery_dispatches_partner_active_idx;

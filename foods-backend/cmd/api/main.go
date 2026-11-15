@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	deliveryapp "github.com/foods-platform/foods-backend/internal/modules/delivery/application"
 	"github.com/foods-platform/foods-backend/internal/platform/config"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/foods-platform/foods-backend/internal/platform/httpapi"
@@ -48,9 +50,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer closeImages()
-	api, dispatcher := newAPI(db, images)
+	api, maintenance := newAPI(db, images)
 	mux := api.Routes()
-	go sweepDeliveryDispatch(ctx, logger, dispatcher)
+	go sweepDeliveryDispatch(ctx, logger, maintenance)
 	mux.HandleFunc("GET /health", health)
 	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)
@@ -72,6 +74,30 @@ func main() {
 const deliverySweepInterval = 20 * time.Second
 
 type deliverySweeper interface{ Sweep(context.Context) error }
+
+// operatorSessionPurgeInterval: las sesiones vencidas de los operadores de las
+// centrales se borran como mucho una vez por hora, dentro del mismo barrido.
+const operatorSessionPurgeInterval = time.Hour
+
+// deliveryMaintenance agrupa el barrido del despacho y la limpieza de sesiones
+// de las centrales. Solo la usa la goroutine del barrido (sin concurrencia).
+type deliveryMaintenance struct {
+	dispatcher *deliveryapp.Dispatcher
+	operators  *deliveryapp.Operators
+	lastPurge  time.Time
+}
+
+func (m *deliveryMaintenance) Sweep(ctx context.Context) error {
+	err := m.dispatcher.Sweep(ctx)
+	if time.Since(m.lastPurge) < operatorSessionPurgeInterval {
+		return err
+	}
+	if _, purgeErr := m.operators.PurgeSessions(ctx); purgeErr != nil {
+		return errors.Join(err, purgeErr)
+	}
+	m.lastPurge = time.Now()
+	return err
+}
 
 func sweepDeliveryDispatch(ctx context.Context, logger *slog.Logger, dispatcher deliverySweeper) {
 	ticker := time.NewTicker(deliverySweepInterval)

@@ -44,14 +44,17 @@ type OperatorRepository interface {
 	OperatorForLogin(ctx context.Context, email string) (domain.OperatorLogin, error)
 	// RecordFailedLogin suma un intento fallido y bloquea al llegar al máximo.
 	RecordFailedLogin(ctx context.Context, operatorID string, max int, lock time.Duration) error
-	// StartOperatorSession reinicia los intentos fallidos, marca el ingreso y crea la sesión.
-	StartOperatorSession(ctx context.Context, operatorID string, tokenHash []byte, expiresAt time.Time) error
+	// StartOperatorSession reinicia los intentos fallidos, marca el ingreso, crea la
+	// sesión y la devuelve con su central, en una sola consulta.
+	StartOperatorSession(ctx context.Context, operatorID string, tokenHash []byte, expiresAt time.Time) (domain.OperatorSession, error)
 	OperatorSession(ctx context.Context, tokenHash []byte) (domain.OperatorSession, error)
 	RevokeOperatorSession(ctx context.Context, tokenHash []byte) error
 	OperatorPasswordHash(ctx context.Context, operatorID string) (string, error)
 	// SetOperatorPassword guarda la contraseña elegida por el operador y quita la obligación de cambiarla.
 	SetOperatorPassword(ctx context.Context, operatorID, passwordHash string) error
 	RecordOperatorAction(ctx context.Context, partnerID, operatorID, action, outcome, orderCode string) error
+	// PurgeOperatorSessions borra las sesiones vencidas o revocadas antes de la fecha indicada.
+	PurgeOperatorSessions(ctx context.Context, before time.Time) (int64, error)
 }
 
 // Passwords cifra y compara contraseñas y genera tokens de sesión.
@@ -263,11 +266,11 @@ func (a *Operators) Login(ctx context.Context, in domain.LoginInput) (OperatorLo
 	if err != nil {
 		return fail(err)
 	}
-	hash := tokenHash(token)
-	if err = a.repo.StartOperatorSession(ctx, operator.ID, hash, a.now().Add(domain.OperatorSessionHours*time.Hour)); err != nil {
-		return fail(err)
+	session, err := a.repo.StartOperatorSession(ctx, operator.ID, tokenHash(token), a.now().Add(domain.OperatorSessionHours*time.Hour))
+	if errors.Is(err, ErrNotFound) {
+		// Lo desactivaron entre la validación y el inicio de sesión.
+		return OperatorLoginResult{}, errOperatorInactive
 	}
-	session, err := a.repo.OperatorSession(ctx, hash)
 	if err != nil {
 		return fail(err)
 	}
@@ -358,6 +361,12 @@ func (a *Operators) ChangePassword(ctx context.Context, token string, in domain.
 // acción ya aplicada si falla: el registro es informativo.
 func (a *Operators) Record(ctx context.Context, session domain.OperatorSession, action, outcome, orderCode string) {
 	_ = a.repo.RecordOperatorAction(ctx, session.PartnerID, session.OperatorID, action, outcome, orderCode)
+}
+
+// PurgeSessions borra las sesiones de operadores vencidas o revocadas hace más
+// de 30 días; la validación de cada petición no las necesita y la tabla no crece.
+func (a *Operators) PurgeSessions(ctx context.Context) (int64, error) {
+	return a.repo.PurgeOperatorSessions(ctx, a.now().AddDate(0, 0, -domain.OperatorSessionRetentionDays))
 }
 
 // PanelPartner es la central de la sesión, como la usa el despacho.

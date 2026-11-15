@@ -107,15 +107,24 @@ func (r *Repository) RecordFailedLogin(ctx context.Context, operatorID string, m
 	return err
 }
 
-func (r *Repository) StartOperatorSession(ctx context.Context, operatorID string, tokenHash []byte, expiresAt time.Time) error {
-	_, err := r.db(ctx).Exec(ctx, `
+func (r *Repository) StartOperatorSession(ctx context.Context, operatorID string, tokenHash []byte, expiresAt time.Time) (domain.OperatorSession, error) {
+	var out domain.OperatorSession
+	err := r.db(ctx).QueryRow(ctx, `
 		WITH signed AS (
 			UPDATE delivery_partner_operators SET failed_logins=0,locked_until=NULL,last_login_at=now()
-			WHERE id=$1 RETURNING id
+			WHERE id=$1 AND active RETURNING id,partner_id,full_name,email,must_change_password
+		), started AS (
+			INSERT INTO delivery_partner_sessions(token_hash,operator_id,expires_at)
+			SELECT $2,id,$3 FROM signed RETURNING operator_id
 		)
-		INSERT INTO delivery_partner_sessions(token_hash,operator_id,expires_at)
-		SELECT $2,id,$3 FROM signed`, operatorID, tokenHash, expiresAt)
-	return err
+		SELECT s.id::text,s.full_name,s.email,s.must_change_password,p.id::text,p.name,p.active
+		FROM signed s JOIN started ON started.operator_id=s.id
+		JOIN delivery_partners p ON p.id=s.partner_id`, operatorID, tokenHash, expiresAt).
+		Scan(&out.OperatorID, &out.OperatorName, &out.Email, &out.MustChangePassword, &out.PartnerID, &out.PartnerName, &out.PartnerActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, application.ErrNotFound
+	}
+	return out, err
 }
 
 func (r *Repository) OperatorSession(ctx context.Context, tokenHash []byte) (domain.OperatorSession, error) {
@@ -158,4 +167,10 @@ func (r *Repository) RecordOperatorAction(ctx context.Context, partnerID, operat
 		INSERT INTO delivery_partner_operator_actions(partner_id,operator_id,action,outcome,order_code)
 		VALUES($1,$2,$3,$4,$5)`, partnerID, operatorID, action, outcome, orderCode)
 	return err
+}
+
+func (r *Repository) PurgeOperatorSessions(ctx context.Context, before time.Time) (int64, error) {
+	tag, err := r.db(ctx).Exec(ctx, `
+		DELETE FROM delivery_partner_sessions WHERE expires_at<$1 OR revoked_at<$1`, before)
+	return tag.RowsAffected(), err
 }

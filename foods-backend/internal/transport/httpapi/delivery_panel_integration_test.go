@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	deliverypg "github.com/foods-platform/foods-backend/internal/modules/delivery/infrastructure/postgres"
 )
 
 // Panel web del proveedor de Delivery Fudia: todas las centrales ven la oferta
@@ -107,9 +109,6 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 		decode(rec, &out)
 		return out.Outcome
 	}
-	locate := func(panelToken, body string) int {
-		return panelCall(d, d.PanelLocation, "POST", body, panelToken).Code
-	}
 	status := func(orderID string) (dispatch, order string) {
 		t.Helper()
 		if err := pool.QueryRow(ctx, `SELECT d.status,o.status FROM delivery_dispatches d JOIN orders o ON o.id=d.order_id WHERE o.id=$1`, orderID).Scan(&dispatch, &order); err != nil {
@@ -203,18 +202,10 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 		t.Fatalf("deliver before pickup: %s", got)
 	}
 
-	// La ubicación llega al seguimiento del cliente mientras el reparto sigue en curso.
-	if code := locate(firstPanel, `{"latitude":123,"longitude":-77.03}`); code != 400 {
-		t.Fatalf("invalid location: %d", code)
-	}
-	if code := locate("00000000000000000000000000000000", `{"latitude":-12.06,"longitude":-77.03}`); code != 401 {
-		t.Fatalf("location without a session: %d", code)
-	}
-	if code := locate(secondPanel, `{"latitude":-12.5,"longitude":-77.5}`); code != 204 {
-		t.Fatalf("location of a partner without orders: %d", code)
-	}
-	if code := locate(firstPanel, `{"latitude":-12.06,"longitude":-77.03}`); code != 204 {
-		t.Fatalf("location: %d", code)
+	// La ubicación (la comparte el motorizado desde su enlace) llega al seguimiento
+	// del cliente mientras el reparto sigue en curso.
+	if _, err := pool.Exec(ctx, `UPDATE delivery_dispatches SET courier_latitude=-12.06,courier_longitude=-77.03,courier_located_at=now() WHERE order_id=$1`, orderID); err != nil {
+		t.Fatal(err)
 	}
 	tracking, found, err := api.dispatcher.DeliveryTracking(ctx, s, orderID)
 	if err != nil || !found || tracking.DispatchStatus != "accepted" || tracking.PartnerName != "Reparto Norte" ||
@@ -294,9 +285,6 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 	if orders = panel(firstPanel); len(orders) != 1 || orders[0].Stage != "picked_up" {
 		t.Fatalf("picked up in panel: %#v", orders)
 	}
-	if code := locate(firstPanel, `{"latitude":-12.1,"longitude":-77.03}`); code != 204 {
-		t.Fatalf("location on the way: %d", code)
-	}
 	if got := act(firstPanel, "deliver", offer); got != "delivered" {
 		t.Fatalf("deliver: %s", got)
 	}
@@ -334,6 +322,21 @@ func TestDeliveryPartnerPanel(t *testing.T) {
 		t.Fatalf("operator actions not recorded: %d %v", recorded, err)
 	}
 	operatorAccessRules(t, d, s, firstID, prefix)
+
+	// La limpieza borra sesiones vencidas o revocadas hace más de 30 días y conserva la vigente.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO delivery_partner_sessions(token_hash,operator_id,expires_at,revoked_at)
+		SELECT decode(md5(o.id::text||'old'),'hex'),o.id,now()-interval '40 days',NULL FROM delivery_partner_operators o WHERE o.email=$1
+		UNION ALL
+		SELECT decode(md5(o.id::text||'revoked'),'hex'),o.id,now()+interval '1 hour',now()-interval '31 days' FROM delivery_partner_operators o WHERE o.email=$1`, email(1)); err != nil {
+		t.Fatal(err)
+	}
+	if purged, err := deliverypg.New(pool).PurgeOperatorSessions(ctx, time.Now().AddDate(0, 0, -30)); err != nil || purged < 2 {
+		t.Fatalf("purge sessions: %d %v", purged, err)
+	}
+	if rec := panelCall(d, d.Panel, "GET", "", firstPanel); rec.Code != 200 {
+		t.Fatalf("purge removed a live session: %d", rec.Code)
+	}
 }
 
 type operatorAdministration interface {

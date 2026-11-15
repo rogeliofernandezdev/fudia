@@ -165,4 +165,5 @@ fallidos seguidos bloquean el acceso 15 minutos; restablecer la contraseña quit
 el bloqueo y cierra sus sesiones, igual que desactivarlo. El enlace del
 motorizado sigue siendo público porque vale para un solo reparto y deja de
 funcionar al entregar, liberar, registrar la entrega fallida o cambiar de
-motorizado. Detalle en `15_DELIVERY_GEOGRAPHY.md`.
+motorizado. Las sesiones vencidas o revocadas hace más de 30 días se borran
+desde el barrido de la API. Detalle en `15_DELIVERY_GEOGRAPHY.md`.

@@ -387,18 +387,6 @@ paths:
         "400": { description: invalid_delivery_action }
         "401": { description: "unauthenticated o session_expired" }
         "403": { description: password_change_required }
-  /v1/delivery-partner/panel/location:
-    post:
-      operationId: shareDeliveryPartnerLocation
-      security: [{ partnerSessionCookie: [] }]
-      summary: Guarda la ubicación del repartidor en los repartos en curso de la central
-      description: "El punto viaja en el cuerpo, nunca en la URL. Se guarda en los repartos aceptados o recogidos de la central y el cliente lo ve en el seguimiento de su pedido mientras el reparto sigue en curso y la ubicación tiene menos de 15 minutos."
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryCourierLocation" } } } }
-      responses:
-        "204": { description: Ubicación guardada }
-        "400": { description: invalid_location }
-        "401": { description: "unauthenticated o session_expired" }
-        "403": { description: password_change_required }
   /v1/delivery-partner/panel/courier:
     post:
       operationId: assignDeliveryCourier

@@ -9,6 +9,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {FormField,FullScreenLoader,Icon,Input} from "@/design-system";
 import {changePartnerPassword,loadPartnerSession,loginPartner} from "../infrastructure/panel-api";
 import {passwordChangeProblem} from "../domain/panel";
+import type {PartnerSession} from "../domain/types";
 
 type Step="checking"|"login"|"password"|"entering";
 
@@ -45,9 +46,11 @@ export function PartnerLogin({hasSession=false}:{hasSession?:boolean}){
   // Tras recargar con la sesión temporal no conocemos la contraseña temporal: se vuelve a pedir.
   const [askCurrent,setAskCurrent]=useState(false);
 
-  function enter(){
+  /** Entra al panel con la sesión ya conocida: el panel no vuelve a pedirla. */
+  function enter(session?:PartnerSession){
     setStep("entering");
     queryClient.removeQueries({queryKey:["delivery-partner-panel"]});
+    if(session)queryClient.setQueryData(["delivery-partner-session"],session);
     router.replace("/delivery-panel");
     router.refresh();
   }
@@ -57,7 +60,7 @@ export function PartnerLogin({hasSession=false}:{hasSession?:boolean}){
     let cancelled=false;
     void loadPartnerSession().then(session=>{
       if(cancelled)return;
-      if(!session.operator.mustChangePassword){enter();return}
+      if(!session.operator.mustChangePassword){enter(session);return}
       setOperator(session.operator.name);
       setAskCurrent(true);
       setStep("password");
@@ -83,7 +86,7 @@ export function PartnerLogin({hasSession=false}:{hasSession?:boolean}){
         setPassword("");
         setTouched(false);
         setStep("password");
-      }else enter();
+      }else enter(session);
     }catch(reason){
       setError(reason instanceof Error?reason.message:"No pudimos iniciar sesión.");
     }finally{setBusy(false)}
@@ -97,8 +100,7 @@ export function PartnerLogin({hasSession=false}:{hasSession?:boolean}){
     setBusy(true);
     setError("");
     try{
-      await changePartnerPassword(current,next);
-      enter();
+      enter(await changePartnerPassword(current,next));
     }catch(reason){
       setError(reason instanceof Error?reason.message:"No pudimos cambiar la contraseña.");
       setBusy(false);

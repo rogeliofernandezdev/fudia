@@ -20,6 +20,8 @@ const (
 	// OperatorPasswordMinLength y OperatorPasswordMaxBytes acotan la contraseña (bcrypt usa 72 bytes).
 	OperatorPasswordMinLength = 8
 	OperatorPasswordMaxBytes  = 72
+	// OperatorSessionRetentionDays: las sesiones vencidas o revocadas se borran pasado este plazo.
+	OperatorSessionRetentionDays = 30
 	// TemporaryPasswordLength es el largo de la contraseña temporal generada.
 	TemporaryPasswordLength = 12
 )

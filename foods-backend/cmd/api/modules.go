@@ -87,7 +87,7 @@ func (h orderHandoff) RestoreDeliveryFee(ctx context.Context, s requestscope.Sco
 
 // newAPI compone el API y devuelve el despachador de Delivery Fudia, cuyo
 // barrido periódico avanza la cascada de centrales.
-func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *deliveryapp.Dispatcher) {
+func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *deliveryMaintenance) {
 	// Composition is the only layer that knows concrete PostgreSQL adapters.
 	// A single unit of work and shared stateless adapters preserve transactions
 	// across Orders, Inventory, Billing and tenant onboarding.
@@ -103,6 +103,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	deliveryRepo := deliverypg.New(db)
 	dispatcher := deliveryapp.NewDispatcher(deliveryRepo, work).WithNotices(notices).WithHandoff(orderHandoff{orders}).WithPanel(deliveryRepo)
 	orders.WithDispatch(dispatcher)
+	operators := deliveryapp.NewOperators(deliveryRepo, work, credentials.Credentials{})
 
 	accessRepo := subscriptionpg.NewAccess(db)
 	access := subscriptionapp.NewAccess(accessRepo)
@@ -130,7 +131,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	concierge.WithDeliveryTracking(dispatcher)
 	return httpapi.NewWithHandlers(httpapi.Handlers{
 		Delivery: deliveryhttp.New(deliveryapp.NewPartners(deliveryRepo, work), dispatcher).
-			WithOperators(deliveryapp.NewOperators(deliveryRepo, work, credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
+			WithOperators(operators, os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
 		Tips:                   billinghttp.NewTips(tips),
 		SpecialTaxes:           orghttp.NewSpecialTaxes(orgapp.NewSpecialTaxes(taxRepository, audit)),
@@ -157,7 +158,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 		Orders:                 orderhttp.New(orders),
 		Notices:                noticehttp.New(notices),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
-	}), dispatcher
+	}), &deliveryMaintenance{dispatcher: dispatcher, operators: operators}
 }
 func configureProductImages(ctx context.Context, db *pgxpool.Pool) (*menuapp.ProductImages, func(), error) {
 	provider := os.Getenv("PRODUCT_IMAGE_STORAGE")

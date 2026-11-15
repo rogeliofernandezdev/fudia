@@ -75,7 +75,6 @@ type Handlers struct {
 		// Panel web de la central: pedidos, acciones y ubicación (con sesión del operador).
 		Panel(http.ResponseWriter, *http.Request)
 		PanelAction(http.ResponseWriter, *http.Request)
-		PanelLocation(http.ResponseWriter, *http.Request)
 		PanelCourier(http.ResponseWriter, *http.Request)
 		DeliveryBoard(http.ResponseWriter, *http.Request)
 		LocationPartners(http.ResponseWriter, *http.Request)

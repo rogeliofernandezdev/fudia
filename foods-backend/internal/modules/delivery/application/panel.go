@@ -22,8 +22,6 @@ type PanelRepository interface {
 	// StartOfferTimers inicia los 3 minutos de las ofertas que el panel muestra por primera vez.
 	StartOfferTimers(ctx context.Context, partnerID string) error
 	PanelOrders(ctx context.Context, partnerID string) ([]domain.PanelOrder, error)
-	// SetCourierLocation guarda la ubicación en los repartos en curso de la central.
-	SetCourierLocation(ctx context.Context, partnerID string, latitude, longitude float64) error
 	Tracking(ctx context.Context, s scope, orderID string) (domain.Tracking, error)
 	// FailedDeliveries lista las entregas fallidas recientes de la central.
 	FailedDeliveries(ctx context.Context, partnerID string) ([]domain.FailedDelivery, error)
@@ -75,21 +73,6 @@ func (a *Dispatcher) PanelAct(ctx context.Context, partner PanelPartner, in doma
 		return domain.ActionResult{}, failure(apperror.Invalid, "invalid_delivery_action", "La acción no es válida.")
 	}
 	return a.act(ctx, in.Action, in.Token, func(st OfferState) bool { return st.PartnerID == partner.ID })
-}
-
-// PanelLocation guarda la ubicación del repartidor en los repartos en curso de
-// la central; el cliente la ve en el seguimiento de su pedido.
-func (a *Dispatcher) PanelLocation(ctx context.Context, partner PanelPartner, in domain.CourierLocation) error {
-	if a.panel == nil {
-		return unavailable("delivery_panel_unavailable", "No pudimos guardar la ubicación.", nil)
-	}
-	if !domain.ValidCoordinates(in.Latitude, in.Longitude) {
-		return failure(apperror.Invalid, "invalid_location", "La ubicación no es válida.")
-	}
-	if err := a.panel.SetCourierLocation(ctx, partner.ID, in.Latitude, in.Longitude); err != nil {
-		return unavailable("delivery_panel_unavailable", "No pudimos guardar la ubicación.", err)
-	}
-	return nil
 }
 
 // DeliveryTracking implementa contracts.TrackingReader: el seguimiento de un

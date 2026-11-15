@@ -482,7 +482,9 @@ cookie; en el cliente, un 401 o `password_change_required` (`needsLogin`,
 `delivery-courier/{courierToken}` sigue público por `/api/public/[...path]`.
 TanStack Query consulta cada 5 s (30 s tras un error), también en segundo plano:
 `["delivery-partner-panel"]`, `["delivery-partner-session"]` (nombre del
-operador, 60 s) y `["delivery-courier",token]`.
+operador, 60 s; el acceso la deja en caché con la respuesta del login o del
+cambio de contraseña, sin pedirla otra vez, y tras un error se reintenta cada
+30 s) y `["delivery-courier",token]`.
 Cada acción invalida su consulta y muestra el resultado (`outcome`) con
 `outcomeFeedback`; el navegador no calcula estados ni montos.
 
