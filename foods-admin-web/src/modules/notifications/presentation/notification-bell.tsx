@@ -10,8 +10,10 @@ import type {NoticeKind,StaffNotice} from "../domain/types";
 
 /** Icono de cada aviso: el mismo dominio que la pantalla donde se atiende. */
 const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock",delivery_unassigned:"motorbike",delivery_pickup_delayed:"clock"};
-/** El aviso emergente se retira solo; se pausa mientras el usuario lo señala o enfoca. */
+/** El aviso emergente se retira solo; se pausa mientras el usuario lo señala o enfoca, o con la pestaña oculta. */
 const toastDuration=8000;
+/** Salida más rápida que la entrada (`--duration-fast`): el sistema responde, no hace esperar. */
+const toastExit=160;
 
 /**
  * Campana del personal: componente independiente que consulta sus propios
@@ -23,7 +25,12 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
  const[open,setOpen]=useState(false);
  const[announcement,setAnnouncement]=useState("");
  const[toast,setToast]=useState<{notice:StaffNotice;more:number}|null>(null);
- const[toastPaused,setToastPaused]=useState(false);
+ const[toastHovered,setToastHovered]=useState(false);
+ const[toastLeaving,setToastLeaving]=useState(false);
+ const[pageHidden,setPageHidden]=useState(false);
+ // Tiempo restante del aviso visible: al pausar se conserva y al reanudar continúa, igual que su barra.
+ const toastClock=useRef({id:"",left:toastDuration});
+ const toastPaused=toastHovered||pageHidden;
  const ref=useRef<HTMLDivElement>(null);
  const triggerRef=useRef<HTMLButtonElement>(null);
  const seen=useRef<Set<string>|null>(null);
@@ -41,7 +48,7 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
    if(fresh.length){
     setAnnouncement(`Nuevo aviso: ${fresh[0].title}`);
     if(!openRef.current){
-     setToast({notice:fresh[0],more:fresh.length-1});setToastPaused(false);
+     setToast({notice:fresh[0],more:fresh.length-1});setToastHovered(false);setToastLeaving(false);
      if(typeof navigator!=="undefined"&&navigator.userActivation?.hasBeenActive)navigator.vibrate?.([120,60,120]);
     }
    }
@@ -49,10 +56,25 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
   seen.current=new Set(items.map(item=>item.id));
  },[feed.data]);
  useEffect(()=>{
-  if(!toast||toastPaused)return;
-  const timer=window.setTimeout(()=>setToast(null),toastDuration);
+  const sync=()=>setPageHidden(document.hidden);
+  document.addEventListener("visibilitychange",sync);
+  return()=>document.removeEventListener("visibilitychange",sync);
+ },[]);
+ useEffect(()=>{
+  if(!toast||toastPaused||toastLeaving)return;
+  const clock=toastClock.current;
+  if(clock.id!==toast.notice.id){clock.id=toast.notice.id;clock.left=toastDuration}
+  const startedAt=Date.now();
+  const timer=window.setTimeout(()=>setToastLeaving(true),clock.left);
+  return()=>{window.clearTimeout(timer);clock.left=Math.max(0,clock.left-(Date.now()-startedAt))};
+ },[toast,toastPaused,toastLeaving]);
+ // Sale hacia arriba, por donde entró; con movimiento reducido se retira sin animación.
+ useEffect(()=>{
+  if(!toastLeaving)return;
+  const reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const timer=window.setTimeout(()=>{setToast(null);setToastLeaving(false)},reduced?0:toastExit);
   return()=>window.clearTimeout(timer);
- },[toast,toastPaused]);
+ },[toastLeaving]);
  useEffect(()=>{
   if(!open)return;
   const close=(event:MouseEvent)=>{if(!ref.current?.contains(event.target as Node))setOpen(false)};
@@ -94,13 +116,19 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
     </button></li>)}</ul>}
   </section>}
   {/* Portal: la barra superior crea su propio contexto y atraparía el `position:fixed` del aviso. */}
-  {toast&&createPortal(<section className="notification-toast" aria-label="Aviso nuevo" onMouseEnter={()=>setToastPaused(true)} onMouseLeave={()=>setToastPaused(false)} onFocus={()=>setToastPaused(true)} onBlur={()=>setToastPaused(false)}>
+  {/* La `key` reinicia entrada y barra de tiempo cuando un aviso nuevo reemplaza al visible. */}
+  {toast&&createPortal(<section key={toast.notice.id} className="notification-toast" aria-label="Aviso nuevo" data-paused={toastPaused} data-leaving={toastLeaving} onMouseEnter={()=>setToastHovered(true)} onMouseLeave={()=>setToastHovered(false)} onFocus={()=>setToastHovered(true)} onBlur={()=>setToastHovered(false)}>
    {/* Todo el aviso abre el detalle, igual que en la lista: sin botón «Ver» redundante. */}
    <button type="button" className="notification-toast-main" onClick={()=>choose(toast.notice)}>
     <IconTile name={noticeIcons[toast.notice.kind]??"bell"} tone={noticeTone(toast.notice.kind)} size="lg"/>
-    <span className="notification-toast-copy"><b>{toast.notice.title}</b><small>{[toast.notice.detail,toast.more?`y ${toast.more} ${toast.more===1?"aviso más":"avisos más"}`:""].filter(Boolean).join(" · ")}</small></span>
+    <span className="notification-toast-copy">
+     <span className="notification-toast-title"><b>{toast.notice.title}</b><time dateTime={toast.notice.createdAt}>{noticeAge(toast.notice.createdAt)}</time></span>
+     {toast.notice.detail&&<small>{toast.notice.detail}</small>}
+     {toast.more>0&&<em>{`y ${toast.more} ${toast.more===1?"aviso más":"avisos más"}`}</em>}
+    </span>
    </button>
-   <IconButton icon="close" label="Descartar aviso" className="notification-toast-close" onClick={()=>setToast(null)}/>
+   <IconButton icon="close" label="Descartar aviso" className="notification-toast-close" onClick={()=>setToastLeaving(true)}/>
+   <span className="notification-toast-timer" aria-hidden="true" style={{animationDuration:`${toastDuration}ms`}}/>
   </section>,document.body)}
  </div>;
 }

@@ -1897,12 +1897,21 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   con el tono de su tipo (`noticeTone`: listo `brand`, cuenta pedida `peach`,
   llamado `sky`, pedidos nuevos `primary`); uno leído va sin fondo, con título
   medio `ink-700` e icono `neutral`.
-- Aviso emergente (2026-11-04): solo cuando llega un aviso nuevo con la campana
-  cerrada, abajo a la derecha (380 px; en móvil a todo el ancho con margen de 16 px),
-  por encima de los modales (`--z-toast`). Todo el aviso es un botón que abre el
-  detalle igual que en la lista; la X lo descarta. Sin botón «Ver» ni sonido; el
-  móvil vibra brevemente si el usuario ya interactuó. Se retira a los 8 s y se
-  pausa al señalarlo o enfocarlo. Si llegan varios, indica «y N avisos más».
+- Aviso emergente (2026-11-04, posición y pulido 2026-11-14): solo cuando llega
+  un aviso nuevo con la campana cerrada, **arriba a la derecha**, 12 px bajo la
+  barra superior y junto a la campana que lo originó (380 px; en móvil a todo el
+  ancho con margen de 16 px, a la altura del popover), por encima de los modales
+  (`--z-toast`). Todo el aviso es un botón que abre el detalle igual que en la
+  lista (presión `--press-scale`); la X lo descarta. Título en una línea con su
+  antigüedad («Ahora») a la derecha, detalle en máximo dos líneas y, si llegan
+  varios, «y N avisos más» en `primary-700`. Entra desde arriba
+  (`--duration-slow`, `--easing-out`) y sale hacia arriba más rápido
+  (`--duration-fast`). Una barra fina `primary-500` muestra los 8 s restantes;
+  el tiempo y la barra se detienen al señalarlo, enfocarlo o con la pestaña
+  oculta, y continúan donde quedaron. Un aviso nuevo reemplaza al visible y
+  reinicia entrada y tiempo. Sin botón «Ver» ni sonido; el móvil vibra
+  brevemente si el usuario ya interactuó. Con movimiento reducido no hay
+  animación ni barra.
 - El éxito de un registro se comunica mediante la alerta global después de que la
   API confirme la operación. Nunca se anticipa éxito ni se pierde el error remoto.
 

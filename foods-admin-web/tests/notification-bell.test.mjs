@@ -53,7 +53,7 @@ test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
  assert.deepEqual([...rules.freshNotices(items,new Set(["n1"]))].map(item=>item.id),["n3"],"solo los nuevos sin leer emergen");
  const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
  assert.match(bell,/tone=\{item\.read\?"neutral":noticeTone\(item\.kind\)\}/,"leído neutro, sin leer con su tono");
- assert.match(bell,/createPortal\(<section className="notification-toast"/,"el aviso emergente sale de la barra superior");
+ assert.match(bell,/createPortal\(<section key=\{toast\.notice\.id\} className="notification-toast"/,"el aviso emergente sale de la barra superior");
  assert.match(bell,/if\(!openRef\.current\)\{/,"no emerge con la campana abierta");
  assert.match(bell,/className="notification-toast-main" onClick=\{\(\)=>choose\(toast\.notice\)\}/,"tocar el aviso abre el detalle como en la lista");
  assert.doesNotMatch(bell,/>Ver<\/Button>/,"sin botón «Ver» redundante");
@@ -61,6 +61,12 @@ test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
  const css=read("src/modules/notifications/presentation/notification-bell.css");
  assert.match(css,/\.notification-item\[data-read=false\]\{background:var\(--primary-50\)\}/);
  assert.match(css,/\.notification-toast\{position:fixed;[^}]*z-index:var\(--z-toast\)/);
+ assert.match(css,/\.notification-toast\{position:fixed;top:calc\(var\(--size-64\) \+ var\(--space-3\)\);right:var\(--space-6\)/,"el aviso emerge arriba a la derecha, bajo la barra superior");
+ assert.doesNotMatch(css,/\.notification-toast\{[^}]*bottom:/,"el aviso ya no se ancla abajo");
+ assert.match(css,/\.notification-toast\[data-leaving=true\]\{pointer-events:none;animation:notification-toast-out var\(--duration-fast\)/,"sale hacia arriba y más rápido de lo que entra");
+ assert.match(css,/\.notification-toast\[data-paused=true\] \.notification-toast-timer\{animation-play-state:paused\}/,"la barra de tiempo se detiene con la pausa");
+ assert.match(bell,/document\.addEventListener\("visibilitychange",sync\)/,"se pausa con la pestaña oculta");
+ assert.match(bell,/key=\{toast\.notice\.id\}/,"un aviso nuevo reinicia la entrada y el tiempo");
  assert.match(css,/@media \(prefers-reduced-motion:reduce\)\{[^}]*\.notification-toast\{animation:none/);
 });
 

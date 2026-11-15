@@ -31,19 +31,30 @@
 .notification-loading>div{display:grid;grid-template-columns:var(--size-40) minmax(0,1fr);gap:var(--space-3);align-items:center}
 .notification-loading span{display:grid;gap:var(--space-1-5)}
 .notification-state{margin:var(--space-4)}
-/* Aviso emergente: llega con la campana cerrada; tocarlo abre el detalle (como en la lista), la X lo descarta y se retira a los 8 s; se pausa al señalarlo. */
-.notification-toast{position:fixed;right:var(--space-6);bottom:calc(var(--space-6) + var(--safe-area-bottom));z-index:var(--z-toast);width:min(var(--size-380),calc(100vw - var(--space-8)));display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-1);padding:var(--space-1-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-4);animation:notification-toast-in var(--duration-slow) var(--easing-out) both}
-.notification-toast-main{display:grid;grid-template-columns:var(--size-40) minmax(0,1fr);align-items:center;gap:var(--space-3);min-width:0;min-height:var(--size-56);padding:var(--space-1-5);border:0;border-radius:var(--radius-tile);background:transparent;text-align:left;cursor:pointer;transition:background var(--duration-fast)}
+/* Aviso emergente: llega arriba a la derecha, bajo la barra superior y junto a la campana que lo originó; tocarlo abre el detalle (como en la lista),
+   la X lo descarta y se retira a los 8 s. La barra inferior muestra el tiempo restante y se detiene al señalarlo, enfocarlo o con la pestaña oculta.
+   Entra y sale por arriba (salida más corta que la entrada). */
+.notification-toast{position:fixed;top:calc(var(--size-64) + var(--space-3));right:var(--space-6);z-index:var(--z-toast);width:min(var(--size-380),calc(100vw - var(--space-8)));display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:var(--space-0-5);padding:var(--space-1-5) var(--space-1-5) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-4);transform-origin:top center;animation:notification-toast-in var(--duration-slow) var(--easing-out) both}
+.notification-toast[data-leaving=true]{pointer-events:none;animation:notification-toast-out var(--duration-fast) var(--easing-out) both}
+.notification-toast-main{display:grid;grid-template-columns:var(--size-40) minmax(0,1fr);align-items:start;gap:var(--space-3);min-width:0;min-height:var(--size-56);padding:var(--space-2);border:0;border-radius:var(--radius-tile);background:transparent;text-align:left;cursor:pointer;transition:background var(--duration-fast) var(--easing-out),var(--transition-press)}
+.notification-toast-main:active{transform:scale(var(--press-scale))}
 .notification-toast-main:focus-visible{outline:0;box-shadow:var(--ring-focus)}
-.notification-toast-copy{display:grid;gap:var(--space-0-5);min-width:0}
-.notification-toast-copy b{color:var(--ink-950);font-size:var(--font-size-sm);font-weight:var(--weight-bold);line-height:var(--line-height-snug);overflow-wrap:anywhere}
-.notification-toast-copy small{color:var(--ink-600);font-size:var(--font-size-xs);line-height:var(--line-height-snug);overflow-wrap:anywhere}
+.notification-toast-copy{display:grid;gap:var(--space-0-5);min-width:0;padding-top:var(--space-0-5)}
+.notification-toast-title{display:flex;align-items:baseline;gap:var(--space-2);min-width:0}
+.notification-toast-title b{flex:1;min-width:0;color:var(--ink-950);font-size:var(--font-size-sm);font-weight:var(--weight-bold);line-height:var(--line-height-snug);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.notification-toast-title time{flex:none;color:var(--ink-500);font-size:var(--font-size-2xs);font-weight:var(--weight-semibold)}
+.notification-toast-copy small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;color:var(--ink-600);font-size:var(--font-size-xs);line-height:var(--line-height-snug);overflow-wrap:anywhere}
+.notification-toast-copy em{color:var(--primary-700);font-size:var(--font-size-xs);font-style:normal;font-weight:var(--weight-semibold)}
 .notification-toast .notification-toast-close{border-color:transparent;border-radius:var(--radius-pill);background:transparent;color:var(--ink-500)}
+.notification-toast-timer{position:absolute;left:var(--space-4);right:var(--space-4);bottom:var(--space-1);height:var(--size-3);border-radius:var(--radius-pill);background:var(--primary-500);transform-origin:left center;animation:notification-toast-timer linear both;pointer-events:none}
+.notification-toast[data-paused=true] .notification-toast-timer{animation-play-state:paused}
 @media (hover:hover) and (pointer:fine){.notification-toast-main:hover{background:var(--cloud-50)}.notification-toast .notification-toast-close:hover{background:var(--cloud-100);color:var(--ink-800)}}
-@keyframes notification-toast-in{from{opacity:0;transform:translateY(var(--size-12))}}
+@keyframes notification-toast-in{from{opacity:0;transform:translateY(calc(var(--size-12) * -1)) scale(var(--press-scale))}}
+@keyframes notification-toast-out{to{opacity:0;transform:translateY(calc(var(--size-8) * -1)) scale(var(--press-scale))}}
+@keyframes notification-toast-timer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 @media (max-width:600px){
  .notification-popover{position:fixed;top:var(--size-70);left:var(--space-4);right:var(--space-4);width:auto;max-height:calc(100dvh - var(--size-84));border-radius:var(--radius-sheet)}
  .notification-item{min-height:var(--size-64)}
- .notification-toast{left:var(--space-4);right:var(--space-4);bottom:calc(var(--space-4) + var(--safe-area-bottom));width:auto}
+ .notification-toast{top:var(--size-70);left:var(--space-4);right:var(--space-4);width:auto}
 }
-@media (prefers-reduced-motion:reduce){.notification-popover,.notification-trigger,.notification-item,.notification-toast{animation:none;transition:none}}
+@media (prefers-reduced-motion:reduce){.notification-popover,.notification-trigger,.notification-item,.notification-toast-main,.notification-toast[data-leaving=true],.notification-toast{animation:none;transition:none}.notification-toast-timer{display:none}}
