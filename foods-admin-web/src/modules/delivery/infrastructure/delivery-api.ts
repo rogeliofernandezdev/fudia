@@ -1,4 +1,4 @@
-import {apiFetch} from "@/shared/api/client";
+import {apiFetch,ApiClientError} from "@/shared/api/client";
 import type {DeliveryFees,DeliveryFeesPayload} from "../domain/delivery-fees";
 import type {DeliveryBoardOrder,DeliveryDispatch,DeliveryLink,DeliveryProviders,LocationFailedDelivery} from "../domain/types";
 
@@ -7,6 +7,13 @@ const order=(id:string)=>`orders/${encodeURIComponent(id)}/delivery-dispatch`;
 
 export function getDeliveryLink(locationId:string){return apiFetch<DeliveryLink>(`${location(locationId)}/delivery-link`);}
 export function rotateDeliveryLink(locationId:string){return apiFetch<DeliveryLink>(`${location(locationId)}/delivery-link`,{method:"POST"});}
+export async function getDeliveryDispatch(orderId:string){
+  try{return await apiFetch<DeliveryDispatch>(order(orderId));}
+  catch(error){
+    if(error instanceof ApiClientError&&error.status===404&&error.code==="delivery_dispatch_not_found")return null;
+    throw error;
+  }
+}
 export function retryDeliveryDispatch(orderId:string){return apiFetch<DeliveryDispatch>(`${order(orderId)}/retry`,{method:"POST"});}
 export function switchToOwnDelivery(orderId:string){return apiFetch<DeliveryDispatch>(`${order(orderId)}/own`,{method:"POST"});}
 

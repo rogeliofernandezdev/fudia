@@ -239,17 +239,21 @@ func (r *Repository) MarkDelivered(ctx context.Context, s scope, dispatchID stri
 func (r *Repository) Dispatch(ctx context.Context, s scope, orderID string) (domain.Dispatch, error) {
 	out := domain.Dispatch{Offers: []domain.DispatchOffer{}}
 	var id string
-	var accepted, picked, delivered *time.Time
+	var accepted, picked, delivered, reported *time.Time
+	var ackLevel int
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT d.id::text,d.order_id::text,d.status,d.round,COALESCE(ap.name,current.name,''),d.accepted_at,d.picked_up_at,d.delivered_at
+		SELECT d.id::text,d.order_id::text,d.status,d.round,COALESCE(ap.name,''),d.accepted_at,d.picked_up_at,d.delivered_at,
+		       COALESCE(ap.whatsapp_phone,''),COALESCE(d.courier_name,''),
+		       CASE WHEN d.status='accepted' AND o.status='listo' AND d.ready_notified_at IS NOT NULL
+		            THEN GREATEST(0,floor(EXTRACT(EPOCH FROM now()-`+pickupWaitSinceSQL+`)))::int ELSE 0 END,
+		       COALESCE(d.pickup_alert_ack_level,0),d.delivery_issue_reported_at,
+		       EXISTS (SELECT 1 FROM delivery_failed_deliveries x WHERE x.dispatch_id=d.id)
 		FROM delivery_dispatches d
-		LEFT JOIN delivery_partners ap ON ap.id=d.accepted_partner_id
-		LEFT JOIN LATERAL (
-		  SELECT p.name FROM delivery_dispatch_offers f JOIN delivery_partners p ON p.id=f.partner_id
-		  WHERE f.dispatch_id=d.id AND f.status='pending' ORDER BY f.created_at DESC LIMIT 1
-		) current ON true
+		JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id AND o.location_id=d.location_id
+		LEFT JOIN delivery_partners ap ON ap.id=d.accepted_partner_id AND d.status IN ('accepted','picked_up','delivered')
 		WHERE d.order_id=$1 AND d.organization_id=$2 AND d.location_id=$3`,
-		orderID, s.OrganizationID, s.LocationID).Scan(&id, &out.OrderID, &out.Status, &out.Round, &out.PartnerName, &accepted, &picked, &delivered)
+		orderID, s.OrganizationID, s.LocationID).Scan(&id, &out.OrderID, &out.Status, &out.Round, &out.PartnerName, &accepted, &picked, &delivered,
+		&out.PartnerPhone, &out.CourierName, &out.PickupWaitSeconds, &ackLevel, &reported, &out.FailedDelivery)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, application.ErrNotFound
 	}
@@ -257,6 +261,9 @@ func (r *Repository) Dispatch(ctx context.Context, s scope, orderID string) (dom
 		return out, err
 	}
 	out.AcceptedAt, out.PickedUpAt, out.DeliveredAt = optionalStamp(accepted), optionalStamp(picked), optionalStamp(delivered)
+	level, alert := domain.PickupAlertLevel(time.Duration(out.PickupWaitSeconds) * time.Second)
+	out.PickupAlert, out.PickupAlertAcknowledged = alert, level > 0 && ackLevel >= level
+	out.IssueReportedAt = optionalStamp(reported)
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.name,f.round,f.priority,f.status,f.created_at,f.expires_at,f.responded_at
 		FROM delivery_dispatch_offers f JOIN delivery_partners p ON p.id=f.partner_id

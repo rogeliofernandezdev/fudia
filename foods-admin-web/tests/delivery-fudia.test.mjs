@@ -46,10 +46,21 @@ test("Delivery Fudia: «Ninguna central aceptó» abre el pedido en Pedidos con 
 
 test("Delivery Fudia: pantallas conectadas sin catálogos ni códigos en el frontend",()=>{
  const detail=read("src/modules/operations/orders/presentation/order-detail-dialog.tsx");
- assert.match(detail,/<OrderDispatchBlock order=\{order\} money=\{money\}\/>/,"el detalle del pedido resume el despacho en el bloque de entrega");
+ assert.ok(detail.includes('<OrderDispatchBlock key={order.id} order={order} money={money}/>'));
  const block=read("src/modules/delivery/presentation/order-dispatch-block.tsx");
- assert.match(block,/deliveryTabPath\("orders"\)/,"el resumen enlaza a Delivery › Pedidos");
- assert.doesNotMatch(block,/retryDeliveryDispatch|switchToOwnDelivery/,"Reintentar y Usar delivery propio viven solo en Delivery › Pedidos");
+ assert.ok(block.includes('getDeliveryDispatch(order.id)'));
+ assert.doesNotMatch(block,/retryDeliveryDispatch|switchToOwnDelivery|ConfirmDialog/,"el detalle es solo seguimiento");
+ const actions=read("src/modules/delivery/presentation/order-dispatch-actions.tsx");
+ assert.ok(actions.includes('retryDeliveryDispatch(order.id)'));
+ assert.ok(actions.includes('switchToOwnDelivery(order.id)'));
+ assert.ok(actions.includes('can("orders.manage")'));
+ assert.ok(actions.includes('createPortal(<ConfirmDialog'));
+ assert.ok(actions.includes('event.stopPropagation()'),"las acciones no abren el detalle de la fila");
+ assert.doesNotMatch(actions,/useQuery\(|getDeliveryDispatch|getOrder\(/,"sin una lectura extra por fila");
+ const manager=read("src/modules/operations/orders/presentation/orders-manager.tsx");
+ assert.ok(manager.includes('<OrderDispatchActions order={o}'));
+ assert.doesNotMatch(block,/Ver en Delivery|deliveryTabPath/);
+ for(const key of ['"order"','"orders"','"pos-order"','"pos-orders"','"staff-notices"'])assert.ok(actions.includes(key));
  const section=read("src/modules/delivery/presentation/location-delivery-section.tsx");
  assert.ok(!/Tabs|PartnerSlots|getLocationDelivery/.test(section),"el local ya no elige modo ni centrales: son globales");
  assert.match(section,/publicConciergePath\(link\.data\.token\)/,"el enlace usa la misma ruta pública que el QR de mesa");
@@ -70,12 +81,14 @@ const plain=value=>JSON.parse(JSON.stringify(value));
 const boardOrder=(overrides={})=>({status:"preparando",failedDelivery:false,dispatchStatus:"accepted",pickupWaitSeconds:0,pickupAlert:"",...overrides});
 
 test("Delivery: una sola opción del menú con pestañas; las de módulos en desarrollo dependen del módulo",()=>{
- assert.deepEqual(plain(board.visibleDeliveryTabs({delivery:true}).map(tab=>tab.value)),["orders","providers","fees","failed"]);
- assert.deepEqual(plain(board.visibleDeliveryTabs({delivery:true,delivery_apps:true,repartidores:true}).map(tab=>tab.value)),["orders","providers","fees","failed","apps","couriers"]);
+ assert.deepEqual(plain(board.visibleDeliveryTabs({delivery:true}).map(tab=>tab.value)),["providers","fees","failed"]);
+ assert.deepEqual(plain(board.visibleDeliveryTabs({delivery:true,delivery_apps:true,repartidores:true}).map(tab=>tab.value)),["providers","fees","failed","apps","couriers"]);
  assert.equal(board.deliveryTabFrom("fees",{delivery:true}),"fees");
- assert.equal(board.deliveryTabFrom("apps",{delivery:true}),"orders","una pestaña de un módulo inactivo vuelve a Pedidos");
- assert.equal(board.deliveryTabFrom("nope",null),"orders");
- assert.equal(board.deliveryTabPath("orders"),"/delivery");
+ assert.equal(board.deliveryTabFrom("apps",{delivery:true}),"providers","una pestaña de un módulo inactivo vuelve a Proveedores");
+ assert.equal(board.deliveryTabFrom("nope",null),"providers");
+ assert.equal(board.deliveryTabFrom("orders",null),"providers");
+ assert.ok(read("src/app/(admin)/delivery/page.tsx").includes('if(params.tab==="orders")redirect(pageRoutes.orders)'));
+ assert.doesNotMatch(read("src/modules/delivery/presentation/delivery-page.tsx"),/DeliveryBoard/);
  assert.equal(board.deliveryTabPath("providers"),"/delivery?tab=providers");
  for(const tab of board.deliveryTabs)assert.match(tab.value,/^[a-z]+$/,"la pestaña viaja en inglés en la URL");
  const navigation=read("src/shell/navigation.ts");
@@ -105,7 +118,7 @@ test("Delivery › Pedidos: en curso, modo, alertas de recogida e incidencias",(
 
 test("Delivery: cada pestaña con carga, error y vacío; la central se edita solo desde Plataforma",()=>{
  for(const [file,fragments] of Object.entries({
-  "delivery-board.tsx":["TableSkeleton","ErrorState","EmptyState","refetchInterval:POLL_MS","getDeliveryBoard",'title="Usar delivery propio"','can("orders.manage")'],
+  "order-dispatch-block.tsx":["Skeleton","ErrorState","getDeliveryDispatch"],
   "delivery-providers.tsx":["TableSkeleton","ErrorState","EmptyState","getDeliveryProviders"],
   "failed-deliveries.tsx":["TableSkeleton","ErrorState","EmptyState","getLocationFailedDeliveries","Con aporte Fudia"],
  })){

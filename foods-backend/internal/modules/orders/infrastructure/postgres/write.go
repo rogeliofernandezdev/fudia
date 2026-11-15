@@ -109,7 +109,7 @@ func (r *Orders) PartnerDeliveryActive(ctx context.Context, s scope, id string) 
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM delivery_dispatches d
 		WHERE d.order_id=$1 AND d.organization_id=$2 AND d.location_id=$3
-		  AND d.status IN ('searching','accepted','picked_up','delivered'))`, id, s.OrganizationID, s.LocationID).Scan(&active)
+		  AND d.status IN ('searching','unassigned','accepted','picked_up','delivered'))`, id, s.OrganizationID, s.LocationID).Scan(&active)
 	return active, err
 }
 

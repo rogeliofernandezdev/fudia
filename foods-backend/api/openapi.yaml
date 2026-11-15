@@ -2747,7 +2747,14 @@ components:
         orderId: { type: string, format: uuid }
         status: { type: string, enum: [searching, accepted, unassigned, picked_up, delivered, own, cancelled], description: "delivered: la central confirmó la entrega al cliente desde su panel." }
         round: { type: integer, minimum: 1, description: "Vuelta de ofertas; Reintentar o una liberación abren una nueva para todas las centrales." }
-        partnerName: { type: string, description: "Central que aceptó o a la que se ofrece ahora." }
+        partnerName: { type: string, description: "Central responsable; ausente mientras se ofrece a las centrales o el despacho es propio o cancelado." }
+        partnerPhone: { type: string, description: "Teléfono de la central responsable, con código de país y solo dígitos." }
+        courierName: { type: string, description: "Motorizado asignado por la central." }
+        pickupWaitSeconds: { type: integer, minimum: 0 }
+        pickupAlert: { type: string, enum: ["", warning, urgent, critical] }
+        pickupAlertAcknowledged: { type: boolean }
+        issueReportedAt: { type: string, format: date-time }
+        failedDelivery: { type: boolean }
         acceptedAt: { type: string, format: date-time }
         pickedUpAt: { type: string, format: date-time }
         deliveredAt: { type: string, format: date-time }

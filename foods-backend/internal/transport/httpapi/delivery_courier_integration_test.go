@@ -69,8 +69,8 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 
 	type panelOrder struct {
 		Token, Stage, OrderStatus, CourierName, CourierToken, PickupAlert, IssueReportedAt, Total string
-		PickupWaitSeconds, FailAvailableInSeconds                                              int
-		PickupAlertAcknowledged                                                                bool
+		PickupWaitSeconds, FailAvailableInSeconds                                                 int
+		PickupAlertAcknowledged                                                                   bool
 	}
 	type failed struct {
 		OrderCode, CourierName, FoodAmount, CourierReimbursement, PartnerShare, FudiaShare string
@@ -281,7 +281,7 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	// La opción «Delivery» del restaurante ve la misma alerta, la central y el motorizado.
 	type boardOrder struct {
 		ID, Code, DispatchStatus, PartnerName, CourierName, PickupAlert, IssueReportedAt string
-		FailedDelivery                                                                  bool
+		FailedDelivery                                                                   bool
 	}
 	board := func(subject scope) []boardOrder {
 		t.Helper()
@@ -296,6 +296,32 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	if items := board(s); len(items) != 1 || items[0].ID != orderID || items[0].DispatchStatus != "accepted" ||
 		items[0].PartnerName != "Motos Sur" || items[0].CourierName != "Rosa Quispe" || items[0].PickupAlert != "critical" {
 		t.Fatalf("board with alert: %#v", items)
+	}
+	// El detalle consulta un pedido sin depender del historial reciente del tablero.
+	readDispatch := func(subject scope) *httptest.ResponseRecorder {
+		return call(d.OrderDispatch, "GET", "", map[string]string{"id": orderID}, subject)
+	}
+	if rec := readDispatch(s); rec.Code != http.StatusOK {
+		t.Fatalf("order dispatch: %d %s", rec.Code, rec.Body.String())
+	} else {
+		var detail struct {
+			PartnerName, PartnerPhone, CourierName, PickupAlert string
+			PickupWaitSeconds                                   int
+		}
+		decode(rec, &detail)
+		if detail.PartnerName != "Motos Sur" || detail.PartnerPhone != prefix+"2" || detail.CourierName != "Rosa Quispe" || detail.PickupAlert != "critical" || detail.PickupWaitSeconds < 540 {
+			t.Fatalf("order dispatch tracking: %#v", detail)
+		}
+	}
+	foreign := s
+	foreign.LocationID = "00000000-0000-0000-0000-000000000001"
+	if rec := readDispatch(foreign); rec.Code != http.StatusNotFound {
+		t.Fatalf("order dispatch location isolation: %d %s", rec.Code, rec.Body.String())
+	}
+	foreign = s
+	foreign.OrganizationID = "00000000-0000-0000-0000-000000000001"
+	if rec := readDispatch(foreign); rec.Code != http.StatusNotFound {
+		t.Fatalf("order dispatch organization isolation: %d %s", rec.Code, rec.Body.String())
 	}
 	if got := act(southPanel, "keep", southOffer); got != "kept" {
 		t.Fatalf("keep: %s", got)
@@ -402,6 +428,18 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	}
 	if items := board(s); len(items) != 1 || items[0].DispatchStatus != "cancelled" || !items[0].FailedDelivery {
 		t.Fatalf("board after failed delivery: %#v", items)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE orders SET created_at=now()-interval '30 days' WHERE id=$1`, orderID); err != nil {
+		t.Fatal(err)
+	}
+	if rec := readDispatch(s); rec.Code != http.StatusOK {
+		t.Fatalf("historical order dispatch: %d %s", rec.Code, rec.Body.String())
+	} else {
+		var detail struct{ FailedDelivery bool }
+		decode(rec, &detail)
+		if !detail.FailedDelivery {
+			t.Fatalf("historical failed delivery: %#v", detail)
+		}
 	}
 	partnersRec := call(d.LocationPartners, "GET", "", nil, s)
 	var located struct {

@@ -1,5 +1,6 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
+import {OrderDispatchActions} from "@/modules/delivery";
 import "../../styles/orders.css";
 import dynamic from "next/dynamic";
 import {useState} from "react";
@@ -30,7 +31,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  useOrderDeepLink(initialOrderId,setDetailId);
  const[creating,setCreating]=useState(false);
  const[adding,setAdding]=useState<{order:Order;draft:Draft;requestKey:string}|null>(null);
- const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});
+ const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData,refetchInterval:10_000});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId),refetchInterval:query=>query.state.data?.completedAt?false:10000});
  const invalidate=()=>Promise.all(["orders","order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability","products","sales","staff-notices"].map(key=>qc.invalidateQueries({queryKey:[key]})));
  const create=useMutation({mutationFn:(draft:ManualOrderDraft)=>createManualOrder(draft),onSuccess:order=>{setCreating(false);setChannel(order.channel);setStatus("abiertos");setQ("");setPage(1);invalidate();notify({tone:"success",title:"Pedido registrado",message:"El pedido fue enviado a Cocina. Puedes seguir su avance en Pedidos y registrar el cobro en Punto de venta."})},onError:error=>{void qc.invalidateQueries({queryKey:["order-catalog"]});void qc.invalidateQueries({queryKey:["order-combo"]});notify({tone:"danger",title:"No se pudo registrar el pedido",message:error.message})}});
@@ -78,7 +79,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
       <td><Status tone={meta.tone} solid>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{money(o.total)}</b></td>
-      <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/></div></td>
+      <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/><OrderDispatchActions order={o} busy={list.isPlaceholderData||advance.isPending||cancel.isPending}/></div></td>
      </tr>})}</tbody>
    </DataTable>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>

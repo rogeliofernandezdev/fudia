@@ -173,8 +173,8 @@ type OrderRepository interface {
 	// PartnerDeliveryAssigned indica si una central de Delivery Fudia tiene el reparto
 	// (aceptado, recogido o entregado). El delivery propio responde false.
 	PartnerDeliveryAssigned(ctx context.Context, s scope, id string) (bool, error)
-	// PartnerDeliveryActive indica si Delivery Fudia lleva el reparto (buscando
-	// central o ya asignada): recojo y entrega los marca el repartidor.
+	// PartnerDeliveryActive indica si Delivery Fudia lleva el reparto (buscando,
+	// sin central o ya asignado): recojo y entrega los marca el repartidor.
 	PartnerDeliveryActive(ctx context.Context, s scope, id string) (bool, error)
 	SubmitServiceItems(ctx context.Context, s scope, id string) (int64, error)
 	PendingServiceItems(ctx context.Context, s scope, id string) (bool, error)

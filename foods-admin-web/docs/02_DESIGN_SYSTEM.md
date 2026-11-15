@@ -2811,7 +2811,7 @@ se gestiona globalmente (decisión del 2026-11-06):
 - Caja sigue el despacho del pedido.
 
 - **Delivery** (`/delivery`, decisión del 2026-11-14): el menú DELIVERY tiene una
-  sola opción, «Delivery», con todo el delivery del local en `Tabs` (la pestaña
+  sola opción, «Delivery», con proveedores, tarifas e incidencias en `Tabs` (la pestaña
   viaja en `?tab=`, en inglés). «Apps de delivery» y «App repartidores» dejaron de
   ser opciones sueltas: `/delivery-apps`, `/couriers`, `/repartidores` y
   `/platform/delivery-partners` redirigen a su pestaña. En móvil la pista de
@@ -2819,7 +2819,6 @@ se gestiona globalmente (decisión del 2026-11-06):
 
   | Pestaña (`tab`) | Contenido |
   | --- | --- |
-  | Pedidos (`orders`) | Tablero en vivo (cada 10 s) con «En curso / Todos de hoy». Tabla «PEDIDO · CLIENTE · ESTADO · REPARTO · RESPONSABLE · RECOGIDA · TOTAL · ACCIONES»: estado del pedido `solid` (operativo), despacho `Status` suave de la matriz, central con teléfono y motorizado, alerta de recogida (`orange` 3 y 5 min, `red` 8 min) o incidencia («No pudo entregar» `orange`, «Entrega fallida» `red`). Acciones de fila con `IconButton`: «Reintentar centrales» (`refresh`) y «Usar delivery propio» (`store`, con `ConfirmDialog` «Usar propio») |
   | Proveedores (`providers`) | Restaurante: tabla de solo lectura «CENTRAL · TELÉFONO» con todas las centrales activas y una línea que explica la oferta simultánea y la aceptación exclusiva. Plataforma: la administración completa de centrales (abajo) |
   | Tarifas de envío (`fees`) | `DeliveryFeesPanel` (ver «Tarifas de envío») |
   | Entregas fallidas (`failed`) | Tabla «PEDIDO · CLIENTE · CENTRAL · COMIDA · REEMBOLSO · CENTRAL ASUME · FUDIA ASUME · APORTE FUDIA», con `Tag` neutro «Con/Sin aporte Fudia» y las notas de validación |
@@ -2879,14 +2878,36 @@ se gestiona globalmente (decisión del 2026-11-06):
     - Generar y regenerar actúan al instante, no esperan a «Guardar».
   - En ≤600 px la imagen va arriba y el grupo de acciones debajo; cada botón
     ocupa la fila y conserva su color semántico.
-- **Detalle del pedido › Entrega**: `OrderDispatchBlock` bajo la dirección
-  (línea fina superior). Solo aparece si el pedido tiene despacho. Es un resumen:
-  - El estado con `Status` suave (no `solid`; es un registro, no el estado
-    operativo del pedido) y el nombre de la central en 14 px semibold.
-  - Si la central cobra el envío: «Envío S/ 5.00: lo cobra la central al cliente.»
-    en `ink-600`.
-  - Enlace «Ver en Delivery» (44 px) a Delivery › Pedidos, donde viven
-    «Reintentar centrales» y «Usar delivery propio».
+- **Detalle del pedido › Reparto** (2026-11-15): se retira la pestaña Pedidos
+  de Delivery para mantener una sola lista en Pedidos. Delivery inicia en
+  Proveedores; los enlaces antiguos con `?tab=orders` redirigen a Pedidos.
+  `OrderDispatchBlock` aparece después de la dirección, también si falta esta,
+  en cualquier pedido delivery. Separa el seguimiento del estado operativo:
+  - Título Reparto, línea fina superior y `Status` suave de la matriz.
+  - `DetailFacts` con central, teléfono accionable y motorizado; si la central
+    aún no lo asignó, «Pendiente de asignación». No hay celdas vacías.
+  - Fechas reales de aceptación, recogida y entrega; alertas e incidencias
+    conservan sus etiquetas y tonos aprobados. El envío de la central se explica
+    solo si tiene asignación vigente.
+  - El detalle es solo seguimiento: las acciones de reparto están en la columna
+    Acciones del registro en Pedidos, junto a Ver detalle (`OrderDispatchActions`).
+    Usa `IconButton` del sistema: `refresh` «Reintentar centrales» y `store`
+    «Usar delivery propio», con tooltip, nombre accesible y área táctil de 44 px
+    en móvil. El clic no abre el detalle. Se ocultan por estado y permiso
+    `orders.manage`, y se bloquean durante la operación.
+  - Usar delivery propio conserva `ConfirmDialog`, montado en `document.body`
+    para no quedar recortado por la tabla. Si hay central aceptante, explica
+    que recibirá el aviso. Pedidos cerrados no ofrecen acciones de reparto.
+  - La columna Acciones reserva 176 px y la tabla móvil conserva su scroll
+    horizontal estándar; no se reducen controles para hacerlos caber.
+  - Consulta individual con skeleton, error explícito y reintento (sin reintento
+    ante 403), y vacío «Este pedido aún no tiene despacho a centrales registrado».
+    No depende del límite ni del historial del antiguo tablero.
+El avance de Delivery Fudia pertenece al motorizado: Caja no ofrece «En camino»
+ni «Entregar», tampoco en «Sin central». Primero debe reintentar centrales o
+confirmar el cambio a delivery propio; el backend rechaza el avance manual
+mientras el despacho siga en Delivery Fudia.
+
 - **Matriz del despacho** (`dispatchStatusMeta`, sin rojo porque nada es un error):
 
   | Estado | Etiqueta | Tono |

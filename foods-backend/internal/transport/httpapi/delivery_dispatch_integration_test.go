@@ -227,6 +227,12 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 	if got := dispatchStatus(orderID); got != "unassigned" {
 		t.Fatalf("after expiry: %s", got)
 	}
+	for _, status := range []string{"en_camino", "entregado"} {
+		rec := call(api.updateOrderStatus, "PATCH", fmt.Sprintf(`{"status":%q}`, status), orderID, s)
+		if rec.Code != 409 || !strings.Contains(rec.Body.String(), "delivery_handled_by_partner") {
+			t.Fatalf("cashier must resolve unassigned dispatch before %s: %d %s", status, rec.Code, rec.Body.String())
+		}
+	}
 	var notices int
 	if err := pool.QueryRow(ctx, `SELECT count(*) FROM staff_notices WHERE order_id=$1 AND kind='delivery_unassigned'`, orderID).Scan(&notices); err != nil || notices != 1 {
 		t.Fatalf("unassigned notice: %d %v", notices, err)

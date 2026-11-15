@@ -2,16 +2,15 @@ import type {IconName} from "@/design-system";
 import type {DeliveryBoardOrder,PickupAlert} from "./types";
 
 /** Pestañas de Delivery; el valor viaja en `?tab=`. */
-export type DeliveryTab="orders"|"providers"|"fees"|"failed"|"apps"|"couriers";
+export type DeliveryTab="providers"|"fees"|"failed"|"apps"|"couriers";
 type TabDefinition={value:DeliveryTab;label:string;icon:IconName;module?:string};
 
 /**
- * Todo el delivery del restaurante vive en una sola opción del menú. «Apps de
+ * Configuración e incidencias de delivery; los pedidos se gestionan en Pedidos. «Apps de
  * delivery» y «Repartidores propios» aún están en desarrollo: solo aparecen si
  * la empresa tiene activo su módulo.
  */
 export const deliveryTabs:readonly TabDefinition[]=[
-  {value:"orders",label:"Pedidos",icon:"orders"},
   {value:"providers",label:"Proveedores",icon:"motorbike"},
   {value:"fees",label:"Tarifas de envío",icon:"route"},
   {value:"failed",label:"Entregas fallidas",icon:"alert"},
@@ -23,14 +22,14 @@ export function visibleDeliveryTabs(modules:Record<string,boolean>|null|undefine
   return deliveryTabs.filter(tab=>!tab.module||modules?.[tab.module]===true);
 }
 
-/** Pestaña inicial: la pedida en la URL si existe y está visible; si no, Pedidos. */
+/** Pestaña inicial: la pedida en la URL si existe y está visible; si no, Proveedores. */
 export function deliveryTabFrom(value:string|null|undefined,modules:Record<string,boolean>|null|undefined):DeliveryTab{
-  return visibleDeliveryTabs(modules).find(tab=>tab.value===value)?.value??"orders";
+  return visibleDeliveryTabs(modules).find(tab=>tab.value===value)?.value??"providers";
 }
 
 /** Ruta a una pestaña de Delivery, para enlaces y redirecciones. */
 export function deliveryTabPath(tab:DeliveryTab){
-  return tab==="orders"?"/delivery":`/delivery?tab=${tab}`;
+  return `/delivery?tab=${tab}`;
 }
 
 /** Un delivery sigue en curso mientras no se entrega, cancela ni registra como fallido. */

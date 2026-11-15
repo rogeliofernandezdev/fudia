@@ -256,3 +256,20 @@ plataforma (11,2 ms y 2 583 bloques por consulta, creciente con el historial);
 después, solo lecturas por índice (3,2 ms y 654 bloques, constante con el
 historial). El inicio de sesión crea la sesión y devuelve operador y central en
 una sola consulta.
+
+## Seguimiento individual en Pedidos (2026-11-15)
+
+`GET /v1/admin/orders/{id}/delivery-dispatch` incluye teléfono de la central
+responsable, motorizado, alerta/espera de recogida y reporte/entrega fallida,
+además de sus fechas y ofertas. La central solo se informa con asignación
+vigente (accepted, picked_up o delivered); una oferta pendiente no es asignación.
+La consulta conserva organización y local, y funciona fuera del límite de
+200 pedidos recientes del tablero. No hay migración ni cambio de permisos.
+El frontend muestra seguimiento en el detalle y Reintentar y Usar delivery propio
+en las acciones de cada fila de Pedidos;
+Delivery conserva configuración e incidencias. La prueba de motorizado también
+comprueba los nuevos datos del detalle y el aislamiento por local.
+
+El despacho `unassigned` sigue bajo Delivery Fudia: el endpoint de estado del
+pedido rechaza el avance manual con `delivery_handled_by_partner`. Caja debe
+reintentar o cambiar explícitamente a delivery propio antes de asumir el reparto.

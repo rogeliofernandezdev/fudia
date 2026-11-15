@@ -56,13 +56,13 @@ test("fuera del salón primero se cobra y luego se entrega",()=>{
  assert.equal(nextOrderAction({...ready,remainingAmount:"30"}).label,"Confirmar entrega","el salón entrega antes de cerrar la cuenta");
 });
 test("delivery Fudia: el repartidor recoge y entrega, caja solo cobra",()=>{
- for(const deliveryDispatchStatus of ["searching","accepted","picked_up","delivered"]){
+ for(const deliveryDispatchStatus of ["searching","unassigned","accepted","picked_up","delivered"]){
   for(const status of ["listo","en_camino"]){
    for(const remainingAmount of ["0","12"])assert.equal(nextOrderAction({...ready,channel:"delivery",status,remainingAmount,deliveryDispatchStatus}),null);
   }
  }
- // Delivery propio, sin central o liberado: caja sigue despachando y entregando.
- for(const deliveryDispatchStatus of [undefined,"own","unassigned","cancelled"]){
+ // Solo el delivery propio conserva el avance manual del restaurante; sin central requiere resolver el reparto.
+ for(const deliveryDispatchStatus of [undefined,"own","cancelled"]){
   assert.equal(nextOrderAction({...ready,channel:"delivery",remainingAmount:"0",deliveryDispatchStatus}).status,"en_camino");
   assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino",remainingAmount:"0",deliveryDispatchStatus}).status,"entregado");
  }

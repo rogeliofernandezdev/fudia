@@ -3,7 +3,6 @@ import {useEffect,useState} from "react";
 import {EmptyState,PageHeader,Tabs,TabsBar} from "@/design-system";
 import {useSession} from "@/providers";
 import {deliveryTabFrom,deliveryTabPath,visibleDeliveryTabs,type DeliveryTab} from "../domain/board";
-import {DeliveryBoard} from "./delivery-board";
 import {DeliveryFeesPanel} from "./delivery-fees-panel";
 import {DeliveryProviders} from "./delivery-providers";
 import {FailedDeliveries} from "./failed-deliveries";
@@ -19,7 +18,7 @@ function ComingSoon(){
  */
 export function DeliveryPage({initialTab}:{initialTab?:string}){
   const{modules}=useSession();
-  const[requested,setRequested]=useState(initialTab??"orders");
+  const[requested,setRequested]=useState(initialTab??"providers");
   const tab=deliveryTabFrom(requested,modules);
   // En móvil la pista de pestañas se desplaza: la activa (por ejemplo, abierta desde la URL) queda a la vista.
   useEffect(()=>{document.querySelector(".delivery-tabs [aria-selected=true]")?.scrollIntoView({block:"nearest",inline:"nearest"});},[tab]);
@@ -28,9 +27,8 @@ export function DeliveryPage({initialTab}:{initialTab?:string}){
     window.history.replaceState(window.history.state,"",deliveryTabPath(next));
   };
   return <>
-    <PageHeader title="Delivery" description="Repartos en curso, centrales, tarifas e incidencias de tu local."/>
+    <PageHeader title="Delivery" description="Proveedores, tarifas de envío e incidencias de tu local."/>
     <TabsBar><Tabs className="delivery-tabs" label="Delivery" value={tab} onChange={change} items={visibleDeliveryTabs(modules).map(({value,label,icon})=>({value,label,icon}))}/></TabsBar>
-    {tab==="orders"&&<DeliveryBoard/>}
     {tab==="providers"&&<DeliveryProviders/>}
     {tab==="fees"&&<DeliveryFeesPanel/>}
     {tab==="failed"&&<FailedDeliveries/>}

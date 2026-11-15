@@ -4,7 +4,7 @@ export type DeliveryLink={locationId:string;token:string;active:boolean;updatedA
 
 export type DispatchStatus="searching"|"accepted"|"unassigned"|"picked_up"|"delivered"|"own"|"cancelled";
 export type DispatchOffer={partnerName:string;round:number;priority:number;status:"pending"|"accepted"|"rejected"|"expired"|"withdrawn";createdAt:string;expiresAt?:string;respondedAt?:string};
-export type DeliveryDispatch={orderId:string;status:DispatchStatus;round:number;partnerName?:string;acceptedAt?:string;pickedUpAt?:string;deliveredAt?:string;offers:DispatchOffer[]};
+export type DeliveryDispatch={orderId:string;status:DispatchStatus;round:number;partnerName?:string;partnerPhone?:string;courierName?:string;pickupWaitSeconds?:number;pickupAlert?:PickupAlert;pickupAlertAcknowledged?:boolean;issueReportedAt?:string;failedDelivery?:boolean;acceptedAt?:string;pickedUpAt?:string;deliveredAt?:string;offers:DispatchOffer[]};
 
 /** Alerta de recogida que calcula el backend: 3, 5 y 8 minutos con el pedido listo sin recoger. */
 export type PickupAlert=""|"warning"|"urgent"|"critical";

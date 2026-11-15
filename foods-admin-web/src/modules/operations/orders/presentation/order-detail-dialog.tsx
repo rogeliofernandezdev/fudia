@@ -120,8 +120,8 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
                   {point.distanceKm!==null&&<span className="order-detail-map-distance">{formatRegionalNumber(point.distanceKm,location?.country,{maximumFractionDigits:1})} km</span>}
                 </span>}
               </p></div>
-              <OrderDispatchBlock order={order} money={money}/>
             </section>}
+            {order.channel==="delivery"&&<OrderDispatchBlock key={order.id} order={order} money={money}/>}
           </section>
 
           {paymentReferences.length>0&&<section className="order-detail-payment-references" aria-label="Números de operación de los pagos registrados">

@@ -34,14 +34,14 @@ test("Pedidos usa el DataTable compartido y su región desplazable",()=>{
 
 test("Pedidos móvil no aplasta las cuatro columnas informativas",()=>{
   const table=ruleInMobile(".orders-panel .orders-table");
-  assert.equal(table["min-width"],"var(--size-500)");
+  assert.equal(table["min-width"],"var(--size-580)");
   assert.equal(table.width,"100%");
   assert.equal(table["table-layout"],"fixed");
   for(const [selector,width] of [
-    [".orders-panel .orders-table th:nth-child(1)","var(--size-208)"],
+    [".orders-panel .orders-table th:nth-child(1)","var(--size-190)"],
     [".orders-panel .orders-table th:nth-child(3)","var(--size-106)"],
     [".orders-panel .orders-table th:nth-child(5)","var(--size-100)"],
-    [".orders-panel .orders-table th:nth-child(6)","var(--size-86)"]
+    [".orders-panel .orders-table th:nth-child(6)","var(--size-176)"]
   ])assert.equal(ruleInMobile(selector).width,width);
   for(const col of [2,4]){
     assert.equal(ruleInMobile(`.orders-table th:nth-child(${col})`).display,"none");

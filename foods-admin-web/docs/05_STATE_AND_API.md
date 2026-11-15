@@ -559,14 +559,10 @@ de distritos antes de este frontend.
 `src/modules/delivery` publica tipos, API y componentes. Todo pasa por el proxy
 `/api/admin` o `/api/platform`:
 
-- **Delivery (`/delivery?tab=`):** `deliveryTabFrom` valida la pestaña pedida
-  contra las visibles (`visibleDeliveryTabs` según módulos) y cae en `orders`;
-  cambiar de pestaña actualiza la URL con `history.replaceState`, sin recargar.
-  - Pedidos: clave `["delivery-board"]` con `GET delivery/orders` y
-    `refetchInterval` de 10 s. «Reintentar centrales» y «Usar delivery propio»
-    (`POST orders/{id}/delivery-dispatch/retry|own`) invalidan `delivery-board`,
-    `order`, `orders` y `staff-notices`. «En curso / Todos de hoy» filtra en el
-    cliente (`filterBoard`).
+- **Delivery (`/delivery?tab=`):** `deliveryTabFrom` valida la pestaña contra
+  las visibles y cae en `providers`. No tiene una lista duplicada de pedidos.
+  `?tab=orders` redirige en servidor a Pedidos; cambiar entre las demás pestañas
+  actualiza la URL con `history.replaceState`.
   - Proveedores: clave `["delivery-providers"]` con `GET delivery/partners`
     (`{enabled,districtName,items:[{name,whatsappPhone}]}`), solo lectura. Si la
     sesión es de Plataforma se muestra `DeliveryPartnersAdmin`.
@@ -583,10 +579,26 @@ de distritos antes de este frontend.
 - **Local:** solo usa `["delivery-link",locationId]`
   (`GET|POST locations/{id}/delivery-link`). Generar o regenerar el enlace
   reemplaza la caché con la respuesta.
-- **Pedido:** la lectura trae `deliveryDispatchStatus`, `deliveryPartnerName`
-  y `deliveryPartnerFee`, sin otra consulta.
-  - El detalle solo resume el despacho y enlaza a Delivery › Pedidos; las
-    acciones viven en el tablero.
+- **Pedido › Reparto:** `["delivery-dispatch",order.id,order.status]` consulta
+  `GET orders/{id}/delivery-dispatch`, cada 10 s mientras el pedido no esté
+  cerrado. Incluye central, teléfono, motorizado, fechas, alerta e incidencia
+  sin descargar la lista del local. Solo `404 delivery_dispatch_not_found`
+  representa ausencia de despacho; el resto conserva el error explícito.
+  - Reintentar y Usar delivery propio están en `OrderDispatchActions`, dentro
+    de la fila de Pedidos, y llaman los POST existentes `retry|own`. El detalle
+    solo presenta seguimiento. La fila usa `deliveryDispatchStatus` del listado
+    sin pedir el despacho por cada registro; el listado se refresca cada 10 s.
+    Tras la operación se invalidan despacho, detalle, lista,
+    POS, ventas, dashboard y avisos. Esto actualiza también el total y saldo al
+    devolver el costo de envío al restaurante.
+  - Se bloquean dobles acciones durante la mutación y acciones en pedidos
+    cerrados, con entrega fallida o sin `orders.manage`. El backend conserva
+    la autorización y todas las transiciones, incluidos conflictos por pagos.
+
+El avance de Delivery Fudia pertenece al motorizado: Caja no ofrece «En camino»
+ni «Entregar», tampoco en «Sin central». Primero debe reintentar centrales o
+confirmar el cambio a delivery propio; el backend rechaza el avance manual
+mientras el despacho siga en Delivery Fudia.
 
 ## Tope mensual de Fudia Concierge (solo Plataforma)
 

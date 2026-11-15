@@ -8,12 +8,12 @@ export function deliveryInProgress(order:Pick<CancellableOrder,"status"|"deliver
 }
 
 /**
- * Delivery Fudia con central buscando o asignada (2026-11-14): el repartidor
+ * Delivery Fudia buscando, sin central o asignado: el repartidor
  * recoge («En camino») y entrega («Entregado») desde su panel, y eso es lo que ve
  * el cliente en el chat. Caja solo cobra; el delivery propio sigue en caja.
  */
 export function partnerHandlesDelivery(order:Pick<OperationalOrder,"channel"|"deliveryDispatchStatus">):boolean{
-  return order.channel==="delivery"&&["searching","accepted","picked_up","delivered"].includes(order.deliveryDispatchStatus??"");
+  return order.channel==="delivery"&&["searching","unassigned","accepted","picked_up","delivered"].includes(order.deliveryDispatchStatus??"");
 }
 
 export function canCancelOrder(order:CancellableOrder):boolean{

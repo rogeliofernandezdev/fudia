@@ -83,7 +83,7 @@ type Partner struct {
 	CoverageCodes  []string `json:"coverageCodes"`
 	CoverageLabels []string `json:"coverageLabels"`
 	// Priority ordena el listado; las ofertas se reciben simultáneamente.
-	Priority int `json:"priority"`
+	Priority  int    `json:"priority"`
 	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 }
@@ -137,14 +137,21 @@ type DispatchOffer struct {
 
 // Dispatch es el despacho de un pedido a las centrales.
 type Dispatch struct {
-	OrderID     string          `json:"orderId"`
-	Status      string          `json:"status"`
-	Round       int             `json:"round"`
-	PartnerName string          `json:"partnerName,omitempty"`
-	AcceptedAt  string          `json:"acceptedAt,omitempty"`
-	PickedUpAt  string          `json:"pickedUpAt,omitempty"`
-	DeliveredAt string          `json:"deliveredAt,omitempty"`
-	Offers      []DispatchOffer `json:"offers"`
+	OrderID                 string          `json:"orderId"`
+	Status                  string          `json:"status"`
+	Round                   int             `json:"round"`
+	PartnerName             string          `json:"partnerName,omitempty"`
+	PartnerPhone            string          `json:"partnerPhone,omitempty"`
+	CourierName             string          `json:"courierName,omitempty"`
+	PickupWaitSeconds       int             `json:"pickupWaitSeconds"`
+	PickupAlert             string          `json:"pickupAlert"`
+	PickupAlertAcknowledged bool            `json:"pickupAlertAcknowledged"`
+	IssueReportedAt         string          `json:"issueReportedAt,omitempty"`
+	FailedDelivery          bool            `json:"failedDelivery"`
+	AcceptedAt              string          `json:"acceptedAt,omitempty"`
+	PickedUpAt              string          `json:"pickedUpAt,omitempty"`
+	DeliveredAt             string          `json:"deliveredAt,omitempty"`
+	Offers                  []DispatchOffer `json:"offers"`
 }
 
 // MessageItem es una línea del pedido en el mensaje a la central.

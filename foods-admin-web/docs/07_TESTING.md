@@ -693,3 +693,14 @@ Las centrales se crean y editan sin cobertura; el modal de acceso no expone la
 URL y conserva copiar, abrir y renovar con confirmación. La vista de prueba
 `tests/helpers/delivery-partners-preview.mjs` monta los componentes reales y
 una API ilustrativa en memoria para verificar escritorio y móvil desde 390 px.
+
+### Reparto desde la fila de Pedidos (2026-11-15)
+
+`delivery-fudia.test.mjs` cubre las pestañas sin duplicar Pedidos, la redirección
+antigua y las acciones en la fila, sin mutaciones de reparto en el detalle. `node tests/helpers/order-dispatch-preview.mjs --verify`
+usa componentes reales con API ficticia local: escritorio y 390 px, estados,
+lectura sin permisos, carga/error/vacío, confirmación y cancelación, reintento,
+acciones que no abren el detalle ni consultan el despacho por cada registro,
+conflicto de pagos, ausencia de avances de reparto para Caja en Delivery Fudia
+y actualización del importe al usar delivery propio. Requiere
+Playwright instalado (`FOODS_PLAYWRIGHT_PATH` si no está en node_modules).
