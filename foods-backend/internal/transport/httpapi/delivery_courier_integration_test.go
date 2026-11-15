@@ -339,6 +339,12 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 	if rec := call(api.updateOrderStatus, "PATCH", `{"status":"cancelado"}`, map[string]string{"id": orderID}, s); rec.Code != 409 || !strings.Contains(rec.Body.String(), "delivery_in_progress_not_cancellable") {
 		t.Fatalf("cancel on the way: %d %s", rec.Code, rec.Body.String())
 	}
+	// Recojo y entrega son del repartidor: caja solo cobra.
+	for _, status := range []string{"en_camino", "entregado"} {
+		if rec := call(api.updateOrderStatus, "PATCH", fmt.Sprintf(`{"status":%q}`, status), map[string]string{"id": orderID}, s); rec.Code != 409 || !strings.Contains(rec.Body.String(), "delivery_handled_by_partner") {
+			t.Fatalf("staff %s on a Fudia delivery: %d %s", status, rec.Code, rec.Body.String())
+		}
+	}
 
 	// Ubicación del motorizado desde su enlace.
 	locate := func(token, body string) int {

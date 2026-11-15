@@ -237,6 +237,19 @@ evalúan la misma regla bajo bloqueo del pedido. Cerrar cuenta y cobrar exigen
 estado Entregado y ausencia de productos pendientes en todas las rondas.
 No hay reapertura después del cierre ni botón adicional para liberar la mesa.
 
+Fuera del salón (mostrador, recojo, delivery y pedidos de chat) primero se cobra y
+luego se entrega (2026-11-14): `PATCH /orders/{id}/status` a Entregado con saldo
+pendiente responde 409 `payment_required_before_delivery` («Cobra el pedido antes
+de entregarlo»). La confirmación de la central de Delivery Fudia (panel del
+repartidor) no pasa por esa transición y no se bloquea.
+
+En Delivery Fudia (despacho `searching`, `accepted`, `picked_up` o `delivered`) el
+recojo y la entrega los marca el repartidor desde su enlace, o la central desde su
+panel; eso es lo que ve el cliente en el chat. Caja solo cobra, y el cobro deja el
+pedido en Pagado. `PATCH /orders/{id}/status` a En camino o Entregado responde 409
+`delivery_handled_by_partner`. El delivery propio sigue despachando y entregando
+desde caja hasta que tenga su propio panel de repartidores.
+
 `orders.paid_amount` (migración 000110) guarda el cobrado neto del pedido (cobros
 menos devoluciones). Lo recalculan triggers de `payments` y `payment_refunds` en la
 misma transacción del documento; ningún código lo escribe. Lo usa el listado de POS

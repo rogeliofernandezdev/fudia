@@ -76,6 +76,7 @@ func validPOSDates(from, to string) bool {
 
 type PaymentRepository interface {
 	CanReadAllShifts(context.Context, scope) (bool, error)
+	IsPlatformAdmin(context.Context, scope) (bool, error)
 	OpenCollectionShifts(context.Context, scope) ([]domain.CollectionShift, error)
 	LockCollectionShift(context.Context, scope, string) (string, error)
 	OwnsCollectionOrder(context.Context, scope, string) (bool, error)

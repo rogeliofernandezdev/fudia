@@ -67,7 +67,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   // El resumen no repite el importe principal: el desglose solo aparece cuando explica una diferencia
   // (delivery, o pagos registrados que dejan saldo); sin nada que explicar queda solo la franja.
   const breakdown=hasDelivery||(pending&&hasPayments);
-  const canCharge=Boolean(order&&canCollectOrder(order,user?.id,can("cash.manage"),cashCollection)&&canChargeAccount(order)&&remaining>0.00001);
+  const canCharge=Boolean(order&&canCollectOrder(order,user,can("cash.manage"),cashCollection)&&canChargeAccount(order)&&remaining>0.00001);
   const canCancel=Boolean(order&&canCancelOrder(order));
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;

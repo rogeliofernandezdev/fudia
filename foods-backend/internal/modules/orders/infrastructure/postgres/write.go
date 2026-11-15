@@ -103,6 +103,16 @@ func (r *Orders) PartnerDeliveryAssigned(ctx context.Context, s scope, id string
 	return assigned, err
 }
 
+// PartnerDeliveryActive lee si Delivery Fudia lleva el reparto del pedido bloqueado.
+func (r *Orders) PartnerDeliveryActive(ctx context.Context, s scope, id string) (bool, error) {
+	var active bool
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM delivery_dispatches d
+		WHERE d.order_id=$1 AND d.organization_id=$2 AND d.location_id=$3
+		  AND d.status IN ('searching','accepted','picked_up','delivered'))`, id, s.OrganizationID, s.LocationID).Scan(&active)
+	return active, err
+}
+
 func (r *Orders) ServiceStarted(ctx context.Context, s scope, id string) (bool, bool, error) {
 	var hasService bool
 	var started bool

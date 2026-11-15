@@ -292,6 +292,17 @@ func (a *Orders) SetStatus(ctx context.Context, s scope, id string, in OrderStat
 	if (current == "confirmado" && in.Status == "preparando") || (current == "preparando" && in.Status == "listo") {
 		return result, orderFailure(apperror.Conflict, "kitchen_transition_required", "Los estados de preparación solo se actualizan desde Cocina.")
 	}
+	if channel == "delivery" && (in.Status == "en_camino" || in.Status == "entregado") {
+		// Delivery Fudia: el repartidor marca recojo y entrega desde su enlace (lo que
+		// ve el cliente en el chat); caja solo cobra (2026-11-14).
+		active, err := a.repo.PartnerDeliveryActive(tx.Context(), s, id)
+		if err != nil {
+			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el reparto del pedido.")
+		}
+		if active {
+			return result, orderFailure(apperror.Conflict, "delivery_handled_by_partner", "El repartidor de Delivery Fudia marca el recojo y la entrega. En caja solo se cobra.")
+		}
+	}
 	var hasService bool
 	if in.Status == "cancelado" && channel == "delivery" && (current == "listo" || current == "en_camino" || current == "entregado") {
 		// Delivery Fudia: preparado y en manos de una central, nadie puede cancelarlo.
@@ -340,8 +351,13 @@ func (a *Orders) SetStatus(ctx context.Context, s scope, id string, in OrderStat
 	if paidErr != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el estado de cobro del pedido.")
 	}
-	if in.Status == "entregado" && tableID != "" && (channel != "salon" || releasingTable) && paid+0.00001 < total {
+	if in.Status == "entregado" && releasingTable && paid+0.00001 < total {
 		return result, orderFailure(apperror.Conflict, "payment_required_before_delivery", "La mesa no puede liberarse mientras exista saldo pendiente.")
+	}
+	// Fuera del salón primero se cobra y luego se entrega (2026-11-14). La
+	// confirmación de la central de Delivery Fudia no pasa por aquí.
+	if in.Status == "entregado" && channel != "salon" && paid+0.00001 < total {
+		return result, orderFailure(apperror.Conflict, "payment_required_before_delivery", "Cobra el pedido antes de entregarlo.")
 	}
 	if in.Status == "cancelado" && paid > 0.00001 {
 		return result, orderFailure(apperror.Conflict, "refund_required_before_cancel", "Devuelve primero los pagos registrados antes de cancelar el pedido.")

@@ -339,6 +339,16 @@ X/Cancelar confirma el descarte si hubo cambios. El éxito cierra el formulario,
 selecciona el canal creado, limpia filtros e invalida Pedidos, Cocina, POS,
 Dashboard y disponibilidad. No se registran pagos desde este formulario: el cobro
 sigue en POS. Delivery continúa con Por entregar → En camino → Entregado.
+Fuera del salón primero se cobra y luego se entrega (2026-11-14): con saldo
+pendiente, el detalle muestra solo «Cobrar saldo» y no «Entregar»
+(`nextOrderAction` + `awaitingPayment`); al quedar pagado, «Entregar» pasa a ser
+la acción principal. El backend lo valida con `payment_required_before_delivery`.
+En Delivery Fudia (`partnerHandlesDelivery`: central buscando o asignada) el
+detalle no muestra «En camino» ni «Entregar»: los marca el repartidor y caja
+solo cobra (backend `delivery_handled_by_partner`). El delivery propio conserva
+ambas acciones.
+El administrador de plataforma no ve «Cobrar» (`canCollectOrder`); el backend
+responde `platform_admin_cannot_collect`.
 
 ## Responsable de mesa y autoría del cobro
 

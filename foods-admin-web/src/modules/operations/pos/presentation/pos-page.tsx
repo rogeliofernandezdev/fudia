@@ -123,7 +123,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const hasCollectionShift=Boolean(shift)||shiftOptions.length>0;
   const refundShift=canChooseShift?current.data?.assignedShift:current.data?.shift;
   const items=orders.data?.items??[];
-  const canCollectSelected=paymentOrder.data?canCollectOrder(paymentOrder.data.order,user?.id,canManage,canCollect):canCollect;
+  const canCollectSelected=paymentOrder.data?canCollectOrder(paymentOrder.data.order,user,canManage,canCollect):canCollect;
 
   function dateTime(value:string){
     return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
@@ -131,7 +131,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function actionsFor(item:POSOrderSummary){
     return <div className="pos-actions">
       <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
-      {canCollectOrder(item,user?.id,canManage,canCollect)&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={hasCollectionShift?`Cobrar ${item.code}`:"Necesitas un turno abierto para cobrar"} disabled={!hasCollectionShift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>{setSelectedCash(null);setPaymentOrderId(item.id)}}/>}
+      {canCollectOrder(item,user,canManage,canCollect)&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={hasCollectionShift?`Cobrar ${item.code}`:"Necesitas un turno abierto para cobrar"} disabled={!hasCollectionShift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>{setSelectedCash(null);setPaymentOrderId(item.id)}}/>}
     </div>;
   }
 

@@ -43,7 +43,29 @@ test("cocina prepara y delivery despacha",()=>{
  assert.match(read("modules/operations/orders/presentation/orders-manager.tsx"),/v\.status==="confirmado"\?sendOrder\(v\.id\)/,"Pedidos envía con POST /send");
  assert.match(read("modules/operations/salon/presentation/salon-manager.tsx"),/v\.status==="confirmado"\?sendSalonOrder\(v\.id\)/,"Salón envía con POST /send");
  assert.match(read("modules/operations/orders/infrastructure/orders-api.ts"),/orders\/\$\{id\}\/send`,\{method:"POST"\}/);
- assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino"}).status,"entregado");
+ assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino",remainingAmount:"0"}).status,"entregado");
+});
+test("fuera del salón primero se cobra y luego se entrega",()=>{
+ // Con saldo, «Entregar» no acompaña a «Cobrar saldo»; al quedar pagado aparece como acción principal.
+ for(const channel of ["mostrador","recojo","whatsapp"]){
+  assert.equal(nextOrderAction({...ready,channel,remainingAmount:"30"}),null);
+  assert.equal(nextOrderAction({...ready,channel,remainingAmount:"0"}).label,"Entregar");
+ }
+ assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino",remainingAmount:"12"}),null);
+ assert.equal(nextOrderAction({...ready,channel:"delivery",remainingAmount:"12"}).status,"en_camino","el despacho no espera el cobro: el repartidor paga al recoger");
+ assert.equal(nextOrderAction({...ready,remainingAmount:"30"}).label,"Confirmar entrega","el salón entrega antes de cerrar la cuenta");
+});
+test("delivery Fudia: el repartidor recoge y entrega, caja solo cobra",()=>{
+ for(const deliveryDispatchStatus of ["searching","accepted","picked_up","delivered"]){
+  for(const status of ["listo","en_camino"]){
+   for(const remainingAmount of ["0","12"])assert.equal(nextOrderAction({...ready,channel:"delivery",status,remainingAmount,deliveryDispatchStatus}),null);
+  }
+ }
+ // Delivery propio, sin central o liberado: caja sigue despachando y entregando.
+ for(const deliveryDispatchStatus of [undefined,"own","unassigned","cancelled"]){
+  assert.equal(nextOrderAction({...ready,channel:"delivery",remainingAmount:"0",deliveryDispatchStatus}).status,"en_camino");
+  assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino",remainingAmount:"0",deliveryDispatchStatus}).status,"entregado");
+ }
 });
 test("cobro requiere entrega y cierre efectivo",()=>{
  assert.equal(canChargeAccount(ready),false);

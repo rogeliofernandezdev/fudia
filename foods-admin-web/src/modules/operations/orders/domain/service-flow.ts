@@ -1,8 +1,14 @@
 export type ServiceItem={id:string;orderItemId:string;productId:string;name:string;qty:string;destination:"kitchen"|"bar"|"direct";destinationLabel:string;status:string;statusLabel:string};
 export type TableAccount={id:string;channel:string;/** "counter" en la venta por mostrador. */origin?:string;status:string;completedAt?:string;billClosedAt?:string;accountState?:"open"|"awaiting_payment"|"paid";waiterId?:string;paidAmount?:string;remainingAmount?:string;total:string;serviceItems?:ServiceItem[]};
 
-export function canCollectOrder(order:{channel:string;waiterId?:string},userId:string|undefined,canManageCash:boolean,assigned:boolean){
- return canManageCash||Boolean(assigned&&userId&&order.channel==="salon"&&order.waiterId===userId);
+/**
+ * El administrador de plataforma no cobra (2026-11-14): no pertenece a la empresa
+ * y el cobro queda a nombre de un usuario de ella. El backend responde
+ * `platform_admin_cannot_collect`.
+ */
+export function canCollectOrder(order:{channel:string;waiterId?:string},user:{id:string;platformAdmin?:boolean}|null|undefined,canManageCash:boolean,assigned:boolean){
+ if(user?.platformAdmin)return false;
+ return canManageCash||Boolean(assigned&&user&&order.channel==="salon"&&order.waiterId===user.id);
 }
 
 export function canAddConsumption(order:TableAccount){

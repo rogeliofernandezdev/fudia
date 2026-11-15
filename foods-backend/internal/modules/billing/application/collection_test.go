@@ -10,9 +10,10 @@ import (
 
 type collectionRepo struct {
 	PaymentRepository
-	shift *domain.CollectionShift
-	err   error
-	calls int
+	shift         *domain.CollectionShift
+	err           error
+	calls         int
+	platformAdmin bool
 }
 
 func (r *collectionRepo) CollectionShift(context.Context, scope) (*domain.CollectionShift, error) {
@@ -80,3 +81,21 @@ func TestCollectionAdministrativeAuthorizationRemainsUnchanged(t *testing.T) {
 }
 
 func (*collectionRepo) CanReadAllShifts(context.Context, scope) (bool, error) { return false, nil }
+func (r *collectionRepo) IsPlatformAdmin(context.Context, scope) (bool, error) {
+	return r.platformAdmin, nil
+}
+
+// El administrador de plataforma no pertenece a la empresa: no registra cobros
+// aunque pueda consultar todas las cajas.
+func TestPlatformAdminCannotCollect(t *testing.T) {
+	repo := &collectionRepo{platformAdmin: true, shift: &domain.CollectionShift{ID: "shift-1"}}
+	service := &Payments{repo: repo}
+	_, err := service.collectionPaymentShift(context.Background(), scope{}, "shift-1")
+	var appErr *apperror.Error
+	if !errors.As(err, &appErr) || appErr.Kind != apperror.Forbidden || appErr.Code != "platform_admin_cannot_collect" {
+		t.Fatalf("platform admin must be refused: %v", err)
+	}
+	if repo.calls != 0 {
+		t.Fatalf("no shift must be resolved for the platform admin, calls=%d", repo.calls)
+	}
+}

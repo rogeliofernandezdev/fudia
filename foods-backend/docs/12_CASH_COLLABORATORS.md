@@ -57,6 +57,13 @@ El pago guarda al administrador en `created_by`, y el movimiento usa el turno
 elegido. No se modifica `opened_by`, no se crea una asignación y solo el abridor
 conserva el derecho de cierre. El efectivo se entrega físicamente a la caja elegida.
 
+El administrador de plataforma puede consultar todas las cajas, pero no cobra
+(2026-11-14): no pertenece a la empresa y `payments.created_by` y
+`cash_movements.created_by` exigen un usuario de ella. Cobro individual y dividido
+responden 403 `platform_admin_cannot_collect` («Ingresa con un usuario de la
+empresa para cobrar») antes de resolver la caja, y el frontend no muestra «Cobrar»
+en su sesión (`canCollectOrder`).
+
 ## Archivos y responsabilidad
 
 `billing/application/{cash,payments,collection}.go` y adaptadores PostgreSQL:

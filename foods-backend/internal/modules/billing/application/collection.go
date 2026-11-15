@@ -154,6 +154,15 @@ func (a *Payments) CollectionOptions(ctx context.Context, s scope) (CollectionOp
 	return out, nil
 }
 func (a *Payments) collectionPaymentShift(ctx context.Context, s scope, selected string) (string, error) {
+	// El administrador de plataforma no pertenece a la empresa: el cobro y su
+	// movimiento de caja deben quedar a nombre de un usuario de ella (2026-11-14).
+	platformAdmin, err := a.repo.IsPlatformAdmin(ctx, s)
+	if err != nil {
+		return "", paymentFailure(apperror.Unavailable, "cash_collection_unavailable", "No pudimos validar la autorización de caja.")
+	}
+	if platformAdmin {
+		return "", paymentFailure(apperror.Forbidden, "platform_admin_cannot_collect", "Ingresa con un usuario de la empresa para cobrar.")
+	}
 	admin, err := a.repo.CanReadAllShifts(ctx, s)
 	if err != nil {
 		return "", paymentFailure(apperror.Unavailable, "cash_collection_unavailable", "No pudimos validar la autorización de caja.")

@@ -102,6 +102,11 @@ func TestManualDeliveryKitchenPaymentAndDispatch(t *testing.T) {
 	if shift.Code != 201 {
 		t.Fatalf("cash shift: %d %s", shift.Code, shift.Body.String())
 	}
+	// Fuera del salón primero se cobra y luego se entrega.
+	early := request("PATCH", "/v1/admin/orders/"+created.ID+"/status", []byte(`{"status":"entregado"}`), created.ID, s)
+	if early.Code != 409 || !strings.Contains(early.Body.String(), "payment_required_before_delivery") {
+		t.Fatalf("unpaid delivery must not be delivered: %d %s", early.Code, early.Body.String())
+	}
 	paid := request("POST", "/v1/admin/payments", []byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":55}`, created.ID)), "", s)
 	if paid.Code != 201 {
 		t.Fatalf("delivery payment: %d %s", paid.Code, paid.Body.String())
