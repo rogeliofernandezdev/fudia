@@ -63,10 +63,18 @@ test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisa
   assert.match(css,/z-index:var\(--z-tooltip\)/,"la capa queda por encima de los modales sin cerrarlos");
 });
 
-test("Fudia Pay: Caja integra el tab «Pagos detectados» con dispositivos y revisión",()=>{
+test("Fudia Pay: «Pagos detectados» es una página propia con pestañas Pagos y Dispositivos",()=>{
   const cash=read("src/modules/operations/cash/presentation/cash-page.tsx");
-  assert.match(cash,/value:"pagos",label:"Pagos detectados",icon:"wallet"/);
-  assert.match(cash,/PayDevicesPanel dateTime=\{dateTime\}\/><PayNotificationsPanel dateTime=\{dateTime\}/);
+  assert.doesNotMatch(cash,/Pagos detectados|payment-devices/,"Caja ya no aloja los pagos detectados");
+  const page=read("src/modules/payment-devices/presentation/detected-payments-page.tsx");
+  assert.match(page,/<PageHeader title="Pagos detectados"/);
+  assert.match(page,/\{value:"payments",label:"Pagos",icon:"wallet"/);
+  assert.match(page,/\{value:"devices",label:"Dispositivos",icon:"phoneApp"/);
+  assert.match(page,/<TabsBar action=\{<Button icon="plus" onClick=\{\(\)=>\{setTab\("devices"\);setPairing\(true\)\}\}>Vincular dispositivo<\/Button>\}>/);
+  assert.match(read("src/app/(admin)/detected-payments/page.tsx"),/<DetectedPaymentsPage\/>/);
+  const nav=read("src/shell/navigation.ts");
+  assert.match(nav,/\{href:pageRoutes\.detectedPayments,name:"Pagos detectados",icon:"wallet",module:"caja",access:"pagos_detectados",permission:"cash\.read"\}/,"casilla propia en roles, mismo módulo y permiso que Caja");
+  assert.match(read("src/shared/routing/page-routes.ts"),/detectedPayments:"\/detected-payments"/);
   const view=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
   assert.match(view,/refetchInterval:query=>query\.state\.data\?\.items\.some\(item=>item\.status==="detected"\)\?10000:30000/,"los pagos por revisar se consultan con más frecuencia");
   assert.match(view,/La asociación registra el cobro real/);
@@ -78,15 +86,18 @@ test("Fudia Pay: Caja integra el tab «Pagos detectados» con dispositivos y rev
   assert.match(providers,/PayNoticeLayer/,"el aviso flotante está en toda la aplicación");
 });
 
-test("Fudia Pay: Pagos detectados usa la cabecera de panel y el DataTable del sistema",()=>{
+test("Fudia Pay: las pestañas usan DataTable del sistema y los pagos paginan en el servidor",()=>{
   for(const file of ["pay-devices-panel.tsx","pay-notifications-panel.tsx"]){
     const view=read(`src/modules/payment-devices/presentation/${file}`);
-    assert.match(view,/<header className="pay-section-header">/,`${file}: cabecera estándar con título, descripción y acción o filtros`);
     assert.match(view,/<DataTable label=/,`${file}: tabla del sistema con cabecera marino`);
     assert.doesNotMatch(view,/<table/,`${file}: sin tablas sueltas`);
     assert.match(view,/<div className="table-actions">/);
   }
+  const payments=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
+  assert.match(payments,/listPayNotificationPage\(\{status,provider,page,size\}\)/);
+  assert.match(payments,/<Pagination page=\{page\} size=\{size\} total=\{notifications\.data\?\.total\?\?0\}/);
+  assert.match(payments,/setStatus\(event\.target\.value\);setPage\(1\)/,"cambiar un filtro vuelve a la primera página");
+  assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/page:String\(filter\.page\),size:String\(filter\.size\)/);
   const css=read("src/modules/payment-devices/presentation/payment-devices.css");
-  assert.match(css,/\.pay-section-header\{[^}]*min-height:var\(--size-64\);padding:var\(--space-3-5\) var\(--space-5\)/,"misma cabecera que .panel>header");
   assert.doesNotMatch(css,/\.pay-devices-table th|\.pay-devices-table td\{/,"las filas y cabeceras las pone data-table.css");
 });

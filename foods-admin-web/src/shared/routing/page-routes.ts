@@ -8,6 +8,8 @@ export const pageRoutes={
   kitchen:"/kitchen",
   tables:"/tables",
   cash:"/cash",
+  /** Pagos de Yape y Plin que reportan los teléfonos con Fudia Pay (acceso de Caja). */
+  detectedPayments:"/detected-payments",
   reservations:"/reservations",
   callCenter:"/call-center",
   qrMenu:"/qr-menu",

@@ -3455,12 +3455,18 @@ global en toda la aplicación para el cajero:
   diferencia queda explicada. Cerrar sin asociar deja el movimiento pendiente
   (lista y campana); la asociación registra el cobro real por el flujo de
   pagos y es de un solo uso (409 en reintento).
-- **Pestaña Pagos detectados:** dos secciones en el panel del tab, separadas por
-  un filete: «Dispositivos de pago» y «Pagos detectados». Cada una abre con la
-  cabecera estándar de panel (64 px, título 16 px bold, descripción 14 px
-  `ink-500`, acción o filtros a la derecha; en móvil apilados y el botón a todo
-  el ancho) y lista en `DataTable` con cabecera marino, filas alternas y
-  `table-actions`; el monto va alineado a la derecha con cifras tabulares.
+- **Página Pagos detectados** (`/detected-payments`, Operación, después de Caja y
+  turnos; desde 2026-11-16 ya no es una pestaña de Caja porque la lista crece):
+  `PageHeader` «Pagos detectados» con «Pagos de Yape y Plin que reportan los
+  teléfonos del local.», `TabsBar` con «Pagos» (`wallet`, contador de pagos por
+  revisar) y «Dispositivos» (`phoneApp`, contador de activos) y «Vincular
+  dispositivo» (primario, `plus`) como acción de la barra. Cada pestaña es un
+  `.panel` con `DataTable` (cabecera marino, filas alternas, `table-actions` de
+  iconos: asociar `link`, descartar `cancel` danger, renombrar y revocar).
+  «Pagos» abre con una barra de filtros (estado y proveedor, más una línea de
+  ayuda en `ink-400`, como el historial de Turnos) y pagina en el servidor con
+  `Pagination` (20 por página); el monto va a la derecha con cifras tabulares.
+  Tiene su casilla en Usuarios y roles › Menú (`pagos_detectados`).
 - **Dispositivos de pago:** modal «Vincular dispositivo» con el QR del código
   temporal y sondeo hasta que el Android aparece vinculado. Se monta solo al
   pulsar «Vincular dispositivo» (el código se genera entonces, nunca al entrar

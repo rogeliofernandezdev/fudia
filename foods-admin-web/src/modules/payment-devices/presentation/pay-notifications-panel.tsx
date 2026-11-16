@@ -1,21 +1,20 @@
 "use client";
 
-import {useEffect,useState} from "react";
+import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,SearchField,Select,Status,TableSkeleton,Tag} from "@/design-system";
+import {IconButton,Button,ConfirmDialog,EmptyState,ErrorState,SearchField,Select,Pagination,Status,TableSkeleton,Tag} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import {ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
-import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
 import type {PayNotification} from "../domain/types";
-import {associatePayNotification,dismissPayNotification,listPayNotifications,payProviderOptions,paySalesMethods,searchPayOrders} from "../infrastructure/pay-devices-api";
+import {associatePayNotification,dismissPayNotification,listPayNotificationPage,payProviderOptions,paySalesMethods,searchPayOrders} from "../infrastructure/pay-devices-api";
 
 type Props={dateTime:(value:string)=>string};
 
-/** Pagos detectados por los dispositivos: el cajero los revisa en Caja y los
- * asocia a un pedido; la asociación registra el cobro real con el flujo de
+/** Pestaña «Pagos» de Pagos detectados: el cajero los revisa (filtros y
+ * paginación en el servidor) y los asocia a un pedido; la asociación registra el cobro real con el flujo de
  * pagos existente. El aviso flotante global hace lo mismo desde cualquier
  * pantalla; esta lista es la consulta y la revisión posterior. */
 const notificationColumns=["Proveedor","Remitente","Monto","Hora","Dispositivo","Estado","Acciones"];
@@ -25,12 +24,15 @@ export function PayNotificationsPanel({dateTime}:Props){
   const {notify}=useFeedback();
   const [status,setStatus]=useState("");
   const [provider,setProvider]=useState("");
+  const [page,setPage]=useState(1);
+  const [size,setSize]=useState(20);
   const [associateTarget,setAssociateTarget]=useState<PayNotification|null>(null);
   const [dismissTarget,setDismissTarget]=useState<PayNotification|null>(null);
 
   const notifications=useQuery({
-    queryKey:["pay-notifications",status,provider],
-    queryFn:()=>listPayNotifications({status,provider}),
+    queryKey:["pay-notifications",status,provider,page,size],
+    queryFn:()=>listPayNotificationPage({status,provider,page,size}),
+    placeholderData:previous=>previous,
     refetchInterval:query=>query.state.data?.items.some(item=>item.status==="detected")?10000:30000,
   });
 
@@ -51,23 +53,23 @@ export function PayNotificationsPanel({dateTime}:Props){
 
   const items=notifications.data?.items??[];
   const pending=items.some(item=>item.status==="detected");
-  return <section className="pay-notifications-section" aria-labelledby="pay-notifications-title">
-    <header className="pay-section-header">
-      <div><h2 id="pay-notifications-title">Pagos detectados</h2><p>{pending?"Hay pagos por revisar.":"Los pagos que los dispositivos detecten aparecen aquí."}</p></div>
+  return <section className="pay-notifications-section" aria-label="Pagos detectados">
+    <div className="pay-notifications-toolbar">
       <div className="pay-notifications-filters">
-        <Select chip aria-label="Filtrar por estado" value={status} onChange={event=>setStatus(event.target.value)}>
+        <Select chip aria-label="Filtrar por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todos los estados</option>
           {Object.entries(payStatusMeta).map(([value,meta])=><option key={value} value={value}>{meta.label}</option>)}
         </Select>
-        <Select chip aria-label="Filtrar por proveedor" value={provider} onChange={event=>setProvider(event.target.value)}>
+        <Select chip aria-label="Filtrar por proveedor" value={provider} onChange={event=>{setProvider(event.target.value);setPage(1)}}>
           <option value="">Yape y Plin</option>
           {payProviderOptions.map(option=><option key={option} value={option}>{payProviderLabel[option]}</option>)}
         </Select>
       </div>
-    </header>
+      <p>{pending?"Hay pagos por revisar: asócialos a su pedido.":"Asociar un pago registra el cobro en su pedido."}</p>
+    </div>
     {notifications.isLoading?<TableSkeleton columns={notificationColumns} rows={5} label="Cargando pagos detectados"/>
-    :notifications.isError?<ErrorState title="No pudimos cargar los pagos detectados" text={notifications.error.message} onRetry={()=>void notifications.refetch()}/>
-    :!items.length?<EmptyState icon="wallet" title="Aún no hay pagos detectados" text="Cuando un teléfono vinculado reciba un pago de Yape o Plin, aparecerá aquí para revisión."/>
+    :notifications.isError?<ErrorState className="pay-empty" title="No pudimos cargar los pagos detectados" text={notifications.error.message} onRetry={()=>void notifications.refetch()}/>
+    :!items.length?<EmptyState className="pay-empty" icon="wallet" title="Aún no hay pagos detectados" text="Cuando un teléfono vinculado reciba un pago de Yape o Plin, aparecerá aquí para revisión."/>
     :<DataTable label="Pagos detectados" containerClassName="hover-scroll pay-notifications-table">
       <thead><tr>{notificationColumns.map(column=><th scope="col" className={column==="Monto"?"pay-amount":undefined} key={column}>{column}</th>)}</tr></thead>
       <tbody>
@@ -81,13 +83,14 @@ export function PayNotificationsPanel({dateTime}:Props){
             <td>{item.deviceName}</td>
             <td><Status tone={meta.tone} icon={item.status==="associated"?"circleCheck":undefined}>{meta.label}</Status></td>
             <td><div className="table-actions">
-              {item.status==="detected"&&<Button kind="secondary" onClick={()=>setAssociateTarget(item)}>Asociar</Button>}
-              {item.status==="associated"&&<Button kind="secondary" onClick={()=>setDismissTarget(item)}>Descartar</Button>}
+              {item.status==="detected"&&<IconButton icon="link" label={`Asociar el pago de ${item.senderName||payProviderLabel[item.provider]} a un pedido`} onClick={()=>setAssociateTarget(item)}/>}
+              {item.status==="associated"&&<IconButton icon="cancel" className="danger" label={`Descartar el pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDismissTarget(item)}/>}
             </div></td>
           </tr>;
         })}
       </tbody>
     </DataTable>}
+    {!notifications.isLoading&&!notifications.isError&&<Pagination page={page} size={size} total={notifications.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     <AssociateDialog target={associateTarget} pending={associate.isPending} onCancel={()=>setAssociateTarget(null)}
       onConfirm={(id,orderId,method)=>associate.mutate({id,orderId,method})}/>
     <ConfirmDialog open={Boolean(dismissTarget)} tone="danger" title="Descartar el pago detectado"

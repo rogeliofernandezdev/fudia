@@ -256,14 +256,37 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 				ID     string `json:"id"`
 				Status string `json:"status"`
 			} `json:"items"`
+			Total int `json:"total"`
 		}
 		if err := json.Unmarshal(list.Body.Bytes(), &page); err != nil {
 			t.Fatal(err)
 		}
-		if len(page.Items) != 2 {
-			t.Fatalf("el local debe ver 2 notificaciones, vio %d", len(page.Items))
+		if len(page.Items) != 2 || page.Total != 2 {
+			t.Fatalf("el local debe ver 2 notificaciones, vio %d (total %d)", len(page.Items), page.Total)
 		}
 		notificationID = page.Items[0].ID
+	}
+	// La lista de Caja pagina en el servidor: page y size, con el total de los filtros.
+	pageOf := func(query string) (int, int) {
+		t.Helper()
+		req := httptest.NewRequest("GET", "/v1/admin/pay-notifications?"+query, nil)
+		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+		rec := httptest.NewRecorder()
+		handler.Notifications(rec, req)
+		var out struct {
+			Items []json.RawMessage `json:"items"`
+			Total int               `json:"total"`
+		}
+		if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &out) != nil {
+			t.Fatalf("page %s: %d %s", query, rec.Code, rec.Body.String())
+		}
+		return len(out.Items), out.Total
+	}
+	if items, total := pageOf("page=1&size=10"); items != 2 || total != 2 {
+		t.Fatalf("page 1: %d items, total %d", items, total)
+	}
+	if items, total := pageOf("page=2&size=10"); items != 0 || total != 2 {
+		t.Fatalf("page 2 must be empty with the same total: %d items, total %d", items, total)
 	}
 	if empty := call("POST", "/v1/admin/pay-notifications/associate", notificationID, s, `{"orderId":""}`); empty.Code != 400 {
 		t.Fatalf("asociar sin pedido debe ser 400, fue %d", empty.Code)

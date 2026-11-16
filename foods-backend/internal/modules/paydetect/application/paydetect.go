@@ -56,6 +56,7 @@ type AdminRepository interface {
 	RenameDevice(ctx context.Context, s scope, deviceID, name string) (domain.Device, error)
 	RevokeDevice(ctx context.Context, s scope, deviceID string) (domain.Device, error)
 	ListNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) ([]domain.Notification, error)
+	CountNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) (int, error)
 	Notification(ctx context.Context, s scope, id string) (domain.Notification, error)
 	AssociateNotification(ctx context.Context, s scope, id, orderID, userID string, now time.Time) (domain.Notification, error)
 	LinkNotification(ctx context.Context, s scope, id, orderID, paymentID, userID string, now time.Time) (domain.Notification, error)
@@ -417,6 +418,20 @@ func (a *Notifications) List(ctx context.Context, s scope, filter domain.Notific
 		return nil, payFailure(apperror.Unavailable, "pay_notifications_unavailable", "No pudimos leer los pagos detectados.", err)
 	}
 	return notifications, nil
+}
+
+// Page lists one page of detected payments with the total that matches the
+// filters; the list grows with the location's history and Cash paginates it.
+func (a *Notifications) Page(ctx context.Context, s scope, filter domain.NotificationFilter) (domain.NotificationPage, error) {
+	items, err := a.List(ctx, s, filter)
+	if err != nil {
+		return domain.NotificationPage{}, err
+	}
+	total, err := a.repo.CountNotifications(ctx, s, filter)
+	if err != nil {
+		return domain.NotificationPage{}, payFailure(apperror.Unavailable, "pay_notifications_unavailable", "No pudimos leer los pagos detectados.", err)
+	}
+	return domain.NotificationPage{Items: items, Total: total}, nil
 }
 
 // Associate links a detected payment to an order of the same local. The order

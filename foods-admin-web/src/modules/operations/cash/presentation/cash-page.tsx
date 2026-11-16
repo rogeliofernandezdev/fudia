@@ -6,7 +6,6 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,IconTile,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader} from "@/design-system";
 import {useFeedback,useMoney,useSession} from "@/providers";
-import {PayDevicesPanel,PayNotificationsPanel} from "@/modules/payment-devices";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
@@ -18,7 +17,7 @@ import {CashClosingDialog} from "./cash-closing-dialog";
 import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
-type CashTab="registers"|"history"|"pagos";
+type CashTab="registers"|"history";
 const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cierre","Efectivo esperado","Efectivo contado","Resultado","Estado","Acciones"];
 
 function recordedAmount(value:string|null|undefined){
@@ -226,14 +225,12 @@ export function CashPage(){
     />
 
     <TabsBar action={headerAction}>
-      <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"},{value:"pagos",label:"Pagos detectados",icon:"wallet"}]}/>
+      <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"}]}/>
     </TabsBar>
 
     <section className="panel standardized-management cash-panel">
 
-      {tab==="pagos"
-        ?<><h2 className="sr-only">Pagos detectados</h2><PayDevicesPanel dateTime={dateTime}/><PayNotificationsPanel dateTime={dateTime}/></>
-        :tab==="registers"
+      {tab==="registers"
         ?<><h2 className="sr-only">Cajas</h2><CashRegisters
           items={registerItems}
           loading={registers.isLoading}

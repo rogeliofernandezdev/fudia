@@ -204,6 +204,15 @@ type NotificationFilter struct {
 	Status   string
 	Provider string
 	Limit    int
+	// Offset salta las filas de las páginas anteriores (página 1: 0).
+	Offset int
+}
+
+// NotificationPage es una página de pagos detectados con el total que cumple
+// los filtros, para paginar en Caja sin traer el historial completo.
+type NotificationPage struct {
+	Items []Notification `json:"items"`
+	Total int            `json:"total"`
 }
 
 // EventOutcome es el resultado por evento de un reporte: registrado ahora o

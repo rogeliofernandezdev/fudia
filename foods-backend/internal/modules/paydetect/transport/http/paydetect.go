@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -199,8 +200,20 @@ func (h *Handler) Notifications(w http.ResponseWriter, r *http.Request) {
 		Provider: strings.TrimSpace(query.Get("provider")),
 		Limit:    50,
 	}
-	notifications, err := h.notifications.List(r.Context(), scope, filter)
-	respond(w, http.StatusOK, map[string]any{"items": notifications}, err)
+	// page y size paginan la lista de Caja (size de 10 a 100); sin ellos se
+	// conservan los 50 más recientes que lee el aviso flotante.
+	if page, err := strconv.Atoi(query.Get("page")); err == nil && page > 0 {
+		size, sizeErr := strconv.Atoi(query.Get("size"))
+		if sizeErr != nil || size < 10 {
+			size = 20
+		}
+		if size > 100 {
+			size = 100
+		}
+		filter.Limit, filter.Offset = size, (page-1)*size
+	}
+	result, err := h.notifications.Page(r.Context(), scope, filter)
+	respond(w, http.StatusOK, result, err)
 }
 
 // AssociateNotification links a detected payment to an order of the same

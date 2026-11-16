@@ -185,7 +185,7 @@ func (r *Pay) RevokeDevice(ctx context.Context, s scope, deviceID string) (domai
 
 // ListNotifications returns the detected payments of the location, most
 // recent first, with optional status and provider filters.
-func (r *Pay) ListNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) ([]domain.Notification, error) {
+func notificationWhere(s scope, filter domain.NotificationFilter) (string, []any) {
 	where := ` WHERE n.organization_id=$1 AND n.location_id=$2`
 	args := []any{s.OrganizationID, s.LocationID}
 	if filter.Status != "" {
@@ -196,6 +196,19 @@ func (r *Pay) ListNotifications(ctx context.Context, s scope, filter domain.Noti
 		args = append(args, filter.Provider)
 		where += fmt.Sprintf(" AND n.provider=$%d", len(args))
 	}
+	return where, args
+}
+
+// CountNotifications counts the detected payments that match the filters.
+func (r *Pay) CountNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) (int, error) {
+	where, args := notificationWhere(s, filter)
+	var total int
+	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM pay_notifications n`+where, args...).Scan(&total)
+	return total, err
+}
+
+func (r *Pay) ListNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) ([]domain.Notification, error) {
+	where, args := notificationWhere(s, filter)
 	limit := filter.Limit
 	if limit <= 0 {
 		limit = 50
@@ -210,7 +223,7 @@ func (r *Pay) ListNotifications(ctx context.Context, s scope, filter domain.Noti
 		JOIN pay_devices d ON d.id=n.device_id
 		`+where+`
 		ORDER BY n.created_at DESC, n.id
-		LIMIT $`+fmt.Sprint(len(args)), args...)
+		LIMIT $`+fmt.Sprint(len(args))+fmt.Sprintf(" OFFSET %d", max(filter.Offset, 0)), args...)
 	if err != nil {
 		return nil, err
 	}

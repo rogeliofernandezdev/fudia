@@ -7,8 +7,9 @@ transacción bancaria: es una alerta detectada que el cajero confirma.
 
 ## Cómo funciona
 
-1. El administrador genera un **código temporal** de vinculación en Caja
-   (`foods-admin-web` › Vincular dispositivo de pagos) y lo muestra como QR.
+1. El administrador genera un **código temporal** de vinculación en
+   `foods-admin-web` › Pagos detectados › Dispositivos › «Vincular dispositivo»
+   y lo muestra como QR.
 2. En el Android del local se instala Fudia Pay, se escanea el QR y el backend
    devuelve la credencial del dispositivo y el restaurante/local asociado.
    La credencial se guarda cifrada con Keystore y no se vuelve a mostrar.

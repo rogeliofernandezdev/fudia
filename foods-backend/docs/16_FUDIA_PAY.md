@@ -12,7 +12,8 @@ registra con el flujo de pagos existente de `billing`.
 
 ### 1. Primera vez — vinculación (una por teléfono)
 
-1. Caja › Dispositivos de pago › «Vincular dispositivo»: código temporal de
+1. Operación › Pagos detectados › «Vincular dispositivo» (pestaña
+   Dispositivos): código temporal de
    10 minutos, un solo uso, mostrado como QR.
 2. La app lo escanea y lo canjea, como WhatsApp Web (migración 000131): al
    leer el QR avisa el escaneo (`POST /v1/mobile/pair/scan`, con el modelo) y
@@ -37,7 +38,7 @@ registra con el flujo de pagos existente de `billing`.
 4. El worker lo envía; el backend deduplica (`UNIQUE device_id, event_key`) y
    lo registra como `detected`.
 5. Aviso flotante en cualquier pantalla del cajero + entrada en la campana +
-   fila en Caja › Pagos detectados.
+   fila en Operación › Pagos detectados.
 
 ### 3. Revisión y cierre (web)
 
@@ -121,7 +122,12 @@ de la app hacen el resto; el sweep horario purga códigos vencidos.
   (contexto del POS), permite cambiarlo, revisar su detalle (saldo, pagos) y
   confirmar. Un pago superior al saldo se registra parcial del saldo y la
   diferencia queda explicada.
-- Caja › Pagos detectados: consulta y revisión posterior; los movimientos sin
+- Operación › Pagos detectados (`/detected-payments`, página propia desde
+  2026-11-16; antes era una pestaña de Caja): pestañas «Pagos», con filtros y
+  paginación en el servidor (`?page=&size=`, respuesta `{items,total}`), y
+  «Dispositivos». Tiene su casilla en Usuarios y roles › Menú
+  (`pagos_detectados`, módulo `caja`, requiere `cash.read`; la migración 000132
+  la dio a todo rol que ya tenía Caja). Consulta y revisión posterior; los movimientos sin
   asociar permanecen pendientes sin afectar pedidos.
 
 ## Preparación para iOS

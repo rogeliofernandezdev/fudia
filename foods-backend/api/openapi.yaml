@@ -2087,13 +2087,15 @@ paths:
     get:
       operationId: listPayNotifications
       summary: Lista los pagos detectados por los dispositivos del local
-      description: "Requiere cash.read. Filtros opcionales por estado y proveedor; del más reciente al más antiguo."
+      description: "Requiere cash.read. Filtros opcionales por estado y proveedor; del más reciente al más antiguo. Con page (desde 1) y size (10 a 100, 20 por defecto) pagina en el servidor; sin page devuelve los 50 más recientes (aviso flotante). total cuenta lo que cumple los filtros."
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: status, schema: { type: string, enum: [detected, associated, confirmed, dismissed] } }
         - { in: query, name: provider, schema: { type: string, enum: [yape, plin] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 10, maximum: 100, default: 20 } }
       responses:
-        "200": { description: Pagos detectados, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PayNotification" } } } } } } }
+        "200": { description: Pagos detectados, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/PayNotification" } }, total: { type: integer } } } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/pay-notifications/{id}/associate:

@@ -2,10 +2,9 @@
 
 import {useCallback,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,IconButton,Input,Status,TableSkeleton,Tag} from "@/design-system";
+import {ConfirmDialog,EmptyState,ErrorState,IconButton,Input,Status,TableSkeleton} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
 import {useFeedback} from "@/providers";
-import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import type {PayDevice} from "../domain/types";
 import {listPayDevices,renamePayDevice,revokePayDevice} from "../infrastructure/pay-devices-api";
 import {PayPairingDialog} from "./pay-pairing-dialog";
@@ -14,23 +13,28 @@ import "./payment-devices.css";
 const platformLabel=(platform:string)=>platform==="IOS"?"iPhone":"Android";
 const deviceColumns=["Dispositivo","Plataforma","Último contacto","Estado","Acciones"];
 
-type Props={dateTime:(value:string)=>string};
+type Props={
+  dateTime:(value:string)=>string;
+  /** «Vincular dispositivo» vive en la barra de pestañas de la página. */
+  pairing:boolean;
+  onPairingChange:(open:boolean)=>void;
+};
 
-/** Dispositivos de pago vinculados al local: alta por QR, renombrar y revocar. */
-export function PayDevicesPanel({dateTime}:Props){
+/** Pestaña «Dispositivos» de Pagos detectados: los Android vinculados al local,
+ * renombrar, revocar y el modal de vinculación por QR. */
+export function PayDevicesPanel({dateTime,pairing,onPairingChange}:Props){
   const qc=useQueryClient();
   const {notify}=useFeedback();
-  const [pairing,setPairing]=useState(false);
   const [revokeTarget,setRevokeTarget]=useState<PayDevice|null>(null);
   const [renameTarget,setRenameTarget]=useState<PayDevice|null>(null);
   const devices=useQuery({queryKey:["pay-devices"],queryFn:listPayDevices,refetchInterval:30000});
-  const closePairing=useCallback(()=>setPairing(false),[]);
+  const closePairing=useCallback(()=>onPairingChange(false),[onPairingChange]);
   // Como WhatsApp Web: al terminar la vinculación el modal se cierra solo.
   const linked=useCallback((name:string)=>{
-    setPairing(false);
+    onPairingChange(false);
     void qc.invalidateQueries({queryKey:["pay-devices"]});
     notify({tone:"success",title:"Dispositivo vinculado",message:`«${name}» ya reporta los pagos de Yape y Plin de este local.`});
-  },[qc,notify]);
+  },[qc,notify,onPairingChange]);
 
   const revoke=useMutation({
     mutationFn:(id:string)=>revokePayDevice(id),
@@ -48,14 +52,10 @@ export function PayDevicesPanel({dateTime}:Props){
   });
 
   const items=devices.data?.items??[];
-  return <section className="pay-devices-section" aria-labelledby="pay-devices-title">
-    <header className="pay-section-header">
-      <div><h2 id="pay-devices-title">Dispositivos de pago</h2><p>Cada Android del local que reporta los pagos de Yape y Plin.</p></div>
-      <Button icon="plus" onClick={()=>setPairing(true)}>Vincular dispositivo</Button>
-    </header>
+  return <section className="pay-devices-section" aria-label="Dispositivos de pago">
     {devices.isLoading?<TableSkeleton columns={deviceColumns} rows={3} label="Cargando dispositivos"/>
-    :devices.isError?<ErrorState title="No pudimos cargar los dispositivos" text={devices.error.message} onRetry={()=>void devices.refetch()}/>
-    :!items.length?<EmptyState icon="wallet" title="Aún no hay dispositivos vinculados" text="Genera el QR de vinculación e instálalo en el Android del local."/>
+    :devices.isError?<ErrorState className="pay-empty" title="No pudimos cargar los dispositivos" text={devices.error.message} onRetry={()=>void devices.refetch()}/>
+    :!items.length?<EmptyState className="pay-empty" icon="wallet" title="Aún no hay dispositivos vinculados" text="Pulsa «Vincular dispositivo» y escanea el QR con Fudia Pay en el Android del local."/>
     :<DataTable label="Dispositivos de pago" containerClassName="hover-scroll pay-devices-table">
       <thead><tr>{deviceColumns.map(column=><th scope="col" key={column}>{column}</th>)}</tr></thead>
       <tbody>

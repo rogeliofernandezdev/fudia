@@ -26,7 +26,13 @@ export function revokePayDevice(id:string){
 
 export function listPayNotifications(filter:{status:string;provider:string}){
   const params=new URLSearchParams({status:filter.status,provider:filter.provider});
-  return apiFetch<{items:PayNotification[]}>(`pay-notifications?${params.toString()}`);
+  return apiFetch<{items:PayNotification[];total:number}>(`pay-notifications?${params.toString()}`);
+}
+
+/** Una página de pagos detectados con el total de los filtros (la lista crece con el historial). */
+export function listPayNotificationPage(filter:{status:string;provider:string;page:number;size:number}){
+  const params=new URLSearchParams({status:filter.status,provider:filter.provider,page:String(filter.page),size:String(filter.size)});
+  return apiFetch<{items:PayNotification[];total:number}>(`pay-notifications?${params.toString()}`);
 }
 
 /** Asociar: registra el cobro real con el flujo de pagos existente y liga la
