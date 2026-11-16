@@ -1,16 +1,19 @@
-/* Fudia Pay dentro de Caja: dispositivos vinculados y pagos detectados por
-   revisar. Los paneles viven dentro del .panel del tab; el CSS solo cubre lo
-   que una utilidad no expresa con claridad. */
-.pay-devices-section,.pay-notifications-section{display:grid;gap:var(--space-4)}
-.pay-devices-toolbar,.pay-notifications-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4)}
-.pay-devices-toolbar p,.pay-notifications-toolbar p{margin:var(--space-0-5) 0 0;color:var(--ink-500);font-size:var(--font-size-sm)}
+/* Fudia Pay dentro de Caja: dos secciones en el .panel del tab, cada una con la
+   cabecera estándar de panel (título, descripción y acción o filtros) y su
+   DataTable con cabecera marino; las filas, cabeceras y acciones las pone el
+   sistema (data-table.css, table-actions.css). */
+.pay-devices-section,.pay-notifications-section{display:grid;min-width:0;background:var(--surface)}
+.pay-notifications-section{border-top:var(--stroke-1) solid var(--line)}
+.pay-section-header{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);min-height:var(--size-64);padding:var(--space-3-5) var(--space-5);border-bottom:var(--stroke-1) solid var(--cloud-100)}
+.pay-section-header>div{display:grid;gap:var(--space-0-5);min-width:0}
+.pay-section-header h2{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-snug)}
+.pay-section-header p{margin:0;color:var(--ink-500);font-size:var(--font-size-sm);line-height:var(--line-height-snug)}
+.pay-section-header>.button{flex-shrink:0}
 .pay-notifications-filters{display:flex;gap:var(--space-2-5);flex-shrink:0}
-.pay-devices-table{width:100%;border-collapse:collapse;font-size:var(--font-size-sm)}
-.pay-devices-table th{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:var(--stroke-1) solid var(--line);color:var(--ink-500);font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
-.pay-devices-table td{padding:var(--space-2-5) var(--space-3);border-bottom:var(--stroke-1) solid var(--cloud-100);vertical-align:middle}
-.pay-devices-table td strong{font-weight:var(--weight-semibold)}
-.pay-devices-table td small{display:block;color:var(--ink-500)}
-.pay-devices-actions{display:flex;gap:var(--space-2);justify-content:flex-end;align-items:center}
+.pay-devices-table table{min-width:var(--size-720)}
+.pay-notifications-table table{min-width:var(--size-900)}
+.pay-devices-table td small{display:block}
+.pay-notifications-table .pay-amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pay-pairing-body{display:grid;justify-items:center;gap:var(--space-3);padding:var(--space-5);text-align:center}
 .pay-pairing-qr{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
@@ -23,7 +26,7 @@
 .pay-order-search{display:grid;gap:var(--space-3);min-width:0}
 .pay-order-options{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
 .pay-order-options li{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile)}
-@media(max-width:700px){.pay-devices-toolbar,.pay-notifications-toolbar{flex-direction:column}.pay-notifications-filters{width:100%;justify-content:flex-start}}
+@media(max-width:700px){.pay-section-header{flex-direction:column;align-items:stretch;padding:var(--space-3-5) var(--space-4)}.pay-section-header>.button{width:100%;justify-content:center}.pay-notifications-filters{display:grid;grid-template-columns:1fr 1fr}}
 
 /* Capa global del aviso flotante: por encima de modales y hojas, apilable. */
 .pay-notice-layer{position:fixed;top:calc(var(--space-4) + var(--space-2));right:var(--space-4);z-index:var(--z-tooltip);display:grid;gap:var(--space-2);width:min(var(--size-320),calc(100vw - var(--space-8)))}

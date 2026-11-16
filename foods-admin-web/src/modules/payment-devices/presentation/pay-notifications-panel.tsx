@@ -3,6 +3,7 @@
 import {useEffect,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,SearchField,Select,Status,TableSkeleton,Tag} from "@/design-system";
+import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import {ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
@@ -17,6 +18,8 @@ type Props={dateTime:(value:string)=>string};
  * asocia a un pedido; la asociación registra el cobro real con el flujo de
  * pagos existente. El aviso flotante global hace lo mismo desde cualquier
  * pantalla; esta lista es la consulta y la revisión posterior. */
+const notificationColumns=["Proveedor","Remitente","Monto","Hora","Dispositivo","Estado","Acciones"];
+
 export function PayNotificationsPanel({dateTime}:Props){
   const qc=useQueryClient();
   const {notify}=useFeedback();
@@ -48,9 +51,9 @@ export function PayNotificationsPanel({dateTime}:Props){
 
   const items=notifications.data?.items??[];
   const pending=items.some(item=>item.status==="detected");
-  return <section className="pay-notifications-section" aria-label="Pagos detectados">
-    <header className="pay-notifications-toolbar">
-      <div><h2>Pagos detectados</h2><p>{pending?"Hay pagos por revisar.":"Los pagos que los dispositivos detecten aparecen aquí."}</p></div>
+  return <section className="pay-notifications-section" aria-labelledby="pay-notifications-title">
+    <header className="pay-section-header">
+      <div><h2 id="pay-notifications-title">Pagos detectados</h2><p>{pending?"Hay pagos por revisar.":"Los pagos que los dispositivos detecten aparecen aquí."}</p></div>
       <div className="pay-notifications-filters">
         <Select chip aria-label="Filtrar por estado" value={status} onChange={event=>setStatus(event.target.value)}>
           <option value="">Todos los estados</option>
@@ -62,29 +65,29 @@ export function PayNotificationsPanel({dateTime}:Props){
         </Select>
       </div>
     </header>
-    {notifications.isLoading?<TableSkeleton columns={["Proveedor","Remitente","Monto","Hora","Dispositivo","Estado","Acciones"]} rows={5} label="Cargando pagos detectados"/>
+    {notifications.isLoading?<TableSkeleton columns={notificationColumns} rows={5} label="Cargando pagos detectados"/>
     :notifications.isError?<ErrorState title="No pudimos cargar los pagos detectados" text={notifications.error.message} onRetry={()=>void notifications.refetch()}/>
     :!items.length?<EmptyState icon="wallet" title="Aún no hay pagos detectados" text="Cuando un teléfono vinculado reciba un pago de Yape o Plin, aparecerá aquí para revisión."/>
-    :<table className="pay-devices-table">
-      <thead><tr><th>Proveedor</th><th>Remitente</th><th>Monto</th><th>Hora</th><th>Dispositivo</th><th>Estado</th><th className="pay-devices-actions">Acciones</th></tr></thead>
+    :<DataTable label="Pagos detectados" containerClassName="hover-scroll pay-notifications-table">
+      <thead><tr>{notificationColumns.map(column=><th scope="col" className={column==="Monto"?"pay-amount":undefined} key={column}>{column}</th>)}</tr></thead>
       <tbody>
-        {items.map(item=>{
+        {items.map((item,index)=>{
           const meta=payStatusMeta[item.status];
-          return <tr key={item.id}>
+          return <tr className={index%2?"alternate":""} key={item.id}>
             <td><Tag>{payProviderLabel[item.provider]}</Tag></td>
             <td><strong>{item.senderName||"Sin remitente"}</strong></td>
-            <td>{item.currency} {item.amount}</td>
+            <td className="pay-amount">{item.currency} {item.amount}</td>
             <td>{dateTime(item.occurredAt)}</td>
             <td>{item.deviceName}</td>
             <td><Status tone={meta.tone} icon={item.status==="associated"?"circleCheck":undefined}>{meta.label}</Status></td>
-            <td className="pay-devices-actions">
+            <td><div className="table-actions">
               {item.status==="detected"&&<Button kind="secondary" onClick={()=>setAssociateTarget(item)}>Asociar</Button>}
               {item.status==="associated"&&<Button kind="secondary" onClick={()=>setDismissTarget(item)}>Descartar</Button>}
-            </td>
+            </div></td>
           </tr>;
         })}
       </tbody>
-    </table>}
+    </DataTable>}
     <AssociateDialog target={associateTarget} pending={associate.isPending} onCancel={()=>setAssociateTarget(null)}
       onConfirm={(id,orderId,method)=>associate.mutate({id,orderId,method})}/>
     <ConfirmDialog open={Boolean(dismissTarget)} tone="danger" title="Descartar el pago detectado"

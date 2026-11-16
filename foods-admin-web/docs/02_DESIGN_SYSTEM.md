@@ -3455,6 +3455,12 @@ global en toda la aplicación para el cajero:
   diferencia queda explicada. Cerrar sin asociar deja el movimiento pendiente
   (lista y campana); la asociación registra el cobro real por el flujo de
   pagos y es de un solo uso (409 en reintento).
+- **Pestaña Pagos detectados:** dos secciones en el panel del tab, separadas por
+  un filete: «Dispositivos de pago» y «Pagos detectados». Cada una abre con la
+  cabecera estándar de panel (64 px, título 16 px bold, descripción 14 px
+  `ink-500`, acción o filtros a la derecha; en móvil apilados y el botón a todo
+  el ancho) y lista en `DataTable` con cabecera marino, filas alternas y
+  `table-actions`; el monto va alineado a la derecha con cifras tabulares.
 - **Dispositivos de pago:** modal «Vincular dispositivo» con el QR del código
   temporal y sondeo hasta que el Android aparece vinculado. Se monta solo al
   pulsar «Vincular dispositivo» (el código se genera entonces, nunca al entrar

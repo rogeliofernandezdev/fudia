@@ -77,3 +77,16 @@ test("Fudia Pay: Caja integra el tab «Pagos detectados» con dispositivos y rev
   assert.match(providers,/PayCollectionProvider/,"la sugerencia vive en contexto global");
   assert.match(providers,/PayNoticeLayer/,"el aviso flotante está en toda la aplicación");
 });
+
+test("Fudia Pay: Pagos detectados usa la cabecera de panel y el DataTable del sistema",()=>{
+  for(const file of ["pay-devices-panel.tsx","pay-notifications-panel.tsx"]){
+    const view=read(`src/modules/payment-devices/presentation/${file}`);
+    assert.match(view,/<header className="pay-section-header">/,`${file}: cabecera estándar con título, descripción y acción o filtros`);
+    assert.match(view,/<DataTable label=/,`${file}: tabla del sistema con cabecera marino`);
+    assert.doesNotMatch(view,/<table/,`${file}: sin tablas sueltas`);
+    assert.match(view,/<div className="table-actions">/);
+  }
+  const css=read("src/modules/payment-devices/presentation/payment-devices.css");
+  assert.match(css,/\.pay-section-header\{[^}]*min-height:var\(--size-64\);padding:var\(--space-3-5\) var\(--space-5\)/,"misma cabecera que .panel>header");
+  assert.doesNotMatch(css,/\.pay-devices-table th|\.pay-devices-table td\{/,"las filas y cabeceras las pone data-table.css");
+});
