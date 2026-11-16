@@ -16,7 +16,9 @@ export type PayDevice={
 };
 
 /** Código temporal de vinculación: un solo uso, expira; nunca trae credenciales. */
-export type PayPairingDraft={code:string;expiresAt:string};
+export type PayPairingDraft={id:string;code:string;expiresAt:string};
+/** Estado del código que Caja muestra: esperando, escaneado por la app, vinculado o vencido. */
+export type PayPairingStatus={status:"pending"|"scanned"|"linked"|"expired";model?:string;deviceName?:string;expiresAt:string};
 
 export type PayNotification={
   id:string;

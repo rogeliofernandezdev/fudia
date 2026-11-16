@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.fudia.pay.NotificationParserTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-16T18:56:27.149Z" hostname="CLRLAP102-1L-F" time="0.066">
+<testsuite name="com.fudia.pay.NotificationParserTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-16T20:25:03.665Z" hostname="CLRLAP102-1L-F" time="0.186">
   <properties/>
-  <testcase name="dos pagos del mismo monto tienen claves distintas" classname="com.fudia.pay.NotificationParserTest" time="0.054"/>
-  <testcase name="los paquetes verificados se resuelven a proveedor" classname="com.fudia.pay.NotificationParserTest" time="0.006"/>
-  <testcase name="sin monto legible no se registra" classname="com.fudia.pay.NotificationParserTest" time="0.001"/>
+  <testcase name="dos pagos del mismo monto tienen claves distintas" classname="com.fudia.pay.NotificationParserTest" time="0.166"/>
+  <testcase name="los paquetes verificados se resuelven a proveedor" classname="com.fudia.pay.NotificationParserTest" time="0.014"/>
+  <testcase name="sin monto legible no se registra" classname="com.fudia.pay.NotificationParserTest" time="0.0"/>
   <testcase name="promociones y avisos no se registran" classname="com.fudia.pay.NotificationParserTest" time="0.001"/>
-  <testcase name="plin recibido se registra con su parser" classname="com.fudia.pay.NotificationParserTest" time="0.0"/>
+  <testcase name="plin recibido se registra con su parser" classname="com.fudia.pay.NotificationParserTest" time="0.001"/>
   <testcase name="yape recibido con remitente y monto se registra" classname="com.fudia.pay.NotificationParserTest" time="0.001"/>
   <testcase name="sin remitente legible no se registra" classname="com.fudia.pay.NotificationParserTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>

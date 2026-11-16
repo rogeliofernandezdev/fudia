@@ -82,6 +82,18 @@ func (h *Handler) CreatePairing(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, draft, err)
 }
 
+// PairingStatus tells Cash whether the code it shows is still waiting, was
+// scanned by the app, linked a device or expired.
+func (h *Handler) PairingStatus(w http.ResponseWriter, r *http.Request) {
+	scope, ok := shared.Scope(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	status, err := h.devices.PairingStatus(r.Context(), scope, r.PathValue("id"), h.now())
+	respond(w, http.StatusOK, status, err)
+}
+
 // Devices lists the devices of the location.
 func (h *Handler) Devices(w http.ResponseWriter, r *http.Request) {
 	scope, ok := shared.Scope(w, r)
@@ -132,6 +144,23 @@ func (h *Handler) Pair(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	activation, err := h.detector.Pair(r.Context(), in.Code, domain.PairInput{Platform: in.Platform, Model: in.Model}, h.now())
 	respond(w, http.StatusOK, activation, err)
+}
+
+// ScanPairing is called by the app the moment it reads the QR, before it
+// redeems the code, so Cash can show «Vinculando…».
+func (h *Handler) ScanPairing(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Code  string `json:"code"`
+		Model string `json:"model"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.detector.Scan(r.Context(), in.Code, in.Model, h.now()); err != nil {
+		shared.WriteError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // DeviceSession returns the restaurant and location resolved by the backend

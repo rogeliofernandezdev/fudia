@@ -50,6 +50,8 @@ func payFailure(kind apperror.Kind, code, message string, err error) error {
 // notifications, always scoped by organization and location.
 type AdminRepository interface {
 	CreatePairingCode(ctx context.Context, s scope, createdBy string, expires time.Time) (domain.PairingDraft, error)
+	// PairingState lee el código del local; ErrPairingInvalid si no es suyo o no existe.
+	PairingState(ctx context.Context, s scope, id string) (domain.PairingState, error)
 	ListDevices(ctx context.Context, s scope) ([]domain.Device, error)
 	RenameDevice(ctx context.Context, s scope, deviceID, name string) (domain.Device, error)
 	RevokeDevice(ctx context.Context, s scope, deviceID string) (domain.Device, error)
@@ -63,6 +65,8 @@ type AdminRepository interface {
 // DeviceRepository is the persistence of the pairing and the device session.
 type DeviceRepository interface {
 	PairingByCode(ctx context.Context, code string) (domain.PairingCode, error)
+	// MarkPairingScanned registra que la app leyó el QR; false si ya no es canjeable.
+	MarkPairingScanned(ctx context.Context, code, model string) (bool, error)
 	ActivateDevice(ctx context.Context, code string, now time.Time, in domain.PairInput, tokenHash []byte, tokenSuffix string) (domain.Activation, error)
 	DeviceByTokenHash(ctx context.Context, tokenHash []byte) (domain.DeviceSession, error)
 	TouchDevice(ctx context.Context, deviceID string, now time.Time) error
@@ -100,6 +104,22 @@ func (a *PayDevices) PairingCode(ctx context.Context, s scope, createdBy string,
 		return domain.PairingDraft{}, payFailure(apperror.Unavailable, "pay_pairing_unavailable", "No pudimos generar el código de vinculación.", err)
 	}
 	return draft, nil
+}
+
+// PairingStatus tells Cash what happened with the code it is showing: still
+// waiting, scanned by the app (pairing in progress), linked or expired.
+func (a *PayDevices) PairingStatus(ctx context.Context, s scope, id string, now time.Time) (domain.PairingStatus, error) {
+	if !isUUID(id) {
+		return domain.PairingStatus{}, ErrPairingInvalid
+	}
+	state, err := a.repo.PairingState(ctx, s, id)
+	if errors.Is(err, ErrPairingInvalid) {
+		return domain.PairingStatus{}, ErrPairingInvalid
+	}
+	if err != nil {
+		return domain.PairingStatus{}, payFailure(apperror.Unavailable, "pay_pairing_unavailable", "No pudimos leer el estado de la vinculación.", err)
+	}
+	return state.StatusOf(now), nil
 }
 
 // Devices lists the devices of the location, active and revoked, with their
@@ -173,6 +193,39 @@ func newDeviceToken() (token string, hash []byte, err error) {
 	return token, sum[:], nil
 }
 
+// Scan records that the app read the QR, before it redeems the code, so Cash
+// can replace the QR with «Vinculando…» at once. It is idempotent and never
+// redeems the code: Pair does that.
+func (a *Detector) Scan(ctx context.Context, code, model string, now time.Time) error {
+	code = strings.TrimSpace(code)
+	if len(code) != 32 || !isHex(code) {
+		return ErrPairingInvalid
+	}
+	model = strings.TrimSpace(model)
+	if runes := []rune(model); len(runes) > domain.PairingScanModelLimit {
+		model = string(runes[:domain.PairingScanModelLimit])
+	}
+	marked, err := a.repo.MarkPairingScanned(ctx, code, model)
+	if err != nil {
+		return ErrPairingUnavailable
+	}
+	if marked {
+		return nil
+	}
+	pairing, err := a.repo.PairingByCode(ctx, code)
+	switch {
+	case errors.Is(err, ErrPairingInvalid):
+		return ErrPairingInvalid
+	case err != nil:
+		return ErrPairingUnavailable
+	case pairing.Used():
+		return ErrPairingUsed
+	case pairing.Expired(now):
+		return ErrPairingExpired
+	}
+	return ErrPairingUnavailable
+}
+
 // Pair exchanges the temporary code for the device credentials. The backend
 // resolves the company and location from the code; the device does not send
 // any of that. The exchange is atomic: two devices cannot redeem the same code.
@@ -216,6 +269,25 @@ func (a *Detector) Pair(ctx context.Context, code string, in domain.PairInput, n
 	}
 	activation.Token = token
 	return activation, nil
+}
+
+// isUUID valida la forma de un identificador antes de consultar la base.
+func isUUID(value string) bool {
+	if len(value) != 36 {
+		return false
+	}
+	for i, char := range value {
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if char != '-' {
+				return false
+			}
+			continue
+		}
+		if !(char >= '0' && char <= '9' || char >= 'a' && char <= 'f' || char >= 'A' && char <= 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func isHex(value string) bool {

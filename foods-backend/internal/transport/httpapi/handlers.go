@@ -91,6 +91,8 @@ type Handlers struct {
 	// credencial propia y revocable.
 	PayDetect interface {
 		CreatePairing(http.ResponseWriter, *http.Request)
+		PairingStatus(http.ResponseWriter, *http.Request)
+		ScanPairing(http.ResponseWriter, *http.Request)
 		Devices(http.ResponseWriter, *http.Request)
 		RenameDevice(http.ResponseWriter, *http.Request)
 		RevokeDevice(http.ResponseWriter, *http.Request)

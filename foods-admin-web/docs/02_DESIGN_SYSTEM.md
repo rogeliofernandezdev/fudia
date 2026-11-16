@@ -3456,7 +3456,15 @@ global en toda la aplicación para el cajero:
   (lista y campana); la asociación registra el cobro real por el flujo de
   pagos y es de un solo uso (409 en reintento).
 - **Dispositivos de pago:** modal «Vincular dispositivo» con el QR del código
-  temporal y sondeo hasta que el Android aparece vinculado; lista con último
+  temporal y sondeo hasta que el Android aparece vinculado. Se monta solo al
+  pulsar «Vincular dispositivo» (el código se genera entonces, nunca al entrar
+  a Caja) y funciona como WhatsApp Web: QR con «Esperando el escaneo…» y
+  «Cancelar»; en cuanto la app lo escanea, el QR cede su lugar (misma altura)
+  a un `Spinner` de 40 px en `primary-600` con «Vinculando «modelo»…» y «Mantén
+  Fudia Pay abierto en el teléfono hasta que termine.»; al vincular, el modal
+  se cierra solo y `FeedbackProvider` avisa «Dispositivo vinculado». Un código
+  vencido muestra «El código venció sin usarse.» y «Generar otro código»
+  (primario, `refresh`). La X cierra en cualquier estado; lista con último
   contacto, renombrar y revocar (ConfirmDialog danger).
 
 ### Panel de reparto del proveedor (2026-11-14)

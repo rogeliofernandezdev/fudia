@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useCallback,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,IconButton,Input,Status,TableSkeleton,Tag} from "@/design-system";
 import {useFeedback} from "@/providers";
@@ -22,6 +22,13 @@ export function PayDevicesPanel({dateTime}:Props){
   const [revokeTarget,setRevokeTarget]=useState<PayDevice|null>(null);
   const [renameTarget,setRenameTarget]=useState<PayDevice|null>(null);
   const devices=useQuery({queryKey:["pay-devices"],queryFn:listPayDevices,refetchInterval:30000});
+  const closePairing=useCallback(()=>setPairing(false),[]);
+  // Como WhatsApp Web: al terminar la vinculación el modal se cierra solo.
+  const linked=useCallback((name:string)=>{
+    setPairing(false);
+    void qc.invalidateQueries({queryKey:["pay-devices"]});
+    notify({tone:"success",title:"Dispositivo vinculado",message:`«${name}» ya reporta los pagos de Yape y Plin de este local.`});
+  },[qc,notify]);
 
   const revoke=useMutation({
     mutationFn:(id:string)=>revokePayDevice(id),
@@ -62,7 +69,7 @@ export function PayDevicesPanel({dateTime}:Props){
         </tr>)}
       </tbody>
     </table>}
-    <PayPairingDialog onClose={()=>setPairing(false)}/>
+    {pairing&&<PayPairingDialog onClose={closePairing} onLinked={linked}/>}
     <ConfirmDialog open={Boolean(revokeTarget)} tone="danger" title="Revocar dispositivo"
       description={`«${revokeTarget?.name}» dejará de reportar pagos de inmediato. Podrás vincularlo de nuevo con un QR nuevo.`}
       subject={revokeTarget?{label:"Dispositivo",name:revokeTarget.name}:undefined}

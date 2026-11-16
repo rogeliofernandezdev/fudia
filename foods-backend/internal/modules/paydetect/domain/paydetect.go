@@ -82,6 +82,8 @@ type PairingCode struct {
 	UsedAt         *time.Time
 	DeviceID       string
 	CreatedAt      time.Time
+	// ScannedAt: la app leyó el QR y está canjeando el código.
+	ScannedAt *time.Time
 }
 
 // Used dice si el código ya se canjeó por un dispositivo.
@@ -218,8 +220,56 @@ type ReportResult struct {
 	Events     []EventOutcome `json:"events"`
 }
 
-// PairingDraft es el código generado por Caja antes de mostrarse como QR.
+// PairingDraft es el código generado por Caja antes de mostrarse como QR. El
+// id permite a Caja seguir el estado del código sin exponerlo de nuevo.
 type PairingDraft struct {
+	ID        string `json:"id"`
 	Code      string `json:"code"`
 	ExpiresAt string `json:"expiresAt"`
+}
+
+// Estados de un código de vinculación, como los ve Caja mientras muestra el QR.
+const (
+	PairingPending = "pending" // esperando que la app lo escanee
+	PairingScanned = "scanned" // la app lo leyó y está activando el dispositivo
+	PairingLinked  = "linked"  // el dispositivo quedó vinculado
+	PairingExpired = "expired" // venció sin usarse
+)
+
+// PairingScanModelLimit acota el modelo que la app declara al escanear.
+const PairingScanModelLimit = 120
+
+// PairingState es lo que Caja lee del código que está mostrando.
+type PairingState struct {
+	ExpiresAt  time.Time
+	UsedAt     *time.Time
+	ScannedAt  *time.Time
+	Model      string
+	DeviceName string
+}
+
+// PairingStatus es la respuesta para Caja: el estado y, cuando corresponde, el
+// modelo que escaneó o el nombre del dispositivo vinculado.
+type PairingStatus struct {
+	Status     string `json:"status"`
+	Model      string `json:"model,omitempty"`
+	DeviceName string `json:"deviceName,omitempty"`
+	ExpiresAt  string `json:"expiresAt"`
+}
+
+// StatusOf decide el estado con el reloj de la aplicación: vinculado gana
+// siempre; un código escaneado sigue «escaneado» hasta que vence.
+func (s PairingState) StatusOf(now time.Time) PairingStatus {
+	out := PairingStatus{ExpiresAt: s.ExpiresAt.Format(time.RFC3339)}
+	switch {
+	case s.UsedAt != nil:
+		out.Status, out.DeviceName = PairingLinked, s.DeviceName
+	case now.After(s.ExpiresAt):
+		out.Status = PairingExpired
+	case s.ScannedAt != nil:
+		out.Status, out.Model = PairingScanned, s.Model
+	default:
+		out.Status = PairingPending
+	}
+	return out
 }

@@ -2048,6 +2048,17 @@ paths:
         "200": { description: Código generado, content: { application/json: { schema: { $ref: "#/components/schemas/PayPairingDraft" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pay-devices/pairing/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPayPairingStatus
+      summary: Estado del código que Caja muestra como QR (como WhatsApp Web)
+      description: "Requiere cash.manage; solo códigos del local de la sesión. pending: esperando el escaneo; scanned: la app leyó el QR y está activando el dispositivo (incluye model); linked: dispositivo vinculado (incluye deviceName); expired: venció sin usarse. Caja consulta cada 1,5 s y cierra el modal al vincular. Cache-Control: no-store."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Estado del código, content: { application/json: { schema: { $ref: "#/components/schemas/PayPairingStatus" } } } }
+        "400": { description: "pay_pairing_invalid: código inexistente o de otro local" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/pay-devices/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
@@ -2109,6 +2120,17 @@ paths:
         "200": { description: Notificación descartada, content: { application/json: { schema: { $ref: "#/components/schemas/PayNotification" } } } }
         "404": { description: Notificación no encontrada en el local activo }
         "409": { description: La notificación ya se procesó }
+  /v1/mobile/pair/scan:
+    post:
+      operationId: scanPayPairing
+      summary: Avisa que la app leyó el QR, antes de canjear el código
+      description: "Sin credencial: el código de un solo uso identifica la vinculación. Marca el código como escaneado (idempotente; el primer escaneo conserva su hora y modelo) para que Caja muestre «Vinculando…». No canjea el código: eso lo hace /v1/mobile/pair."
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string, pattern: "^[a-f0-9]{32}$" }, model: { type: string, maxLength: 120 } } } } } }
+      responses:
+        "204": { description: Escaneo registrado }
+        "400": { description: "pay_pairing_invalid o pay_pairing_expired" }
+        "409": { description: "pay_pairing_used: el código ya se usó" }
   /v1/mobile/pair:
     post:
       operationId: pairPayDevice
@@ -3937,7 +3959,8 @@ components:
     RestaurantOption: {"type": "object", "required": ["organizationId", "locationId", "organizationName", "locationName", "visitCount"], "properties": {"organizationId": {"type": "string", "format": "uuid"}, "locationId": {"type": "string", "format": "uuid"}, "organizationName": {"type": "string"}, "locationName": {"type": "string"}, "visitCount": {"type": "integer", "minimum": 0}, "lastVisitedAt": {"type": "string"}, "qrToken": {"type": "string"}}}
     RestaurantPage: {"type": "object", "required": ["items", "hasMore", "offset"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/RestaurantOption"}}, "hasMore": {"type": "boolean"}, "offset": {"type": "integer"}}}
     PayDevice: {"type": "object", "required": ["id", "name", "platform", "tokenSuffix", "active", "createdAt"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "platform": {"type": "string", "enum": ["ANDROID", "IOS"]}, "model": {"type": "string"}, "tokenSuffix": {"type": "string", "description": "Últimos caracteres de la credencial, para reconocerla; nunca el token."}, "active": {"type": "boolean"}, "lastSeenAt": {"type": "string"}, "createdAt": {"type": "string"}}}
-    PayPairingDraft: {"type": "object", "required": ["code", "expiresAt"], "properties": {"code": {"type": "string", "pattern": "^[a-f0-9]{32}$"}, "expiresAt": {"type": "string", "format": "date-time"}}}
+    PayPairingDraft: {"type": "object", "required": ["id", "code", "expiresAt"], "properties": {"id": {"type": "string", "format": "uuid", "description": "Para seguir el estado del código sin volver a exponerlo."}, "code": {"type": "string", "pattern": "^[a-f0-9]{32}$"}, "expiresAt": {"type": "string", "format": "date-time"}}}
+    PayPairingStatus: {"type": "object", "required": ["status", "expiresAt"], "properties": {"status": {"type": "string", "enum": ["pending", "scanned", "linked", "expired"]}, "model": {"type": "string", "description": "Modelo que declaró la app al escanear (solo scanned)."}, "deviceName": {"type": "string", "description": "Nombre del dispositivo vinculado (solo linked)."}, "expiresAt": {"type": "string", "format": "date-time"}}}
     PayActivation: {"type": "object", "required": ["device", "token", "organizationName", "locationName"], "properties": {"device": {"$ref": "#/components/schemas/PayDevice"}, "token": {"type": "string", "description": "Credencial del dispositivo; se entrega una sola vez y nunca vuelve a leerse del backend."}, "organizationName": {"type": "string"}, "locationName": {"type": "string"}}}
     PayDeviceSession: {"type": "object", "required": ["device", "restaurant", "location", "currency"], "properties": {"device": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}}, "restaurant": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}}, "location": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}}, "currency": {"type": "string"}}}
     PayReportInput: {"type": "object", "required": ["events"], "properties": {"events": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object", "required": ["provider", "eventKey", "amount", "occurredAt"], "properties": {"provider": {"type": "string", "enum": ["yape", "plin"]}, "eventKey": {"type": "string", "minLength": 8, "maxLength": 200}, "senderName": {"type": "string", "maxLength": 80}, "amount": {"type": "number", "exclusiveMinimum": 0}, "occurredAt": {"type": "string", "format": "date-time"}}}}}}

@@ -1,9 +1,14 @@
 import {apiFetch} from "@/shared/api/client";
-import type {PayDevice,PayNotification,PayNotificationStatus,PayOrderRef,PayPairingDraft,PayProvider} from "../domain/types";
+import type {PayDevice,PayNotification,PayNotificationStatus,PayOrderRef,PayPairingDraft,PayPairingStatus,PayProvider} from "../domain/types";
 
 /** Caja genera el código temporal que se muestra como QR. */
 export function createPayPairing(){
   return apiFetch<PayPairingDraft>("pay-devices/pairing",{method:"POST"});
+}
+
+/** Estado del código mientras el QR está a la vista (como WhatsApp Web). */
+export function getPayPairingStatus(id:string){
+  return apiFetch<PayPairingStatus>(`pay-devices/pairing/${encodeURIComponent(id)}`);
 }
 
 export function listPayDevices(){

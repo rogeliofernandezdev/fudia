@@ -22,12 +22,21 @@ test("Fudia Pay: la matriz de estados del pago detectado usa la paleta aprobada 
   assert.equal(status.payProviderLabel.plin,"Plin");
 });
 
-test("Fudia Pay: la vinculación usa el código temporal por QR y vigila los dispositivos",()=>{
+test("Fudia Pay: la vinculación es como WhatsApp Web: QR, «Vinculando…» al escanear y cierre automático",()=>{
   const dialog=read("src/modules/payment-devices/presentation/pay-pairing-dialog.tsx");
   assert.match(dialog,/createPayPairing\(\)/,"el diálogo genera el código temporal");
   assert.match(dialog,/toCanvas\(canvas\.current,draft\.code/,"el QR se dibuja con el código, no con credenciales");
-  assert.match(dialog,/refetchInterval:query=>query\.state\.data\?\.items\.some\(item=>Date\.parse\(item\.createdAt\)>=issuedAt-1000\)\?false:3000/,"vigila los dispositivos cada 3 s hasta que aparece el nuevo");
+  assert.match(dialog,/getPayPairingStatus\(draft!\.id\)/,"sigue el estado del código mostrado");
+  assert.match(dialog,/\["linked","expired"\]\.includes\(query\.state\.data\?\.status\?\?""\)\?false:STATUS_POLL_MS/,"consulta hasta que se vincula o vence");
+  assert.match(dialog,/Vinculando\{status\.data\?\.model/,"al escanear el QR cede su lugar al progreso con el modelo");
+  assert.match(dialog,/<Spinner size=\{40\}\/>/);
+  assert.match(dialog,/onLinked\(status\.data\?\.deviceName/,"al vincular avisa al panel, que cierra el modal");
+  assert.match(dialog,/Generar otro código/,"un código vencido se renueva sin cerrar el modal");
   assert.doesNotMatch(dialog,/token/i,"el QR y la pantalla nunca muestran la credencial del dispositivo");
+  const panel=read("src/modules/payment-devices/presentation/pay-devices-panel.tsx");
+  assert.match(panel,/\{pairing&&<PayPairingDialog onClose=\{closePairing\} onLinked=\{linked\}\/>\}/,"el diálogo se monta solo al abrirlo y cierra con la X, Cancelar o al vincular");
+  assert.match(panel,/title:"Dispositivo vinculado"/);
+  assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/pay-devices\/pairing\/\$\{encodeURIComponent\(id\)\}/);
 });
 
 test("Fudia Pay: los endpoints del dispositivo y de Caja siguen el contrato",()=>{

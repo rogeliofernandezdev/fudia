@@ -76,3 +76,26 @@ func TestFormatAmountDosDecimales(t *testing.T) {
 		t.Fatalf("FormatAmount = %q", got)
 	}
 }
+
+func TestPairingStatusOf(t *testing.T) {
+	now := time.Date(2026, 11, 16, 12, 0, 0, 0, time.UTC)
+	later := now.Add(5 * time.Minute)
+	scanned := now.Add(-time.Minute)
+	cases := []struct {
+		name  string
+		state PairingState
+		want  PairingStatus
+	}{
+		{"pending", PairingState{ExpiresAt: later}, PairingStatus{Status: PairingPending}},
+		{"scanned", PairingState{ExpiresAt: later, ScannedAt: &scanned, Model: "Pixel 8"}, PairingStatus{Status: PairingScanned, Model: "Pixel 8"}},
+		{"linked wins over expiry", PairingState{ExpiresAt: now.Add(-time.Hour), ScannedAt: &scanned, UsedAt: &scanned, DeviceName: "Caja 1"}, PairingStatus{Status: PairingLinked, DeviceName: "Caja 1"}},
+		{"expired after scan", PairingState{ExpiresAt: now.Add(-time.Second), ScannedAt: &scanned}, PairingStatus{Status: PairingExpired}},
+	}
+	for _, c := range cases {
+		got := c.state.StatusOf(now)
+		got.ExpiresAt = ""
+		if got != c.want {
+			t.Fatalf("%s: %#v", c.name, got)
+		}
+	}
+}

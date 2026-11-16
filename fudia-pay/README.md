@@ -42,6 +42,12 @@ Las variantes apuntan por defecto: `debug` al backend de desarrollo y
 El APK se instala directamente en el Android del local
 (`adb install -r app/build/outputs/apk/debug/app-debug.apk`).
 
+**Permisos restringidos (HONOR/Huawei/Xiaomi/Oppo):** al instalar el APK por
+fuera de la tienda, MagicOS/HyperOS/ColorOS bloquea permisos delicados. En el
+teléfono: Ajustes › Apps › Gestionar apps › Fudia Pay › menú ⋮ ›
+**«Permitir ajustes restringidos»** → confirma. Después, el acceso a
+notificaciones se puede activar con normalidad. Es un paso único por teléfono.
+
 ## Estructura
 
 ```
@@ -69,6 +75,12 @@ La bienvenida muestra una sola acción por estado: «Vincular restaurante» (azu
 48 dp) con la instrucción de Caja debajo; con el escáner abierto, solo el
 escáner y «Volver»; sin permiso de cámara, «Conceder cámara»; al vincular,
 «Continuar».
+
+Al leer el QR, la app avisa el escaneo (`POST /v1/mobile/pair/scan`, con el
+modelo del teléfono) y luego canjea el código: así Caja muestra «Vinculando…»
+como WhatsApp Web y cierra su modal sola al terminar. Los errores muestran el
+mensaje del backend («El código de vinculación ya se usó. Genera otro.»), sin
+códigos HTTP.
 
 ## Contrato con el backend
 

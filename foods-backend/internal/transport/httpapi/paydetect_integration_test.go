@@ -49,6 +49,10 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		switch {
 		case path == "/v1/admin/pay-devices/pairing":
 			handler.CreatePairing(rec, req)
+		case path == "/v1/admin/pay-devices/pairing/status":
+			handler.PairingStatus(rec, req)
+		case path == "/v1/mobile/pair/scan":
+			handler.ScanPairing(rec, req)
 		case path == "/v1/mobile/pair":
 			handler.Pair(rec, req)
 		case path == "/v1/mobile/notifications":
@@ -82,10 +86,37 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		t.Fatalf("create pairing: %d %s", pairingRec.Code, pairingRec.Body.String())
 	}
 	var draft struct {
+		ID   string `json:"id"`
 		Code string `json:"code"`
 	}
 	if err := json.Unmarshal(pairingRec.Body.Bytes(), &draft); err != nil {
 		t.Fatal(err)
+	}
+	// Caja sigue el código como WhatsApp Web: esperando, escaneado y vinculado.
+	pairingStatus := func(subject scope) (int, string, string, string) {
+		t.Helper()
+		rec := call("GET", "/v1/admin/pay-devices/pairing/status", draft.ID, subject, "")
+		var out struct{ Status, Model, DeviceName string }
+		_ = json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec.Code, out.Status, out.Model, out.DeviceName
+	}
+	if code, status, _, _ := pairingStatus(s); code != 200 || status != "pending" {
+		t.Fatalf("pairing pending: %d %s", code, status)
+	}
+	if code, _, _, _ := pairingStatus(other); code != 400 {
+		t.Fatalf("otro local no lee el código: %d", code)
+	}
+	if scan := call("POST", "/v1/mobile/pair/scan", "", scope{}, fmt.Sprintf(`{"code":%q,"model":"Samsung Galaxy A15"}`, draft.Code)); scan.Code != 204 {
+		t.Fatalf("scan: %d %s", scan.Code, scan.Body.String())
+	}
+	if scan := call("POST", "/v1/mobile/pair/scan", "", scope{}, fmt.Sprintf(`{"code":%q,"model":"Otro"}`, draft.Code)); scan.Code != 204 {
+		t.Fatalf("scan twice is idempotent: %d", scan.Code)
+	}
+	if code, status, model, _ := pairingStatus(s); code != 200 || status != "scanned" || model != "Samsung Galaxy A15" {
+		t.Fatalf("pairing scanned: %d %s %q", code, status, model)
+	}
+	if bad := call("POST", "/v1/mobile/pair/scan", "", scope{}, `{"code":"abcdef"}`); bad.Code != 400 {
+		t.Fatalf("scan with invalid code: %d", bad.Code)
 	}
 	pairRec := call("POST", "/v1/mobile/pair", "", scope{}, fmt.Sprintf(`{"code":%q,"platform":"ANDROID","model":"Samsung Galaxy A15"}`, draft.Code))
 	if pairRec.Code != 200 {
@@ -105,6 +136,12 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	deviceToken = activation.Token
 	if activation.Token == "" || activation.OrganizationName == "" || activation.LocationName == "" {
 		t.Fatal("la activación no trajo credencial ni restaurante")
+	}
+	if code, status, _, name := pairingStatus(s); code != 200 || status != "linked" || name != "Samsung Galaxy A15" {
+		t.Fatalf("pairing linked: %d %s %q", code, status, name)
+	}
+	if scan := call("POST", "/v1/mobile/pair/scan", "", scope{}, fmt.Sprintf(`{"code":%q}`, draft.Code)); scan.Code != 409 {
+		t.Fatalf("scan a used code must be 409, got %d", scan.Code)
 	}
 	if reuse := call("POST", "/v1/mobile/pair", "", scope{}, fmt.Sprintf(`{"code":%q,"platform":"ANDROID"}`, draft.Code)); reuse.Code != 409 {
 		t.Fatalf("reusar un código canjeado debe ser 409, fue %d", reuse.Code)

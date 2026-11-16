@@ -87,13 +87,50 @@ func (r *Pay) CreatePairingCode(ctx context.Context, s scope, createdBy string, 
 	err := r.db(ctx).QueryRow(ctx, `
 		INSERT INTO pay_pairing_codes (organization_id, location_id, code, created_by, expires_at)
 		VALUES ($1, $2, replace(gen_random_uuid()::text, '-', ''), $3, $4)
-		RETURNING code, expires_at
-	`, s.OrganizationID, s.LocationID, createdBy, expires).Scan(&draft.Code, &expiresAt)
+		RETURNING id::text, code, expires_at
+	`, s.OrganizationID, s.LocationID, createdBy, expires).Scan(&draft.ID, &draft.Code, &expiresAt)
 	if err != nil {
 		return domain.PairingDraft{}, err
 	}
 	draft.ExpiresAt = expiresAt.Format(time.RFC3339)
 	return draft, nil
+}
+
+// PairingState reads the code Cash is showing, within its location, with the
+// name of the device it linked.
+func (r *Pay) PairingState(ctx context.Context, s scope, id string) (domain.PairingState, error) {
+	var state domain.PairingState
+	var model, deviceName *string
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT p.expires_at, p.used_at, p.scanned_at, p.scanned_model, d.name
+		FROM pay_pairing_codes p
+		LEFT JOIN pay_devices d ON d.id=p.device_id
+		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	`, id, s.OrganizationID, s.LocationID).Scan(&state.ExpiresAt, &state.UsedAt, &state.ScannedAt, &model, &deviceName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return state, application.ErrPairingInvalid
+	}
+	if model != nil {
+		state.Model = *model
+	}
+	if deviceName != nil {
+		state.DeviceName = *deviceName
+	}
+	return state, err
+}
+
+// MarkPairingScanned records that the app read the QR. The first scan keeps
+// its time; a later scan only fills the model if it was missing.
+func (r *Pay) MarkPairingScanned(ctx context.Context, code, model string) (bool, error) {
+	tag, err := r.db(ctx).Exec(ctx, `
+		UPDATE pay_pairing_codes
+		SET scanned_at=COALESCE(scanned_at, now()), scanned_model=COALESCE(scanned_model, NULLIF($2, ''))
+		WHERE code=$1 AND used_at IS NULL AND expires_at > now()
+	`, code, model)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 // ListDevices returns all the devices of the location, active and revoked.
@@ -325,6 +362,10 @@ func (r *Pay) ActivateDevice(ctx context.Context, code string, now time.Time, in
 		return err
 	}()
 	if err != nil {
+		return domain.Activation{}, err
+	}
+	// The code remembers the device it linked: Cash shows its name when done.
+	if _, err = r.db(ctx).Exec(ctx, `UPDATE pay_pairing_codes SET device_id=$2 WHERE id=$1`, pairing.id, device.ID); err != nil {
 		return domain.Activation{}, err
 	}
 	var organizationName, locationName string

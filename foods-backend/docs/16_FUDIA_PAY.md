@@ -14,11 +14,19 @@ registra con el flujo de pagos existente de `billing`.
 
 1. Caja › Dispositivos de pago › «Vincular dispositivo»: código temporal de
    10 minutos, un solo uso, mostrado como QR.
-2. La app lo escanea y lo canjea: el backend resuelve empresa y local y
-   devuelve la credencial, que viaja **una sola vez** y se guarda cifrada.
+2. La app lo escanea y lo canjea, como WhatsApp Web (migración 000131): al
+   leer el QR avisa el escaneo (`POST /v1/mobile/pair/scan`, con el modelo) y
+   Caja, que consulta el estado del código cada 1,5 s, cambia el QR por
+   «Vinculando «modelo»…»; luego lo canjea (`POST /v1/mobile/pair`): el backend
+   resuelve empresa y local, liga el dispositivo al código y devuelve la
+   credencial, que viaja **una sola vez** y se guarda cifrada. Al quedar
+   vinculado, el modal de Caja se cierra solo y avisa «Dispositivo vinculado».
+   El aviso de escaneo es de mejor esfuerzo: si la red falla, el canje igual
+   valida el código.
 3. El cajero activa el **acceso a notificaciones** desde la configuración de
    Android (permiso del sistema, no de la app).
-4. Un QR vencido o ya canjeado responde 400/409: se genera otro.
+4. Un QR vencido o ya canjeado responde 400/409 (también al escanear): Caja
+   muestra «El código venció sin usarse» con «Generar otro código».
 
 ### 2. Operación diaria (automática)
 
@@ -82,7 +90,8 @@ Cajeros (permisos `cash.read`/`cash.manage`, sesión del panel):
 
 | Ruta | Uso |
 | --- | --- |
-| `POST /v1/admin/pay-devices/pairing` | Código temporal para el QR (10 min, un solo uso) |
+| `POST /v1/admin/pay-devices/pairing` | Código temporal para el QR (10 min, un solo uso); devuelve `id`, `code` y `expiresAt` |
+| `GET /v1/admin/pay-devices/pairing/{id}` | Estado del código: `pending`, `scanned` (con `model`), `linked` (con `deviceName`) o `expired`; solo del local |
 | `GET /v1/admin/pay-devices` | Dispositivos del local, activos y revocados |
 | `PATCH /v1/admin/pay-devices/{id}` | Renombrar |
 | `POST /v1/admin/pay-devices/{id}/revoke` | Revocar la credencial (401 inmediato) |
@@ -94,6 +103,7 @@ Dispositivo (credencial `Bearer`, revocable):
 
 | Ruta | Uso |
 | --- | --- |
+| `POST /v1/mobile/pair/scan` | Sin credencial: avisa que la app leyó el QR (`{code, model}`), 204; idempotente |
 | `POST /v1/mobile/pair` | Canjea el código del QR; el token viaja **una sola vez** |
 | `GET /v1/mobile/session` | Restaurante, local y moneda resueltos por el backend |
 | `POST /v1/mobile/notifications` | Reporta lotes (≤20); responde `registered|duplicate` por evento |
@@ -119,6 +129,13 @@ de la app hacen el resto; el sweep horario purga códigos vencidos.
 Contratos independientes de la plataforma (`ANDROID|IOS`). iOS no ofrece un
 equivalente general a `NotificationListenerService`: la futura versión iOS
 requerirá otro mecanismo autorizado; no se desarrolla en esta etapa.
+
+**Permisos restringidos (HONOR/Huawei/Xiaomi/Oppo):** al instalar el APK por
+fuera de la tienda, MagicOS/HyperOS/ColorOS bloquea permisos delicados («Fudia
+Pay · Controlado por ajustes restringidos»). En el teléfono: Ajustes › Apps ›
+Gestionar apps › Fudia Pay › menú ⋮ › **«Permitir ajustes restringidos»** →
+confirmar. Después el acceso a notificaciones se activa con normalidad; es un
+paso único por teléfono, documentado también en el README de la app.
 
 ## Pruebas
 
