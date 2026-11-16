@@ -4,7 +4,7 @@
             "outputFile": "com.fudia.pay.app-mergeDebugResources-66:/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\rogelio.fernandez\\.gradle\\caches\\9.1.0\\transforms\\a2f8a3d9e6661323a0919e3674c04b81\\workspace\\transformed\\work-runtime-2.10.0\\res\\values-v23\\values-v23.xml",
+                    "source": "C:\\Users\\rogelio.fernandez\\.gradle\\caches\\8.9\\transforms\\e779c2dda72145dcb5e91b95ed9be790\\transformed\\work-runtime-2.10.0\\res\\values-v23\\values-v23.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",
