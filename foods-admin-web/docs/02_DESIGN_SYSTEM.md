@@ -3434,6 +3434,31 @@ Revisa tu pedido y toca **Confirmar pedido** para enviarlo. **Mi pedido** se
 menciona solo cuando corresponde abrir el resumen. Los mensajes históricos
 limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
+### Pagos detectados de Yape y Plin en Caja (2026-11-15)
+
+Módulo `payment-devices` integrado en Caja (tab «Pagos detectados») y capa
+global en toda la aplicación para el cajero:
+
+- **Aviso flotante global:** capa fija (por encima de los modales, sin cerrar
+  nada) que sondea los pagos detectados cada 10 s y apila las tarjetas nuevas
+  (máx. 4). Cada tarjeta: etiqueta del proveedor (Yape/Plin), monto, remitente
+  y dispositivo; el clic abre el detalle. Sin permiso de cobro, la capa no
+  consulta. También queda registrado en la campana (`pay_detected`).
+- **Detalle y asociación:** medio, remitente, monto, fecha, número de
+  operación y estado; sección «Asociar pago a pedido» con el medio de pago del
+  catálogo (preselecciona Yape/Plin). El pedido que el cajero está cobrando en
+  el POS se **sugiere** (contexto `PayCollectionContext`, registrado al abrir
+  el modal de cobro); nunca se asocia automáticamente. «Cambiar pedido» abre
+  los pedidos con saldo pendiente (mesas, delivery, venta rápida), los de
+  monto exacto primero; «Ver detalle» muestra pedido, pagos y saldo antes de
+  confirmar. Un pago superior al saldo se registra parcial del saldo y la
+  diferencia queda explicada. Cerrar sin asociar deja el movimiento pendiente
+  (lista y campana); la asociación registra el cobro real por el flujo de
+  pagos y es de un solo uso (409 en reintento).
+- **Dispositivos de pago:** modal «Vincular dispositivo» con el QR del código
+  temporal y sondeo hasta que el Android aparece vinculado; lista con último
+  contacto, renombrar y revocar (ConfirmDialog danger).
+
 ### Panel de reparto del proveedor (2026-11-14)
 
 `/delivery-panel` (`src/modules/delivery-panel`): pantalla sin menú para el

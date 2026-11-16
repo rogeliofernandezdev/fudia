@@ -10,6 +10,7 @@ celular, tablet y PC.
 | `foods-backend` | API, dominio, persistencia, integraciones y procesos asíncronos |
 | `fudia-image-processor` | Procesamiento asíncrono e independiente de imágenes subidas directamente a Storage |
 | `foods-admin-web` | Aplicación web única para POS, mesas, pedidos, cocina, caja, administración, catálogo, inventario, compras, reportes y configuración |
+| `fudia-pay` | Aplicación Android nativa (Kotlin) que detecta las notificaciones de pagos de Yape y Plin y las reporta a Fudia para revisión y confirmación en Caja |
 | `fudia-concierge` | Asistente conversacional multicanal; inicia con pedidos por WhatsApp desde QR |
 | `fudia-whatsapp-gateway` | Transporte whatsmeow independiente, sesiones SQL y conexión continua; sin IA ni pedidos |
 | `foods-infrastructure` | Infraestructura como código, despliegue y observabilidad |
@@ -21,8 +22,10 @@ los documentos de la raíz conservan únicamente decisiones transversales.
 La solución se organiza en seis proyectos. Fudia Concierge orquesta la
 conversación con el comensal y consume foods-backend como fuente de verdad. La
 facturación electrónica por país, la impresión y los pagos continúan encapsulados
-como integraciones del backend. No se crea una aplicación móvil nativa en la fase
-inicial: `foods-admin-web` concentra la experiencia web operativa y administrativa y debe ser adaptable desde 390 px.
+como integraciones del backend. La captura de pagos de Yape y Plin se agrega
+como excepción con un proyecto móvil propio (`fudia-pay`, Android nativo en
+Kotlin): solo detecta y reporta; toda la gestión vive en `foods-admin-web` y el
+backend, que sigue siendo adaptable desde 390 px.
 
 ## Documentación
 

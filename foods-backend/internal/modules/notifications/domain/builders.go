@@ -106,6 +106,19 @@ func DeliveryPickupDelayed(orderID, code, customer, partner, key string) Input {
 	}
 }
 
+// PaymentDetected avisa a caja que un dispositivo de Fudia Pay detectó un pago
+// de Yape o Plin. Es una notificación por revisar, nunca una confirmación
+// bancaria: el cajero la asocia y confirma con el flujo de cobros. La clave de
+// deduplicación es la identidad estable del evento en el dispositivo.
+func PaymentDetected(provider, symbol, amount, sender, key string) Input {
+	return Input{
+		Kind: KindPayDetected, Audience: AudienceCashier,
+		Title:   fmt.Sprintf("Pago recibido por %s", provider),
+		Detail:  Join(Money(symbol, amount), sender),
+		DedupeKey: dedupe("pay-detected", key, provider),
+	}
+}
+
 // OrderReady avisa que una comanda está lista para entregar. En mesa la
 // entrega el mozo; mostrador, recojo y delivery se avisan también a caja.
 func OrderReady(ticketID, station, orderID, tableID, tableName, code, customer string) Input {

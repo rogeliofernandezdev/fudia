@@ -19,6 +19,8 @@ const (
 	KindDeliveryUnassigned = "delivery_unassigned"
 	// KindDeliveryPickupDelayed: el motorizado de la central no llega a recoger (8 min).
 	KindDeliveryPickupDelayed = "delivery_pickup_delayed"
+	// KindPayDetected: Fudia Pay detectó un pago de Yape o Plin por revisar en caja.
+	KindPayDetected = "pay_detected"
 )
 
 // Audiencias: el servicio de salón (mozos), la caja (cajeros) o ambos.

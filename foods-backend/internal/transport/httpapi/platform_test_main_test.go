@@ -26,14 +26,13 @@ func TestMain(m *testing.M) {
 	}
 
 	const phone = "+999000000001"
+	// No destructivo: si el despliegue ya tiene un canal para el país (p. ej. el
+	// chat web FUDIA_WEB de un entorno real), se conserva tal cual y las
+	// pruebas corren sobre él; la limpieza solo retira el canal del fixture.
 	_, err = pool.Exec(context.Background(), `
 		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active,provider_key,routing_key)
 		VALUES('PE',$1,'Integration Test Global',true,$1,$1)
-		ON CONFLICT(country_code) WHERE superseded_by IS NULL DO UPDATE SET
-            phone_number=EXCLUDED.phone_number,provider_key=EXCLUDED.provider_key,routing_key=EXCLUDED.routing_key,needs_reconciliation=false,
-			country_code='PE',
-			active=true,
-			updated_at=now()
+		ON CONFLICT(country_code) WHERE superseded_by IS NULL DO NOTHING
 	`, phone)
 	if err != nil {
 		pool.Close()

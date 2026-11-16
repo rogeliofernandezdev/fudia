@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.fudia.pay.app-debug-68:/drawable_ic_launcher.xml.flat",
+        "source": "com.fudia.pay.app-main-70:/drawable/ic_launcher.xml"
+    },
+    {
+        "merged": "com.fudia.pay.app-debug-68:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.fudia.pay.app-main-70:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.fudia.pay.app-debug-68:/mipmap_ic_launcher.png.flat",
+        "source": "com.fudia.pay.app-main-70:/mipmap/ic_launcher.png"
+    },
+    {
+        "merged": "com.fudia.pay.app-debug-68:/drawable-nodpi_logo_mark.png.flat",
+        "source": "com.fudia.pay.app-main-70:/drawable-nodpi/logo_mark.png"
+    }
+]

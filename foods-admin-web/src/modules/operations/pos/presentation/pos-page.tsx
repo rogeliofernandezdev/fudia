@@ -18,6 +18,7 @@ import {createPayment,getPOSCollectionAccess,getPOSOrder,listPOSOrders,listSales
 import {collectionShift} from "../domain/collection-shift";
 import {PaymentForm} from "./pos-dialogs";
 import {deliveredDocument,FiscalStatus,ticketNoticeFor,useCheckoutOptions} from "@/modules/einvoicing";
+import {PayCollectionRegistration} from "@/modules/payment-devices";
 const RefundDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.RefundDialog),{ssr:false});
 const PaymentTicketDialog=dynamic(()=>import("@/modules/sales").then(module=>module.PaymentTicketDialog),{ssr:false});
 const FiscalPrintDialog=dynamic(()=>import("@/modules/einvoicing").then(module=>module.FiscalPrintDialog),{ssr:false});
@@ -194,6 +195,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       {!orders.isLoading&&!orders.isError&&<Pagination page={page} size={size} total={orders.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
 
+    {paymentOrderId&&paymentOrder.data&&<PayCollectionRegistration order={{id:paymentOrderId,code:paymentOrder.data.order.code,pending:paymentOrder.data.remainingAmount}}/>}
     {paymentOrderId&&<POSPaymentEntry
       loading={paymentOrder.isPending||paymentOrder.isFetching}
       error={paymentOrder.error?.message}

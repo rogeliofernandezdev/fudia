@@ -33,6 +33,8 @@ var (
 	DeliveryUnassigned  = domain.DeliveryUnassigned
 	// DeliveryPickupDelayed: alerta crítica al restaurante por recogida demorada.
 	DeliveryPickupDelayed = domain.DeliveryPickupDelayed
+	// PayDetected: Fudia Pay detectó un pago de Yape o Plin para revisión en caja.
+	PayDetected = domain.PaymentDetected
 	Money                 = domain.Money
 	// OrderReadyForCustomer devuelve false si el pedido no avisa al cliente.
 	OrderReadyForCustomer = domain.OrderReadyForCustomer

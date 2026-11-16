@@ -39,6 +39,9 @@ import (
 	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	orderpg "github.com/foods-platform/foods-backend/internal/modules/orders/infrastructure/postgres"
 	orderhttp "github.com/foods-platform/foods-backend/internal/modules/orders/transport/http"
+	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
+	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
+	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	orgapp "github.com/foods-platform/foods-backend/internal/modules/organizations/application"
 	orgpg "github.com/foods-platform/foods-backend/internal/modules/organizations/infrastructure/postgres"
 	orghttp "github.com/foods-platform/foods-backend/internal/modules/organizations/transport/http"
@@ -130,6 +133,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), database.NewUnitOfWork(db), auditpg.New(db)).WithTableGuard(concierge).WithOrigins(conciergepg.NewUsage(db), platform)),
 		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
 		Payments:               billinghttp.NewPayments(payments),
+		PayDetect:              paydetecthttp.New(paydetectapp.NewPayDevices(paydetectpg.New(db)), paydetectapp.NewDetector(paydetectpg.New(db), database.NewUnitOfWork(db)).WithNotices(notices), paydetectapp.NewNotifications(paydetectpg.New(db)).WithOrderLooker(orderpg.New(db)).WithPaymentRegisterer(payments)),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db)).WithTips(tips)),
 		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),

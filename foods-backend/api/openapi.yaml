@@ -2027,6 +2027,118 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: Sin turno activo, pedido no cobrable o monto superior al saldo }
         "403": { $ref: "#/components/responses/Forbidden" }
+  # Fudia Pay: dispositivos de pago vinculados por QR y notificaciones de pagos
+  # de Yape y Plin que Caja revisa y confirma con el flujo de pagos existente;
+  # una notificación detectada nunca marca una venta pagada por sí sola.
+  /v1/admin/pay-devices:
+    get:
+      operationId: listPayDevices
+      summary: Lista los dispositivos de pago del local, activos y revocados
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Dispositivos del local, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PayDevice" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pay-devices/pairing:
+    post:
+      operationId: createPayPairing
+      summary: Genera el código temporal de vinculación para el QR
+      description: "Requiere cash.manage. Código de un solo uso, vigente 10 minutos; nunca contiene credenciales permanentes."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Código generado, content: { application/json: { schema: { $ref: "#/components/schemas/PayPairingDraft" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pay-devices/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: renamePayDevice
+      summary: Renombra el dispositivo
+      description: "Requiere cash.manage."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 60 } } } } } }
+      responses:
+        "200": { description: Dispositivo actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/PayDevice" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Dispositivo no encontrado en el local activo }
+  /v1/admin/pay-devices/{id}/revoke:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: revokePayDevice
+      summary: Revoca la credencial del dispositivo
+      description: "Requiere cash.manage. El dispositivo deja de autenticarse de inmediato y debe vincularse de nuevo."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Dispositivo revocado, content: { application/json: { schema: { $ref: "#/components/schemas/PayDevice" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Dispositivo no encontrado en el local activo }
+  /v1/admin/pay-notifications:
+    get:
+      operationId: listPayNotifications
+      summary: Lista los pagos detectados por los dispositivos del local
+      description: "Requiere cash.read. Filtros opcionales por estado y proveedor; del más reciente al más antiguo."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [detected, associated, confirmed, dismissed] } }
+        - { in: query, name: provider, schema: { type: string, enum: [yape, plin] } }
+      responses:
+        "200": { description: Pagos detectados, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PayNotification" } } } } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pay-notifications/{id}/associate:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: associatePayNotification
+      summary: Asocia el pago detectado a un pedido y registra el cobro real
+      description: "Requiere cash.manage. Solo desde detected: registra el cobro con el flujo de pagos existente (turno y movimientos del cajero), liga la notificación al pedido y al pago creado. Un importe superior al saldo lo rechaza el cobro con sus reglas. Cada movimiento se asocia una sola vez; la tenencia la resuelve la sesión."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [orderId, method], properties: { orderId: { type: string, format: uuid }, method: { type: string, minLength: 1, description: "Código del medio de pago del catálogo de la empresa." } } } } } }
+      responses:
+        "200": { description: Notificación asociada, content: { application/json: { schema: { $ref: "#/components/schemas/PayNotification" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Notificación no encontrada en el local activo }
+        "409": { description: La notificación ya se procesó }
+  /v1/admin/pay-notifications/{id}/dismiss:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: dismissPayNotification
+      summary: Descarta la notificación como irrelevante o duplicada
+      description: "Requiere cash.manage. No elimina el evento: la revisión conserva su traza."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Notificación descartada, content: { application/json: { schema: { $ref: "#/components/schemas/PayNotification" } } } }
+        "404": { description: Notificación no encontrada en el local activo }
+        "409": { description: La notificación ya se procesó }
+  /v1/mobile/pair:
+    post:
+      operationId: pairPayDevice
+      summary: Canjea el código temporal del QR por las credenciales del dispositivo
+      description: "El backend resuelve empresa y local desde el código; el token en claro viaja una sola vez y nunca se vuelve a leer. El canje es atómico: dos dispositivos no pueden usar el mismo código."
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [code, platform], properties: { code: { type: string, pattern: "^[a-f0-9]{32}$" }, platform: { type: string, enum: [ANDROID, IOS] }, model: { type: string, maxLength: 80 } } } } } }
+      responses:
+        "200": { description: Dispositivo activado, content: { application/json: { schema: { $ref: "#/components/schemas/PayActivation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: El código ya se usó }
+  /v1/mobile/session:
+    get:
+      operationId: payDeviceSession
+      summary: Estado del dispositivo y de su restaurante vinculado
+      security: [{ deviceToken: [] }]
+      responses:
+        "200": { description: Sesión del dispositivo, content: { application/json: { schema: { $ref: "#/components/schemas/PayDeviceSession" } } } }
+        "401": { description: Credencial revocada o desconocida }
+  /v1/mobile/notifications:
+    post:
+      operationId: reportPayNotifications
+      summary: Reporta lotes de notificaciones detectadas por el dispositivo
+      description: "Idempotente por (dispositivo, eventKey): el mismo evento vuelve como duplicate y el dispositivo lo retira de su cola local. Máximo 20 eventos por solicitud."
+      security: [{ deviceToken: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PayReportInput" } } } }
+      responses:
+        "200": { description: Resultado por evento, content: { application/json: { schema: { $ref: "#/components/schemas/PayReportResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial revocada o desconocida }
   /v1/operations/payments/batch:
     post:
       operationId: createPaymentBatch
@@ -2651,7 +2763,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: Conflicto por auto-desactivación o último administrador; plan_limit_reached si reactivar supera el máximo de usuarios activos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: No se pudo validar el usuario o la capacidad de la suscripción } } }
 components:
-  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, partnerSessionCookie: { type: apiKey, in: cookie, name: fudia_partner_session, description: "Sesión de 12 horas del operador de una central de Delivery Fudia." }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key }, workerKey: { type: apiKey, in: header, name: X-Fudia-Worker-Key } }
+  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, partnerSessionCookie: { type: apiKey, in: cookie, name: fudia_partner_session, description: "Sesión de 12 horas del operador de una central de Delivery Fudia." }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key }, workerKey: { type: apiKey, in: header, name: X-Fudia-Worker-Key }, deviceToken: { type: http, scheme: bearer, description: "Credencial del dispositivo de Fudia Pay; revocable desde Caja." } }
   parameters:
     EntityId: { in: path, name: id, required: true, schema: { type: string, format: uuid } }
   responses:
@@ -3824,3 +3936,10 @@ components:
     RestaurantSearchInput: {"type": "object", "required": ["channelKey", "identity", "onlyVisited", "offset"], "properties": {"channelKey": {"type": "string"}, "identity": {"$ref": "#/components/schemas/ConciergeCustomerIdentity"}, "onlyVisited": {"type": "boolean"}, "offset": {"type": "integer", "minimum": 0, "maximum": 10000}}}
     RestaurantOption: {"type": "object", "required": ["organizationId", "locationId", "organizationName", "locationName", "visitCount"], "properties": {"organizationId": {"type": "string", "format": "uuid"}, "locationId": {"type": "string", "format": "uuid"}, "organizationName": {"type": "string"}, "locationName": {"type": "string"}, "visitCount": {"type": "integer", "minimum": 0}, "lastVisitedAt": {"type": "string"}, "qrToken": {"type": "string"}}}
     RestaurantPage: {"type": "object", "required": ["items", "hasMore", "offset"], "properties": {"items": {"type": "array", "items": {"$ref": "#/components/schemas/RestaurantOption"}}, "hasMore": {"type": "boolean"}, "offset": {"type": "integer"}}}
+    PayDevice: {"type": "object", "required": ["id", "name", "platform", "tokenSuffix", "active", "createdAt"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}, "platform": {"type": "string", "enum": ["ANDROID", "IOS"]}, "model": {"type": "string"}, "tokenSuffix": {"type": "string", "description": "Últimos caracteres de la credencial, para reconocerla; nunca el token."}, "active": {"type": "boolean"}, "lastSeenAt": {"type": "string"}, "createdAt": {"type": "string"}}}
+    PayPairingDraft: {"type": "object", "required": ["code", "expiresAt"], "properties": {"code": {"type": "string", "pattern": "^[a-f0-9]{32}$"}, "expiresAt": {"type": "string", "format": "date-time"}}}
+    PayActivation: {"type": "object", "required": ["device", "token", "organizationName", "locationName"], "properties": {"device": {"$ref": "#/components/schemas/PayDevice"}, "token": {"type": "string", "description": "Credencial del dispositivo; se entrega una sola vez y nunca vuelve a leerse del backend."}, "organizationName": {"type": "string"}, "locationName": {"type": "string"}}}
+    PayDeviceSession: {"type": "object", "required": ["device", "restaurant", "location", "currency"], "properties": {"device": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}}, "restaurant": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}}, "location": {"type": "object", "required": ["id", "name"], "properties": {"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}}, "currency": {"type": "string"}}}
+    PayReportInput: {"type": "object", "required": ["events"], "properties": {"events": {"type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "object", "required": ["provider", "eventKey", "amount", "occurredAt"], "properties": {"provider": {"type": "string", "enum": ["yape", "plin"]}, "eventKey": {"type": "string", "minLength": 8, "maxLength": 200}, "senderName": {"type": "string", "maxLength": 80}, "amount": {"type": "number", "exclusiveMinimum": 0}, "occurredAt": {"type": "string", "format": "date-time"}}}}}}
+    PayReportResult: {"type": "object", "required": ["registered", "duplicates", "events"], "properties": {"registered": {"type": "integer"}, "duplicates": {"type": "integer"}, "events": {"type": "array", "items": {"type": "object", "required": ["eventKey", "status"], "properties": {"eventKey": {"type": "string"}, "status": {"type": "string", "enum": ["registered", "duplicate"]}}}}}}
+    PayNotification: {"type": "object", "required": ["id", "deviceId", "deviceName", "provider", "eventKey", "senderName", "amount", "currency", "occurredAt", "status", "createdAt"], "properties": {"id": {"type": "string", "format": "uuid"}, "deviceId": {"type": "string", "format": "uuid"}, "deviceName": {"type": "string"}, "provider": {"type": "string", "enum": ["yape", "plin"]}, "eventKey": {"type": "string"}, "senderName": {"type": "string"}, "amount": {"type": "string", "description": "Monto como texto decimal."}, "currency": {"type": "string"}, "occurredAt": {"type": "string", "format": "date-time"}, "status": {"type": "string", "enum": ["detected", "associated", "confirmed", "dismissed"]}, "orderId": {"type": "string", "format": "uuid"}, "paymentId": {"type": "string", "format": "uuid"}, "confirmedBy": {"type": "string", "format": "uuid"}, "confirmedAt": {"type": "string", "format": "date-time"}, "createdAt": {"type": "string", "format": "date-time"}}}

@@ -1,0 +1,40 @@
+/* Fudia Pay dentro de Caja: dispositivos vinculados y pagos detectados por
+   revisar. Los paneles viven dentro del .panel del tab; el CSS solo cubre lo
+   que una utilidad no expresa con claridad. */
+.pay-devices-section,.pay-notifications-section{display:grid;gap:var(--space-4)}
+.pay-devices-toolbar,.pay-notifications-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4)}
+.pay-devices-toolbar p,.pay-notifications-toolbar p{margin:var(--space-0-5) 0 0;color:var(--ink-500);font-size:var(--font-size-sm)}
+.pay-notifications-filters{display:flex;gap:var(--space-2-5);flex-shrink:0}
+.pay-devices-table{width:100%;border-collapse:collapse;font-size:var(--font-size-sm)}
+.pay-devices-table th{text-align:left;padding:var(--space-2) var(--space-3);border-bottom:var(--stroke-1) solid var(--line);color:var(--ink-500);font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
+.pay-devices-table td{padding:var(--space-2-5) var(--space-3);border-bottom:var(--stroke-1) solid var(--cloud-100);vertical-align:middle}
+.pay-devices-table td strong{font-weight:var(--weight-semibold)}
+.pay-devices-table td small{display:block;color:var(--ink-500)}
+.pay-devices-actions{display:flex;gap:var(--space-2);justify-content:flex-end;align-items:center}
+.pay-pairing-body{display:grid;justify-items:center;gap:var(--space-3);padding:var(--space-5);text-align:center}
+.pay-pairing-qr{width:var(--size-240);height:var(--size-240)}
+.pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
+.pay-pairing-done{margin:0;font-size:var(--font-size-md)}
+.pay-order-search{display:grid;gap:var(--space-3);min-width:0}
+.pay-order-options{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.pay-order-options li{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile)}
+@media(max-width:700px){.pay-devices-toolbar,.pay-notifications-toolbar{flex-direction:column}.pay-notifications-filters{width:100%;justify-content:flex-start}}
+
+/* Capa global del aviso flotante: por encima de modales y hojas, apilable. */
+.pay-notice-layer{position:fixed;top:calc(var(--space-4) + var(--space-2));right:var(--space-4);z-index:var(--z-tooltip);display:grid;gap:var(--space-2);width:min(var(--size-320),calc(100vw - var(--space-8)))}
+.pay-notice{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--space-2);align-items:center;padding:var(--space-2-5) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-3);color:var(--ink-950);text-align:left;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:var(--transition-surface)}
+.pay-notice-main{display:grid;gap:var(--space-0-5);min-width:0}
+.pay-notice-main small{color:var(--ink-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pay-notice-hint{grid-column:1/-1;color:var(--primary-700);font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
+@media(hover:hover) and (pointer:fine){.pay-notice:hover{border-color:var(--primary-300)}}
+
+/* Detalle del pago detectado y asociación. */
+.pay-detail-body,.pay-order-search{display:grid;gap:var(--space-3);padding:var(--space-4) var(--space-5) var(--space-5)}
+.pay-detail-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--size-140),1fr));gap:var(--space-2-5);margin:0}
+.pay-detail-facts dt{font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}
+.pay-detail-facts dd{margin:var(--space-0-5) 0 0;overflow-wrap:anywhere}
+.pay-detail-field{display:grid;gap:var(--space-0-5);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}
+.pay-associate{display:grid;gap:var(--space-3);padding-top:var(--space-3);border-top:var(--stroke-1) solid var(--line)}
+.pay-associate h3{margin:0;font-size:var(--font-size-md);font-weight:var(--weight-bold)}
+.pay-detail-actions{display:flex;gap:var(--space-2-5);justify-content:flex-end}
+@media(max-width:600px){.pay-detail-actions{grid-template-columns:1fr 1fr}.pay-detail-actions .button{width:100%;justify-content:center}}

@@ -57,6 +57,23 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("POST /v1/integrations/concierge/delivery-messages/{id}/dispatched", a.conciergeServiceAuth(http.HandlerFunc(d.MarkMessageDispatched)))
 		m.Handle("POST /v1/integrations/concierge/delivery-actions", a.conciergeServiceAuth(http.HandlerFunc(d.PartnerAction)))
 	}
+	if p := a.handlers.PayDetect; p != nil {
+		// Fudia Pay: dispositivos de pago vinculados por QR y notificaciones de
+		// pagos de Yape y Plin que Caja revisa y confirma con el flujo de pagos
+		// existente; una notificación nunca marca una venta pagada por sí sola.
+		m.Handle("POST /v1/admin/pay-devices/pairing", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.CreatePairing))))
+		m.Handle("GET /v1/admin/pay-devices", a.auth(a.requirePermission("cash.read", http.HandlerFunc(p.Devices))))
+		m.Handle("PATCH /v1/admin/pay-devices/{id}", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.RenameDevice))))
+		m.Handle("POST /v1/admin/pay-devices/{id}/revoke", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.RevokeDevice))))
+		m.Handle("GET /v1/admin/pay-notifications", a.auth(a.requirePermission("cash.read", http.HandlerFunc(p.Notifications))))
+		m.Handle("POST /v1/admin/pay-notifications/{id}/associate", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.AssociateNotification))))
+		m.Handle("POST /v1/admin/pay-notifications/{id}/dismiss", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.DismissNotification))))
+		// El dispositivo de Fudia Pay entra con su credencial propia: el
+		// backend resuelve la empresa y el local desde la vinculación.
+		m.Handle("POST /v1/mobile/pair", http.HandlerFunc(p.Pair))
+		m.Handle("GET /v1/mobile/session", p.DeviceAuth(http.HandlerFunc(p.DeviceSession)))
+		m.Handle("POST /v1/mobile/notifications", p.DeviceAuth(http.HandlerFunc(p.Report)))
+	}
 	if a.handlers.Tips != nil {
 		m.Handle("GET /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.Tips.GetSettings))))
 		m.Handle("PUT /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.Tips.UpdateSettings))))

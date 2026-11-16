@@ -13,6 +13,8 @@ import (
 	"time"
 
 	deliveryapp "github.com/foods-platform/foods-backend/internal/modules/delivery/application"
+	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
+	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
 	"github.com/foods-platform/foods-backend/internal/platform/config"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/foods-platform/foods-backend/internal/platform/httpapi"
@@ -53,6 +55,7 @@ func main() {
 	api, maintenance := newAPI(db, images)
 	mux := api.Routes()
 	go sweepDeliveryDispatch(ctx, logger, maintenance)
+	go sweepPayPairing(ctx, logger, paydetectapp.NewMaintenance(paydetectpg.New(db)))
 	mux.HandleFunc("GET /health", health)
 	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)
@@ -109,6 +112,31 @@ func sweepDeliveryDispatch(ctx context.Context, logger *slog.Logger, dispatcher 
 		case <-ticker.C:
 			if err := dispatcher.Sweep(ctx); err != nil && ctx.Err() == nil {
 				logger.Warn("delivery_sweep_failed", "error", err)
+			}
+		}
+	}
+}
+
+// payPairingSweepInterval: los códigos de vinculación vencidos de Fudia Pay se
+// purgan como mucho una vez por hora; la validez se comprueba en cada canje.
+const payPairingSweepInterval = time.Hour
+
+type payPairingSweeper interface {
+	Sweep(context.Context, time.Time) (int64, error)
+}
+
+func sweepPayPairing(ctx context.Context, logger *slog.Logger, maintenance payPairingSweeper) {
+	ticker := time.NewTicker(payPairingSweepInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if removed, err := maintenance.Sweep(ctx, time.Now()); err != nil && ctx.Err() == nil {
+				logger.Warn("pay_pairing_sweep_failed", "error", err)
+			} else if removed > 0 {
+				logger.Info("pay_pairing_sweep_removed", "removed", removed)
 			}
 		}
 	}

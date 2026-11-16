@@ -22,6 +22,9 @@ import (
 	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	orderpg "github.com/foods-platform/foods-backend/internal/modules/orders/infrastructure/postgres"
 	orderhttp "github.com/foods-platform/foods-backend/internal/modules/orders/transport/http"
+	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
+	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
+	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	orgapp "github.com/foods-platform/foods-backend/internal/modules/organizations/application"
 	orgpg "github.com/foods-platform/foods-backend/internal/modules/organizations/infrastructure/postgres"
 	orghttp "github.com/foods-platform/foods-backend/internal/modules/organizations/transport/http"
@@ -126,6 +129,15 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscalDocuments)
 	customers := customerapp.New(customerpg.New(db))
 
+	// Fudia Pay: dispositivos de pago vinculados por QR y notificaciones de
+	// pagos de Yape y Plin que Caja revisa y confirma.
+	payRepo := paydetectpg.New(db)
+	payDevices := paydetectapp.NewPayDevices(payRepo)
+	payDetector := paydetectapp.NewDetector(payRepo, work).WithNotices(notices)
+	payNotifications := paydetectapp.NewNotifications(payRepo).
+		WithOrderLooker(orderpg.New(db)).
+		WithPaymentRegisterer(payments)
+
 	concierge := conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers).WithNotices(notices)
 	concierge.WithDirectory(conciergepg.New(db), platform, work)
 	concierge.WithDeliveryTracking(dispatcher)
@@ -143,6 +155,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit).WithTableGuard(concierge).WithOrigins(conciergepg.NewUsage(db), platform)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),
+		PayDetect:              paydetecthttp.New(payDevices, payDetector, payNotifications),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work).WithTips(tips)),
 		PaymentMethods:         billinghttp.NewMethods(methods),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), work, audit)),

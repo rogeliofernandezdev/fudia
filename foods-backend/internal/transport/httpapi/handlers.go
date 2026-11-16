@@ -86,6 +86,22 @@ type Handlers struct {
 		MarkMessageDispatched(http.ResponseWriter, *http.Request)
 		PartnerAction(http.ResponseWriter, *http.Request)
 	}
+	// Fudia Pay: dispositivos de pago vinculados por QR y pagos detectados de
+	// Yape y Plin que Caja revisa y confirma. El dispositivo entra con su
+	// credencial propia y revocable.
+	PayDetect interface {
+		CreatePairing(http.ResponseWriter, *http.Request)
+		Devices(http.ResponseWriter, *http.Request)
+		RenameDevice(http.ResponseWriter, *http.Request)
+		RevokeDevice(http.ResponseWriter, *http.Request)
+		Pair(http.ResponseWriter, *http.Request)
+		Notifications(http.ResponseWriter, *http.Request)
+		AssociateNotification(http.ResponseWriter, *http.Request)
+		DismissNotification(http.ResponseWriter, *http.Request)
+		DeviceAuth(http.Handler) http.Handler
+		DeviceSession(http.ResponseWriter, *http.Request)
+		Report(http.ResponseWriter, *http.Request)
+	}
 	Concierge              ConciergeHandler
 	ConciergeUsage         ConciergeUsageHandler
 	Platform               PlatformHandler
