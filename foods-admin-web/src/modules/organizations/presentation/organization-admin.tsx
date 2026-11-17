@@ -18,6 +18,7 @@ import {OrganizationPanel} from "./organization-panel";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {Icon} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
+import {PayDevicesPanel} from "@/modules/payment-devices";
 import {Button,EmptyState,ErrorState,FormField,InlineNotice,Input,PageHeader,Pagination,RowActionButton,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader,ModalForm,ModalBody,ModalFooter,FormSection} from "@/design-system";
 import {RemoteModalSkeleton} from "@/design-system/remote-modal-skeleton";
 import {TimezoneSelect} from "@/design-system/timezone-select";
@@ -32,8 +33,10 @@ function OrganizationFormSkeleton(){return <div className="organization-layout" 
 
 export function CompanySettings(){
  const{notify}=useFeedback();
- const{can}=useSession();
+ const{can,location}=useSession();
  const canManage=can("organizations.manage");
+ const dateTime=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
+ const[payPairing,setPayPairing]=useState(false);
  const client=useQueryClient();
  const query=useQuery({queryKey:["organization"],queryFn:getOrganization});
  const profile=useRestaurantProfile();
@@ -71,6 +74,11 @@ export function CompanySettings(){
     <div><Button kind="ghost" disabled={save.isPending} onClick={cancel}>Cancelar</Button><Button type="submit" icon="check" disabled={save.isPending||profile.reading} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
    </footer>}
   </form>}
+  {canManage&&<section className="panel pay-devices-settings" aria-label="Dispositivos de pago">
+   <header className="pay-devices-toolbar"><div><h2>Dispositivos de pago</h2><p>Los Android que reportan a tu caja los pagos recibidos por Yape y Plin.</p></div><Button icon="plus" onClick={()=>setPayPairing(true)}>Vincular dispositivo</Button></header>
+   <PayDevicesPanel dateTime={dateTime} pairing={payPairing} onPairingChange={setPayPairing}/>
+  </section>}
+  
  </>;
 }
 
@@ -124,6 +132,7 @@ export function LocationsManager(){
   </section>
   {draft&&(profiles.isLoading?<RemoteModalSkeleton className="compact" label="Cargando datos del local" title={draft.id?"Editar local":"Nuevo local"} close={()=>setDraft(null)}/>:<LocationDialog value={draft} profiles={profiles.data?.items.filter(x=>x.active)??[]} busy={save.isPending} close={()=>setDraft(null)} save={(value,tips)=>save.mutate({value,tips})}/>)}
   <ConfirmDialog open={Boolean(remove)} title="Desactivar local" description={`El local “${remove?.name??""}” dejará de admitir nuevas operaciones, pero conservará su historial.`} confirmLabel="Desactivar" pending={deactivate.isPending} onCancel={()=>setRemove(null)} onConfirm={()=>remove&&deactivate.mutate(remove.id)}/>
+ 
  </>;
 }
 // Tips are part of the location form. Only the reserved company administrator

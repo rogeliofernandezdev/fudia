@@ -1,4 +1,4 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info: { title: Foods API, version: 0.15.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
@@ -2042,7 +2042,7 @@ paths:
     post:
       operationId: createPayPairing
       summary: Genera el código temporal de vinculación para el QR
-      description: "Requiere cash.manage. Código de un solo uso, vigente 10 minutos; nunca contiene credenciales permanentes."
+      description: "Requiere organizations.manage. Código de un solo uso, vigente 10 minutos; nunca contiene credenciales permanentes."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Código generado, content: { application/json: { schema: { $ref: "#/components/schemas/PayPairingDraft" } } } }
@@ -2053,7 +2053,7 @@ paths:
     get:
       operationId: getPayPairingStatus
       summary: Estado del código que Caja muestra como QR (como WhatsApp Web)
-      description: "Requiere cash.manage; solo códigos del local de la sesión. pending: esperando el escaneo; scanned: la app leyó el QR y está activando el dispositivo (incluye model); linked: dispositivo vinculado (incluye deviceName); expired: venció sin usarse. Caja consulta cada 1,5 s y cierra el modal al vincular. Cache-Control: no-store."
+      description: "Requiere organizations.manage; solo códigos del local de la sesión. pending: esperando el escaneo; scanned: la app leyó el QR y está activando el dispositivo (incluye model); linked: dispositivo vinculado (incluye deviceName); expired: venció sin usarse. Caja consulta cada 1,5 s y cierra el modal al vincular. Cache-Control: no-store."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Estado del código, content: { application/json: { schema: { $ref: "#/components/schemas/PayPairingStatus" } } } }
@@ -2064,7 +2064,7 @@ paths:
     patch:
       operationId: renamePayDevice
       summary: Renombra el dispositivo
-      description: "Requiere cash.manage."
+      description: "Requiere organizations.manage."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 60 } } } } } }
       responses:
@@ -2077,7 +2077,7 @@ paths:
     post:
       operationId: revokePayDevice
       summary: Revoca la credencial del dispositivo
-      description: "Requiere cash.manage. El dispositivo deja de autenticarse de inmediato y debe vincularse de nuevo."
+      description: "Requiere organizations.manage. El dispositivo deja de autenticarse de inmediato y debe vincularse de nuevo."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Dispositivo revocado, content: { application/json: { schema: { $ref: "#/components/schemas/PayDevice" } } } }

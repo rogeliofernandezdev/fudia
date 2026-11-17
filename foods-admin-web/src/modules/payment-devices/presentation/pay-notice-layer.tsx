@@ -23,18 +23,21 @@ export function PayNoticeLayer(){
   const [visible,setVisible]=useState<PayNotification[]>([]);
   const [detail,setDetail]=useState<PayNotification|null>(null);
   const seen=useRef<Set<string>>(new Set());
-  const [stopped,setStopped]=useState(false);
 
-  const enabled=Boolean(session.user)&&session.can("cash.read")&&!session.isUnauthorized&&!stopped&&!session.isLoading;
+  // Sondea SOLO con sesión de cajero vigente: sin sesión el BFF responde 401 y
+  // cada sondeo forzaría el cierre de sesión. Un 401 detiene el intervalo; el
+  // próximo ingreso reinicia el cliente de consultas y la capa vuelve sola.
+  const sessionOk=Boolean(session.user)&&session.can("cash.read")&&!session.isUnauthorized&&!session.isLoading;
   const feed=useQuery({
     queryKey:["pay-notice-feed"],
     queryFn:()=>listPayNotifications({status:"detected",provider:""}),
-    enabled,
-    refetchInterval:query=>enabled&&!query.state.error?10000:false,
+    enabled:sessionOk,
+    refetchInterval:query=>sessionOk&&!query.state.error?10000:false,
+    refetchOnWindowFocus:false,
     retry:false,
     gcTime:0,
   });
-  useEffect(()=>{if(feed.isError)setStopped(true)},[feed.isError]);
+  const enabled=sessionOk&&!feed.isError;
 
   useEffect(()=>{
     const items=feed.data?.items??[];
