@@ -1,5 +1,5 @@
-/* Pagos detectados (página propia en Operación): un .panel por pestaña. «Pagos»
-   abre con su barra de filtros, como el historial de Turnos; las tablas son
+/* Fudia Pay: la pestaña «Pagos detectados» de Caja abre con su barra de
+   filtros, como el historial de Turnos, y Mi restaurante lista los dispositivos; las tablas son
    DataTable con cabecera marino y las filas, cabeceras y acciones las pone el
    sistema (data-table.css, table-actions.css). */
 .pay-page-panel{overflow:hidden}

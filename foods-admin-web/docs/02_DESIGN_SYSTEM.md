@@ -3436,8 +3436,9 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Pagos detectados de Yape y Plin en Caja (2026-11-15)
 
-Módulo `payment-devices` integrado en Caja (tab «Pagos detectados») y capa
-global en toda la aplicación para el cajero:
+Módulo `payment-devices`: los pagos se revisan en Caja (pestaña «Pagos
+detectados»), los dispositivos se vinculan en Configuración › Mi restaurante
+y una capa global avisa al cajero en el panel:
 
 - **Aviso flotante global:** capa fija (por encima de los modales, sin cerrar
   nada) que sondea los pagos detectados cada 10 s y apila las tarjetas nuevas
@@ -3455,22 +3456,19 @@ global en toda la aplicación para el cajero:
   diferencia queda explicada. Cerrar sin asociar deja el movimiento pendiente
   (lista y campana); la asociación registra el cobro real por el flujo de
   pagos y es de un solo uso (409 en reintento).
-- **Página Pagos detectados** (`/detected-payments`, Operación, después de Caja y
-  turnos; desde 2026-11-16 ya no es una pestaña de Caja porque la lista crece):
-  `PageHeader` «Pagos detectados» con «Pagos de Yape y Plin que reportan los
-  teléfonos del local.», `TabsBar` con «Pagos» (`wallet`, contador de pagos por
-  revisar) y «Dispositivos» (`phoneApp`, contador de activos) y «Vincular
-  dispositivo» (primario, `plus`) como acción de la barra. Cada pestaña es un
-  `.panel` con `DataTable` (cabecera marino, filas alternas, `table-actions` de
-  iconos: asociar `link`, descartar `cancel` danger, renombrar y revocar).
-  «Pagos» abre con una barra de filtros (estado y proveedor, más una línea de
-  ayuda en `ink-400`, como el historial de Turnos) y pagina en el servidor con
+- **Caja › Pagos detectados** (pestaña `wallet` de Caja y turnos, sin casilla
+  de menú propia: la habilita el acceso a Caja): barra de filtros (estado y
+  proveedor, más una línea de ayuda en `ink-400`, como el historial de Turnos),
+  `DataTable` (cabecera marino, filas alternas, `table-actions` de iconos:
+  asociar `link`, descartar `cancel` danger) y paginación en el servidor con
   `Pagination` (20 por página); el monto va a la derecha con cifras tabulares.
-  Tiene su casilla en Usuarios y roles › Menú (`pagos_detectados`).
+- **Mi restaurante › Dispositivos de pago** (sección `.panel` para quien
+  gestiona la empresa): título, descripción y «Vincular dispositivo»
+  (primario, `plus`); `DataTable` con último contacto, renombrar y revocar.
 - **Dispositivos de pago:** modal «Vincular dispositivo» con el QR del código
   temporal y sondeo hasta que el Android aparece vinculado. Se monta solo al
   pulsar «Vincular dispositivo» (el código se genera entonces, nunca al entrar
-  a Caja) y funciona como WhatsApp Web: QR con «Esperando el escaneo…» y
+  a la pantalla) y funciona como WhatsApp Web: QR con «Esperando el escaneo…» y
   «Cancelar»; en cuanto la app lo escanea, el QR cede su lugar (misma altura)
   a un `Spinner` de 40 px en `primary-600` con «Vinculando «modelo»…» y «Mantén
   Fudia Pay abierto en el teléfono hasta que termine.»; al vincular, el modal

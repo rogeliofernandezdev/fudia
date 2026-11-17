@@ -17,7 +17,6 @@ var MenuRequirements = map[string][]string{
 	"cocina":           {"orders.read"},
 	"mesas":            {"tables.read", "menu.read"},
 	"caja":             {"cash.read"},
-	"pagos_detectados": {"cash.read"},
 	"reservas":         {"reservations.read", "tables.read"},
 	"productos":        {"menu.read"},
 	"disponibilidad":   {"menu.read"},

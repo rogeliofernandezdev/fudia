@@ -1,4 +1,4 @@
-﻿export const pageRoutes={
+export const pageRoutes={
   home:"/",
   dashboard:"/dashboard",
   sales:"/sales",
@@ -8,7 +8,6 @@
   kitchen:"/kitchen",
   tables:"/tables",
   cash:"/cash",
-  /** Pagos de Yape y Plin que reportan los telÃ©fonos con Fudia Pay (acceso de Caja). */
   reservations:"/reservations",
   callCenter:"/call-center",
   qrMenu:"/qr-menu",
@@ -98,7 +97,7 @@ export const legacyPageRedirects=[
   ...legacyPageAliases,
   {legacy:"/configuracion/onboarding",canonical:pageRoutes.platformOnboarding},
   {legacy:"/platform/configuracion-global",canonical:pageRoutes.platformGlobalSettings},
-  // Todo el delivery vive en una sola opciÃ³n del menÃº: las pantallas sueltas abren su pestaÃ±a.
+  // Todo el delivery vive en una sola opción del menú: las pantallas sueltas abren su pestaña.
   {legacy:"/delivery-apps",canonical:"/delivery?tab=apps"},
   {legacy:"/couriers",canonical:"/delivery?tab=couriers"},
   {legacy:"/platform/delivery-partners",canonical:"/delivery?tab=providers"},

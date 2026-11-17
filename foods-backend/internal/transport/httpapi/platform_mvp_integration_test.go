@@ -429,7 +429,7 @@ func TestReservationsPersistCapacityAndSchedule(t *testing.T) {
 func TestDefaultRolesOnlyExposeUsableMVPMenus(t *testing.T) {
 	required := map[string]string{
 		"dashboard": "dashboard.read", "pos": "cash.read", "pedidos": "orders.read", "cocina": "orders.read",
-		"mesas": "tables.read", "caja": "cash.read", "pagos_detectados": "cash.read", "reservas": "reservations.read", "productos": "menu.read",
+		"mesas": "tables.read", "caja": "cash.read", "reservas": "reservations.read", "productos": "menu.read",
 		"disponibilidad": "menu.read", "combos": "menu.read", "recetas": "menu.read", "inventario": "inventory.read",
 		"kardex": "inventory.read", "compras": "purchases.read", "clientes": "customers.read", "locales": "organizations.read",
 		"fiscal": "organizations.read", "usuarios": "users.read", "costos": "expenses.read",

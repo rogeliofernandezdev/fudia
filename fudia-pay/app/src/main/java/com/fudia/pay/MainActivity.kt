@@ -168,7 +168,7 @@ private fun WelcomeFlow(onPaired: () -> Unit) {
             }
             if (!state.done) {
                 Text(
-                    "En tu computadora, abre Pagos detectados › Dispositivos › «Vincular dispositivo» y apunta la cámara al QR que muestra.",
+                    "En tu computadora, abre Mi restaurante › Dispositivos de pago › «Vincular dispositivo» y apunta la cámara al QR que muestra.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF39507A),
                 )

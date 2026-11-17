@@ -20,7 +20,7 @@ type Props={
   onPairingChange:(open:boolean)=>void;
 };
 
-/** Pestaña «Dispositivos» de Pagos detectados: los Android vinculados al local,
+/** Dispositivos de pago de Mi restaurante: los Android vinculados al local,
  * renombrar, revocar y el modal de vinculación por QR. */
 export function PayDevicesPanel({dateTime,pairing,onPairingChange}:Props){
   const qc=useQueryClient();

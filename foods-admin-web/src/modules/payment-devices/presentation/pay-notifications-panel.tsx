@@ -13,7 +13,7 @@ import {associatePayNotification,dismissPayNotification,listPayNotificationPage,
 
 type Props={dateTime:(value:string)=>string};
 
-/** Pestaña «Pagos» de Pagos detectados: el cajero los revisa (filtros y
+/** Pestaña «Pagos detectados» de Caja: el cajero los revisa (filtros y
  * paginación en el servidor) y los asocia a un pedido; la asociación registra el cobro real con el flujo de
  * pagos existente. El aviso flotante global hace lo mismo desde cualquier
  * pantalla; esta lista es la consulta y la revisión posterior. */

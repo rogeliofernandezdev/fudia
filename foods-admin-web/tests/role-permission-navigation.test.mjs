@@ -24,7 +24,7 @@ test("Acciones usa exactamente secciones, módulos, iconos y orden del menú",()
  const sections=sectionsOf(catalog);
  assert.ok(Object.keys(screenActions).length>20,"se leyeron las acciones por pantalla del backend");
  assert.deepEqual(plain(sections.map(section=>section.name)),["Control","Operación","Carta y producción","Configuración"]);
- assert.deepEqual(plain(sections[1].modules.map(module=>module.name)),["Punto de venta","Pedidos","Salón","Cocina","Mesas y zonas","Caja y turnos","Pagos detectados"]);
+ assert.deepEqual(plain(sections[1].modules.map(module=>module.name)),["Punto de venta","Pedidos","Salón","Cocina","Mesas y zonas","Caja y turnos"]);
  for(const section of sections)for(const feature of section.modules){const nav=navigation.navigationGroups.flatMap(group=>group.items).find(item=>item.href===feature.id);assert.equal(feature.name,nav.name);assert.equal(feature.icon,nav.icon);}
  assert.equal(sections.some(section=>section.name==="Administración"),false);
  assert.deepEqual(plain(permissionSections([])),[]);

@@ -25,7 +25,6 @@ var ScreenActions = map[string][]ScreenAction{
 	"cocina":           {{"orders.read", "Ver las comandas"}, {"kitchen.manage", "Iniciar y marcar listo en Cocina"}, {"bar.manage", "Iniciar y marcar listo en Barra"}},
 	"mesas":            {{"tables.read", "Ver mesas"}, {"menu.read", "Ver zonas"}, {"tables.manage", "Crear, editar e imprimir QR de mesas"}, {"menu.manage", "Crear y editar zonas"}},
 	"caja":             {{"cash.read", "Ver cajas, turnos y reportes de cierre"}, {"cash.registers.manage", "Registrar y editar cajas"}, {"cash.manage", "Abrir y cerrar turnos, registrar ingresos y egresos"}, {"cash.expected.read", "Ver el saldo esperado en el cierre ciego"}},
-	"pagos_detectados": {{"cash.read", "Ver pagos detectados y dispositivos de pago"}, {"cash.manage", "Asociar pagos a pedidos y vincular dispositivos"}},
 	"reservas":         {{"reservations.read", "Ver reservas"}, {"tables.read", "Ver mesas para asignarlas"}, {"reservations.manage", "Crear, confirmar, sentar y cancelar reservas"}},
 	"productos":        {{"menu.read", "Ver carta y productos"}, {"menu.manage", "Crear y editar productos y categorías"}},
 	"disponibilidad":   {{"menu.read", "Ver la disponibilidad"}, {"menu.manage", "Agotar y reponer productos"}},
