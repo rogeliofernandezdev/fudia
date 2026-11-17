@@ -50,9 +50,10 @@ test("Fudia Pay: los endpoints del dispositivo y de Caja siguen el contrato",()=
 
 test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisada",()=>{
   const layer=read("src/modules/payment-devices/presentation/pay-notice-layer.tsx");
-  assert.match(layer,/refetchInterval:10000/,"la capa sondea los pagos detectados");
+  assert.match(layer,/useSession\(\)/,"la capa vive en el área admin y conoce la sesión");
+  assert.match(layer,/refetchInterval:query=>sessionOk&&!query\.state\.error\?10000:false/,"sondea cada 10 s solo con sesión y sin errores");
+  assert.match(layer,/enabled:sessionOk/,"sin sesión o sin permiso no hay sondeo: cero 401 que expulsen al login");
   assert.match(layer,/PayNotificationDetail notification=\{detail\}/,"el clic abre el detalle");
-  assert.match(layer,/position:fixed|pay-notice-layer/,"la capa es flotante");
   const detail=read("src/modules/payment-devices/presentation/pay-notification-detail.tsx");
   assert.match(detail,/usePayCollection\(\)/,"usa el pedido en cobro como sugerencia");
   assert.match(detail,/la asociación nunca es automática/,"el pedido abierto es sugerencia, no selección");
@@ -63,18 +64,19 @@ test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisa
   assert.match(css,/z-index:var\(--z-tooltip\)/,"la capa queda por encima de los modales sin cerrarlos");
 });
 
-test("Fudia Pay: «Pagos detectados» es una página propia con pestañas Pagos y Dispositivos",()=>{
+test("Fudia Pay: Caja revisa los pagos detectados y Mi restaurante vincula los dispositivos",()=>{
   const cash=read("src/modules/operations/cash/presentation/cash-page.tsx");
-  assert.doesNotMatch(cash,/Pagos detectados|payment-devices/,"Caja ya no aloja los pagos detectados");
-  const page=read("src/modules/payment-devices/presentation/detected-payments-page.tsx");
-  assert.match(page,/<PageHeader title="Pagos detectados"/);
-  assert.match(page,/\{value:"payments",label:"Pagos",icon:"wallet"/);
-  assert.match(page,/\{value:"devices",label:"Dispositivos",icon:"phoneApp"/);
-  assert.match(page,/<TabsBar action=\{<Button icon="plus" onClick=\{\(\)=>\{setTab\("devices"\);setPairing\(true\)\}\}>Vincular dispositivo<\/Button>\}>/);
-  assert.match(read("src/app/(admin)/detected-payments/page.tsx"),/<DetectedPaymentsPage\/>/);
+  assert.match(cash,/value:"pagos",label:"Pagos detectados",icon:"wallet"/);
+  assert.match(cash,/PayNotificationsPanel dateTime=\{dateTime\}/);
+  const admin=read("src/modules/organizations/presentation/organization-admin.tsx");
+  assert.match(admin,/pay-devices-settings/,"la vinculación vive en Mi restaurante");
+  assert.match(admin,/PayDevicesPanel dateTime=\{dateTime\} pairing=\{payPairing\} onPairingChange=\{setPayPairing\}/);
+  assert.match(admin,/Vincular dispositivo/);
+  assert.doesNotMatch(cash,/PayDevicesPanel/,"Caja no administra dispositivos: eso es configuración");
+  const routing=read("src/shared/routing/page-routes.ts");
+  assert.doesNotMatch(routing,/detectedPayments/,"la página separada ya no existe");
   const nav=read("src/shell/navigation.ts");
-  assert.match(nav,/\{href:pageRoutes\.detectedPayments,name:"Pagos detectados",icon:"wallet",module:"caja",access:"pagos_detectados",permission:"cash\.read"\}/,"casilla propia en roles, mismo módulo y permiso que Caja");
-  assert.match(read("src/shared/routing/page-routes.ts"),/detectedPayments:"\/detected-payments"/);
+  assert.doesNotMatch(nav,/detectedPayments/,"sin casilla de navegación para la página eliminada");
   const view=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
   assert.match(view,/refetchInterval:query=>query\.state\.data\?\.items\.some\(item=>item\.status==="detected"\)\?10000:30000/,"los pagos por revisar se consultan con más frecuencia");
   assert.match(view,/La asociación registra el cobro real/);
@@ -83,7 +85,8 @@ test("Fudia Pay: «Pagos detectados» es una página propia con pestañas Pagos 
   assert.match(pos,/PayCollectionRegistration order=/,"el POS registra el pedido en cobro como sugerencia");
   const providers=read("src/providers/providers.tsx");
   assert.match(providers,/PayCollectionProvider/,"la sugerencia vive en contexto global");
-  assert.match(providers,/PayNoticeLayer/,"el aviso flotante está en toda la aplicación");
+  const layout=read("src/app/(admin)/layout.tsx");
+  assert.match(layout,/PayNoticeLayer/,"el aviso flotante vive en el área admin con sesión");
 });
 
 test("Fudia Pay: las pestañas usan DataTable del sistema y los pagos paginan en el servidor",()=>{
