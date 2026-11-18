@@ -15,12 +15,14 @@
 .pay-pairing-qr{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-done{margin:0;font-size:var(--font-size-md)}
-/* Identidad del proveedor sobre la etiqueta del sistema: tinte de marca de
-   Yape (morado) y Plin (verde azulado) con su nombre en texto; la identidad
-   es de color, sin logotipos ajenos. */
-.pay-provider-tag{display:inline-flex;align-items:center;padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);border:var(--stroke-1) solid transparent;white-space:nowrap}
+/* Identidad del proveedor sobre la etiqueta del sistema: monograma con el
+   color de Yape (morado) y Plin (verde azulado) y su nombre en texto; la
+   identidad es de color y letra, sin logotipos ajenos. */
+.pay-provider-tag{display:inline-flex;align-items:center;gap:var(--space-1-5);padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);border:var(--stroke-1) solid transparent;white-space:nowrap}
 .pay-provider-tag.yape{color:var(--purple-600);background:var(--purple-100);border-color:var(--purple-200)}
 .pay-provider-tag.plin{color:var(--teal-700);background:var(--teal-100);border-color:var(--teal-200)}
+.pay-provider-mark{display:inline-flex;align-items:center;justify-content:center;width:var(--size-18);height:var(--size-18);border-radius:var(--radius-tile);color:var(--surface);background:var(--purple-600);font-size:var(--font-size-xs)}
+.pay-provider-tag.plin .pay-provider-mark{background:var(--teal-700)}
 
 /* Tabla de pagos detectados: columnas cuadradas, sin saltos en datos de una
    sola línea y acciones alineadas a la derecha. */
@@ -47,11 +49,10 @@
 .pay-notice-hint{grid-column:1/-1;color:var(--primary-700);font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
 @media(hover:hover) and (pointer:fine){.pay-notice:hover{border-color:var(--primary-300)}}
 
-/* Detalle del pago detectado y asociación. */
+/* Detalle del pago detectado y asociación: identidad con DetailHero, datos en
+   dos columnas con DetailFacts (el detalle del pedido continúa con detalle). */
 .pay-detail-body,.pay-order-search{display:grid;gap:var(--space-3);padding:var(--space-4) var(--space-5) var(--space-5)}
-.pay-detail-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(var(--size-140),1fr));gap:var(--space-2-5);margin:0}
-.pay-detail-facts dt{font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}
-.pay-detail-facts dd{margin:var(--space-0-5) 0 0;overflow-wrap:anywhere}
+.pay-detail-title{display:inline-flex;align-items:center;gap:var(--space-2)}
 .pay-detail-field{display:grid;gap:var(--space-0-5);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}
 .pay-associate{display:grid;gap:var(--space-3);padding-top:var(--space-3);border-top:var(--stroke-1) solid var(--line)}
 .pay-associate h3{margin:0;font-size:var(--font-size-md);font-weight:var(--weight-bold)}

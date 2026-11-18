@@ -3,6 +3,7 @@
 import {useEffect,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,SearchField,Select,Status} from "@/design-system";
+import {DetailFacts,DetailHero} from "@/design-system/detail-view";
 import {Dialog} from "@/design-system/dialog";
 import {ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
@@ -85,14 +86,17 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={onClose} className="crud-modal pay-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pay-detail-title" aria-busy={associate.isPending}>
     <ModalHeader title="Pago detectado" titleId="pay-detail-title" onClose={onClose} closeLabel="Cerrar"/>
     <div className="pay-detail-body">
-      <dl className="pay-detail-facts">
-        <div><dt>Medio de pago</dt><dd><PayProviderTag provider={notification.provider}/></dd></div>
-        <div><dt>Remitente</dt><dd>{notification.senderName||"Sin remitente"}</dd></div>
-        <div><dt>Monto recibido</dt><dd><strong>{notification.currency} {notification.amount}</strong></dd></div>
-        <div><dt>Fecha y hora</dt><dd>{formatRegionalDateTime(notification.occurredAt)}</dd></div>
-        <div><dt>Número de operación</dt><dd>{notification.eventKey}</dd></div>
-        <div><dt>Estado</dt><dd><Status tone={meta.tone}>{meta.label}</Status></dd></div>
-      </dl>
+      <DetailHero
+        title={<span className="pay-detail-title"><PayProviderTag provider={notification.provider}/><span>{notification.currency} {notification.amount}</span></span>}
+        status={<Status tone={meta.tone}>{meta.label}</Status>}
+        meta={`Recibido el ${formatRegionalDateTime(notification.occurredAt)} en ${notification.deviceName}.`}
+      />
+      <DetailFacts label="Datos del pago" items={[
+        {label:"Remitente",value:notification.senderName||"Sin remitente"},
+        {label:"Monto recibido",value:<strong>{notification.currency} {notification.amount}</strong>},
+        {label:"Fecha y hora",value:formatRegionalDateTime(notification.occurredAt)},
+        {label:"Dispositivo",value:notification.deviceName},
+      ]}/>
 
       <section aria-label="Asociar pago a pedido" className="pay-associate">
         <h3>Asociar pago a pedido</h3>
