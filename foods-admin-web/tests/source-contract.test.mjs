@@ -169,6 +169,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(kardex.includes("item.balanceBefore"),"Kárdex expone el saldo anterior");
   assert.ok(kardex.includes("item.balanceAfter"),"Kárdex expone el saldo resultante");
   assert.ok(kardex.includes("{item.unitName}"),"Kárdex muestra la unidad del artículo en cada celda de cantidad y stock");
+  assert.ok(kardex.includes("useCurrency()"),"Kárdex toma el símbolo de moneda de la empresa");
+  assert.ok(kardex.includes("por {item.unitName}"),"Costo u. indica la moneda y la unidad del artículo");
   assert.ok(kardex.includes("item.createdByName"),"Kárdex expone el usuario que registró el movimiento");
   assert.equal(kardex.includes("item.sourceId.slice"),false,"Kárdex no expone fragmentos de UUID");
   assert.equal(kardex.includes("item.productId.slice"),false,"Kárdex no expone UUID de producto");

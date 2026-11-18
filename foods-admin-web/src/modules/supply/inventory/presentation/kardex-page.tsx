@@ -5,6 +5,7 @@ import {useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
 import {useSession} from "@/providers/session-context";
+import {useCurrency} from "@/providers";
 import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {listStockMovements} from "../infrastructure/inventory-api";
 import type {InventoryProductOption,StockMovement} from "../domain/types";
@@ -21,6 +22,7 @@ function traceLabel(item:StockMovement){if(item.reason)return reasonLabels[item.
 
 export function KardexPage(){
  const{location}=useSession();
+ const currency=useCurrency();
  const[itemFilter,setItemFilter]=useState<InventoryProductOption|null>(null);
  const inventoryItemId=itemFilter?.id??"";
  const[movementType,setMovementType]=useState("");
@@ -66,7 +68,7 @@ export function KardexPage(){
        <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:6})} {item.unitName}</b></td>
        <td>{formatRegionalNumber(Number(item.balanceBefore),location?.country,{maximumFractionDigits:6})} {item.unitName}</td>
        <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:6})} {item.unitName}</td>
-       <td>{formatRegionalNumber(Number(item.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
+       <td>{currency.symbol} {formatRegionalNumber(Number(item.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})} por {item.unitName}</td>
        <td>{formatRegionalNumber(Number(item.valueDelta),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
        <td><b>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td>{item.createdByName||"Usuario no disponible"}</td>
