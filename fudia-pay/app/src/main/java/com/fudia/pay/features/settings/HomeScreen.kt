@@ -27,13 +27,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import com.fudia.pay.core.design.FudiaGreenDark
@@ -63,6 +69,15 @@ internal fun sinceLabel(atMillis: Long, now: Long): String {
     }
 }
 
+/** El permiso de escucha está concedido y la exclusión de batería otorgada:
+ *  dos lecturas del sistema que cambian en Ajustes, no dentro de la app. */
+internal fun listenerGranted(context: Context): Boolean =
+    NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
+
+internal fun batteryExempt(context: Context): Boolean =
+    context.getSystemService(android.os.PowerManager::class.java)
+        ?.isIgnoringBatteryOptimizations(context.packageName) ?: false
+
 /** Inicio: el estado que importa en una mirada — detección, restaurante y
  * pendientes — y las dos acciones reales (activar permiso, desvincular).
  * Grupos apretados, secciones separadas, 48 dp de área táctil. */
@@ -76,11 +91,21 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val count by dao.countFlow().collectAsState(initial = 0)
-    val enabled = NotificationManagerCompat.getEnabledListenerPackages(context)
-        .contains(context.packageName)
-    val batteryExempt = remember {
-        (context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
-            .isIgnoringBatteryOptimizations(context.packageName)
+    // Ambos estados los concede Ajustes del sistema: se recalculan al volver
+    // de ahí (ON_RESUME), no solo al abrir la app, o el botón quedaría visible
+    // después de concederlo.
+    var enabled by remember { mutableStateOf(listenerGranted(context)) }
+    var batteryExempt by remember { mutableStateOf(batteryExempt(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                enabled = listenerGranted(context)
+                batteryExempt = batteryExempt(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

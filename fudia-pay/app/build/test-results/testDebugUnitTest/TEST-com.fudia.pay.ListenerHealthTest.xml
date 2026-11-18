@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.fudia.pay.ListenerHealthTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-18T21:09:15.331Z" hostname="CLRLAP102-1L-F" time="0.013">
+<testsuite name="com.fudia.pay.ListenerHealthTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-18T21:48:05.035Z" hostname="CLRLAP102-1L-F" time="0.011">
   <properties/>
-  <testcase name="el texto de antiguedad usa minutos, horas y dias" classname="com.fudia.pay.ListenerHealthTest" time="0.012"/>
-  <testcase name="sin conexiones registradas el texto lo admite" classname="com.fudia.pay.ListenerHealthTest" time="0.0"/>
-  <testcase name="la conexion mas reciente define el estado" classname="com.fudia.pay.ListenerHealthTest" time="0.0"/>
+  <testcase name="el texto de antiguedad usa minutos, horas y dias" classname="com.fudia.pay.ListenerHealthTest" time="0.009"/>
+  <testcase name="sin conexiones registradas el texto lo admite" classname="com.fudia.pay.ListenerHealthTest" time="0.001"/>
+  <testcase name="la conexion mas reciente define el estado" classname="com.fudia.pay.ListenerHealthTest" time="0.001"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
