@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,8 +40,28 @@ import com.fudia.pay.core.design.FudiaGreenDark
 import com.fudia.pay.core.design.FudiaHeader
 import com.fudia.pay.core.design.FudiaPrimary
 import com.fudia.pay.core.security.DeviceCredentials
+import com.fudia.pay.features.notifications.ListenerHealth
 import com.fudia.pay.features.payments.PendingEventDao
 import com.fudia.pay.features.sync.SyncScheduler
+
+/** Texto sincero sobre la vida del servicio: conectado o desconectado y hace
+ *  cuánto, lo que el sistema reporta — no solo el permiso. */
+internal fun livenessText(health: ListenerHealth, now: Long = System.currentTimeMillis()): String = when {
+    health.connected -> "Servicio de escucha conectado ${sinceLabel(health.connectedAtMillis, now)}."
+    health.disconnectedAtMillis == 0L -> "El servicio de escucha aún no se ha conectado."
+    else -> "Servicio desconectado ${sinceLabel(health.disconnectedAtMillis, now)}; Android lo reconectará al usarse."
+}
+
+internal fun sinceLabel(atMillis: Long, now: Long): String {
+    val minutes = ((now - atMillis) / 60_000).coerceAtLeast(0)
+    return when {
+        minutes == 0L -> "ahora mismo"
+        minutes == 1L -> "hace 1 minuto"
+        minutes < 60L -> "hace $minutes minutos"
+        minutes < 1440L -> "hace ${minutes / 60} h"
+        else -> "hace ${minutes / 1440} d"
+    }
+}
 
 /** Inicio: el estado que importa en una mirada — detección, restaurante y
  * pendientes — y las dos acciones reales (activar permiso, desvincular).
@@ -48,6 +69,7 @@ import com.fudia.pay.features.sync.SyncScheduler
 @Composable
 fun HomeScreen(
     credentials: DeviceCredentials,
+    listenerHealth: ListenerHealth,
     dao: PendingEventDao,
     scheduler: SyncScheduler,
     onUnlink: () -> Unit,
@@ -56,6 +78,10 @@ fun HomeScreen(
     val count by dao.countFlow().collectAsState(initial = 0)
     val enabled = NotificationManagerCompat.getEnabledListenerPackages(context)
         .contains(context.packageName)
+    val batteryExempt = remember {
+        (context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager)
+            .isIgnoringBatteryOptimizations(context.packageName)
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Cabecera compartida con la bienvenida (marca, nombre y descripción).
@@ -95,6 +121,28 @@ fun HomeScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = FudiaPrimary),
                             onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         ) { Text("Activar detección de pagos") }
+                    }
+                    // Salud real del servicio: el permiso puede estar concedido
+                    // con el servicio muerto por la batería del fabricante.
+                    Text(
+                        livenessText(listenerHealth),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF39507A),
+                    )
+                    if (!batteryExempt) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp),
+                            onClick = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(
+                                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                            android.net.Uri.parse("package:${context.packageName}"),
+                                        )
+                                    )
+                                }
+                            },
+                        ) { Text("Excluir de optimización de batería") }
                     }
                 }
             }

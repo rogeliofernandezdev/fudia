@@ -49,6 +49,19 @@ teléfono: Ajustes › Apps › Gestionar apps › Fudia Pay › menú ⋮ ›
 **«Permitir ajustes restringidos»** → confirma. Después, el acceso a
 notificaciones se puede activar con normalidad. Es un paso único por teléfono.
 
+**Vida del servicio en teléfonos con batería agresiva:** el permiso de escucha
+puede estar concedido con el servicio muerto. Por eso:
+
+- Tras **actualizar el APK, abre Fudia Pay una vez**: MagicOS no reconecta el
+  `NotificationListenerService` solo y el sistema no reenvía notificaciones
+  anteriores al reenlace.
+- El servicio se **reenlaza solo** cuando Android lo desconecta
+  (`onListenerDisconnected` → `requestRebind`), sin abrir la app.
+- La pantalla de inicio muestra la **salud real** (conectado/desconectado y
+  hace cuánto, según lo que reporta el propio servicio) y ofrece excluir la
+  app de la **optimización de batería**; en ajustes de marca conviene además
+  activar «Iniciar automáticamente» y fijar la app en recientes.
+
 ## Estructura
 
 ```

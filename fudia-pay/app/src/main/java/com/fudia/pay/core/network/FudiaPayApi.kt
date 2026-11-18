@@ -33,8 +33,9 @@ data class PaymentEvent(
     val eventKey: String,
     val senderName: String,
     val amount: Double,
-    /** Época en milisegundos; el backend la convierte a UTC. */
-    val occurredAt: Long,
+    /** Fecha ISO 8601 en UTC — el contrato OpenAPI la define como
+     *  `string, format date-time`; el epoch en milisegundos es interno. */
+    val occurredAt: String,
 )
 
 @Serializable

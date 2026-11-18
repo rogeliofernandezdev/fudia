@@ -2,14 +2,16 @@
 
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {IconButton,Button,ConfirmDialog,EmptyState,ErrorState,SearchField,Select,Pagination,Status,TableSkeleton,Tag} from "@/design-system";
+import {IconButton,Button,ConfirmDialog,EmptyState,ErrorState,SearchField,Select,Pagination,Status,TableSkeleton} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import {ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
 import type {PayNotification} from "../domain/types";
+import {PayProviderTag} from "./pay-status-tag";
 import {associatePayNotification,dismissPayNotification,listPayNotificationPage,payProviderOptions,paySalesMethods,searchPayOrders} from "../infrastructure/pay-devices-api";
+import {PayNotificationDetail} from "./pay-notification-detail";
 
 type Props={dateTime:(value:string)=>string};
 
@@ -28,6 +30,7 @@ export function PayNotificationsPanel({dateTime}:Props){
   const [size,setSize]=useState(20);
   const [associateTarget,setAssociateTarget]=useState<PayNotification|null>(null);
   const [dismissTarget,setDismissTarget]=useState<PayNotification|null>(null);
+  const [detail,setDetail]=useState<PayNotification|null>(null);
 
   const notifications=useQuery({
     queryKey:["pay-notifications",status,provider,page,size],
@@ -71,18 +74,19 @@ export function PayNotificationsPanel({dateTime}:Props){
     :notifications.isError?<ErrorState className="pay-empty" title="No pudimos cargar los pagos detectados" text={notifications.error.message} onRetry={()=>void notifications.refetch()}/>
     :!items.length?<EmptyState className="pay-empty" icon="wallet" title="Aún no hay pagos detectados" text="Cuando un teléfono vinculado reciba un pago de Yape o Plin, aparecerá aquí para revisión."/>
     :<DataTable label="Pagos detectados" containerClassName="hover-scroll pay-notifications-table">
-      <thead><tr>{notificationColumns.map(column=><th scope="col" className={column==="Monto"?"pay-amount":undefined} key={column}>{column}</th>)}</tr></thead>
+      <thead><tr>{notificationColumns.map(column=><th scope="col" className={column==="Monto"?"pay-amount":column==="Proveedor"?"pay-col-provider":column==="Hora"?"pay-col-when":column==="Dispositivo"?"pay-col-device":column==="Estado"?"pay-col-state":column==="Acciones"?"pay-col-actions":undefined} key={column}>{column}</th>)}</tr></thead>
       <tbody>
         {items.map((item,index)=>{
           const meta=payStatusMeta[item.status];
           return <tr className={index%2?"alternate":""} key={item.id}>
-            <td><Tag>{payProviderLabel[item.provider]}</Tag></td>
+            <td><PayProviderTag provider={item.provider}/></td>
             <td><strong>{item.senderName||"Sin remitente"}</strong></td>
             <td className="pay-amount">{item.currency} {item.amount}</td>
             <td>{dateTime(item.occurredAt)}</td>
             <td>{item.deviceName}</td>
             <td><Status tone={meta.tone} icon={item.status==="associated"?"circleCheck":undefined}>{meta.label}</Status></td>
             <td><div className="table-actions">
+              <IconButton icon="eye" label={`Ver el detalle del pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDetail(item)}/>
               {item.status==="detected"&&<IconButton icon="link" label={`Asociar el pago de ${item.senderName||payProviderLabel[item.provider]} a un pedido`} onClick={()=>setAssociateTarget(item)}/>}
               {item.status==="associated"&&<IconButton icon="cancel" className="danger" label={`Descartar el pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDismissTarget(item)}/>}
             </div></td>
@@ -90,6 +94,7 @@ export function PayNotificationsPanel({dateTime}:Props){
         })}
       </tbody>
     </DataTable>}
+    <PayNotificationDetail notification={detail} onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void notifications.refetch()}}/>
     {!notifications.isLoading&&!notifications.isError&&<Pagination page={page} size={size} total={notifications.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     <AssociateDialog target={associateTarget} pending={associate.isPending} onCancel={()=>setAssociateTarget(null)}
       onConfirm={(id,orderId,method)=>associate.mutate({id,orderId,method})}/>

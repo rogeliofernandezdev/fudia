@@ -16,6 +16,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+         Solo para pedir al usuario, con su confirmación, excluir la app de la
+         optimización de batería en teléfonos que matan el listener (HONOR y
+         similares). La app nunca lo hace a escondidas.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -81,13 +87,16 @@
             </intent-filter>
         </service>
 
+        <!--
+             Inicialización on-demand de WorkManager (FudiaPayApplication es
+             Configuration.Provider): el inicializador por defecto del manifest
+             de la librería debe retirarse o la configuración con
+             HiltWorkerFactory no aplica.
+        -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="com.fudia.pay.androidx-startup"
             android:exported="false" >
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup" />
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"
                 android:value="androidx.startup" />

@@ -51,7 +51,8 @@ test("Fudia Pay: los endpoints del dispositivo y de Caja siguen el contrato",()=
 test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisada",()=>{
   const layer=read("src/modules/payment-devices/presentation/pay-notice-layer.tsx");
   assert.match(layer,/useSession\(\)/,"la capa vive en el área admin y conoce la sesión");
-  assert.match(layer,/refetchInterval:query=>sessionOk&&!query\.state\.error\?10000:false/,"sondea cada 10 s solo con sesión y sin errores");
+  assert.match(layer,/refetchInterval:query=>sessionOk\?10000:false/,"sondea cada 10 s con sesión y sigue pese a fallos pasajeros del API");
+  assert.match(layer,/retry:1/,"un 503 transitorio no silencia los avisos hasta recargar");
   assert.match(layer,/enabled:sessionOk/,"sin sesión o sin permiso no hay sondeo: cero 401 que expulsen al login");
   assert.match(layer,/PayNotificationDetail notification=\{detail\}/,"el clic abre el detalle");
   const detail=read("src/modules/payment-devices/presentation/pay-notification-detail.tsx");

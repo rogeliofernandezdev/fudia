@@ -2,13 +2,14 @@
 
 import {useEffect,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,SearchField,Select,Status,Tag} from "@/design-system";
+import {Button,SearchField,Select,Status} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
 import type {PayNotification,PayOrderRef} from "../domain/types";
+import {PayProviderTag} from "./pay-status-tag";
 import {associatePayNotification,payOrderDetail,paySalesMethods,searchPayOrders} from "../infrastructure/pay-devices-api";
 import {usePayCollection} from "./pay-collection-context";
 
@@ -85,7 +86,7 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
     <ModalHeader title="Pago detectado" titleId="pay-detail-title" onClose={onClose} closeLabel="Cerrar"/>
     <div className="pay-detail-body">
       <dl className="pay-detail-facts">
-        <div><dt>Medio de pago</dt><dd><Tag>{payProviderLabel[notification.provider]}</Tag></dd></div>
+        <div><dt>Medio de pago</dt><dd><PayProviderTag provider={notification.provider}/></dd></div>
         <div><dt>Remitente</dt><dd>{notification.senderName||"Sin remitente"}</dd></div>
         <div><dt>Monto recibido</dt><dd><strong>{notification.currency} {notification.amount}</strong></dd></div>
         <div><dt>Fecha y hora</dt><dd>{formatRegionalDateTime(notification.occurredAt)}</dd></div>

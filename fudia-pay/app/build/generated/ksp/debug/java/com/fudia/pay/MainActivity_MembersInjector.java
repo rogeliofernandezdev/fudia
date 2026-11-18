@@ -2,6 +2,7 @@ package com.fudia.pay;
 
 import com.fudia.pay.core.network.FudiaPayApi;
 import com.fudia.pay.core.security.DeviceCredentials;
+import com.fudia.pay.features.notifications.ListenerStatus;
 import com.fudia.pay.features.payments.PendingEventDao;
 import com.fudia.pay.features.sync.SyncScheduler;
 import dagger.MembersInjector;
@@ -34,19 +35,23 @@ public final class MainActivity_MembersInjector implements MembersInjector<MainA
 
   private final Provider<FudiaPayApi> apiProvider;
 
+  private final Provider<ListenerStatus> listenerStatusProvider;
+
   public MainActivity_MembersInjector(Provider<DeviceCredentials> credentialsProvider,
       Provider<SyncScheduler> schedulerProvider, Provider<PendingEventDao> daoProvider,
-      Provider<FudiaPayApi> apiProvider) {
+      Provider<FudiaPayApi> apiProvider, Provider<ListenerStatus> listenerStatusProvider) {
     this.credentialsProvider = credentialsProvider;
     this.schedulerProvider = schedulerProvider;
     this.daoProvider = daoProvider;
     this.apiProvider = apiProvider;
+    this.listenerStatusProvider = listenerStatusProvider;
   }
 
   public static MembersInjector<MainActivity> create(
       Provider<DeviceCredentials> credentialsProvider, Provider<SyncScheduler> schedulerProvider,
-      Provider<PendingEventDao> daoProvider, Provider<FudiaPayApi> apiProvider) {
-    return new MainActivity_MembersInjector(credentialsProvider, schedulerProvider, daoProvider, apiProvider);
+      Provider<PendingEventDao> daoProvider, Provider<FudiaPayApi> apiProvider,
+      Provider<ListenerStatus> listenerStatusProvider) {
+    return new MainActivity_MembersInjector(credentialsProvider, schedulerProvider, daoProvider, apiProvider, listenerStatusProvider);
   }
 
   @Override
@@ -55,6 +60,7 @@ public final class MainActivity_MembersInjector implements MembersInjector<MainA
     injectScheduler(instance, schedulerProvider.get());
     injectDao(instance, daoProvider.get());
     injectApi(instance, apiProvider.get());
+    injectListenerStatus(instance, listenerStatusProvider.get());
   }
 
   @InjectedFieldSignature("com.fudia.pay.MainActivity.credentials")
@@ -75,5 +81,10 @@ public final class MainActivity_MembersInjector implements MembersInjector<MainA
   @InjectedFieldSignature("com.fudia.pay.MainActivity.api")
   public static void injectApi(MainActivity instance, FudiaPayApi api) {
     instance.api = api;
+  }
+
+  @InjectedFieldSignature("com.fudia.pay.MainActivity.listenerStatus")
+  public static void injectListenerStatus(MainActivity instance, ListenerStatus listenerStatus) {
+    instance.listenerStatus = listenerStatus;
   }
 }

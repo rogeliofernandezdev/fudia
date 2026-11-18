@@ -1,7 +1,10 @@
 package com.fudia.pay.features.notifications
 
+import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
+import com.fudia.pay.BuildConfig
 import com.fudia.pay.core.security.DeviceCredentials
 import com.fudia.pay.features.payments.PendingEvent
 import com.fudia.pay.features.payments.PendingEventDao
@@ -19,6 +22,9 @@ import javax.inject.Inject
  * configuración de Android. Solo procesa los paquetes verificados de Yape y
  * Plin; el parser descarta lo ambiguo. Nunca registra el contenido en logs.
  *
+ * Los rastros de depuración (solo debug) reportan decisiones, nunca contenido:
+ * paquete de origen, veredicto del parser y resultado del encolado.
+ *
  * goAsync() mantiene vivo el callback mientras la cola hace su insert en un
  * hilo de E/S, sin bloquear el hilo del listener ni perder la notificación si
  * el sistema reclama el servicio.
@@ -28,8 +34,24 @@ class PayNotificationListener : NotificationListenerService() {
     @Inject lateinit var credentials: DeviceCredentials
     @Inject lateinit var dao: PendingEventDao
     @Inject lateinit var scheduler: SyncScheduler
+    @Inject lateinit var listenerStatus: ListenerStatus
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        scope.launch { listenerStatus.markConnected() }
+        if (BuildConfig.DEBUG) Log.d(TAG, "servicio de escucha conectado")
+    }
+
+    override fun onListenerDisconnected() {
+        // Android desconectó el servicio (ahorro de batería, límites del
+        // fabricante): se solicita el reenlace para recuperarlo sin abrir la
+        // app, y queda registrado en la salud que muestra la pantalla.
+        if (BuildConfig.DEBUG) Log.d(TAG, "desconectado por el sistema: solicitando reenlace")
+        scope.launch { listenerStatus.markDisconnected() }
+        requestRebind(ComponentName(this, PayNotificationListener::class.java))
+    }
 
     override fun onDestroy() {
         scope.cancel()
@@ -37,8 +59,16 @@ class PayNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        if (!credentials.paired) return
-        val provider = KnownApps.providerOf(sbn.packageName) ?: return
+        if (BuildConfig.DEBUG) Log.d(TAG, "notificación de ${sbn.packageName}")
+        if (!credentials.paired) {
+            if (BuildConfig.DEBUG) Log.d(TAG, "sin vinculación: ignorada")
+            return
+        }
+        val provider = KnownApps.providerOf(sbn.packageName)
+        if (provider == null) {
+            if (BuildConfig.DEBUG) Log.d(TAG, "paquete no verificado: ignorada")
+            return
+        }
         val extras = sbn.notification.extras
         val title = extras.getCharSequence("android.title")?.toString()
         val text = extras.getCharSequence("android.text")?.toString()
@@ -55,8 +85,15 @@ class PayNotificationListener : NotificationListenerService() {
                 text = text,
                 whenMillis = whenMillis,
                 key = key,
-            ) ?: return@launch
-            if (payment.senderName.isBlank() || payment.amount <= 0.0) return@launch
+            )
+            if (payment == null) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "parser sin confianza: descartada")
+                return@launch
+            }
+            if (payment.senderName.isBlank() || payment.amount <= 0.0) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "datos incompletos: descartada")
+                return@launch
+            }
             val event = PendingEvent(
                 providerEventKey = payment.eventKey,
                 provider = payment.provider,
@@ -68,7 +105,16 @@ class PayNotificationListener : NotificationListenerService() {
             // El insert idempotente decide: si la clave ya está en la cola,
             // la notificación repetida no se encola otra vez.
             val inserted = dao.insert(event)
-            if (inserted != -1L) scheduler.enqueueNow()
+            if (inserted != -1L) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "pago encolado para sincronizar")
+                scheduler.enqueueNow()
+            } else if (BuildConfig.DEBUG) {
+                Log.d(TAG, "pago duplicado en cola: ignorado")
+            }
         }
+    }
+
+    private companion object {
+        const val TAG = "FudiaPay"
     }
 }

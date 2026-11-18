@@ -15,6 +15,20 @@
 .pay-pairing-qr{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-done{margin:0;font-size:var(--font-size-md)}
+/* Identidad del proveedor sobre la etiqueta del sistema: tinte de marca de
+   Yape (morado) y Plin (verde azulado) con su nombre en texto; la identidad
+   es de color, sin logotipos ajenos. */
+.pay-provider-tag{display:inline-flex;align-items:center;padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);border:var(--stroke-1) solid transparent;white-space:nowrap}
+.pay-provider-tag.yape{color:var(--purple-600);background:var(--purple-100);border-color:var(--purple-200)}
+.pay-provider-tag.plin{color:var(--teal-700);background:var(--teal-100);border-color:var(--teal-200)}
+
+/* Tabla de pagos detectados: columnas cuadradas, sin saltos en datos de una
+   sola línea y acciones alineadas a la derecha. */
+.pay-notifications-table .pay-col-provider{width:var(--size-88)}
+.pay-notifications-table .pay-col-when,.pay-notifications-table .pay-col-device,.pay-notifications-table .pay-col-state{white-space:nowrap}
+.pay-notifications-table .pay-col-actions{width:var(--size-96);text-align:right}
+.pay-notifications-table .pay-col-actions .table-actions{justify-content:flex-end}
+
 /* Escaneado: el QR cede su lugar al progreso, con la misma altura para que el modal no salte. */
 .pay-pairing-progress{display:grid;justify-items:center;align-content:center;gap:var(--space-3);min-height:var(--size-240);color:var(--primary-600)}
 .pay-pairing-progress.is-done{color:var(--brand-600)}

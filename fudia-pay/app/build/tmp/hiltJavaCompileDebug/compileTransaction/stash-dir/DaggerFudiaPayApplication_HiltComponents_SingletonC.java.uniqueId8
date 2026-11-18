@@ -421,15 +421,15 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
-
       static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
 
-      @KeepFieldType
-      PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
+      static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
 
       @KeepFieldType
       SessionViewModel com_fudia_pay_SessionViewModel2;
+
+      @KeepFieldType
+      PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
     }
   }
 

@@ -2,9 +2,8 @@
 
 import {useEffect,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {Tag} from "@/design-system";
 import {useSession} from "@/providers";
-import {payProviderLabel} from "../domain/pay-status";
+import {PayProviderTag} from "./pay-status-tag";
 import type {PayNotification} from "../domain/types";
 import {listPayNotifications} from "../infrastructure/pay-devices-api";
 import {PayNotificationDetail} from "./pay-notification-detail";
@@ -27,17 +26,19 @@ export function PayNoticeLayer(){
   // Sondea SOLO con sesión de cajero vigente: sin sesión el BFF responde 401 y
   // cada sondeo forzaría el cierre de sesión. Un 401 detiene el intervalo; el
   // próximo ingreso reinicia el cliente de consultas y la capa vuelve sola.
+  // Un fallo pasajero del API (503, red) no mata la capa: el sondeo sigue
+  // cada 10 s y conserva el último dato bueno, para que un tropiezo no
+  // silencie los avisos hasta recargar la página.
   const sessionOk=Boolean(session.user)&&session.can("cash.read")&&!session.isUnauthorized&&!session.isLoading;
   const feed=useQuery({
     queryKey:["pay-notice-feed"],
     queryFn:()=>listPayNotifications({status:"detected",provider:""}),
     enabled:sessionOk,
-    refetchInterval:query=>sessionOk&&!query.state.error?10000:false,
+    refetchInterval:query=>sessionOk?10000:false,
     refetchOnWindowFocus:false,
-    retry:false,
+    retry:1,
     gcTime:0,
   });
-  const enabled=sessionOk&&!feed.isError;
 
   useEffect(()=>{
     const items=feed.data?.items??[];
@@ -50,11 +51,11 @@ export function PayNoticeLayer(){
     setVisible(current=>current.filter(stale=>items.some(item=>item.id===stale.id)));
   },[feed.data]);
 
-  if(!enabled||feed.isError||!feed.data)return null;
+  if(!sessionOk)return null;
   return <>
     {visible.length>0&&<div className="pay-notice-layer" role="region" aria-label="Pagos detectados por Yape y Plin">
       {visible.map(item=><button key={item.id} type="button" className="pay-notice" onClick={()=>setDetail(item)}>
-        <Tag>{payProviderLabel[item.provider]}</Tag>
+        <PayProviderTag provider={item.provider}/>
         <span className="pay-notice-main"><strong>{item.currency} {item.amount}</strong><small>{item.senderName||"Sin remitente"} · {item.deviceName}</small></span>
         <span className="pay-notice-hint">Ver pago detectado</span>
       </button>)}

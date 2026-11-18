@@ -2,6 +2,7 @@ package com.fudia.pay
 
 import com.fudia.pay.features.notifications.KnownApps
 import com.fudia.pay.features.notifications.NotificationParser
+import com.fudia.pay.features.sync.isoUtc
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -27,6 +28,49 @@ class NotificationParserTest {
         assertEquals("yape", payment!!.provider)
         assertEquals(35.0, payment.amount, 0.001)
         assertEquals("Rosa Quispe", payment.senderName)
+    }
+
+    @Test
+    fun `yape formato actual con monto sin decimales se registra`() {
+        val payment = parse("yape", "Confirmación de Pago", "Yape! Rogelio  Fernandez Aybar te envió un pago por S/ 1")
+        assertNotNull(payment)
+        assertEquals("yape", payment!!.provider)
+        assertEquals(1.0, payment.amount, 0.001)
+        assertEquals("Rogelio Fernandez Aybar", payment.senderName)
+    }
+
+    @Test
+    fun `yape formato actual con monto con decimales se registra`() {
+        val payment = parse("yape", "Confirmación de Pago", "Yape! Maria Torres te envió un pago por S/ 62.50")
+        assertNotNull(payment)
+        assertEquals(62.5, payment!!.amount, 0.001)
+        assertEquals("Maria Torres", payment.senderName)
+    }
+
+    @Test
+    fun `plin formato interbank con nombre antes del verbo se registra`() {
+        val payment = parse("plin", "Interbank", "Rogelio Fernandez Aybar te ha plineado S/ 1.00")
+        assertNotNull(payment)
+        assertEquals("plin", payment!!.provider)
+        assertEquals(1.0, payment.amount, 0.001)
+        assertEquals("Rogelio Fernandez Aybar", payment.senderName)
+    }
+
+    @Test
+    fun `el titulo de la app no contamina el remitente`() {
+        // Sin el texto, el título es la única fuente: si algún formato pusiera
+        // el remitente en el título, se captura; pero con texto presente el
+        // nombre no arrastra el título pegado.
+        val payment = NotificationParser.parse(
+            provider = "plin",
+            packageName = "pe.com.interbank.mobilebanking",
+            title = "Interbank",
+            text = "Rogelio Fernandez Aybar te ha plineado S/ 1.00",
+            whenMillis = 1_763_000_000_000,
+            key = "0|real|2",
+        )
+        assertNotNull(payment)
+        assertEquals("Rogelio Fernandez Aybar", payment!!.senderName)
     }
 
     @Test
@@ -65,9 +109,38 @@ class NotificationParserTest {
     }
 
     @Test
+    fun `la marca de tiempo se envia como fecha iso utc`() {
+        assertEquals("1970-01-01T00:00:00Z", isoUtc(0L))
+        assertEquals("1970-01-02T00:00:00Z", isoUtc(86_400_000L))
+        assertEquals("2026-11-18T20:46:00Z", isoUtc(1_795_034_760_000L))
+    }
+
+    @Test
     fun `los paquetes verificados se resuelven a proveedor`() {
         assertEquals("yape", KnownApps.providerOf(KnownApps.YAPE))
+        assertEquals("yape", KnownApps.providerOf(KnownApps.YAPE_LEGACY))
+        assertEquals("yape", KnownApps.providerOf("com.bcp.innovacxion.yapeapp"))
         assertEquals("plin", KnownApps.providerOf(KnownApps.PLIN))
+        assertEquals("plin", KnownApps.providerOf(KnownApps.PLIN_INTERBANK))
+        assertEquals("plin", KnownApps.providerOf("pe.com.interbank.mobilebanking"))
         assertNull(KnownApps.providerOf("com.android.messaging"))
+    }
+
+    @Test
+    fun `paquete real de yape en el telefono del local se acepta`() {
+        // El APK real de Yape (BCP Innovación) publica la notificación desde
+        // su paquete propio; el evento se registra igual que con el paquete
+        // histórico.
+        val payment = NotificationParser.parse(
+            provider = KnownApps.providerOf("com.bcp.innovacxion.yapeapp")!!,
+            packageName = "com.bcp.innovacxion.yapeapp",
+            title = "Confirmación de Pago",
+            text = "Yape! Rogelio  Fernandez Aybar te envió un pago por S/ 1",
+            whenMillis = 1_763_000_000_000,
+            key = "0|real|1",
+        )
+        assertNotNull(payment)
+        assertEquals(1.0, payment!!.amount, 0.001)
+        assertEquals("Rogelio Fernandez Aybar", payment.senderName)
     }
 }

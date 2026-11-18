@@ -56,6 +56,8 @@ import com.fudia.pay.core.network.FudiaPayApi
 import com.fudia.pay.core.network.SessionResponse
 import com.fudia.pay.core.security.DeviceCredentials
 import com.fudia.pay.features.pairing.PairingViewModel
+import com.fudia.pay.features.notifications.ListenerHealth
+import com.fudia.pay.features.notifications.ListenerStatus
 import com.fudia.pay.features.settings.HomeScreen
 import com.fudia.pay.features.sync.SyncScheduler
 import com.journeyapps.barcodescanner.DecoratedBarcodeView
@@ -99,6 +101,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var scheduler: SyncScheduler
     @Inject lateinit var dao: com.fudia.pay.features.payments.PendingEventDao
     @Inject lateinit var api: FudiaPayApi
+    @Inject lateinit var listenerStatus: ListenerStatus
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,8 +117,10 @@ class MainActivity : ComponentActivity() {
                 if (!session) WelcomeFlow(onPaired = { session = true; scheduler.schedulePeriodic() })
                 else {
                     val sessionViewModel: SessionViewModel = hiltViewModel()
+                    val health by listenerStatus.health.collectAsState(initial = ListenerHealth(0, 0))
                     HomeScreen(
                         credentials = credentials,
+                        listenerHealth = health,
                         dao = dao,
                         scheduler = scheduler,
                         onUnlink = { sessionViewModel.unlink { session = false } },

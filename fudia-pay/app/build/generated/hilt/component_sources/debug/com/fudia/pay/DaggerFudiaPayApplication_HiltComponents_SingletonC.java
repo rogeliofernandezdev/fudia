@@ -17,6 +17,7 @@ import com.fudia.pay.core.DatabaseModule_ProvidePendingEventDaoFactory;
 import com.fudia.pay.core.network.FudiaPayApi;
 import com.fudia.pay.core.network.NetworkModule_ProvideApiFactory;
 import com.fudia.pay.core.security.DeviceCredentials;
+import com.fudia.pay.features.notifications.ListenerStatus;
 import com.fudia.pay.features.notifications.PayNotificationListener;
 import com.fudia.pay.features.notifications.PayNotificationListener_MembersInjector;
 import com.fudia.pay.features.pairing.PairingViewModel;
@@ -416,20 +417,21 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
       MainActivity_MembersInjector.injectScheduler(instance, syncScheduler());
       MainActivity_MembersInjector.injectDao(instance, singletonCImpl.pendingEventDao());
       MainActivity_MembersInjector.injectApi(instance, singletonCImpl.provideApiProvider.get());
+      MainActivity_MembersInjector.injectListenerStatus(instance, singletonCImpl.listenerStatusProvider.get());
       return instance;
     }
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
-
       static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
 
-      @KeepFieldType
-      SessionViewModel com_fudia_pay_SessionViewModel2;
+      static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
 
       @KeepFieldType
       PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
+
+      @KeepFieldType
+      SessionViewModel com_fudia_pay_SessionViewModel2;
     }
   }
 
@@ -477,15 +479,15 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
-
       static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
 
-      @KeepFieldType
-      SessionViewModel com_fudia_pay_SessionViewModel2;
+      static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
 
       @KeepFieldType
       PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
+
+      @KeepFieldType
+      SessionViewModel com_fudia_pay_SessionViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -603,6 +605,7 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
       PayNotificationListener_MembersInjector.injectCredentials(instance, singletonCImpl.deviceCredentialsProvider.get());
       PayNotificationListener_MembersInjector.injectDao(instance, singletonCImpl.pendingEventDao());
       PayNotificationListener_MembersInjector.injectScheduler(instance, syncScheduler());
+      PayNotificationListener_MembersInjector.injectListenerStatus(instance, singletonCImpl.listenerStatusProvider.get());
       return instance;
     }
   }
@@ -619,6 +622,8 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
     private Provider<FudiaPayApi> provideApiProvider;
 
     private Provider<SyncWorker_AssistedFactory> syncWorker_AssistedFactoryProvider;
+
+    private Provider<ListenerStatus> listenerStatusProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -645,6 +650,7 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
       this.deviceCredentialsProvider = DoubleCheck.provider(new SwitchingProvider<DeviceCredentials>(singletonCImpl, 3));
       this.provideApiProvider = DoubleCheck.provider(new SwitchingProvider<FudiaPayApi>(singletonCImpl, 2));
       this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
+      this.listenerStatusProvider = DoubleCheck.provider(new SwitchingProvider<ListenerStatus>(singletonCImpl, 4));
     }
 
     @Override
@@ -702,6 +708,9 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
           case 3: // com.fudia.pay.core.security.DeviceCredentials 
           return (T) new DeviceCredentials(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 4: // com.fudia.pay.features.notifications.ListenerStatus 
+          return (T) new ListenerStatus(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);
         }

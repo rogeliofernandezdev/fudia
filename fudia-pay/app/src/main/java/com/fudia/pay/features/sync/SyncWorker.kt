@@ -1,6 +1,7 @@
 package com.fudia.pay.features.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -12,14 +13,27 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.fudia.pay.BuildConfig
 import com.fudia.pay.core.network.FudiaPayApi
 import com.fudia.pay.core.network.PaymentEvent
 import com.fudia.pay.core.network.ReportRequest
 import com.fudia.pay.features.payments.PendingEventDao
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+
+/** La marca de tiempo del evento como ISO 8601 UTC: el contrato OpenAPI
+ *  (`PayReportInput.occurredAt`) la define `string, date-time`; java.time no
+ *  está disponible en minSdk 24 sin desugaring, así que se formatea a mano. */
+internal fun isoUtc(millis: Long): String =
+    SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date(millis))
 
 /** Sincronización: envía los eventos pendientes en lotes de 20; lo registrado
  * y lo duplicado se retiran de la cola (la idempotencia del backend los
@@ -33,9 +47,13 @@ class SyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        if (!apiPaired()) return Result.retry()
+        if (!apiPaired()) {
+            if (BuildConfig.DEBUG) Log.d(TAG, "sincronización: credencial inválida o backend inaccesible")
+            return Result.retry()
+        }
         val batch = dao.all().take(20)
         if (batch.isEmpty()) return Result.success()
+        if (BuildConfig.DEBUG) Log.d(TAG, "sincronización: enviando ${batch.size} eventos")
         return try {
             val response = api.report(ReportRequest(events = batch.map { event ->
                 PaymentEvent(
@@ -43,12 +61,16 @@ class SyncWorker @AssistedInject constructor(
                     eventKey = event.providerEventKey,
                     senderName = event.senderName,
                     amount = event.amount,
-                    occurredAt = event.occurredAtMillis,
+                    occurredAt = isoUtc(event.occurredAtMillis),
                 )
             }))
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "sincronización: ${response.events.size} confirmados (${response.registered} registrados, ${response.duplicates} duplicados)")
+            }
             response.events.forEach { outcome -> dao.delete(outcome.eventKey) }
             if (dao.all().isNotEmpty()) Result.retry() else Result.success()
         } catch (error: Exception) {
+            if (BuildConfig.DEBUG) Log.w(TAG, "sincronización: fallo, reintento con backoff", error)
             batch.forEach { event -> dao.markAttempt(event.providerEventKey) }
             Result.retry()
         }
@@ -57,6 +79,10 @@ class SyncWorker @AssistedInject constructor(
     private suspend fun apiPaired(): Boolean = runCatching {
         api.session().device.id.isNotBlank()
     }.getOrDefault(false)
+
+    private companion object {
+        const val TAG = "FudiaPay"
+    }
 }
 
 /** Encola el trabajo: inmediato al detectar un pago y periódico de respaldo

@@ -31,17 +31,21 @@ public final class PayNotificationListener_MembersInjector implements MembersInj
 
   private final Provider<SyncScheduler> schedulerProvider;
 
+  private final Provider<ListenerStatus> listenerStatusProvider;
+
   public PayNotificationListener_MembersInjector(Provider<DeviceCredentials> credentialsProvider,
-      Provider<PendingEventDao> daoProvider, Provider<SyncScheduler> schedulerProvider) {
+      Provider<PendingEventDao> daoProvider, Provider<SyncScheduler> schedulerProvider,
+      Provider<ListenerStatus> listenerStatusProvider) {
     this.credentialsProvider = credentialsProvider;
     this.daoProvider = daoProvider;
     this.schedulerProvider = schedulerProvider;
+    this.listenerStatusProvider = listenerStatusProvider;
   }
 
   public static MembersInjector<PayNotificationListener> create(
       Provider<DeviceCredentials> credentialsProvider, Provider<PendingEventDao> daoProvider,
-      Provider<SyncScheduler> schedulerProvider) {
-    return new PayNotificationListener_MembersInjector(credentialsProvider, daoProvider, schedulerProvider);
+      Provider<SyncScheduler> schedulerProvider, Provider<ListenerStatus> listenerStatusProvider) {
+    return new PayNotificationListener_MembersInjector(credentialsProvider, daoProvider, schedulerProvider, listenerStatusProvider);
   }
 
   @Override
@@ -49,6 +53,7 @@ public final class PayNotificationListener_MembersInjector implements MembersInj
     injectCredentials(instance, credentialsProvider.get());
     injectDao(instance, daoProvider.get());
     injectScheduler(instance, schedulerProvider.get());
+    injectListenerStatus(instance, listenerStatusProvider.get());
   }
 
   @InjectedFieldSignature("com.fudia.pay.features.notifications.PayNotificationListener.credentials")
@@ -65,5 +70,11 @@ public final class PayNotificationListener_MembersInjector implements MembersInj
   @InjectedFieldSignature("com.fudia.pay.features.notifications.PayNotificationListener.scheduler")
   public static void injectScheduler(PayNotificationListener instance, SyncScheduler scheduler) {
     instance.scheduler = scheduler;
+  }
+
+  @InjectedFieldSignature("com.fudia.pay.features.notifications.PayNotificationListener.listenerStatus")
+  public static void injectListenerStatus(PayNotificationListener instance,
+      ListenerStatus listenerStatus) {
+    instance.listenerStatus = listenerStatus;
   }
 }
