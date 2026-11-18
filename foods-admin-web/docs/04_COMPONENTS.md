@@ -718,11 +718,43 @@ en móvil), agrupados por proximidad:
 
 ## Niveles de inventario
 
+El campo remoto «Unidad de inventario» permite elegir «Se mide por» según las
+familias del catálogo del API. Sugiere kg para Peso, litros para Volumen y Unidad
+para Unidades cuando el catálogo los marca como predeterminados; el usuario
+puede elegir otra unidad de la familia. No deduce la familia del nombre del insumo.
+
+El alta «Nuevo artículo» de Compras e Inventario y el vínculo «Controlar con
+inventario» ofrecen «Niveles de stock del local», con el nombre del local activo
+y mínimo/óptimo opcionales en la unidad base. Reutilizan `FormField` con icono
+`box` y `numeric-value`; las unidades contables usan enteros y las medibles
+admiten fracciones. El mínimo vacío equivale a 0; el óptimo vacío usa el mínimo
+y nunca se guarda por debajo de él. La configuración no crea existencias y se
+puede modificar después desde Inventario.
+
 El ajuste de niveles de Inventario usa el mismo `crud-modal compact`, `FormField`
 y formulario con footer interno que el resto de altas y ediciones. No añade CSS
 local: los márgenes, la separación de acciones y la columna única en móvil
 provienen del sistema compartido. Valida cantidades no negativas con RHF/Zod y
 bloquea campos y cierres manuales mientras espera la respuesta del guardado.
+
+## Unidades de consumo en Recetas
+
+Cada fila combina cantidad y selector de unidad compatible, con controles
+compartidos y etiquetas accesibles independientes. El catálogo proviene de
+`GET /inventory/units` (permiso de lectura de Inventario, sin exigir Compras),
+con skeleton, error recuperable y vacío explícito. Gramos y mililitros se sugieren
+solo para unidades compatibles; unidades contables/personalizadas conservan su
+propia unidad. Cambiar la unidad convierte la cantidad y conserva la equivalencia.
+Una ayuda muestra el equivalente en Inventario cuando difiere de la unidad elegida.
+
+Al editar se conserva la cantidad/unidad guardada; los decimales de relleno se
+omiten en campos y equivalencias. En móvil la cantidad y unidad ocupan una fila
+completa, con Merma y Quitar debajo y áreas táctiles de al menos 44 px. Inventario
+y Kárdex muestran hasta seis decimales solo cuando son necesarios para representar
+consumos pequeños. La autoridad de conversión y precisión permanece en backend.
+«Merma %» usa `Tooltip` con «Porcentaje extra que se descuenta del inventario»:
+en la cabecera de escritorio y junto a la etiqueta de cada fila móvil. La ayuda
+abre con puntero, foco o toque; el campo también publica esa descripción accesible.
 
 ## Estado activo e inactivo
 

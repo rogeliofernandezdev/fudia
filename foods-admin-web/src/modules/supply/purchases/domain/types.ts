@@ -132,6 +132,7 @@ export type PurchaseInventoryItemDraft={
   presentationType:PresentationType;
   unitsPerPresentation:string;
   minimumStock:string;
+  optimalStock?:string;
   presentations?:PurchasePresentationDraft[];
   /** Regla de la unidad recibida del API; no la elige el usuario. */
   unitCountable?:boolean;

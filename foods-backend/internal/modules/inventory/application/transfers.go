@@ -98,11 +98,11 @@ func (a *Stock) Transfer(ctx context.Context, s scope, in domain.TransferInput) 
 		if !srcFound || !dstFound {
 			return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos bloquear los saldos.")
 		}
-		if line.Quantity > src.Quantity+0.000001 {
+		if line.Quantity > src.Quantity+1e-9 {
 			return result, stockFailure(apperror.Conflict, "insufficient_stock", "No hay stock suficiente de "+name+" para transferir.")
 		}
-		srcAfter := math.Round((src.Quantity-line.Quantity)*1000) / 1000
-		dstAfter := math.Round((dst.Quantity+line.Quantity)*1000) / 1000
+		srcAfter := domain.RoundStockQuantity(src.Quantity - line.Quantity)
+		dstAfter := domain.RoundStockQuantity(dst.Quantity + line.Quantity)
 		if dstAfter >= domain.MaxStockQuantity {
 			return result, stockLimitFailure()
 		}

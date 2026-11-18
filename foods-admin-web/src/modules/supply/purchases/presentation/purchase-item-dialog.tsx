@@ -3,7 +3,7 @@ import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,ErrorState,Icon,Input,Skeleton,Status,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Icon,Input,Skeleton,Status,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseInventoryItemResolver} from "../domain/purchase-schema";
@@ -27,6 +27,7 @@ const blankDraft:PurchaseInventoryItemDraft={
   presentationType:"unit",
   unitsPerPresentation:"1",
   minimumStock:"0",
+  optimalStock:"",
 };
 
 export function PurchaseItemDialog({
@@ -70,6 +71,8 @@ export function PurchaseItemDialog({
   const mode=useWatch({control,name:"mode"});
   const categoryId=useWatch({control,name:"categoryId"})??"";
   const unit=useWatch({control,name:"unit"})??"";
+  const unitCountable=useWatch({control,name:"unitCountable"});
+  const unitName=useWatch({control,name:"unitName"});
   const presentations=useWatch({control,name:"presentations"})??[];
   const locked=busy||isSubmitting;
   const validationMessage=Object.values(errors).find(error=>typeof error?.message==="string")?.message;
@@ -107,11 +110,11 @@ export function PurchaseItemDialog({
   const linkableItems=linkSearch?linkable.data?.items??[]:[];
   const nothingFound=!items.isLoading&&!items.isError&&!existing.length&&(!linkSearch||(!linkable.isLoading&&!linkable.isError&&!linkableItems.length));
 
-  const stockFields=<section className="purchase-item-section">
+  const quantityInput={step:unitCountable?"1":"0.001",inputMode:unitCountable?"numeric" as const:"decimal" as const};
+  const stockFields=<><section className="purchase-item-section">
     <div className="purchase-section-title"><span><Icon name="box" size={18}/></span><div><b>Unidad y presentación</b><small>Cómo se almacena y cómo se compra.</small></div></div>
     <div className="form-grid">
-      <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} help={usesRecipes?"Elige la unidad que usas para medir este insumo en tus recetas.":undefined} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
-      <label>Stock mínimo<Input type="number" min="0" step="0.001" inputMode="decimal" {...register("minimumStock")} aria-invalid={Boolean(errors.minimumStock)}/>{errors.minimumStock?.message&&<small className="field-error">{errors.minimumStock.message}</small>}</label>
+      <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("unitCountable",undefined);setValue("unitName",undefined);setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} help={usesRecipes?"Elige la unidad que usas para medir este insumo en tus recetas.":undefined} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
     </div>
     <PurchasePresentationsField unit={unit} value={presentations} disabled={locked} onBusyChange={setCatalogBusy} error={errors.presentations?.message??errors.unitsPerPresentation?.message} onUnitRuleChange={rule=>{setValue("unitCountable",rule.countable);setValue("unitName",rule.unitName)}} onChange={rows=>{
       setValue("presentations",rows,{shouldDirty:true,shouldValidate:isSubmitted});
@@ -119,7 +122,14 @@ export function PurchaseItemDialog({
       setValue("presentationType",preferred?.presentationType??"unit",{shouldDirty:true});
       setValue("unitsPerPresentation",preferred?.unitsPerPresentation??"1",{shouldDirty:true});
     }}/>
-  </section>;
+  </section>
+  <section className="purchase-item-section">
+    <div className="purchase-section-title"><span><Icon name="stock" size={18}/></span><div><b>Niveles de stock del local</b><small>{location?.name??"Local activo"}{unitName?` · Cantidades en ${unitName.toLowerCase()}`:""}</small></div></div>
+    <div className="form-grid">
+      <FormField label="Stock mínimo" icon="box" className="numeric-value" optional error={errors.minimumStock?.message} help="Nivel para avisarte que queda poco stock."><Input type="number" min="0" {...quantityInput} placeholder="0" disabled={locked} {...register("minimumStock")}/></FormField>
+      <FormField label="Stock óptimo" icon="box" className="numeric-value" optional error={errors.optimalStock?.message} help="Meta al reponer, al menos igual al mínimo. Vacío: usa el mínimo."><Input type="number" min="0" {...quantityInput} placeholder="Igual al mínimo" disabled={locked} {...register("optimalStock")}/></FormField>
+    </div>
+  </section></>;
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={locked}>

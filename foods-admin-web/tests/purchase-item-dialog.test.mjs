@@ -43,8 +43,8 @@ function mount({save=async()=>{},busy=false,modules={},linkable=[]}={}){
    return {...formControl,formState:{errors:formControl.control._formState.errors,isSubmitted:formControl.control._formState.isSubmitted,isSubmitting:formControl.control._formState.isSubmitting}};
   },useWatch:({name})=>formControl.getValues(name)};
   if(name==="@tanstack/react-query")return {useQuery:({queryKey})=>({data:{items:queryKey[0]==="purchase-linkable-products"?linkable:[]},isLoading:false,isError:false})};
-  if(name==="@/providers/session-context")return {useSession:()=>({location:{country:"PE"},modules})};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","Icon","Input","Select","Textarea","Dialog","EmptyState","ErrorState","Skeleton","Status","ModalHeader","ModalFooter"].map(key=>[key,key]));
+  if(name==="@/providers/session-context")return {useSession:()=>({location:{country:"PE",name:"Miraflores"},modules})};
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Textarea","Dialog","EmptyState","ErrorState","Skeleton","Status","ModalHeader","ModalFooter"].map(key=>[key,key]));
   if(name==="../domain/linkable-product")return {linkableControlLabel:()=>"Usa cupo del día"};
   if(name==="../domain/purchase-schema")return schema;
   if(name==="./purchase-unit-field")return {PurchaseUnitField:"PurchaseUnitField"};
@@ -165,4 +165,36 @@ test("un producto de la carta sin inventario se vincula sin crear otro",async()=
  assert.equal(saved.length,1);
  assert.equal(saved[0].mode,"link_product");
  assert.equal(saved[0].productId,"product-1");
+});
+
+test("el alta muestra niveles opcionales del local y permite omitir el óptimo",async()=>{
+ const saved=[];const ui=mount({save:async draft=>saved.push(draft)});
+ ui.chooseMode("new_ingredient");ui.fill({...valid,minimumStock:""});
+ const nodes=ui.render().nodes;
+ assert.ok(nodes.some(node=>node.props.children==="Niveles de stock del local"));
+ assert.ok(nodes.some(node=>node.props.children?.[0]==="Miraflores"));
+ for(const label of ["Stock mínimo","Stock óptimo"]){
+  const field=nodes.find(node=>node.type==="FormField"&&node.props.label===label);
+  assert.equal(field.props.optional,true);
+ }
+ await ui.render().button.props.onClick();await tick();
+ assert.equal(saved.length,1);assert.equal(saved[0].optimalStock,"");
+});
+
+test("los niveles respetan la unidad contable y conservan los valores al corregir",async()=>{
+ const saved=[];const ui=mount({save:async draft=>saved.push(draft)});
+ ui.chooseMode("new_ingredient");ui.fill({...valid,minimumStock:"5",optimalStock:"15.5"});
+ ui.render().nodes.find(node=>node.type==="PurchasePresentationsField").props.onUnitRuleChange({countable:true,unitName:"Botella"});
+ const input=ui.render().nodes.find(node=>node.type==="Input"&&node.props.name==="optimalStock");
+ assert.equal(input.props.step,"1");assert.equal(input.props.inputMode,"numeric");
+ await ui.render().button.props.onClick();await tick();
+ assert.equal(saved.length,0);assert.equal(ui.control.getFieldState("optimalStock").error.message,"Ingresa una cantidad entera para esta unidad.");
+ assert.equal(ui.control.getValues("minimumStock"),"5");
+ ui.render().nodes.find(node=>node.type==="PurchaseUnitField").props.onChange("kg");
+ ui.render().nodes.find(node=>node.type==="PurchasePresentationsField").props.onUnitRuleChange({countable:false,unitName:"Kilogramo"});
+ ui.render().nodes.find(node=>node.type==="PurchasePresentationsField").props.onChange([{presentationType:"unit",unitsPerPresentation:"1",isDefault:true}]);
+ const measured=ui.render().nodes.find(node=>node.type==="Input"&&node.props.name==="optimalStock");
+ assert.equal(measured.props.step,"0.001");assert.equal(measured.props.inputMode,"decimal");
+ await ui.render().button.props.onClick();await tick();
+ assert.equal(saved.length,1);assert.equal(saved[0].optimalStock,"15.5");
 });

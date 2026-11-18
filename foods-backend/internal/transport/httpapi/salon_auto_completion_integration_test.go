@@ -34,7 +34,7 @@ func TestSalonAutomaticCompletion(t *testing.T) {
 			if w.Code != 201 {
 				t.Fatalf("open shift: %d %s", w.Code, w.Body.String())
 			}
-			if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa auto',4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID).Scan(&tableID); err != nil {
+			if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa auto',4,'Principal',md5(random()::text||clock_timestamp()::text)) RETURNING id`, s.OrganizationID, s.LocationID).Scan(&tableID); err != nil {
 				t.Fatal(err)
 			}
 			if err := pool.QueryRow(ctx, `INSERT INTO orders(organization_id,location_id,code,channel,status,total,table_id,created_by) VALUES($1,$2,'PED-AUTO','salon','listo',25,$3,$4) RETURNING id`, s.OrganizationID, s.LocationID, tableID, s.UserID).Scan(&orderID); err != nil {

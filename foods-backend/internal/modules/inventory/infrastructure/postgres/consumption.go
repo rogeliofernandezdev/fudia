@@ -128,7 +128,7 @@ func (r *Stock) NetRecipeUsage(ctx context.Context, s scope, orderID string) (ma
 		if err = rows.Scan(&id, &qty); err != nil {
 			return nil, err
 		}
-		if math.Abs(qty) > 0.000001 {
+		if math.Abs(qty) > 1e-9 {
 			out[id] = qty
 		}
 	}

@@ -61,7 +61,7 @@ func TestPurchaseLinksExistingPortionProductWithoutDuplicating(t *testing.T) {
 		t.Fatal("a portions product must be offered for linking")
 	}
 
-	body := []byte(fmt.Sprintf(`{"productId":%q,"unit":"botella","presentations":[{"presentationType":"unit","unitsPerPresentation":1,"isDefault":true}],"minimumStock":6}`, productID))
+	body := []byte(fmt.Sprintf(`{"productId":%q,"unit":"botella","presentations":[{"presentationType":"unit","unitsPerPresentation":1,"isDefault":true}],"minimumStock":6,"optimalStock":18}`, productID))
 	req := httptest.NewRequest("POST", "/v1/admin/purchase-inventory-items", bytes.NewReader(body))
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	rec := httptest.NewRecorder()
@@ -75,6 +75,10 @@ func TestPurchaseLinksExistingPortionProductWithoutDuplicating(t *testing.T) {
 	}
 	if linked.ProductID == nil || *linked.ProductID != productID || linked.Quantity != "0" {
 		t.Fatalf("link must reuse the product at zero stock: %#v", linked)
+	}
+	var optimal float64
+	if err := pool.QueryRow(ctx, `SELECT optimal_stock::float8 FROM inventory_location_settings WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`, s.OrganizationID, s.LocationID, linked.ID).Scan(&optimal); err != nil || optimal != 18 {
+		t.Fatalf("linked product must save its target for this location: %v %v", optimal, err)
 	}
 
 	var products int

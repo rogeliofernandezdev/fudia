@@ -365,7 +365,7 @@ func TestReservationsPersistCapacityAndSchedule(t *testing.T) {
 	var tableID string
 	if err := pool.QueryRow(context.Background(), `
 		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
+		VALUES($1,$2,$3,4,'Principal',true,md5(random()::text||clock_timestamp()::text),false)
 		RETURNING id
 	`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa reserva %d", nonce)).Scan(&tableID); err != nil {
 		t.Fatal(err)

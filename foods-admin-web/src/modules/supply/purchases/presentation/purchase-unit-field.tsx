@@ -15,20 +15,29 @@ export function PurchaseUnitField({value,onChange,error,help,disabled,onBusyChan
  const query=useQuery({queryKey,queryFn:listInventoryUnits,staleTime:30000});
  const[creating,setCreating]=useState(false);
  const[selected,setSelected]=useState<InventoryUnit|null>(null);
+ const[family,setFamily]=useState("");
  const units=query.data?.items??[];
  const options=selected&&!units.some(unit=>unit.code===selected.code)?[...units,selected]:units;
+ const families=[...new Map(options.filter(unit=>unit.family).map(unit=>[unit.family,unit.familyLabel])).entries()];
+ const activeFamily=family||options.find(unit=>unit.code===value)?.family||"";
+ const visibleOptions=activeFamily?options.filter(unit=>unit.family===activeFamily):options;
  function close(){setCreating(false);onBusyChange(false)}
  return <>
+  {!query.isLoading&&!query.isError&&families.length>0&&<FormField label="Se mide por"><Select aria-label="Se mide por" value={activeFamily} disabled={disabled||creating} onChange={event=>{
+   setFamily(event.target.value);
+   const suggested=options.find(unit=>unit.family===event.target.value&&unit.inventoryDefault);
+   onChange(suggested?.code??"");
+  }}><option value="">Selecciona cómo se mide</option>{families.map(([code,label])=><option key={code} value={code}>{label}</option>)}</Select></FormField>}
   <FormField label="Unidad de inventario" as="div" help={help} error={query.isError?query.error.message:error}>
    {query.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando unidades"><Skeleton width="70%"/></div>:<div className="purchase-reference-controls">
-    <Select aria-label="Unidad de inventario" aria-description={query.isError?query.error.message:error||help} value={value} disabled={disabled||creating||query.isError||options.length===0} aria-invalid={Boolean(error)||query.isError} onChange={event=>onChange(event.target.value)}>
+    <Select aria-label="Unidad de inventario" aria-description={query.isError?query.error.message:error||help} value={value} disabled={disabled||creating||query.isError||options.length===0} aria-invalid={Boolean(error)||query.isError} onChange={event=>{setFamily(options.find(unit=>unit.code===event.target.value)?.family??"");onChange(event.target.value)}}>
      <option value="">{query.isError?"No pudimos cargar las unidades":options.length?"Selecciona una unidad":"No hay unidades registradas"}</option>
-     {options.map(unit=><option key={unit.id} value={unit.code}>{unit.name}</option>)}
+     {visibleOptions.map(unit=><option key={unit.id} value={unit.code}>{unit.name}</option>)}
     </Select>
     {query.isError?<Button type="button" kind="secondary" icon="refresh" disabled={disabled||query.isFetching} onClick={()=>void query.refetch()}>Reintentar</Button>:can("purchases.manage")&&<IconButton icon="plus" label="Nueva unidad" disabled={disabled||creating} onClick={()=>{setCreating(true);onBusyChange(true)}}/>}
    </div>}
   </FormField>
-  {creating&&createPortal(<InventoryUnitDialog close={close} save={unit=>{setSelected(unit);onChange(unit.code);qc.setQueryData<{items:InventoryUnit[]}>(queryKey,current=>({items:[...(current?.items??[]).filter(item=>item.code!==unit.code),unit]}));void qc.invalidateQueries({queryKey});close()}}/>,document.body)}
+  {creating&&createPortal(<InventoryUnitDialog close={close} save={unit=>{setSelected(unit);setFamily(unit.family??"");onChange(unit.code);qc.setQueryData<{items:InventoryUnit[]}>(queryKey,current=>({items:[...(current?.items??[]).filter(item=>item.code!==unit.code),unit]}));void qc.invalidateQueries({queryKey});close()}}/>,document.body)}
  </>;
 }
 

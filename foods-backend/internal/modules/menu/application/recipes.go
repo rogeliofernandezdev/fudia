@@ -54,7 +54,7 @@ func (a *Catalog) SaveRecipe(ctx context.Context, s scope, productID string, in 
 	if err := a.checkRecipes(ctx, s, true); err != nil {
 		return nil, err
 	}
-	if in.YieldQuantity <= 0 || len(in.Items) == 0 || len(in.Notes) > 500 {
+	if math.IsNaN(in.YieldQuantity) || math.IsInf(in.YieldQuantity, 0) || in.YieldQuantity < 0.001 || in.YieldQuantity >= 1e11 || len(in.Items) == 0 || len(in.Items) > 100 || len(in.Notes) > 500 {
 		return result, menuFailure(apperror.Invalid, "invalid_recipe", "Indica rendimiento e insumos válidos.")
 	}
 	in.YieldQuantity = math.Round(in.YieldQuantity*1000) / 1000
@@ -62,9 +62,12 @@ func (a *Catalog) SaveRecipe(ctx context.Context, s scope, productID string, in 
 	for i := range in.Items {
 		x := &in.Items[i]
 		x.InventoryItemID = strings.TrimSpace(x.InventoryItemID)
-		x.Quantity = math.Round(x.Quantity*1000) / 1000
 		x.WastePercent = math.Round(x.WastePercent*10000) / 10000
-		if x.InventoryItemID == "" || x.Quantity <= 0 || x.WastePercent < 0 || x.WastePercent >= 100 || seen[x.InventoryItemID] {
+		quantity := x.Quantity
+		if x.ConsumptionQuantity != nil {
+			quantity = *x.ConsumptionQuantity
+		}
+		if (x.ConsumptionQuantity == nil) != (strings.TrimSpace(x.ConsumptionUnit) == "") || x.InventoryItemID == "" || math.IsNaN(quantity) || math.IsInf(quantity, 0) || quantity <= 0 || math.IsNaN(x.WastePercent) || math.IsInf(x.WastePercent, 0) || x.WastePercent < 0 || x.WastePercent >= 100 || seen[x.InventoryItemID] {
 			return result, menuFailure(apperror.Invalid, "invalid_recipe", "Los insumos de la receta no son válidos.")
 		}
 		seen[x.InventoryItemID] = true
@@ -89,11 +92,20 @@ func (a *Catalog) SaveRecipe(ctx context.Context, s scope, productID string, in 
 	if control == "inventory" {
 		return result, menuFailure(apperror.Conflict, "recipe_inventory_conflict", "Un producto controlado directamente por inventario no debe descontarse también por receta.")
 	}
-	for _, x := range in.Items {
-		var ok bool
-		if err = func() error { var err error; ok, err = a.repo.RecipeIngredientActive(tx.Context(), s, x); return err }(); err != nil || !ok {
-			return result, menuFailure(apperror.Conflict, "recipe_item_invalid", "Un insumo ya no está disponible.")
+	if a.recipeUnits == nil {
+		return result, menuFailure(apperror.Unavailable, "recipe_units_unavailable", "No pudimos validar las unidades de la receta.")
+	}
+	for i := range in.Items {
+		x := &in.Items[i]
+		quantity := x.Quantity
+		if x.ConsumptionQuantity != nil {
+			quantity = *x.ConsumptionQuantity
 		}
+		normalized, unitErr := a.recipeUnits.NormalizeRecipeQuantity(tx.Context(), s, x.InventoryItemID, quantity, x.ConsumptionUnit)
+		if unitErr != nil {
+			return result, unitErr
+		}
+		x.BaseQuantity, x.ConsumptionQuantityValue, x.ConsumptionUnit, x.ConsumptionFactor = normalized.BaseQuantity, normalized.ConsumptionQuantity, normalized.ConsumptionUnit, normalized.Factor
 	}
 	var recipeID string
 	err = func() error {

@@ -6,6 +6,7 @@ import (
 	"math"
 
 	"github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
+	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 )
 
 // PurchaseLedgerRepository exposes only the persistence primitives used by
@@ -40,7 +41,7 @@ func (l *PurchaseLedger) ReceivePurchase(ctx context.Context, s scope, in contra
 	if err != nil {
 		return err
 	}
-	balance := math.Round((current+quantity)*1000) / 1000
+	balance := domain.RoundStockQuantity(current + quantity)
 	unitCost := in.UnitCost / in.UnitsPerPresentation
 	average := currentAverage
 	if balance > 0 {
@@ -53,7 +54,7 @@ func (l *PurchaseLedger) ReceivePurchase(ctx context.Context, s scope, in contra
 		ProductID: in.ProductID, ItemID: in.ItemID, Type: "entry",
 		Delta: quantity, Balance: balance, UnitCost: unitCost,
 		SourceType: "purchase_receipt", SourceID: in.ReceiptID, Note: in.Note,
-		ValueDelta: math.Round(quantity*unitCost*10000) / 10000,
+		ValueDelta:   math.Round(quantity*unitCost*10000) / 10000,
 		BalanceValue: math.Round(balance*average*10000) / 10000,
 	})
 }
@@ -70,14 +71,14 @@ func (l *PurchaseLedger) ReturnPurchase(ctx context.Context, s scope, in contrac
 	if err != nil {
 		return err
 	}
-	if quantity > balance.Quantity+0.000001 {
+	if quantity > balance.Quantity+1e-9 {
 		return contracts.ErrInsufficientStock
 	}
 	// The outflow reverses the receipt at its own cost, so a wrong receipt does not
 	// leave its price inside the average. Consumption at average cost can leave less
 	// value than the receipt carried; the remaining value never goes below zero.
 	unitCost := in.UnitCost / in.UnitsPerPresentation
-	after := math.Round((balance.Quantity-quantity)*1000) / 1000
+	after := domain.RoundStockQuantity(balance.Quantity - quantity)
 	valueBefore := balance.Quantity * balance.AverageUnitCost
 	average := balance.AverageUnitCost
 	if after > 0 {

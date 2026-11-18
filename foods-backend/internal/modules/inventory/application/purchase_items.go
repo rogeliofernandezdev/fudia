@@ -35,6 +35,13 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 	if normalized.ProductID == "" && normalized.NewProduct == nil && normalized.NewIngredient == nil {
 		return result, stockFailure(apperror.Invalid, "invalid_purchase_item", "Selecciona un producto de la carta o crea un artículo nuevo.")
 	}
+	settings := domain.LocationSettings{MinimumStock: normalized.MinimumStockValue(), OptimalStock: normalized.MinimumStockValue()}
+	if input.OptimalStock != nil {
+		settings.OptimalStock = *input.OptimalStock
+	}
+	if !domain.ValidLocationSettings(settings) {
+		return result, stockFailure(apperror.Invalid, "invalid_inventory_settings", "Revisa los niveles de stock.")
+	}
 	presentations := input.Presentations
 	if len(presentations) == 0 {
 		presentations = []domain.InventoryPresentationInput{{PresentationType: normalized.PresentationType, UnitsPerPresentation: normalized.UnitsPerPresentation, IsDefault: true}}
@@ -78,6 +85,13 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 	}
 	if createErr != nil {
 		return result, createErr
+	}
+	// Share validation and persistence with Inventory, inside the article transaction.
+	if err = a.LocationSettings(tx.Context(), s, created.InventoryItemID, settings); err != nil {
+		return result, err
+	}
+	if settings.OptimalStock < settings.MinimumStock {
+		settings.OptimalStock = settings.MinimumStock
 	}
 	for _, p := range presentations {
 		var id string
@@ -136,6 +150,8 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 		UnitName:        unitName,
 		Quantity:        "0",
 		MinimumStock:    minimumStock,
+		ReorderPoint:    minimumStock,
+		OptimalStock:    strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.3f", settings.OptimalStock), "0"), "."),
 		Presentations:   presentationOptions,
 	}, nil
 

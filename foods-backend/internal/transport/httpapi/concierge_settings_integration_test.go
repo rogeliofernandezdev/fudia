@@ -31,7 +31,7 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 		INSERT INTO tables(
 		  organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled
 		)
-		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		VALUES($1,$2,$3,4,'Principal',true,md5(random()::text||clock_timestamp()::text),true)
 		RETURNING id,qr_token
 	`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa entitlement %d", nonce)).Scan(&tableID, &token); err != nil {
 		t.Fatal(err)
@@ -161,7 +161,7 @@ func TestConciergeMenuListsRecommendedFirst(t *testing.T) {
 	var token string
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		VALUES($1,$2,$3,4,'Principal',true,md5(random()::text||clock_timestamp()::text),true)
 		RETURNING qr_token
 	`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa recomendados %d", nonce)).Scan(&token); err != nil {
 		t.Fatal(err)

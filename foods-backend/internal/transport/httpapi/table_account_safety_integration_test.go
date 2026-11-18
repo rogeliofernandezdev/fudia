@@ -58,7 +58,7 @@ func TestKitchenLegacyFallbackCannotMutateOtherStations(t *testing.T) {
 				}
 				t.Run(fmt.Sprintf("%s/round=%t/legacy=%t", destination, round, legacy), func(t *testing.T) {
 					var product string
-					if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,encode(gen_random_bytes(8),'hex'),'Prueba estación',10,'prepared','none',$2) RETURNING id`, s.OrganizationID, destination).Scan(&product); err != nil {
+					if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,substr(md5(random()::text||clock_timestamp()::text),1,16),'Prueba estación',10,'prepared','none',$2) RETURNING id`, s.OrganizationID, destination).Scan(&product); err != nil {
 						t.Fatal(err)
 					}
 					w := serviceSafetyCall(t, s, "", fmt.Sprintf(`{"channel":"mostrador","sendToKitchen":true,"items":[{"productId":%q,"qty":1}]}`, product), api.createOrder, 201)
@@ -149,10 +149,10 @@ func TestCancelUsesActualServiceProgress(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var product, table string
-			if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,encode(gen_random_bytes(8),'hex'),'Prueba cancelación',10,'prepared','none',$2) RETURNING id`, s.OrganizationID, tc.destination).Scan(&product); err != nil {
+			if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,substr(md5(random()::text||clock_timestamp()::text),1,16),'Prueba cancelación',10,'prepared','none',$2) RETURNING id`, s.OrganizationID, tc.destination).Scan(&product); err != nil {
 				t.Fatal(err)
 			}
-			if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,qr_token) VALUES($1,$2,$3,4,encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID, tc.name).Scan(&table); err != nil {
+			if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,qr_token) VALUES($1,$2,$3,4,md5(random()::text||clock_timestamp()::text)) RETURNING id`, s.OrganizationID, s.LocationID, tc.name).Scan(&table); err != nil {
 				t.Fatal(err)
 			}
 			w := serviceSafetyCall(t, s, "", fmt.Sprintf(`{"channel":"salon","tableId":%q,"sendToKitchen":true,"items":[{"productId":%q,"qty":1}]}`, table, product), api.createOrder, 201)
@@ -215,7 +215,7 @@ func TestCancelDirectRestoresStockOnceAndPreservesGuards(t *testing.T) {
 			body := fmt.Sprintf(`{"channel":"mostrador","sendToKitchen":true,"items":[{"productId":%q,"qty":2}]}`, product)
 			if scenario == "mixed pending" || scenario == "previous delivery" {
 				var kitchen string
-				if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,encode(gen_random_bytes(8),'hex'),'Plato pendiente',10,'prepared','none','kitchen') RETURNING id`, s.OrganizationID).Scan(&kitchen); err != nil {
+				if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,substr(md5(random()::text||clock_timestamp()::text),1,16),'Plato pendiente',10,'prepared','none','kitchen') RETURNING id`, s.OrganizationID).Scan(&kitchen); err != nil {
 					t.Fatal(err)
 				}
 				body = fmt.Sprintf(`{"channel":"mostrador","sendToKitchen":true,"items":[{"productId":%q,"qty":1},{"productId":%q,"qty":1}]}`, product, kitchen)

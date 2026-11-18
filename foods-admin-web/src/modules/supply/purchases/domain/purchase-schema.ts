@@ -71,8 +71,12 @@ const purchaseInventoryCommon={
   unitName:z.string().optional(),
   minimumStock:z.string().trim().refine(value=>{
     const parsed=Number(value);
-    return value!==""&&Number.isFinite(parsed)&&parsed>=0;
-  },"El stock mínimo no puede ser negativo."),
+    return Number.isFinite(parsed)&&parsed>=0&&parsed<1e11;
+  },"Ingresa un stock mínimo igual o mayor que cero y menor que 100000000000."),
+  optimalStock:z.string().trim().refine(value=>{
+    const parsed=Number(value);
+    return Number.isFinite(parsed)&&parsed>=0&&parsed<1e11;
+  },"Ingresa un stock óptimo igual o mayor que cero y menor que 100000000000.").optional(),
 };
 const articleName=z.string().trim().min(1,"Ingresa el nombre del artículo.").max(160);
 
@@ -95,6 +99,11 @@ export const purchaseInventoryItemSchema=z.discriminatedUnion("mode",[
     productId:z.string().trim().min(1,"Selecciona el producto de la carta."),
   }),
 ]).superRefine((value,ctx)=>{
+  if(value.unitCountable){
+    for(const field of ["minimumStock","optimalStock"] as const){
+      if(value[field]&&Number.isFinite(Number(value[field]))&&!Number.isInteger(Number(value[field])))ctx.addIssue({code:"custom",path:[field],message:"Ingresa una cantidad entera para esta unidad."});
+    }
+  }
   const rows=value.presentations??[{presentationType:value.presentationType,unitsPerPresentation:value.unitsPerPresentation,isDefault:true}];
   const seen=new Set<string>();
   for(const row of rows){

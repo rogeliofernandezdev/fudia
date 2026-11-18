@@ -52,6 +52,20 @@ test("unidades: skeleton, error con reintento y vacío sin opciones inventadas",
  assert.ok(empty.some(node=>node.type==="option"&&node.props.children==="No hay unidades registradas"));
  assert.equal(empty.find(node=>node.type==="Select").props.disabled,true);
 });
+
+test("unidades: elegir una familia sugiere la unidad remota y permite cambiarla",()=>{
+ const ui=mount({items:[
+  {id:"kg",code:"kg",name:"Kilogramo",family:"mass",familyLabel:"Peso",inventoryDefault:true},
+  {id:"g",code:"g",name:"Gramo",family:"mass",familyLabel:"Peso",inventoryDefault:false},
+  {id:"l",code:"l",name:"Litro",family:"volume",familyLabel:"Volumen",inventoryDefault:true},
+ ]});
+ ui.render().find(node=>node.type==="Select"&&node.props["aria-label"]==="Se mide por").props.onChange({target:{value:"mass"}});
+ assert.deepEqual(ui.changes,["kg"]);
+ const unitField=ui.render().find(node=>node.type==="Select"&&node.props["aria-label"]==="Unidad de inventario");
+ assert.equal(nodes(unitField).some(node=>node.type==="option"&&node.props.value==="l"),false);
+ unitField.props.onChange({target:{value:"g"}});
+ assert.deepEqual(ui.changes,["kg","g"]);
+});
 test("unidades: crear selecciona el resultado confirmado y lectura no ofrece alta",()=>{
  assert.equal(mount({manage:false}).render().some(node=>node.props.label==="Nueva unidad"),false);
  const ui=mount();ui.render().find(node=>node.type==="IconButton"&&node.props.label==="Nueva unidad").props.onClick();

@@ -11,7 +11,12 @@ type Unit struct {
 	Code string `json:"code"`
 	Name string `json:"name"`
 	// Countable indica que la unidad se cuenta por piezas (botella, lata...).
-	Countable bool `json:"countable"`
+	Countable        bool   `json:"countable"`
+	Family           string `json:"family"`
+	FamilyLabel      string `json:"familyLabel"`
+	ReferenceFactor  string `json:"referenceFactor"`
+	InventoryDefault bool   `json:"inventoryDefault"`
+	RecipeDefault    bool   `json:"recipeDefault"`
 }
 
 // PresentationRule es lo que la unidad base de un artículo permite al guardar
@@ -34,6 +39,7 @@ func PresentationContentError(rule PresentationRule, presentationType string, un
 	}
 	return "La presentación debe contener al menos 1 " + unit + ". Las fracciones solo se usan con unidades de medida como kilos o litros."
 }
+
 type UnitInput struct {
 	Code string `json:"code"`
 	Name string `json:"name"`

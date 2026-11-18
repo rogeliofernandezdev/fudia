@@ -24,7 +24,7 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
   const lines=useWatch({control,name:"items"})??[];
   const selectedIds=lines.map(line=>line?.inventoryItemId).filter(Boolean);
   const hasErrors=Object.keys(errors).length>0;
-  const amount=(value:string)=>formatRegionalNumber(Number(value||0),location?.country,{maximumFractionDigits:3});
+  const amount=(value:string)=>formatRegionalNumber(Number(value||0),location?.country,{maximumFractionDigits:6});
 
   function add(){
     append({inventoryItemId:"",quantity:""});

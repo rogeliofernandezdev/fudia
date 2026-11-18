@@ -128,7 +128,7 @@ func TestKardexKeepsTheOrderOfMovementsFromOneTransaction(t *testing.T) {
 	if err = json.Unmarshal(rec.Body.Bytes(), &page); err != nil || len(page.Items) != 3 {
 		t.Fatalf("movements: %d %s %v", rec.Code, rec.Body.String(), err)
 	}
-	for index, want := range []string{"3.000", "2.000", "1.000"} {
+	for index, want := range []string{"3.000000", "2.000000", "1.000000"} {
 		if page.Items[index].BalanceAfter != want {
 			t.Fatalf("Kárdex must list the latest registration first: %#v", page.Items)
 		}

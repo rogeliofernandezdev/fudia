@@ -160,6 +160,19 @@ test("transporte: combinaciones y conversiones se persisten; crear no genera sto
  const body=JSON.parse(calls[3].options.body);assert.equal(body.presentations[0].unitsPerPresentation,.5);assert.equal("quantity" in body,false);
 });
 
+test("niveles del alta: el transporte omite el óptimo vacío y lo acota al mínimo",async()=>{
+ const calls=[];
+ const api=compile("src/modules/supply/purchases/infrastructure/purchases-api.ts",name=>name==="@/shared/api/client"?{apiFetch:(_path,options)=>{calls.push(JSON.parse(options.body));return Promise.resolve({})}}:name==="@/shared/api/product-image"?{}:require(name));
+ for(const mode of ["new_ingredient","new_product","link_product"]){
+  const draft={mode,productId:"product",name:"Tomate",categoryId:"category",price:"5",unit:"kg",presentationType:"unit",unitsPerPresentation:"1",minimumStock:"5"};
+  for(const [optimalStock,expected] of [["",undefined],["15.5",15.5],["2",5],["0",5]]){
+   await api.createPurchaseInventoryItem({...draft,optimalStock});
+   const body=calls.at(-1);assert.equal(body.optimalStock,expected);assert.equal(body.minimumStock,5);assert.equal("quantity" in body,false);
+   assert.equal("locationId" in body,false);assert.equal("organizationId" in body,false);
+  }
+ }
+});
+
 test("unidad contable: un paquete de botellas no puede contener menos de 1",()=>{
  const {presentationContentError,presentationUnitRule}=presentationContent;
  const bottle=presentationUnitRule(combos,"botella"),kilo=presentationUnitRule([{code:"unit",name:"Unidad base",unit:"kg",unitName:"Kilogramo",unitCountable:false,isDefault:true}],"kg");

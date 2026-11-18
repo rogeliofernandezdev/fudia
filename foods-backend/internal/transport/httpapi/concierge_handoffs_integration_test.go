@@ -23,7 +23,7 @@ func TestConciergeHandoffLifecycle(t *testing.T) {
 		INSERT INTO tables(
 		  organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled
 		)
-		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		VALUES($1,$2,$3,4,'Principal',true,md5(random()::text||clock_timestamp()::text),true)
 		RETURNING id,qr_token
 	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Mesa Handoff %d",nonce)).
 		Scan(&tableID,&qrToken);err!=nil{t.Fatal(err)}

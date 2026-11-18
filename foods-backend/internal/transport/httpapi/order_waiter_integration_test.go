@@ -39,7 +39,7 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 	grantCashManagementForPaymentTest(t, api, cashier)
 	otherLocation := owner
 	otherLocation.LocationID = seedID(`INSERT INTO locations(organization_id,name,code) VALUES($1,'Otro local','OTHER') RETURNING id`, owner.OrganizationID)
-	tableID := seedID(`INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa 04',4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, owner.OrganizationID, owner.LocationID)
+	tableID := seedID(`INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa 04',4,'Principal',md5(random()::text||clock_timestamp()::text)) RETURNING id`, owner.OrganizationID, owner.LocationID)
 	productID := seedID(`INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control) VALUES($1,'WAITER-TEST','Plato',25,'prepared','none') RETURNING id`, owner.OrganizationID)
 	// Tables are not part of the shared inventory fixture cleanup.
 	t.Cleanup(func() {

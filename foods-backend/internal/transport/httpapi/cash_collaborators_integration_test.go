@@ -136,7 +136,7 @@ func TestCashCollaboratorsCollectWithTemporaryAuthority(t *testing.T) {
 	order := func(total int) string {
 		t.Helper()
 		var id, tableID string
-		if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,$3,4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa equipo %d", time.Now().UnixNano())).Scan(&tableID); err != nil {
+		if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,$3,4,'Principal',md5(random()::text||clock_timestamp()::text)) RETURNING id`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa equipo %d", time.Now().UnixNano())).Scan(&tableID); err != nil {
 			t.Fatal(err)
 		}
 		if err := pool.QueryRow(ctx, `INSERT INTO orders(organization_id,location_id,code,channel,status,total,created_by,table_id,waiter_id,bill_closed_at) VALUES($1,$2,$3,'salon','entregado',$4,$5,$6,$7,now()) RETURNING id`, s.OrganizationID, s.LocationID, fmt.Sprintf("PED-TEAM-%d", time.Now().UnixNano()), total, s.UserID, tableID, waiter.UserID).Scan(&id); err != nil {
@@ -203,7 +203,7 @@ func TestCashCollaboratorsCollectWithTemporaryAuthority(t *testing.T) {
 		expect(assign(otherWaiter.UserID), 201)
 		otherWaiterCall := companySession(t, api, otherWaiter)
 		var tableID, productID string
-		if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa de comanda',4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID).Scan(&tableID); err != nil {
+		if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa de comanda',4,'Principal',md5(random()::text||clock_timestamp()::text)) RETURNING id`, s.OrganizationID, s.LocationID).Scan(&tableID); err != nil {
 			t.Fatal(err)
 		}
 		if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,$2,'Plato directo',20,'prepared','none','direct') RETURNING id`, s.OrganizationID, fmt.Sprintf("team-plate-%d", time.Now().UnixNano())).Scan(&productID); err != nil {

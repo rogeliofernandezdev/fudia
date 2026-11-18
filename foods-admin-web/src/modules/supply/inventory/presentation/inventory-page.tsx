@@ -59,7 +59,7 @@ export function InventoryPage(){
    notify({
     tone:"success",
     title:"Ajuste registrado",
-    message:result.name+": "+sign+formatRegionalNumber(result.quantity,location?.country,{maximumFractionDigits:3})+" "+result.unit+". Saldo "+formatRegionalNumber(result.stockAfter,location?.country,{maximumFractionDigits:3})+" "+result.unit+".",
+    message:result.name+": "+sign+formatRegionalNumber(result.quantity,location?.country,{maximumFractionDigits:6})+" "+result.unit+". Saldo "+formatRegionalNumber(result.stockAfter,location?.country,{maximumFractionDigits:6})+" "+result.unit+".",
    });
   },
   onError:error=>notify({tone:"danger",title:"No se pudo registrar el ajuste",message:error.message}),
@@ -89,8 +89,8 @@ export function InventoryPage(){
        <td className="inventory-product-cell"><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{item.name}</b></td>
        <td>{item.kind==="ingredient"?"Insumo":"Producto"}</td>
        <td>{item.unit}</td>
-       <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></td>
-       <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})}</b></td>
+       <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:6})}</b></td>
+       <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:6})}</b></td>
        <td>{formatRegionalNumber(Number(item.averageUnitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
        <td><b>{formatRegionalNumber(Number(item.stockValue),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td><Status tone={meta.tone}>{meta.label}</Status></td>

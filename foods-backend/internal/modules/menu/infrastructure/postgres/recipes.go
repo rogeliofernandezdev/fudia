@@ -19,11 +19,6 @@ func (r *Catalog) LockRecipeProduct(ctx context.Context, s scope, productID stri
 	err := r.db(ctx).QueryRow(ctx, `SELECT name,quantity_control FROM products WHERE id=$1 AND organization_id=$2 AND active FOR UPDATE`, productID, s.OrganizationID).Scan(&productName, &control)
 	return productName, control, menuError(err)
 }
-func (r *Catalog) RecipeIngredientActive(ctx context.Context, s scope, x domain.RecipeIngredientInput) (bool, error) {
-	var ok bool
-	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM inventory_items WHERE id=$1 AND organization_id=$2 AND active)`, x.InventoryItemID, s.OrganizationID).Scan(&ok)
-	return ok, menuError(err)
-}
 func (r *Catalog) SaveRecipe(ctx context.Context, s scope, productID string, in domain.RecipeInput) (string, error) {
 	var recipeID string
 	err := r.db(ctx).QueryRow(ctx, `
@@ -40,7 +35,7 @@ func (r *Catalog) DeleteRecipeIngredients(ctx context.Context, s scope, recipeID
 	return tag.RowsAffected(), menuError(err)
 }
 func (r *Catalog) CreateRecipeIngredient(ctx context.Context, s scope, recipeID string, x domain.RecipeIngredientInput) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `INSERT INTO product_recipe_items(organization_id,recipe_id,inventory_item_id,quantity,waste_percent) VALUES($1,$2,$3,$4,$5)`, s.OrganizationID, recipeID, x.InventoryItemID, x.Quantity, x.WastePercent)
+	tag, err := r.db(ctx).Exec(ctx, `INSERT INTO product_recipe_items(organization_id,recipe_id,inventory_item_id,quantity,waste_percent,consumption_unit,consumption_quantity,consumption_factor) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`, s.OrganizationID, recipeID, x.InventoryItemID, x.BaseQuantity, x.WastePercent, x.ConsumptionUnit, x.ConsumptionQuantityValue, x.ConsumptionFactor)
 	return tag.RowsAffected(), menuError(err)
 }
 func (r *Catalog) Recipes(ctx context.Context, s scope, f application.CatalogFilter) (application.RecipePage, error) {
@@ -87,7 +82,8 @@ func (r *Catalog) Recipe(ctx context.Context, s scope, productID string) (domain
 		return out, menuError(err)
 	}
 	rows, err := r.db(ctx).Query(ctx, `
-		SELECT ri.id,ri.inventory_item_id,COALESCE(p.name,ii.name),ii.unit,ri.quantity::text,ri.waste_percent::text
+		SELECT ri.id,ri.inventory_item_id,COALESCE(p.name,ii.name),ii.unit,ri.quantity::text,ri.waste_percent::text,
+		 COALESCE(ri.consumption_unit,ii.unit),COALESCE(ri.consumption_quantity,ri.quantity)::text,COALESCE(ri.consumption_factor,1)::text
 		FROM product_recipe_items ri
 		JOIN inventory_items ii ON ii.id=ri.inventory_item_id AND ii.organization_id=ri.organization_id
 		LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
@@ -100,7 +96,7 @@ func (r *Catalog) Recipe(ctx context.Context, s scope, productID string) (domain
 	out.Items = []domain.RecipeItemView{}
 	for rows.Next() {
 		var x domain.RecipeItemView
-		if err = rows.Scan(&x.ID, &x.InventoryItemID, &x.Name, &x.Unit, &x.Quantity, &x.WastePercent); err != nil {
+		if err = rows.Scan(&x.ID, &x.InventoryItemID, &x.Name, &x.Unit, &x.Quantity, &x.WastePercent, &x.ConsumptionUnit, &x.ConsumptionQuantity, &x.ConsumptionFactor); err != nil {
 			return out, err
 		}
 		out.Items = append(out.Items, x)

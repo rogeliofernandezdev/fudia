@@ -113,6 +113,7 @@ export function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft){
     presentationType:draft.presentationType,
     unitsPerPresentation:Number(draft.presentationType==="unit"?1:draft.unitsPerPresentation),
     minimumStock:Number(draft.minimumStock||0),
+    ...(draft.optimalStock?.trim()?{optimalStock:Math.max(Number(draft.minimumStock||0),Number(draft.optimalStock))}:{}),
     ...(draft.presentations?{presentations:draft.presentations.map(row=>({...row,unitsPerPresentation:Number(row.unitsPerPresentation)}))}:{}),
   };
   const payload=draft.mode==="link_product"

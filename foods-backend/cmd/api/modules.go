@@ -22,12 +22,12 @@ import (
 	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	orderpg "github.com/foods-platform/foods-backend/internal/modules/orders/infrastructure/postgres"
 	orderhttp "github.com/foods-platform/foods-backend/internal/modules/orders/transport/http"
-	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
-	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
-	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	orgapp "github.com/foods-platform/foods-backend/internal/modules/organizations/application"
 	orgpg "github.com/foods-platform/foods-backend/internal/modules/organizations/infrastructure/postgres"
 	orghttp "github.com/foods-platform/foods-backend/internal/modules/organizations/transport/http"
+	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
+	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
+	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	platformapp "github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
 	platformdiag "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/diagnostics"
 	platformpg "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/postgres"
@@ -99,6 +99,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	inventoryRepo := inventorypg.NewStock(db)
 	stock := inventoryapp.NewStock(inventoryRepo, work, audit)
 	menu := menuapp.NewCatalog(menupg.NewCatalog(db), work, audit, menufiles.Images{Directory: "./uploads/products"}).WithProductImages(images)
+	menu.WithRecipeUnits(inventoryapp.NewRecipeUnits(inventoryRepo))
 	stock.WithProductNames(menu)
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	notices := noticeapp.New(noticepg.New(db), identityService)

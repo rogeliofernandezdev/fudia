@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"math"
 	"sort"
@@ -166,8 +167,11 @@ func (a *Stock) DesiredRecipeUsage(ctx context.Context, s scope, products map[st
 		}
 		for _, x := range ingredients {
 			need := products[id] / yield * x.Quantity * (1 + x.WastePercent/100)
-			out[x.ItemID] += math.Round(need*1000) / 1000
+			out[x.ItemID] += need
 		}
+	}
+	for id, quantity := range out {
+		out[id] = domain.RoundStockQuantity(quantity)
 	}
 	return out, nil
 }
@@ -181,8 +185,8 @@ func (a *Stock) ApplyRecipeUsageDelta(ctx context.Context, s scope, orderID stri
 	}
 	sort.Strings(ids)
 	for _, itemID := range ids {
-		change := math.Round(delta[itemID]*1000) / 1000
-		if math.Abs(change) <= 0.000001 {
+		change := domain.RoundStockQuantity(delta[itemID])
+		if change == 0 {
 			continue
 		}
 		bal, err := a.repo.LockBalance(ctx, s, itemID)
@@ -192,10 +196,10 @@ func (a *Stock) ApplyRecipeUsageDelta(ctx context.Context, s scope, orderID stri
 		if err != nil {
 			return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos validar el stock de receta.")
 		}
-		if change > bal.Quantity+0.000001 {
+		if change > bal.Quantity+1e-9 {
 			return stockFailure(apperror.Conflict, "insufficient_recipe_stock", "No hay stock suficiente de "+bal.Name+" para preparar el pedido.")
 		}
-		after := math.Round((bal.Quantity-change)*1000) / 1000
+		after := domain.RoundStockQuantity(bal.Quantity - change)
 		avg := bal.AverageUnitCost
 		if _, err = a.repo.SaveBalance(ctx, s, itemID, after, avg); err != nil {
 			return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos actualizar el stock de receta.")

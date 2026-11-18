@@ -3,12 +3,15 @@ package domain
 import "time"
 
 type RecipeItemView struct {
-	ID              string `json:"id"`
-	InventoryItemID string `json:"inventoryItemId"`
-	Name            string `json:"name"`
-	Unit            string `json:"unit"`
-	Quantity        string `json:"quantity"`
-	WastePercent    string `json:"wastePercent"`
+	ID                  string `json:"id"`
+	InventoryItemID     string `json:"inventoryItemId"`
+	Name                string `json:"name"`
+	Unit                string `json:"unit"`
+	Quantity            string `json:"quantity"`
+	WastePercent        string `json:"wastePercent"`
+	ConsumptionUnit     string `json:"consumptionUnit"`
+	ConsumptionQuantity string `json:"consumptionQuantity"`
+	ConsumptionFactor   string `json:"consumptionFactor"`
 }
 type RecipeView struct {
 	ID            string           `json:"id"`
@@ -27,9 +30,14 @@ type RecipeInput struct {
 	Items         []RecipeIngredientInput `json:"items"`
 }
 type RecipeIngredientInput struct {
-	InventoryItemID string  `json:"inventoryItemId"`
-	Quantity        float64 `json:"quantity"`
-	WastePercent    float64 `json:"wastePercent"`
+	InventoryItemID          string   `json:"inventoryItemId"`
+	Quantity                 float64  `json:"quantity"`
+	WastePercent             float64  `json:"wastePercent"`
+	ConsumptionUnit          string   `json:"consumptionUnit,omitempty"`
+	ConsumptionQuantity      *float64 `json:"consumptionQuantity,omitempty"`
+	BaseQuantity             string   `json:"-"`
+	ConsumptionQuantityValue string   `json:"-"`
+	ConsumptionFactor        string   `json:"-"`
 }
 type RecipeSummary struct {
 	ID            string    `json:"id"`

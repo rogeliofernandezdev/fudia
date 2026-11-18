@@ -144,6 +144,11 @@ func TestInventoryUnitsMigrationPreservesLegacyStock(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
+	// Reproduce the pre-76 schema inside this rolled-back transaction. The later
+	// recipe FK must be released before the historical unit table can be dropped.
+	if _, err = tx.Exec(ctx, `ALTER TABLE product_recipe_items DROP CONSTRAINT recipe_consumption_unit_fk`); err != nil {
+		t.Fatal(err)
+	}
 	latestMigration, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000077_inventory_combinations.down.sql"))
 	if err != nil {
 		t.Fatal(err)

@@ -39,12 +39,12 @@ import (
 	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	orderpg "github.com/foods-platform/foods-backend/internal/modules/orders/infrastructure/postgres"
 	orderhttp "github.com/foods-platform/foods-backend/internal/modules/orders/transport/http"
-	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
-	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
-	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	orgapp "github.com/foods-platform/foods-backend/internal/modules/organizations/application"
 	orgpg "github.com/foods-platform/foods-backend/internal/modules/organizations/infrastructure/postgres"
 	orghttp "github.com/foods-platform/foods-backend/internal/modules/organizations/transport/http"
+	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
+	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
+	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	platformapp "github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
 	platformdiag "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/diagnostics"
 	platformpg "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/postgres"
@@ -131,7 +131,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 		Platform:               platformhttp.New(platform),
 		Concierge:              conciergehttp.New(concierge, func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), database.NewUnitOfWork(db), auditpg.New(db)).WithTableGuard(concierge).WithOrigins(conciergepg.NewUsage(db), platform)),
-		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
+		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}).WithRecipeUnits(inventoryapp.NewRecipeUnits(inventorypg.NewStock(db)))),
 		Payments:               billinghttp.NewPayments(payments),
 		PayDetect:              paydetecthttp.New(paydetectapp.NewPayDevices(paydetectpg.New(db)), paydetectapp.NewDetector(paydetectpg.New(db), database.NewUnitOfWork(db)).WithNotices(notices), paydetectapp.NewNotifications(paydetectpg.New(db)).WithOrderLooker(orderpg.New(db)).WithPaymentRegisterer(payments)),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db)).WithTips(tips)),

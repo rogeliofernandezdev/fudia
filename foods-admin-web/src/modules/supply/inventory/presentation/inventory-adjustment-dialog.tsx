@@ -55,7 +55,7 @@ export function InventoryAdjustmentDialog({busy,close,save}:{busy:boolean;close:
   const quantity=Number(quantityValue||0);
   const projected=movementType==="entry"?currentStock+quantity:currentStock-quantity;
   const averageCost=Number(selected?.averageUnitCost??0);
-  const amount=(value:number)=>formatRegionalNumber(value,location?.country,{maximumFractionDigits:3});
+  const amount=(value:number)=>formatRegionalNumber(value,location?.country,{maximumFractionDigits:6});
   const money=(value:number)=>formatRegionalNumber(value,location?.country,{minimumFractionDigits:2,maximumFractionDigits:4});
   const hasErrors=Object.keys(errors).length>0;
   const costHelp=!selected?undefined:averageCost>0?"Vacío usa el promedio actual: "+money(averageCost):"Obligatorio: el artículo aún no tiene costo promedio.";

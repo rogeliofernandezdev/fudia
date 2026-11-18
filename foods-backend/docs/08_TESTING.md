@@ -14,6 +14,14 @@ reparto 100 % al motorizado y 50/50 con validación, tope y límite mensual.
 
 ## Puerta completa de integración
 
+`TestRecipeConsumptionUnitsPersistConvertConsumeAndReverse` verifica gramos/kg,
+ml/l, edición conservando unidad, cantidades de 0.5 g, merma, costo, consumo,
+reversa, snapshots de ajustes y compatibilidad con clientes anteriores. Comprueba
+rechazo de unidades incompatibles/ajenas, aislamiento entre empresas y reversión
+de migración sin pérdida de precisión. Dominio usa conversiones decimales exactas;
+`TestPurchaseLedgerPreservesSubGramBalances` cubre reposición y devolución después
+de un consumo fraccionario.
+
 GitHub Actions ejecuta las migraciones y `go test ./...` con `DATABASE_URL`
 apuntando a PostgreSQL 18 durante toda la suite. Esa es la puerta completa para
 cambios de autorización, caja y cobros. Ejecutar casos seleccionados con base y

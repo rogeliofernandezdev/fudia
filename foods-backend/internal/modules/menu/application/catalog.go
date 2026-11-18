@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
+	inventorycontracts "github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/menu/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -50,18 +51,23 @@ type ImageStore interface {
 	Save(context.Context, string, string, io.Reader) (string, error)
 }
 type Catalog struct {
-	repo   CatalogRepository
-	work   unitofwork.Manager
-	audit  audit.Repository
-	images ImageStore
-	direct *ProductImages
+	repo        CatalogRepository
+	work        unitofwork.Manager
+	audit       audit.Repository
+	images      ImageStore
+	direct      *ProductImages
+	recipeUnits inventorycontracts.RecipeUnitResolver
 }
 
 func NewCatalog(repo CatalogRepository, work unitofwork.Manager, audit audit.Repository, images ImageStore) *Catalog {
 	return &Catalog{repo: repo, work: work, audit: audit, images: images}
 }
 func (a *Catalog) WithProductImages(images *ProductImages) *Catalog { a.direct = images; return a }
-func (a *Catalog) DirectImagesEnabled() bool                        { return a.direct != nil }
+func (a *Catalog) WithRecipeUnits(units inventorycontracts.RecipeUnitResolver) *Catalog {
+	a.recipeUnits = units
+	return a
+}
+func (a *Catalog) DirectImagesEnabled() bool { return a.direct != nil }
 func menuFailure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
 }
@@ -76,7 +82,6 @@ type CatalogRepository interface {
 	Recipes(context.Context, scope, CatalogFilter) (RecipePage, error)
 	Recipe(context.Context, scope, string) (domain.RecipeView, error)
 	LockRecipeProduct(ctx context.Context, s scope, productID string) (string, string, error)
-	RecipeIngredientActive(ctx context.Context, s scope, x domain.RecipeIngredientInput) (bool, error)
 	SaveRecipe(ctx context.Context, s scope, productID string, in domain.RecipeInput) (string, error)
 	DeleteRecipeIngredients(ctx context.Context, s scope, recipeID string) (int64, error)
 	CreateRecipeIngredient(ctx context.Context, s scope, recipeID string, x domain.RecipeIngredientInput) (int64, error)

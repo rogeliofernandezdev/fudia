@@ -43,7 +43,7 @@ func seedConciergeUsage(t *testing.T, cap int) conciergeUsageFixture {
 	var token, planID string
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		VALUES($1,$2,$3,4,'Principal',true,md5(random()::text||clock_timestamp()::text),true)
 		RETURNING qr_token
 	`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa uso %d", nonce)).Scan(&token); err != nil {
 		t.Fatal(err)

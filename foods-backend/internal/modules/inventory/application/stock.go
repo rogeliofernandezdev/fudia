@@ -403,7 +403,7 @@ func (a *Stock) CreateEntry(ctx context.Context, s scope, in domain.InventoryEnt
 	if err != nil {
 		return result, err
 	}
-	balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
+	balanceAfter := domain.RoundStockQuantity(current + stockQuantity)
 	if balanceAfter >= domain.MaxStockQuantity {
 		return result, stockLimitFailure()
 	}
@@ -505,8 +505,8 @@ func (a *Stock) CreateAdjustment(ctx context.Context, s scope, in domain.Invento
 	if in.MovementType == "exit" {
 		delta = -in.Quantity
 	}
-	stockAfter := math.Round((stockBefore+delta)*1000) / 1000
-	if stockAfter < -0.000001 {
+	stockAfter := domain.RoundStockQuantity(stockBefore + delta)
+	if stockAfter < 0 {
 		return result, stockFailure(apperror.Conflict, "insufficient_stock", "La salida supera el stock actual del artículo.")
 	}
 	if stockAfter < 0 {

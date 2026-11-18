@@ -1,2 +1,3 @@
-export type InventoryUnit={id:string;code:string;name:string;countable:boolean};
+import type {MeasurementUnit} from "@/shared/units/measurement-unit";
+export type InventoryUnit=MeasurementUnit&{id:string;countable:boolean};
 export type InventoryUnitDraft={code:string;name:string};

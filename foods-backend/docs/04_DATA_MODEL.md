@@ -380,6 +380,37 @@ de conversión. Una entrada de 5 cajas x 12 de un producto cuya unidad base es
 botella aumenta el saldo y el Kárdex en 60 botellas. El documento de entrada
 conserva la cantidad recibida, la presentación y el factor utilizados.
 
+### Unidades de consumo de recetas (migración 000134)
+
+La unidad base sigue perteneciendo al artículo de Inventario. Cada fila de receta
+puede guardar `consumption_unit`, `consumption_quantity` y `consumption_factor`;
+`quantity` conserva su equivalencia en unidad base para consumo, merma y costeo.
+Por ejemplo, 200 g de carne se guardan como 0.2 kg, y 0.5 g como 0.0005 kg. El
+editor conserva y muestra la cantidad/unidad elegidas, sin ceros de relleno.
+
+`inventory_measurement_units` es el catálogo de familias, factores decimales y
+sugerencias: Peso (kg en Inventario, g en Recetas), Volumen (l/ml) y Unidades.
+El catálogo por empresa incorpora esos metadatos solo para sus unidades reales.
+Unidades contables y personalizadas se usan consigo mismas: botella→unidad,
+kg→litro o envase→volumen no tienen equivalencia universal. Las presentaciones
+de compra siguen conservando su conversión particular por artículo.
+
+Menu normaliza mediante `inventory/contracts.RecipeUnitResolver`, compuesto en
+`cmd/api`, dentro de la transacción de guardado. Inventario valida empresa,
+artículo activo, unidad y familia; calcula con racionales decimales y rechaza
+cantidades no representables. Se conserva el factor como instantánea. El par
+`consumptionUnit`/`consumptionQuantity` del API es opcional para clientes anteriores;
+sin él, `quantity` sigue significando unidad base. La lectura conserva esos
+campos históricos y agrega los campos de consumo. Guardar no mueve existencias.
+
+Las cantidades base de recetas, saldos, movimientos y snapshots de ajustes
+admiten seis decimales (`numeric(17,6)`), conservando once cifras enteras. El
+consumo agrega necesidades antes de redondear; entradas, recepciones,
+devoluciones y transferencias conservan los restos de receta al actualizar
+saldos. Se mantiene la fórmula de merma existente y la precisión monetaria.
+La migración no convierte cantidades históricas; las recetas anteriores quedan
+en su unidad base. La reversión se rechaza si descartaría conversiones o precisión.
+
 `inventory_units` es el catálogo de unidades base por empresa. La migración 76
 copia `inventory_unit_templates` para empresas existentes y un trigger inicializa
 las nuevas; incluye Paquete y Bolsa. Conserva todos los códigos históricos y no
@@ -435,6 +466,14 @@ Las salidas siempre salen al promedio e ignoran `unitCost`.
 `minimumStock` es opcional en una entrada: solo cambia el mínimo configurado del
 local (y el del artículo al revincular un producto) cuando se envía. Un artículo
 nuevo sin ese campo queda con mínimo 0.
+
+El alta `POST /purchase-inventory-items` acepta `optimalStock` opcional junto al
+mínimo y guarda ambos en `inventory_location_settings` para el local activo,
+dentro de la misma transacción del artículo o vínculo. Comparte validación y
+persistencia con la edición de niveles de Inventario: unidades contables solo
+con enteros, niveles no negativos menores que 100000000000 y óptimo al menos
+igual al mínimo. Omitir el óptimo usa el mínimo; no se crean movimientos y el
+saldo inicial continúa en 0. No requiere migración.
 
 Cantidades, saldos y niveles se validan contra el rango de las columnas
 `numeric(14,3)` (menores que 100000000000) y los costos contra `numeric(14,4)`

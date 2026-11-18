@@ -28,7 +28,7 @@ func TestTableAccountPreparationAppendPaymentAndAutomaticRelease(t *testing.T) {
 	other.UserID = seed(`INSERT INTO users(organization_id,email,full_name,password_hash) VALUES($1,'other@flow.test','Otro mozo','test') RETURNING id`, s.OrganizationID)
 	otherLocal := s
 	otherLocal.LocationID = seed(`INSERT INTO locations(organization_id,name,code) VALUES($1,'Segundo','FLOW2') RETURNING id`, s.OrganizationID)
-	table := seed(`INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa Flujo',4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID)
+	table := seed(`INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa Flujo',4,'Principal',md5(random()::text||clock_timestamp()::text)) RETURNING id`, s.OrganizationID, s.LocationID)
 	products := map[string]string{}
 	for _, dest := range []string{"kitchen", "bar", "direct"} {
 		products[dest] = seed(`INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,$2,$2,10,'prepared','none',$2) RETURNING id`, s.OrganizationID, dest)

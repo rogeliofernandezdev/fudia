@@ -31,7 +31,7 @@ func TestConciergeDeliveryAndPickupOrders(t *testing.T) {
 	}
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,2,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		VALUES($1,$2,$3,2,'Principal',true,md5(random()::text||clock_timestamp()::text),true)
 		RETURNING qr_token
 	`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa Delivery %d", nonce)).Scan(&qrToken); err != nil {
 		t.Fatal(err)

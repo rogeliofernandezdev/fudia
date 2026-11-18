@@ -10,14 +10,15 @@ import (
 )
 
 type purchaseLedgerFake struct {
-	balance contracts.Balance
-	current, average float64
+	balance                      contracts.Balance
+	current, average             float64
 	updatedQuantity, updatedCost float64
-	movement contracts.Movement
-	writes int
-	seenContext context.Context
-	movementErr error
+	movement                     contracts.Movement
+	writes                       int
+	seenContext                  context.Context
+	movementErr                  error
 }
+
 func (f *purchaseLedgerFake) EnsureEntryBalance(ctx context.Context, _ scope, _ string) (int64, error) {
 	f.seenContext = ctx
 	return 1, nil
@@ -44,6 +45,23 @@ func (f *purchaseLedgerFake) SaveMovement(ctx context.Context, _ scope, m contra
 }
 func near(a, b float64) bool { return math.Abs(a-b) < 0.00001 }
 
+func TestPurchaseLedgerPreservesSubGramBalances(t *testing.T) {
+	f := &purchaseLedgerFake{current: 0.9995, average: 100}
+	if err := NewPurchaseLedger(f).ReceivePurchase(context.Background(), scope{}, contracts.PurchaseReceipt{ItemID: "item", ReceiptID: "receipt", Quantity: 1, UnitsPerPresentation: 1, UnitCost: 100}); err != nil {
+		t.Fatal(err)
+	}
+	if f.updatedQuantity != 1.9995 || f.movement.Balance != 1.9995 {
+		t.Fatalf("receipt rounded a recipe remainder: %#v", f)
+	}
+	f.balance = contracts.Balance{Quantity: 1.9995, AverageUnitCost: 100}
+	if err := NewPurchaseLedger(f).ReturnPurchase(context.Background(), scope{}, contracts.PurchaseReturn{ItemID: "item", ReturnID: "return", Kind: "supplier_return", Quantity: 1, UnitsPerPresentation: 1, UnitCost: 100}); err != nil {
+		t.Fatal(err)
+	}
+	if f.updatedQuantity != 0.9995 || f.movement.Balance != 0.9995 {
+		t.Fatalf("return rounded a recipe remainder: %#v", f)
+	}
+}
+
 func TestPurchaseLedgerOwnsWeightedAverageAndKardex(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "transaction", "active")
 	f := &purchaseLedgerFake{current: 10, average: 2}
@@ -52,12 +70,18 @@ func TestPurchaseLedgerOwnsWeightedAverageAndKardex(t *testing.T) {
 		ItemID: "item", Quantity: 5, UnitsPerPresentation: 10,
 		UnitCost: 30, ReceiptID: "receipt", Note: "recepcion",
 	})
-	if err != nil { t.Fatal(err) }
-	if f.seenContext != ctx { t.Fatal("caller transaction context not forwarded") }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.seenContext != ctx {
+		t.Fatal("caller transaction context not forwarded")
+	}
 	if !near(f.updatedQuantity, 60) || !near(f.updatedCost, 2.8333) {
 		t.Fatalf("wrong balance or weighted average: %v %v", f.updatedQuantity, f.updatedCost)
 	}
-	if f.writes != 2 { t.Fatalf("want balance + movement writes; got %d", f.writes) }
+	if f.writes != 2 {
+		t.Fatalf("want balance + movement writes; got %d", f.writes)
+	}
 	if f.movement.Type != "entry" || f.movement.SourceType != "purchase_receipt" ||
 		!near(f.movement.Delta, 50) || !near(f.movement.UnitCost, 3) ||
 		!near(f.movement.ValueDelta, 150) || !near(f.movement.BalanceValue, 169.998) {
@@ -74,7 +98,9 @@ func TestPurchaseReturnReversesReceiptCostAndRejectsShortage(t *testing.T) {
 		ItemID: "item", Quantity: 1, UnitsPerPresentation: 10, UnitCost: 40,
 		Kind: "receipt_correction", ReturnID: "return-1",
 	})
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !near(f.updatedQuantity, 10) || !near(f.updatedCost, 2) ||
 		!near(f.movement.Delta, -10) || !near(f.movement.UnitCost, 4) ||
 		!near(f.movement.ValueDelta, -40) || !near(f.movement.BalanceValue, 20) ||
@@ -98,14 +124,18 @@ func TestPurchaseReturnNeverLeavesNegativeValue(t *testing.T) {
 		ItemID: "item", Quantity: 2, UnitsPerPresentation: 1, UnitCost: 5,
 		Kind: "supplier_return", ReturnID: "return-1",
 	})
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !near(f.updatedQuantity, 2) || !near(f.updatedCost, 0) || !near(f.movement.BalanceValue, 0) || !near(f.movement.ValueDelta, -4) {
 		t.Fatalf("value must floor at zero: %#v, balance %f/%f", f.movement, f.updatedQuantity, f.updatedCost)
 	}
 	f = &purchaseLedgerFake{balance: contracts.Balance{Quantity: 2, AverageUnitCost: 1.5}}
 	if err = NewPurchaseLedger(f).ReturnPurchase(context.Background(), scope{}, contracts.PurchaseReturn{
 		ItemID: "item", Quantity: 2, UnitsPerPresentation: 1, UnitCost: 5, Kind: "supplier_return", ReturnID: "return-2",
-	}); err != nil { t.Fatal(err) }
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if !near(f.updatedQuantity, 0) || !near(f.updatedCost, 1.5) || !near(f.movement.BalanceValue, 0) {
 		t.Fatalf("empty balance keeps its last average: %#v, balance %f/%f", f.movement, f.updatedQuantity, f.updatedCost)
 	}
