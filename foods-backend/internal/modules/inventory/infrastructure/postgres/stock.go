@@ -42,6 +42,11 @@ func (r *Stock) UnitExists(ctx context.Context, s scope, code string) (bool, err
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM inventory_units WHERE organization_id=$1 AND code=$2)`, s.OrganizationID, code).Scan(&valid)
 	return valid, err
 }
+func (r *Stock) UnitName(ctx context.Context, s scope, code string) (string, error) {
+	var name string
+	err := r.db(ctx).QueryRow(ctx, `SELECT name FROM inventory_units WHERE organization_id=$1 AND code=$2`, s.OrganizationID, code).Scan(&name)
+	return name, err
+}
 func (r *Stock) PresentationRule(ctx context.Context, s scope, item, typeCode string) (domain.PresentationRule, error) {
 	var rule domain.PresentationRule
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(
@@ -417,7 +422,7 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
 		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
-		       c.name,p.quantity_control,ii.unit,COALESCE(sb.quantity,0)::text,
+		       c.name,p.quantity_control,ii.unit,COALESCE(u.name,ii.unit),COALESCE(sb.quantity,0)::text,
 		       COALESCE(ils.minimum_stock,ii.minimum_stock)::text,
 		       COALESCE(ils.reorder_point,COALESCE(ils.minimum_stock,ii.minimum_stock))::text,
 		       COALESCE(ils.optimal_stock,COALESCE(ils.reorder_point,COALESCE(ils.minimum_stock,ii.minimum_stock)))::text,
@@ -447,6 +452,8 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 		LEFT JOIN menu_categories c
 		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN inventory_units u
+		  ON u.organization_id=ii.organization_id AND u.code=ii.unit
 		LEFT JOIN stock_balances sb
 		  ON sb.organization_id=ii.organization_id
 		 AND sb.location_id=$2
@@ -480,7 +487,7 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 		var presentationsJSON []byte
 		if err := rows.Scan(
 			&item.ID, &item.ProductID, &item.SKU, &item.Name, &item.Kind, &item.CategoryName,
-			&item.QuantityControl, &item.Unit, &item.Quantity, &item.MinimumStock,
+			&item.QuantityControl, &item.Unit, &item.UnitName, &item.Quantity, &item.MinimumStock,
 			&item.ReorderPoint, &item.OptimalStock, &item.AverageUnitCost, &presentationsJSON, &total,
 		); err != nil {
 			return out, err

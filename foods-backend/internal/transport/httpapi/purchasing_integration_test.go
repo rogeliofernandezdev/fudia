@@ -92,6 +92,33 @@ func TestPurchaseReceiptSupportsPartialReceivingAndTracksOrder(t *testing.T) {
 		t.Fatalf("unexpected partial receipt result: %#v", firstResult)
 	}
 
+	detailReq := httptest.NewRequest("GET", "/v1/admin/purchase-orders/"+orderID, nil)
+	detailReq.SetPathValue("id", orderID)
+	detailReq = detailReq.WithContext(context.WithValue(detailReq.Context(), scopeKey{}, s))
+	detailRec := httptest.NewRecorder()
+	api.getPurchaseOrder(detailRec, detailReq)
+	if detailRec.Code != 200 {
+		t.Fatalf("expected order detail 200, got %d body=%s", detailRec.Code, detailRec.Body.String())
+	}
+	var detail struct {
+		Items []struct {
+			ID       string `json:"id"`
+			Unit     string `json:"unit"`
+			UnitName string `json:"unitName"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(detailRec.Body.Bytes(), &detail); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range detail.Items {
+		if item.ID != lineID {
+			continue
+		}
+		if item.Unit != "kg" || item.UnitName != "Kilogramo" {
+			t.Fatalf("order line must keep the unit code and expose its readable name: %#v", item)
+		}
+	}
+
 	var status string
 	var received, balance float64
 	if err := pool.QueryRow(ctx, `
@@ -214,6 +241,9 @@ func TestPurchaseItemCreationStartsAtZeroWithoutMovement(t *testing.T) {
 	}
 	if ingredient.ProductID != nil || ingredient.Kind != "ingredient" || ingredient.Quantity != "0" {
 		t.Fatalf("ingredient must remain non-vendible at stock zero: %#v", ingredient)
+	}
+	if ingredient.UnitName != "Kilogramo" {
+		t.Fatalf("created item must expose the readable unit name, got %q", ingredient.UnitName)
 	}
 	var balance, movements float64
 	if err := pool.QueryRow(ctx, `

@@ -37,6 +37,7 @@ export type PurchaseInventoryOption={
   categoryName:string|null;
   quantityControl:"inventory"|null;
   unit:string;
+  unitName?:string;
   quantity?:string;
   minimumStock:string;
   presentations:PurchasePresentation[];
@@ -70,6 +71,7 @@ export type PurchaseOrderItem={
   itemName:string;
   sku:string;
   unit:string;
+  unitName?:string;
   presentationId:string;
   presentationType:PresentationType;
   presentationName:string;

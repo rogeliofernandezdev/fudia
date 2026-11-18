@@ -41,6 +41,7 @@ type InventoryProductOption struct {
 	CategoryName    *string                       `json:"categoryName"`
 	QuantityControl *string                       `json:"quantityControl"`
 	Unit            string                        `json:"unit"`
+	UnitName        string                        `json:"unitName"`
 	Quantity        string                        `json:"quantity"`
 	MinimumStock    string                        `json:"minimumStock"`
 	ReorderPoint    string                        `json:"reorderPoint"`

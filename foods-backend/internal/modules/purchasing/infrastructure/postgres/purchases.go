@@ -315,6 +315,7 @@ func (r *Purchasing) Order(ctx context.Context, s scope, id string) (domain.Purc
 	}
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT poi.id,poi.inventory_item_id,COALESCE(p.name,ii.name),COALESCE(p.sku,ii.sku),ii.unit,
+		       COALESCE(u.name,ii.unit),
 		       poi.presentation_id,poi.presentation_type,poi.units_per_presentation::text,
 		       poi.quantity::text,poi.received_quantity::text,(poi.quantity-poi.received_quantity)::text,
 		       poi.stock_quantity::text,poi.unit_cost::text,poi.line_total::text,pt.name
@@ -322,6 +323,7 @@ func (r *Purchasing) Order(ctx context.Context, s scope, id string) (domain.Purc
 		JOIN inventory_presentation_types pt ON pt.organization_id=poi.organization_id AND pt.code=poi.presentation_type
 		JOIN inventory_items ii ON ii.id=poi.inventory_item_id AND ii.organization_id=poi.organization_id
 		LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		LEFT JOIN inventory_units u ON u.organization_id=ii.organization_id AND u.code=ii.unit
 		WHERE poi.purchase_order_id=$1 AND poi.organization_id=$2
 		ORDER BY poi.created_at,COALESCE(p.name,ii.name)`,
 		item.ID, s.OrganizationID)
@@ -333,7 +335,7 @@ func (r *Purchasing) Order(ctx context.Context, s scope, id string) (domain.Purc
 	for rows.Next() {
 		var line domain.PurchaseOrderItemView
 		if err := rows.Scan(
-			&line.ID, &line.InventoryItemID, &line.ItemName, &line.SKU, &line.Unit,
+			&line.ID, &line.InventoryItemID, &line.ItemName, &line.SKU, &line.Unit, &line.UnitName,
 			&line.PresentationID, &line.PresentationType, &line.UnitsPerPresentation,
 			&line.Quantity, &line.ReceivedQuantity, &line.PendingQuantity,
 			&line.StockQuantity, &line.UnitCost, &line.LineTotal, &line.PresentationName,

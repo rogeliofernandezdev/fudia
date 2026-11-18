@@ -143,8 +143,8 @@ export function PurchaseItemDialog({
             />:<>
               {existing.length>0&&<div className="purchase-result-list" aria-label="Artículos de inventario">
                 {existing.map(item=>{const stock=Number(item.quantity??0);return <button type="button" className="purchase-result" key={item.id} onClick={()=>choose(item)}>
-                  <span className="purchase-result-copy"><b>{item.name}</b><small>{item.kind==="ingredient"?"Insumo":"Se vende"} · {item.unit}</small></span>
-                  {stock>0?<span className="purchase-result-stock">{formatRegionalNumber(stock,location?.country,{maximumFractionDigits:3})} {item.unit}</span>:<Status tone="gray">Agotado</Status>}
+                  <span className="purchase-result-copy"><b>{item.name}</b><small>{item.kind==="ingredient"?"Insumo":"Se vende"} · {item.unitName??item.unit}</small></span>
+                  {stock>0?<span className="purchase-result-stock">{formatRegionalNumber(stock,location?.country,{maximumFractionDigits:3})} {item.unitName??item.unit}</span>:<Status tone="gray">Agotado</Status>}
                   <Icon name="chevron" size={16}/>
                 </button>})}
               </div>}

@@ -51,7 +51,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
           <div className="purchase-receipt-intro"><Icon name="truck" size={18}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
           <div className="purchase-receipt-lines">
             {order.items.map((item,index)=><article className="purchase-receipt-line" key={item.id}>
-              <div className="purchase-receipt-item"><b>{item.itemName}</b><small>{item.presentationType==="unit"?item.unit:(item.presentationName??item.presentationType)+" · "+item.unit}</small></div>
+              <div className="purchase-receipt-item"><b>{item.itemName}</b><small>{item.presentationType==="unit"?(item.unitName??item.unit):(item.presentationName??item.presentationType)+" · "+(item.unitName??item.unit)}</small></div>
               <div><small>Solicitado</small><b>{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>Recibido</small><b>{formatRegionalNumber(Number(item.receivedQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>Pendiente</small><b>{formatRegionalNumber(Number(item.pendingQuantity),location?.country,{maximumFractionDigits:3})}</b></div>

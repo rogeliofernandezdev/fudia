@@ -85,6 +85,9 @@ type StockRepository interface {
 	ItemExists(ctx context.Context, s scope, id string) (bool, error)
 	LocationSettings(ctx context.Context, s scope, id string, in domain.LocationSettings) (int64, error)
 	UnitExists(context.Context, scope, string) (bool, error)
+	// UnitName devuelve el nombre legible de una unidad de inventario
+	// registrada en la organización (p. ej. «litros» para el código «l»).
+	UnitName(context.Context, scope, string) (string, error)
 	// PresentationRule informa en una consulta si la presentación está configurada
 	// para la unidad base del artículo y si esa unidad es contable.
 	PresentationRule(context.Context, scope, string, string) (domain.PresentationRule, error)

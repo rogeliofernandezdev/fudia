@@ -65,6 +65,7 @@ type PurchaseOrderItemView struct {
 	ItemName             string `json:"itemName"`
 	SKU                  string `json:"sku"`
 	Unit                 string `json:"unit"`
+	UnitName             string `json:"unitName"`
 	PresentationID       string `json:"presentationId"`
 	PresentationType     string `json:"presentationType"`
 	PresentationName     string `json:"presentationName"`

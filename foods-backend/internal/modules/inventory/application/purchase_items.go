@@ -120,6 +120,10 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 	if minimumStock == "" {
 		minimumStock = "0"
 	}
+	unitName := created.Unit
+	if name, err := a.repo.UnitName(ctx, s, created.Unit); err == nil && name != "" {
+		unitName = name
+	}
 	return domain.InventoryProductOption{
 		ID:              created.InventoryItemID,
 		ProductID:       created.ProductID,
@@ -129,6 +133,7 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 		CategoryName:    nil,
 		QuantityControl: quantityControl,
 		Unit:            created.Unit,
+		UnitName:        unitName,
 		Quantity:        "0",
 		MinimumStock:    minimumStock,
 		Presentations:   presentationOptions,
