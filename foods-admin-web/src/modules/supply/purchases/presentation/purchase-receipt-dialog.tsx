@@ -8,13 +8,17 @@ import {purchaseReceiptResolver} from "../domain/purchase-schema";
 import {requiresWholeQuantity} from "../domain/purchase-totals";
 import type {PurchaseOrder,PurchaseReceiptDraft} from "../domain/types";
 
+// El API devuelve números DECIMAL como texto con escala fija («1.000»);
+// el campo «Recibir ahora» se prefiere sin ceros de relleno (1, 0.04).
+const trimDecimal=(value:string)=>{const n=Number(value);return value.trim()!==""&&Number.isFinite(n)?String(n):value};
+
 export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrder;busy:boolean;close:()=>void;save:(draft:PurchaseReceiptDraft)=>void}){
   const{location}=useSession();
   const defaults:PurchaseReceiptDraft={
     purchaseOrderId:order.id,
     idempotencyKey:crypto.randomUUID(),
     notes:"",
-    items:order.items.map(item=>({purchaseOrderItemId:item.id,quantity:item.pendingQuantity})),
+    items:order.items.map(item=>({purchaseOrderItemId:item.id,quantity:trimDecimal(item.pendingQuantity)})),
   };
   const{register,handleSubmit,setError,formState:{errors}}=useForm<PurchaseReceiptDraft>({
     defaultValues:defaults,
