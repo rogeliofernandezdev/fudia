@@ -21,6 +21,10 @@ import {
 } from "../infrastructure/recipes-api";
 
 const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",active:true,items:[]});
+// El API devuelve números DECIMAL como texto con escala fija («0.0000»);
+// al editar se muestran sin ceros de relleno (0, 0.04, 2) para que el campo
+// no parezca una cifra de precisión. El guardado vuelve a enviar el texto tal cual.
+const trimDecimal=(value:string)=>{const n=Number(value);return value.trim()!==""&&Number.isFinite(n)?String(n):value};
 // The async autocomplete (react-select + emotion) only lives inside the recipe modal:
 // load it on demand and keep the generic signature for typed options.
 const AsyncSelect=dynamic(()=>import("react-select/async"),{ssr:false,loading:()=><Skeleton height="var(--control-height)"/>}) as unknown as typeof import("react-select/async").default;
@@ -127,10 +131,10 @@ export function RecipesPage(){
    setIngredientOptions(Object.fromEntries(r.items.map(item=>[item.inventoryItemId,{value:item.inventoryItemId,label:item.name??"Insumo",unit:item.unit??""}])));
    setDraft({
     productId:r.productId,
-    yieldQuantity:r.yieldQuantity,
+    yieldQuantity:trimDecimal(r.yieldQuantity),
     notes:r.notes,
     active:r.active,
-    items:r.items.map(i=>({inventoryItemId:i.inventoryItemId,quantity:i.quantity,wastePercent:i.wastePercent})),
+    items:r.items.map(i=>({inventoryItemId:i.inventoryItemId,quantity:trimDecimal(i.quantity),wastePercent:trimDecimal(i.wastePercent)})),
    });
   }catch(e){
    notify({tone:"danger",title:"No se pudo cargar la receta",message:e instanceof Error?e.message:"Inténtalo nuevamente."});
