@@ -22,19 +22,24 @@
 .recipe-section-icon{width:var(--size-32);height:var(--size-32);color:var(--primary-600);background:var(--primary-100);border-radius:var(--radius-tile);place-items:center;flex:0 0 auto;display:grid}
 .recipe-ingredients-toolbar .button{height:var(--control-height);white-space:nowrap}
 .recipe-ingredients-grid{display:grid}
-.recipe-ingredients-head{min-height:var(--size-38);color:var(--surface);background:var(--primary-600);grid-template-columns:minmax(var(--size-260),1.5fr) minmax(var(--size-170),.7fr) minmax(var(--size-120),.5fr) var(--size-72);align-items:center;gap:0;display:grid}
+.recipe-ingredients-head{min-height:var(--size-38);color:var(--surface);background:var(--primary-600);grid-template-columns:minmax(var(--size-260),1.5fr) minmax(var(--size-220),.9fr) minmax(var(--size-120),.5fr) var(--size-72);align-items:center;gap:0;display:grid}
 .recipe-ingredients-head span{height:100%;border-left:var(--stroke-1) solid var(--primary-700);align-items:center;padding:0 var(--space-3);letter-spacing:var(--letter-spacing-caps);font-size:var(--font-size-label);font-weight:var(--weight-heavy);display:flex}
 .recipe-ingredients-head span:first-child{border-left:0}
 .recipe-ingredients-head span:last-child{justify-content:center;padding:0}
-.recipe-ingredient-row{min-height:var(--size-58);background:var(--surface);border-bottom:var(--stroke-1) solid var(--line);grid-template-columns:minmax(var(--size-260),1.5fr) minmax(var(--size-170),.7fr) minmax(var(--size-120),.5fr) var(--size-72);align-items:start;gap:0;padding:var(--space-2) 0;display:grid}
+.recipe-ingredient-row{min-height:var(--size-58);background:var(--surface);border-bottom:var(--stroke-1) solid var(--line);grid-template-columns:minmax(var(--size-260),1.5fr) minmax(var(--size-220),.9fr) minmax(var(--size-120),.5fr) var(--size-72);align-items:start;gap:0;padding:var(--space-2) 0;display:grid}
 .recipe-ingredient-row:nth-child(odd){background:var(--cloud-50)}
 .recipe-ingredient-row:last-child{border-bottom:0}
-.recipe-ingredient-row>label{min-width:0;padding:0 var(--space-3)}.recipe-ingredient-action{min-width:0;padding:0}
-.recipe-ingredient-row>label+label,.recipe-ingredient-action{border-left:var(--stroke-1) solid var(--line)}
-.recipe-ingredient-row>label{gap:var(--space-1);display:grid}
+.recipe-ingredient-stock{display:flex;align-items:center;gap:var(--space-1-5);flex-wrap:wrap}
+.recipe-ingredient-stock small{color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-snug)}
+.recipe-option-line{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
+.recipe-option-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recipe-ingredient-row>label,.recipe-ingredient-row>.recipe-ingredient-quantity,.recipe-ingredient-row>.recipe-ingredient-waste{min-width:0;padding:0 var(--space-3);gap:var(--space-1);display:grid}
+.recipe-ingredient-row>.recipe-ingredient-waste,.recipe-ingredient-quantity,.recipe-ingredient-action{border-left:var(--stroke-1) solid var(--line)}
 .recipe-ingredient-row .ds-input,.recipe-ingredient-row .ds-select{height:var(--control-height);min-height:var(--control-height)}
-.recipe-quantity-control{height:var(--control-height);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);grid-template-columns:minmax(0,1fr) auto;align-items:center;display:grid;overflow:hidden}.recipe-quantity-control:focus-within{border-color:var(--primary-600);box-shadow:var(--ring-focus-soft)}.recipe-quantity-control:has(.ds-input[aria-invalid=true]){border-color:var(--danger-600)}.recipe-quantity-control .ds-input{height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));border:0;border-radius:0;box-shadow:none;padding-right:var(--space-1-5)}.recipe-quantity-control .ds-input:focus{border:0!important;box-shadow:none!important}.recipe-quantity-control>small{height:100%;color:var(--ink-500);background:var(--cloud-50);border-left:var(--stroke-1) solid var(--line);align-items:center;padding:0 var(--space-2);font-size:var(--font-size-label);font-weight:var(--weight-bold);white-space:nowrap;display:flex}
-.recipe-ingredient-action{height:var(--control-height);place-items:center;display:grid}
+.recipe-quantity-control{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:var(--space-1-5)}
+.recipe-waste-label{display:none}
+.recipe-merma-help{display:inline-grid;place-items:center;flex-shrink:0;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-control)}
+.recipe-ingredient-action{min-width:0;padding:0;height:var(--control-height);place-items:center;display:grid}
 .recipe-ingredient-action .ds-icon-button{margin:0}
 .recipe-inline-state{min-height:var(--size-112);color:var(--ink-600);background:var(--cloud-50);place-content:center;grid-template-columns:auto minmax(0,auto) auto;align-items:center;justify-content:center;gap:var(--space-2-5);padding:var(--space-5);display:grid}
 .recipe-inline-state>span{display:grid;gap:var(--space-0-5)}
@@ -76,10 +81,13 @@
  .recipe-ingredient-row{min-height:0;background:var(--surface);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);grid-template-columns:1fr 1fr var(--control-height);gap:var(--space-2-5);padding:var(--space-3)}
  .recipe-ingredient-row:nth-child(odd){background:var(--surface)}
  .recipe-ingredient-row:last-child{border-bottom:var(--stroke-1) solid var(--line)}
- .recipe-ingredient-row>label,.recipe-ingredient-action{border:0;padding:0}
+ .recipe-ingredient-row>label,.recipe-ingredient-row>.recipe-ingredient-quantity,.recipe-ingredient-row>.recipe-ingredient-waste,.recipe-ingredient-action{border:0;padding:0}
  .recipe-ingredient-source{grid-column:1/-1}
- .recipe-ingredient-quantity,.recipe-ingredient-waste{grid-column:auto}
- .recipe-ingredient-action{grid-column:3;grid-row:2;align-self:end}
+ .recipe-ingredient-quantity{grid-column:1/-1}
+ .recipe-ingredient-waste{grid-column:1/3}
+ .recipe-ingredient-action{grid-column:3;grid-row:3;align-self:end}
+ .recipe-waste-label{display:flex;align-items:center;justify-content:space-between;color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+ .recipe-merma-help{width:var(--control-height);height:var(--control-height)}
  .recipe-ingredient-row [data-label]::before{content:attr(data-label);color:var(--ink-400);letter-spacing:var(--letter-spacing-caps);font-size:var(--font-size-label);font-weight:var(--weight-heavy)}
  .recipe-ingredient-action::before{display:none}
  .recipe-inline-state{grid-template-columns:auto 1fr;justify-content:stretch}

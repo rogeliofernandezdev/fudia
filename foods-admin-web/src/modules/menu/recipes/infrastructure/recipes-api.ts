@@ -1,15 +1,18 @@
 import {apiFetch} from "@/shared/api/client";
+import type {MeasurementUnit} from "@/shared/units/measurement-unit";
 
-export type RecipeIngredient={id?:string;inventoryItemId:string;name?:string;unit?:string;quantity:string;wastePercent:string};
+export type RecipeIngredient={id?:string;inventoryItemId:string;name?:string;unit?:string;quantity:string;wastePercent:string;consumptionUnit?:string;consumptionQuantity?:string;consumptionFactor?:string};
 export type Recipe={id:string;productId:string;productName:string;yieldQuantity:string;notes:string;active:boolean;updatedAt:string;items:RecipeIngredient[]};
 export type RecipeSummary={id:string;productId:string;productName:string;yieldQuantity:string;notes:string;active:boolean;updatedAt:string;itemCount:number};
-export type RecipeDraft={productId:string;yieldQuantity:string;notes:string;active:boolean;items:Array<{inventoryItemId:string;quantity:string;wastePercent:string}>};
+export type RecipeDraft={productId:string;yieldQuantity:string;notes:string;active:boolean;items:Array<{inventoryItemId:string;quantity:string;wastePercent:string;consumptionUnit?:string}>};
+
+export function listRecipeUnits(){return apiFetch<{items:MeasurementUnit[]}>("inventory/units")}
 
 export function listRecipes(q=""){return apiFetch<{items:RecipeSummary[];total:number}>(`recipes?q=${encodeURIComponent(q)}&page=1&pageSize=100`)}
 export function getRecipe(productId:string){return apiFetch<Recipe>(`recipes/${productId}`)}
 export function saveRecipe(draft:RecipeDraft){return apiFetch<{id:string;productId:string;productName:string}>(`recipes/${draft.productId}`,{method:"PUT",body:JSON.stringify({
  yieldQuantity:Number(draft.yieldQuantity),notes:draft.notes.trim(),active:draft.active,
- items:draft.items.map(i=>({inventoryItemId:i.inventoryItemId,quantity:Number(i.quantity),wastePercent:Number(i.wastePercent||0)})),
+ items:draft.items.map(i=>({inventoryItemId:i.inventoryItemId,...(i.consumptionUnit?{consumptionUnit:i.consumptionUnit,consumptionQuantity:Number(i.quantity)}:{quantity:Number(i.quantity)}),wastePercent:Number(i.wastePercent||0)})),
 })})}
 type RecipeProductLookup={items:Array<{id:string;name:string;quantityControl:string}>;total:number;page:number;pageSize:number};
 export async function listRecipeProducts(q=""){
@@ -23,7 +26,7 @@ export async function listRecipeProducts(q=""){
  ));
  return {...first,items:[...first.items,...rest.flatMap(page=>page.items)]};
 }
-type RecipeInventoryLookup={items:Array<{id:string;name:string;kind:string;unit:string;quantity:string}>;total:number;page:number;pageSize:number};
+type RecipeInventoryLookup={items:Array<{id:string;name:string;kind:string;unit:string;quantity:string;minimumStock:string}>;total:number;page:number;pageSize:number};
 export async function listRecipeInventory(q=""){
  const search=q.trim();
  if(!search)return apiFetch<RecipeInventoryLookup>("inventory/products?page=1&pageSize=10");

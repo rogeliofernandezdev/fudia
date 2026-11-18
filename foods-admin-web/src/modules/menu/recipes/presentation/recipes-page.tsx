@@ -7,7 +7,9 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Skeleton} from "@/design-system/skeleton";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,Select,PageHeader,RowActionButton,Status,Textarea,Tooltip,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
+import {compatibleMeasurementUnits,convertMeasurementQuantity,suggestedRecipeUnit} from "@/shared/units/measurement-unit";
+import {stockStatus} from "@/shared/stock-status";
 import {useFeedback,useSession} from "@/providers";
 import {isPermissionError,missingPermissionLabel} from "@/shared/api/client";
 import {
@@ -15,12 +17,14 @@ import {
  listRecipeInventory,
  listRecipeProducts,
  listRecipes,
+ listRecipeUnits,
  saveRecipe,
  type RecipeDraft,
  type RecipeSummary,
 } from "../infrastructure/recipes-api";
 
 const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",active:true,items:[]});
+const wasteHint="Porcentaje extra que se descuenta del inventario.";
 // El API devuelve números DECIMAL como texto con escala fija («0.0000»);
 // al editar se muestran sin ceros de relleno (0, 0.04, 2) para que el campo
 // no parezca una cifra de precisión. El guardado vuelve a enviar el texto tal cual.
@@ -29,7 +33,7 @@ const trimDecimal=(value:string)=>{const n=Number(value);return value.trim()!=="
 // load it on demand and keep the generic signature for typed options.
 const AsyncSelect=dynamic(()=>import("react-select/async"),{ssr:false,loading:()=><Skeleton height="var(--control-height)"/>}) as unknown as typeof import("react-select/async").default;
 
-type RecipeLookupOption={label:string;value:string;unit?:string};
+type RecipeLookupOption={label:string;value:string;unit?:string;stockQuantity?:string;minimumStock?:string};
 const recipeLookupSelectStyles=createLookupSelectStyles<RecipeLookupOption>({
  dropdownIndicator:base=>({...base,color:"var(--ink-500)",padding:"0 var(--space-2)","&:hover":{color:"var(--primary-700)"}}),
  clearIndicator:base=>({...base,color:"var(--ink-400)",padding:"0 var(--space-1-5)","&:hover":{color:"var(--danger-600)"}}),
@@ -47,13 +51,13 @@ async function loadRecipeIngredientOptions(q:string):Promise<RecipeLookupOption[
  const search=q.trim();
  if(search.length>0&&search.length<3)return [];
  const response=await listRecipeInventory(search);
- return response.items.map(item=>({value:item.id,label:item.name,unit:item.unit}));
+ return response.items.map(item=>({value:item.id,label:item.name,unit:item.unit,stockQuantity:item.quantity,minimumStock:item.minimumStock}));
 }
 
 export function RecipesPage(){
  const qc=useQueryClient();
  const{notify}=useFeedback();
- const{can}=useSession();
+ const{can,organization}=useSession();
  const[q,setQ]=useState("");
  const[draft,setDraft]=useState<RecipeDraft|null>(null);
  const[editingProductId,setEditingProductId]=useState("");
@@ -66,6 +70,8 @@ export function RecipesPage(){
 
  const recipes=useQuery({queryKey:["recipes",q],queryFn:()=>listRecipes(q)});
  const ingredientDefaults=useQuery({queryKey:["recipe-inventory-options","initial"],queryFn:()=>listRecipeInventory(""),enabled:Boolean(draft)});
+ const unitCatalog=useQuery({queryKey:["recipe-units",organization?.id],queryFn:listRecipeUnits,enabled:Boolean(draft),staleTime:30000});
+ const units=unitCatalog.data?.items??[];
  // Sin «Ver inventario» no se puede listar ni buscar insumos: se explica qué falta y no se ofrece reintentar.
  const ingredientsForbidden=isPermissionError(ingredientDefaults.error);
  // Los insumos salen de GET inventory/products, que solo exige «Ver inventario»: se nombra
@@ -96,7 +102,8 @@ export function RecipesPage(){
     active,
     items:recipe.items.map(item=>({
      inventoryItemId:item.inventoryItemId,
-     quantity:item.quantity,
+     quantity:item.consumptionQuantity??item.quantity,
+     consumptionUnit:item.consumptionUnit,
      wastePercent:item.wastePercent,
     })),
    });
@@ -134,7 +141,7 @@ export function RecipesPage(){
     yieldQuantity:trimDecimal(r.yieldQuantity),
     notes:r.notes,
     active:r.active,
-    items:r.items.map(i=>({inventoryItemId:i.inventoryItemId,quantity:trimDecimal(i.quantity),wastePercent:trimDecimal(i.wastePercent)})),
+    items:r.items.map(i=>({inventoryItemId:i.inventoryItemId,quantity:trimDecimal(i.consumptionQuantity??i.quantity),consumptionUnit:i.consumptionUnit??i.unit,wastePercent:trimDecimal(i.wastePercent)})),
    });
   }catch(e){
    notify({tone:"danger",title:"No se pudo cargar la receta",message:e instanceof Error?e.message:"Inténtalo nuevamente."});
@@ -160,14 +167,14 @@ export function RecipesPage(){
 
  function submit(event:React.FormEvent){
   event.preventDefault();
-  if(!draft)return;
+  if(!draft||unitCatalog.isLoading||unitCatalog.isError||!units.length)return;
   setAttempted(true);
   const ids=draft.items.map(item=>item.inventoryItemId).filter(Boolean);
   const duplicateIngredient=new Set(ids).size!==ids.length;
   const invalidItems=draft.items.some(item=>{
    const quantity=Number(item.quantity);
    const waste=Number(item.wastePercent||0);
-   return !item.inventoryItemId||!Number.isFinite(quantity)||quantity<=0||!Number.isFinite(waste)||waste<0||waste>=100;
+   return !item.inventoryItemId||!item.consumptionUnit||!compatibleMeasurementUnits(units,ingredientOptions[item.inventoryItemId]?.unit??"").some(unit=>unit.code===item.consumptionUnit)||!/^\d+(\.\d{1,6})?$/.test(item.quantity)||!Number.isFinite(quantity)||quantity<=0||!Number.isFinite(waste)||waste<0||waste>=100;
   });
   if(!draft.productId||!Number.isFinite(Number(draft.yieldQuantity))||Number(draft.yieldQuantity)<=0||!draft.items.length||invalidItems||duplicateIngredient){
    return;
@@ -197,7 +204,7 @@ export function RecipesPage(){
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
    <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
-    <ModalHeader title={<>{editingProductId?"Editar receta":"Configurar receta"} · {editingProductId?"Editar receta":"Nueva receta"}</>} titleId="recipe-modal-title" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
+    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar"/>
 
     <ModalForm className="recipe-form" onSubmit={submit} noValidate>
      <div className="recipe-form-body">
@@ -250,19 +257,25 @@ export function RecipesPage(){
         <Button type="button" kind="secondary" icon="plus" disabled={save.isPending||ingredientsForbidden||draft.items.some(item=>!item.inventoryItemId)} onClick={addIngredient}>Agregar insumo</Button>
        </header>
 
+       {unitCatalog.isLoading?<div className="recipe-inline-state" role="status" aria-label="Cargando unidades de consumo"><Skeleton height="var(--control-height)"/></div>:unitCatalog.isError?<ErrorState title="No pudimos cargar las unidades de consumo" text={unitCatalog.error.message} onRetry={isPermissionError(unitCatalog.error)?undefined:()=>void unitCatalog.refetch()}/>:!units.length?<EmptyState icon="stock" title="No hay unidades de consumo" text="Registra unidades de inventario para configurar la receta."/>:null}
        {ingredientsForbidden?<div className="recipe-inline-state error" role="alert"><Icon name="alert" size={18}/><span><b>{`Falta el permiso «${ingredientsPermission}»`}</b><small>Tu rol no puede ver los insumos. Pide a un administrador que lo agregue a tu rol en Usuarios y roles.</small></span></div>
        :ingredientDefaults.isError&&draft.items.length===0?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga o busca un insumo cuando agregues una fila.</small></span><Button kind="secondary" icon="refresh" onClick={()=>ingredientDefaults.refetch()}>Reintentar</Button></div>
        :draft.items.length===0?<div className={attempted?"recipe-inline-state warning":"recipe-inline-state"}><Icon name="stock" size={20}/><span><b>Agrega al menos un insumo</b><small>La receta necesita un insumo con cantidad válida para poder guardarse.</small></span></div>
        :<div className="recipe-ingredients-grid">
-        <div className="recipe-ingredients-head" aria-hidden="true"><span>Insumo</span><span>Cantidad</span><span>Merma %</span><span>Acción</span></div>
+        <div className="recipe-ingredients-head"><span>Insumo</span><span>Cantidad y unidad</span><span>Merma %<Tooltip label="Ayuda sobre la merma" content={wasteHint} className="recipe-merma-help"><Icon name="info" size={16}/></Tooltip></span><span>Acción</span></div>
         {draft.items.map((item,index)=>{
          const selected=ingredientOptions[item.inventoryItemId]??null;
+         const consumptionUnits=compatibleMeasurementUnits(units,selected?.unit??"");
+         const baseUnit=units.find(unit=>unit.code===selected?.unit);
+         const consumptionUnit=units.find(unit=>unit.code===item.consumptionUnit);
+         const equivalent=convertMeasurementQuantity(item.quantity,consumptionUnit,baseUnit);
          const usedIds=new Set(draft.items.map(source=>source.inventoryItemId).filter(id=>id&&id!==item.inventoryItemId));
          const defaultOptions=(ingredientDefaults.data?.items??[])
           .filter(source=>!usedIds.has(source.id))
-          .map(source=>({value:source.id,label:source.name,unit:source.unit}));
+          .map(source=>({value:source.id,label:source.name,unit:source.unit,stockQuantity:source.quantity,minimumStock:source.minimumStock}));
          const ingredientInvalid=attempted&&!item.inventoryItemId;
-         const quantityInvalid=attempted&&Number(item.quantity)<=0;
+         const quantityInvalid=attempted&&(!/^\d+(\.\d{1,6})?$/.test(item.quantity)||Number(item.quantity)<=0);
+         const unitInvalid=attempted&&!consumptionUnits.some(unit=>unit.code===item.consumptionUnit);
          const waste=Number(item.wastePercent||0);
          const wasteInvalid=attempted&&(waste<0||waste>=100||!Number.isFinite(waste));
          return <div className="recipe-ingredient-row" key={index}>
@@ -281,9 +294,12 @@ export function RecipesPage(){
             placeholder="Buscar insumo..."
             loadingMessage={()=>"Buscando insumos..."}
             noOptionsMessage={({inputValue})=>inputValue.trim().length>0&&inputValue.trim().length<3?"Escribe al menos 3 caracteres":inputValue.trim()?"No hay coincidencias":"No hay insumos disponibles"}
+            formatOptionLabel={(option,meta)=>meta.context==="menu"&&option.stockQuantity!==undefined
+             ?(()=>{const status=stockStatus(Number(option.stockQuantity),Number(option.minimumStock||0));return <span className="recipe-option-line"><span className="recipe-option-name">{option.label}</span><Status tone={status.tone}>{status.label}</Status></span>})()
+             :option.label}
             onChange={option=>{
              if(option)setIngredientOptions(current=>({...current,[option.value]:option}));
-             setDraft({...draft,items:draft.items.map((source,i)=>i===index?{...source,inventoryItemId:option?.value??""}:source)});
+             setDraft({...draft,items:draft.items.map((source,i)=>i===index?{...source,inventoryItemId:option?.value??"",consumptionUnit:option?suggestedRecipeUnit(units,option.unit??""):""}:source)});
             }}
             styles={recipeLookupSelectStyles}
             className={`react-select-container recipe-ingredient-autocomplete${ingredientInvalid?" invalid":""}`}
@@ -292,15 +308,30 @@ export function RecipesPage(){
             menuPosition="fixed"
            />
            {ingredientInvalid&&<small className="field-error">Selecciona un insumo.</small>}
+           {selected&&(()=>{const status=stockStatus(Number(selected.stockQuantity||0),Number(selected.minimumStock||0));return <div className="recipe-ingredient-stock" data-status={status.key}>
+            <Status tone={status.tone}>{status.label}</Status>
+            {status.key!=="ok"&&<small>{status.hint}</small>}
+           </div>})()}
           </label>
-          <label className="recipe-ingredient-quantity" data-label="CANTIDAD">
-           <div className="recipe-quantity-control"><Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.001" step="0.001" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>{selected?.unit&&<small>{selected.unit}</small>}</div>
-           {quantityInvalid&&<small className="field-error">Mayor que 0.</small>}
-          </label>
-          <label className="recipe-ingredient-waste" data-label="MERMA %">
-           <Input aria-label={`Merma del insumo ${index+1}`} type="number" min="0" max="99.9999" step="0.01" inputMode="decimal" disabled={save.isPending} aria-invalid={wasteInvalid} value={item.wastePercent} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,wastePercent:e.target.value}:x)})}/>
+          <div className="recipe-ingredient-quantity" data-label="CANTIDAD Y UNIDAD">
+           <div className="recipe-quantity-control">
+            <Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.000001" step="any" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>
+            <Select aria-label={`Unidad de consumo del insumo ${index+1}`} value={item.consumptionUnit??""} disabled={save.isPending||unitCatalog.isLoading||unitCatalog.isError||!selected||!consumptionUnits.length} aria-invalid={unitInvalid} onChange={event=>{
+             const nextUnit=units.find(unit=>unit.code===event.target.value);
+             const quantity=convertMeasurementQuantity(item.quantity,consumptionUnit,nextUnit);
+             if(item.quantity.trim()!==""&&!quantity)return;
+             setDraft({...draft,items:draft.items.map((source,i)=>i===index?{...source,consumptionUnit:event.target.value,quantity:quantity||source.quantity}:source)});
+            }}><option value="">Unidad</option>{consumptionUnits.map(unit=><option key={unit.code} value={unit.code}>{unit.name}</option>)}</Select>
+           </div>
+           {equivalent&&item.consumptionUnit!==selected?.unit&&<small className="field-help">Equivale a {equivalent} {selected?.unit} de inventario.</small>}
+           {quantityInvalid&&<small className="field-error">Ingresa una cantidad mayor que 0, con hasta seis decimales.</small>}
+           {unitInvalid&&<small className="field-error">Elige una unidad compatible con el insumo.</small>}
+          </div>
+          <div className="recipe-ingredient-waste">
+           <span className="recipe-waste-label">Merma %<Tooltip label={`Ayuda sobre la merma del insumo ${index+1}`} content={wasteHint} className="recipe-merma-help"><Icon name="info" size={16}/></Tooltip></span>
+           <Input aria-label={`Merma del insumo ${index+1}`} aria-description={wasteHint} type="number" min="0" max="99.9999" step="0.01" inputMode="decimal" disabled={save.isPending} aria-invalid={wasteInvalid} value={item.wastePercent} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,wastePercent:e.target.value}:x)})}/>
            {wasteInvalid&&<small className="field-error">Entre 0 y 99.99.</small>}
-          </label>
+          </div>
           <div className="recipe-ingredient-action" data-label="ACCIÓN"><RowActionButton action="remove" label={`Quitar ${selected?.label??"insumo"}`} disabled={save.isPending} onClick={()=>setDraft({...draft,items:draft.items.filter((_,i)=>i!==index)})}/></div>
          </div>;
         })}
@@ -310,7 +341,7 @@ export function RecipesPage(){
 
      <ModalFooter className="recipe-form-footer">
       <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
-      <Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
+      <Button type="submit" icon="check" disabled={save.isPending||unitCatalog.isLoading||unitCatalog.isError||!units.length} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
      </ModalFooter>
     </ModalForm>
    </Dialog>
