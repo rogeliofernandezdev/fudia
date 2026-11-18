@@ -8,7 +8,7 @@ import postcss from "postcss";
 
 const require=createRequire(import.meta.url);
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
-const routes={pos:"/pos",orders:"/orders",diningRoom:"/dining-room"};
+const routes={pos:"/pos",orders:"/orders",diningRoom:"/dining-room",cash:"/cash"};
 function compile(path){
  const exports={};
  vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,require:name=>name==="@/shared/routing/page-routes"?{pageRoutes:routes}:require(name)});
@@ -23,6 +23,8 @@ test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de prefer
  assert.deepEqual([...rules.noticeTargets({kind:"delivery_order"})],[routes.orders,routes.pos]);
  assert.deepEqual([...rules.noticeTargets({kind:"bill_requested"})],[routes.pos,routes.diningRoom]);
  assert.deepEqual([...rules.noticeTargets({kind:"stale_account"})],[routes.diningRoom,routes.pos]);
+ assert.deepEqual([...rules.noticeTargets({kind:"pay_detected"})],[routes.cash]);
+ assert.equal(rules.noticeHref(routes.cash,{kind:"pay_detected"}),"/cash?tab=pagos");
  // Listo en mesa: el mozo entrega en Salón; sin mesa (mostrador, recojo, delivery) se ve en Pedidos.
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready",tableId:"t1"})],[routes.diningRoom,routes.orders]);
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready"})],[routes.orders,routes.pos]);
@@ -54,7 +56,7 @@ test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
  const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
  assert.match(bell,/tone=\{item\.read\?"neutral":noticeTone\(item\.kind\)\}/,"leído neutro, sin leer con su tono");
  assert.match(bell,/createPortal\(<section key=\{toast\.notice\.id\} className="notification-toast"/,"el aviso emergente sale de la barra superior");
- assert.match(bell,/if\(!openRef\.current\)\{/,"no emerge con la campana abierta");
+ assert.match(bell,/if\(!openRef\.current&&popup\.length\)\{/,"no emerge con la campana abierta ni duplica los avisos propios de pagos");
  assert.match(bell,/className="notification-toast-main" onClick=\{\(\)=>choose\(toast\.notice\)\}/,"tocar el aviso abre el detalle como en la lista");
  assert.doesNotMatch(bell,/>Ver<\/Button>/,"sin botón «Ver» redundante");
  assert.match(bell,/navigator\.userActivation\?\.hasBeenActive\)navigator\.vibrate\?\./,"vibra solo tras interacción, sin sonido");

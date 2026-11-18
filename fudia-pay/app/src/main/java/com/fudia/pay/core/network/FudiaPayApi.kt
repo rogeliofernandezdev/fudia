@@ -36,6 +36,7 @@ data class PaymentEvent(
     /** Fecha ISO 8601 en UTC — el contrato OpenAPI la define como
      *  `string, format date-time`; el epoch en milisegundos es interno. */
     val occurredAt: String,
+    val operationNumber: String? = null,
 )
 
 @Serializable

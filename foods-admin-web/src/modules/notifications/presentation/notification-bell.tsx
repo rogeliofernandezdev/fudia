@@ -9,7 +9,7 @@ import {freshNotices,noticeAge,noticeHref,noticeTargets,noticeTone,unreadLabel} 
 import type {NoticeKind,StaffNotice} from "../domain/types";
 
 /** Icono de cada aviso: el mismo dominio que la pantalla donde se atiende. */
-const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock",delivery_unassigned:"motorbike",delivery_pickup_delayed:"clock"};
+const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock",delivery_unassigned:"motorbike",delivery_pickup_delayed:"clock",pay_detected:"wallet"};
 /** El aviso emergente se retira solo; se pausa mientras el usuario lo señala o enfoca, o con la pestaña oculta. */
 const toastDuration=8000;
 /** Salida más rápida que la entrada (`--duration-fast`): el sistema responde, no hace esperar. */
@@ -47,8 +47,10 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
    const fresh=freshNotices(items,seen.current);
    if(fresh.length){
     setAnnouncement(`Nuevo aviso: ${fresh[0].title}`);
-    if(!openRef.current){
-     setToast({notice:fresh[0],more:fresh.length-1});setToastHovered(false);setToastLeaving(false);
+    // Los pagos tienen su aviso con logo y acceso al detalle en PayNoticeLayer.
+    const popup=fresh.filter(item=>item.kind!=="pay_detected");
+    if(!openRef.current&&popup.length){
+     setToast({notice:popup[0],more:popup.length-1});setToastHovered(false);setToastLeaving(false);
      if(typeof navigator!=="undefined"&&navigator.userActivation?.hasBeenActive)navigator.vibrate?.([120,60,120]);
     }
    }
@@ -108,7 +110,7 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
    </header>
    {feed.isLoading?<div className="notification-loading" role="status" aria-label="Cargando avisos">{Array.from({length:3},(_,index)=><div key={index}><Skeleton width="var(--size-40)" height="var(--size-40)" radius="var(--radius-tile)"/><span><Skeleton width="70%"/><Skeleton width="45%"/></span></div>)}</div>
    :feed.isError&&!feed.data?<ErrorState className="notification-state" title="No pudimos cargar los avisos" text={feed.error.message} onRetry={()=>void feed.refetch()} retrying={feed.isFetching}/>
-   :!items.length?<EmptyState className="notification-state" icon="bell" title="Sin avisos" text="Aquí verás los pedidos, cuentas y llamados de las últimas 24 horas."/>
+   :!items.length?<EmptyState className="notification-state" icon="bell" title="Sin avisos" text="Aquí verás los pedidos, pagos, cuentas y llamados de las últimas 24 horas."/>
    :<ul className="notification-list">{items.map(item=><li key={item.id}><button type="button" className="notification-item" data-read={item.read} onClick={()=>choose(item)}>
      <IconTile name={noticeIcons[item.kind]??"bell"} tone={item.read?"neutral":noticeTone(item.kind)} size="lg"/>
      <span className="notification-item-copy"><b>{item.title}</b>{item.detail&&<small>{item.detail}</small>}<time dateTime={item.createdAt}>{noticeAge(item.createdAt)}</time></span>

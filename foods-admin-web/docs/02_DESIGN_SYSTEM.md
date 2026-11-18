@@ -3436,6 +3436,22 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Pagos detectados de Yape y Plin en Caja (2026-11-15)
 
+Los avisos nuevos de pago tienen X y se ocultan a los 8 segundos. El tiempo se
+pausa al señalar o enfocar la tarjeta, o con la pestaña oculta. Cerrar o agotar
+el tiempo no marca el pago como descartado ni cobra nada; la consulta sigue en
+Caja y la campana. La carga inicial del historial no dispara avisos flotantes.
+La campana admite `pay_detected` y abre directamente «Pagos detectados» de
+Caja (`/cash?tab=pagos`), sin un segundo aviso emergente del mismo pago.
+El teléfono se conserva como dato de trazabilidad dentro de «Origen del aviso»,
+plegado por defecto, y se retira de la tabla y del aviso emergente.
+
+El número de operación bancario se muestra en el detalle (o «No informado» si
+el proveedor no lo incluyó) y debajo del remitente en la tabla cuando existe.
+Nunca sustituirlo por la clave técnica del evento. El selector «Medio de pago»
+se autoselecciona por el código estable del proveedor y permanece deshabilitado;
+no ofrece otros medios. Si Yape o Plin no están disponibles para ventas en el
+catálogo remoto, se explica cómo activarlos y no se permite confirmar el cobro.
+
 Refinamiento aprobado por solicitud del usuario (2026-11-18): los proveedores
 usan sus logos originales de los sitios oficiales, alojados en `public/brands`,
 sin filtros ni recoloreado. Sustituyen los monogramas Y/P y se muestran solos,

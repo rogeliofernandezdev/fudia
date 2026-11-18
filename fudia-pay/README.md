@@ -98,6 +98,14 @@ códigos HTTP.
 
 ## Contrato con el backend
 
+El parser recoge el número de operación cuando la notificación incluye una
+referencia explícita («Número de operación», «N° de operación», «Operación» o
+«Código de operación»). También lee el texto expandido; no usa la clave de
+Android, el importe ni códigos de seguridad como sustitutos. Si no existe una
+referencia inequívoca, reporta el pago sin número y Caja muestra «No informado».
+La cola Room versión 2 conserva los eventos pendientes mediante migración.
+Requiere desplegar primero la migración 000135 y la API con `operationNumber`.
+
 `foods-backend/api/openapi.yaml` › *Fudia Pay*. El dispositivo se autentica con
 su credencial revocable; el backend resuelve empresa y local; la plataforma del
 dispositivo se declara como `ANDROID` o `IOS` (solo Android en esta etapa).

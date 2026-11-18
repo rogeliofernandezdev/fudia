@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Modal,ModalBody,ModalFooter,SearchField,Select,Skeleton,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormDisclosure,Modal,ModalBody,ModalFooter,SearchField,Select,Skeleton,Status} from "@/design-system";
 import {DetailFacts,DetailHero} from "@/design-system/detail-view";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -28,16 +28,17 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
   const money=useMoney();
   const {location}=useSession();
   const {open}=usePayCollection();
-  const [method,setMethod]=useState("");
   const [view,setView]=useState<"suggestion"|"orders"|"detail">(open?"suggestion":"orders");
   const [q,setQ]=useState("");
   const [selected,setSelected]=useState<PayOrderRef|null>(null);
+  const [sourceOpen,setSourceOpen]=useState(false);
   const canAssociate=notification.status==="detected";
   const dateTime=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
 
   const methods=useQuery({queryKey:["pay-sales-methods"],queryFn:paySalesMethods,enabled:canAssociate});
-  // El catálogo sigue siendo remoto; la preselección corresponde al proveedor recibido.
-  const effectiveMethod=method||(methods.data?.items.find(item=>`${item.code} ${item.name}`.toLowerCase().includes(notification.provider))?.code??"");
+  // El código estable del catálogo identifica al proveedor, aunque se renombre.
+  const detectedMethod=methods.data?.items.find(item=>item.code===notification.provider);
+  const effectiveMethod=detectedMethod?.code??"";
   const pending=useQuery({
     queryKey:["pay-pending-orders",notification.id,q],
     queryFn:()=>searchPayOrders(q),
@@ -80,8 +81,8 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
       <dl className="pay-detail-amount"><dt>Monto recibido</dt><dd>{money(notification.amount)}</dd></dl>
       <DetailFacts label="Datos del pago" items={[
         {label:"Remitente",value:notification.senderName||"Sin remitente",wide:true},
+        {label:"Número de operación",value:notification.operationNumber||"No informado",wide:true},
         {label:"Fecha y hora",value:<time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time>},
-        {label:"Dispositivo",value:notification.deviceName},
       ]}/>
 
       {canAssociate?<section aria-label="Asociar pago a pedido" className="pay-associate">
@@ -91,11 +92,10 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
         </div>
         {methods.isLoading?<div role="status" aria-label="Cargando medios de pago"><Skeleton height="var(--control-height)"/></div>
         :methods.isError?<ErrorState className="pay-detail-state" title="No pudimos cargar los medios de pago" text={methods.error.message} onRetry={()=>void methods.refetch()}/>
-        :!methods.data?.items.length?<EmptyState className="pay-detail-state" icon="wallet" title="No hay medios de pago disponibles" text="Activa un medio de pago para ventas en Configuración."/>
+        :!detectedMethod?<EmptyState className="pay-detail-state" icon="wallet" title={`${payProviderLabel[notification.provider]} no está disponible para ventas`} text={`Activa ${payProviderLabel[notification.provider]} en Configuración para asociar este pago.`}/>
         :<label className="pay-detail-field">Medio de pago
-          <Select value={effectiveMethod} onChange={event=>setMethod(event.target.value)}>
-            <option value="">Elegir medio de pago</option>
-            {methods.data.items.map(item=><option key={item.code} value={item.code}>{item.name}</option>)}
+          <Select value={effectiveMethod} disabled>
+            <option value={detectedMethod.code}>{detectedMethod.name}</option>
           </Select>
         </label>}
 
@@ -136,6 +136,9 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
           </>}
         </div>}
       </section>:<p className="pay-detail-footer-note">{notification.status==="dismissed"?"Este pago fue descartado y se conserva en el historial.":"Este pago ya fue asociado a un pedido."}</p>}
+      <FormDisclosure title="Origen del aviso" summary="" open={sourceOpen} onToggle={()=>setSourceOpen(value=>!value)}>
+        <DetailFacts label="Origen del aviso" items={[{label:"Teléfono de origen",value:notification.deviceName}]}/>
+      </FormDisclosure>
     </ModalBody>
     {canAssociate&&view==="detail"&&<ModalFooter>
       <div className="modal-action-layout">

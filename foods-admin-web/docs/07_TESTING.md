@@ -2,6 +2,20 @@
 
 ## Pagos detectados
 
+`?notices` habilita la campana y la capa global en la muestra. Después de cargar
+el historial vacío, `await window.payFixture.receive('yape')` simula un pago
+nuevo (también admite `plin`). Verificar una sola tarjeta, X de 44 px,
+desaparición a los 8 segundos, pausas con hover/foco/pestaña oculta y que
+`window.payFixture.refresh()` no vuelva a mostrar un aviso ya cerrado.
+Cerrar la tarjeta no modifica el pago ni marca el aviso de la campana como
+leído. Abrirlo desde la campana navega a `/cash?tab=pagos`.
+
+Comprobar `?case=missing-operation` («No informado»), `wrong-method` (un medio
+con nombre Yape pero código `cash` nunca se selecciona) y `renamed-method`
+(el código estable sigue seleccionando Yape aunque cambie el nombre).
+El selector está siempre bloqueado y solo contiene el proveedor detectado.
+El número `0012345678` de la muestra conserva sus ceros iniciales.
+
 Después de compilar, `node tests/helpers/pay-notifications-preview.mjs` sirve
 los componentes reales con datos ficticios en `http://127.0.0.1:5198`, sin sesión
 ni escrituras al backend. `?table` muestra la tabla; `?provider=plin` cambia el

@@ -3,6 +3,7 @@ import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
 import {useState} from "react";
+import {useRouter} from "next/navigation";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,IconTile,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader} from "@/design-system";
 import {PayNotificationsPanel} from "@/modules/payment-devices";
@@ -10,6 +11,7 @@ import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
+import {pageRoutes} from "@/shared/routing/page-routes";
 import {canCloseCashShift} from "../domain/shift-ownership";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
 import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
@@ -27,7 +29,8 @@ function recordedAmount(value:string|null|undefined){
   return Number.isFinite(amount)?amount:null;
 }
 
-export function CashPage(){
+export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
+  const router=useRouter();
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{can,location,user,organization}=useSession();
@@ -35,7 +38,7 @@ export function CashPage(){
   const money=useMoney();
   const canManage=can("cash.manage");
   const canManageRegisters=can("cash.registers.manage");
-  const[tab,setTab]=useState<CashTab>("registers");
+  const[tab,setTab]=useState<CashTab>(initialTab);
   const[q,setQ]=useState("");
   const[status,setStatus]=useState("");
   const[page,setPage]=useState(1);
@@ -209,6 +212,7 @@ export function CashPage(){
 
   function changeTab(next:CashTab){
     setTab(next);
+    router.replace(`${pageRoutes.cash}?tab=${next}`,{scroll:false});
     setQ("");
     setStatus("");
     setPage(1);

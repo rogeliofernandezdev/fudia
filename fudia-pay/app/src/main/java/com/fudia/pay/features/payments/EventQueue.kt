@@ -8,6 +8,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /** Cola local persistente: la notificación sobrevive al reinicio del
@@ -22,6 +24,7 @@ data class PendingEvent(
     val occurredAtMillis: Long,
     val attempts: Int = 0,
     val createdAtMillis: Long,
+    val operationNumber: String? = null,
 )
 
 @Dao
@@ -45,7 +48,14 @@ interface PendingEventDao {
     fun countFlow(): Flow<Int>
 }
 
-@Database(entities = [PendingEvent::class], version = 1, exportSchema = false)
+/** Conserva los eventos pendientes al actualizar la app. */
+val PAY_MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE pending_events ADD COLUMN operationNumber TEXT")
+    }
+}
+
+@Database(entities = [PendingEvent::class], version = 2, exportSchema = false)
 abstract class PayDatabase : RoomDatabase() {
     abstract fun pendingEventDao(): PendingEventDao
 }

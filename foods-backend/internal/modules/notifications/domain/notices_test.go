@@ -45,6 +45,15 @@ func TestNormalizeRejectsUnknownAndClipsText(t *testing.T) {
 	}
 }
 
+func TestPaymentDetectedIsAcceptedForCashierBell(t *testing.T) {
+	for _, provider := range []string{"Yape", "Plin"} {
+		notice, ok := Normalize(PaymentDetected(provider, "S/", "10.50", "Rosa Quispe", "stable-event-key"))
+		if !ok || notice.Kind != KindPayDetected || notice.Audience != AudienceCashier || notice.Detail != "S/ 10.50 · Rosa Quispe" {
+			t.Fatalf("payment notice discarded or altered: %+v, accepted=%v", notice, ok)
+		}
+	}
+}
+
 func TestBuildersWriteStaffText(t *testing.T) {
 	table := TableOrder("t1", "Mesa 4", "o1", "Ana", 3, "r1")
 	if table.Audience != AudienceService || table.Title != "Mesa 4 · nuevo pedido" || table.Detail != "3 productos · Ana" || table.DedupeKey != "order:o1:r1" {

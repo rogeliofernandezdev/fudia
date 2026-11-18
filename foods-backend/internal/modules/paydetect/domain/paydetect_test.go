@@ -54,6 +54,24 @@ func TestNormalizeEventAcotaElRemitente(t *testing.T) {
 	}
 }
 
+func TestNormalizeEventOperationNumber(t *testing.T) {
+	for _, value := range []string{"", "0012345678", "IBK-001234", strings.Repeat("1", OperationNumberMax)} {
+		event := validEvent()
+		event.OperationNumber = " " + value + " "
+		clean, err := NormalizeEvent(event)
+		if err != nil || clean.OperationNumber != value || clean.EventKey != event.EventKey {
+			t.Fatalf("operation %q: %+v, %v", value, clean, err)
+		}
+	}
+	for _, value := range []string{"123 456", "123\n456", strings.Repeat("1", OperationNumberMax+1), "<123>"} {
+		event := validEvent()
+		event.OperationNumber = value
+		if _, err := NormalizeEvent(event); err == nil {
+			t.Fatalf("invalid operation accepted: %q", value)
+		}
+	}
+}
+
 func TestPairingCodeSoloVigenteYSinUsar(t *testing.T) {
 	now := time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC)
 	fresh := PairingCode{ExpiresAt: now.Add(PairingCodeMinutes * time.Minute)}

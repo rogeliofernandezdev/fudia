@@ -33,6 +33,7 @@ data class DetectedPayment(
     val senderName: String,
     val amount: Double,
     val occurredAtMillis: Long,
+    val operationNumber: String? = null,
 )
 
 /**
@@ -48,25 +49,39 @@ object NotificationParser {
      *  el monto con otro número del mensaje. */
     private val currencyAmount = Regex("""S/\.?\s*(\d{1,6}(?:[.,]\d{1,2})?)""")
     private val plainAmount = Regex("""(\d{1,6}(?:[.,]\d{2}))""")
+    // Solo referencias explícitas del proveedor; nunca la clave de Android,
+    // el monto, la hora ni códigos de seguridad sin etiqueta de operación.
+    private val operationReference = Regex(
+        """(?i)\b(?:(?:n(?:[úu]mero|ro\.?|[.º°o]{1,3})|c[óo]digo)\s+(?:de\s+)?)?operaci[óo]n\s*[:#-]?\s*([a-z0-9][a-z0-9-]{3,63})\b""",
+    )
+
+    private fun operationNumberOf(content: String): String? = operationReference.findAll(content)
+        .map { it.groupValues[1] }.filter { value -> value.any { it.isDigit() } }
+        .distinct().toList().singleOrNull()
 
     private fun amountOf(content: String): Double? =
         (currencyAmount.find(content) ?: plainAmount.find(content))
             ?.groupValues?.get(1)?.replace(",", ".")?.toDoubleOrNull()
 
-    fun parse(provider: String, packageName: String, title: String?, text: String?, whenMillis: Long, key: String): DetectedPayment? {
-        val content = listOfNotNull(title, text).joinToString(" ").trim()
+    fun parse(provider: String, packageName: String, title: String?, text: String?, whenMillis: Long, key: String, expandedText: String? = null): DetectedPayment? {
+        // La identidad conserva el resumen original aunque se lea el texto expandido.
+        val sourceText = text?.takeIf { it.isNotBlank() } ?: expandedText
+        val content = listOfNotNull(title, sourceText).joinToString(" ").trim()
         if (content.isEmpty()) return null
         // El texto sin el título: el título suele ser el nombre de la app
         // ("Interbank", "Confirmación de Pago") y pegado al remitente lo
         // contaminaría ("Interbank Rogelio…").
-        val body = text?.takeIf { it.isNotBlank() } ?: content
+        val operationNumber = operationNumberOf(listOfNotNull(content, expandedText).joinToString(" "))
+        val bodyText = expandedText?.takeIf { it.isNotBlank() } ?: sourceText
+        val paymentContent = operationReference.replace(listOfNotNull(title, bodyText).joinToString(" "), " ")
+        val body = operationReference.replace(bodyText ?: content, " ")
         val confidence = when (provider) {
-            "yape" -> YapeParser.confidence(content, body)
-            "plin" -> PlinParser.confidence(content, body)
+            "yape" -> YapeParser.confidence(paymentContent, body)
+            "plin" -> PlinParser.confidence(paymentContent, body)
             else -> return null
         }
         if (!confidence.isPayment) return null
-        val amount = amountOf(body) ?: amountOf(content) ?: return null
+        val amount = amountOf(body) ?: amountOf(paymentContent) ?: return null
         if (amount <= 0.0) return null
         // Remitente sin puntuación de cierre ni espacios dobles del mensaje.
         val sender = confidence.sender
@@ -76,7 +91,7 @@ object NotificationParser {
         // Identidad estable: clave de la notificación + su texto. Dos pagos
         // legítimos con el mismo monto y hora tienen claves distintas.
         val eventKey = "$packageName:$key:${Integer.toHexString(content.hashCode())}"
-        return DetectedPayment(provider, eventKey, sender, amount, whenMillis)
+        return DetectedPayment(provider, eventKey, sender, amount, whenMillis, operationNumber)
     }
 }
 

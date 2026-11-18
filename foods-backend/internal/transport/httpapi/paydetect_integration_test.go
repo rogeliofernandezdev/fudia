@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -179,7 +180,7 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		}
 		return result.Registered, result.Duplicates, rec.Code
 	}
-	registered, _, _ := report(`{"provider":"yape","eventKey":"yape-op-9f81d2a","senderName":"Rosa Quispe","amount":62.5,"occurredAt":"2026-11-15T12:30:00Z"}`)
+	registered, _, _ := report(`{"provider":"yape","eventKey":"yape-op-9f81d2a","operationNumber":"0012345678","senderName":"Rosa Quispe","amount":62.5,"occurredAt":"2026-11-15T12:30:00Z"}`)
 	if registered != 1 {
 		t.Fatalf("el primer reporte debe registrar 1, fue %d", registered)
 	}
@@ -190,6 +191,34 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	registeredTwo, _, _ := report(`{"provider":"plin","eventKey":"plin-op-b71c94e","senderName":"Ana Villanueva","amount":10,"occurredAt":"2026-11-15T12:35:00Z"}`)
 	if registeredTwo != 1 {
 		t.Fatal("un segundo pago legítimo con distinto eventKey debe registrarse")
+	}
+	var noticeCount int
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM staff_notices WHERE organization_id=$1 AND location_id=$2 AND kind='pay_detected'`, s.OrganizationID, s.LocationID).Scan(&noticeCount); err != nil || noticeCount != 2 {
+		t.Fatalf("each payment must publish one bell notice, including after duplicate report: count=%d err=%v", noticeCount, err)
+	}
+	// La corrección recupera los avisos perdidos, sin duplicarlos al reintentar.
+	backfillSQL, err := os.ReadFile("../../../migrations/000136_pay_staff_notices.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(context.Background())
+	if _, err := tx.Exec(context.Background(), `DELETE FROM staff_notices WHERE organization_id=$1 AND kind='pay_detected'`, s.OrganizationID); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := tx.Exec(context.Background(), string(backfillSQL)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.QueryRow(context.Background(), `SELECT count(*) FROM staff_notices WHERE organization_id=$1 AND kind='pay_detected'`, s.OrganizationID).Scan(&noticeCount); err != nil || noticeCount != 2 {
+		t.Fatalf("notice recovery must be idempotent: count=%d err=%v", noticeCount, err)
+	}
+	if err := tx.Rollback(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 	if ambiguous := call("POST", "/v1/mobile/notifications", "", scope{}, `{"events":[{"provider":"mercadopago","eventKey":"mp-12345678","amount":5,"occurredAt":"2026-11-15T12:36:00Z"}]}`); ambiguous.Code != 400 {
 		t.Fatal("un proveedor desconocido no se registra")
@@ -227,6 +256,23 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		t.Fatalf("seed cajero: %v", err)
 	}
 	var registerID string
+	for _, subject := range []scope{s, other} {
+		request := httptest.NewRequest("GET", "/v1/admin/notices", nil)
+		request = request.WithContext(context.WithValue(request.Context(), scopeKey{}, subject))
+		response := httptest.NewRecorder()
+		api.handlers.Notices.Feed(response, request)
+		var feed noticeFeed
+		if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &feed) != nil {
+			t.Fatalf("payment bell feed: %d %s", response.Code, response.Body.String())
+		}
+		want := 0
+		if subject.OrganizationID == s.OrganizationID {
+			want = 2
+		}
+		if len(feed.Items) != want || feed.Unread != want {
+			t.Fatalf("payment bell isolation: %+v, want %d", feed, want)
+		}
+	}
 	if err := pool.QueryRow(context.Background(), `
 		INSERT INTO cash_registers(organization_id,location_id,name,created_by)
 		VALUES($1,$2,'Caja Fudia Pay',$3) RETURNING id::text`,
@@ -253,8 +299,10 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	} else {
 		var page struct {
 			Items []struct {
-				ID     string `json:"id"`
-				Status string `json:"status"`
+				ID              string `json:"id"`
+				Status          string `json:"status"`
+				Provider        string `json:"provider"`
+				OperationNumber string `json:"operationNumber"`
 			} `json:"items"`
 			Total int `json:"total"`
 		}
@@ -264,7 +312,19 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		if len(page.Items) != 2 || page.Total != 2 {
 			t.Fatalf("el local debe ver 2 notificaciones, vio %d (total %d)", len(page.Items), page.Total)
 		}
-		notificationID = page.Items[0].ID
+		for _, item := range page.Items {
+			if item.Provider == "yape" {
+				notificationID = item.ID
+				if item.OperationNumber != "0012345678" {
+					t.Fatalf("operation number lost: %q", item.OperationNumber)
+				}
+			} else if item.OperationNumber != "" {
+				t.Fatal("a legacy event must not invent an operation number")
+			}
+		}
+		if notificationID == "" {
+			t.Fatal("Yape notification missing")
+		}
 	}
 	// La lista de Caja pagina en el servidor: page y size, con el total de los filtros.
 	pageOf := func(query string) (int, int) {
@@ -294,7 +354,13 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	if missing := call("POST", "/v1/admin/pay-notifications/associate", notificationID, s, `{"orderId":"11111111-1111-4111-8111-111111111111"}`); missing.Code != 400 {
 		t.Fatalf("un pedido inexistente no se puede ligar: %d", missing.Code)
 	}
-	associatedRec := call("POST", "/v1/admin/pay-notifications/associate", notificationID, s, fmt.Sprintf(`{"orderId":%q,"method":"card"}`, orderID))
+	for _, method := range []string{"card", "plin"} {
+		wrong := call("POST", "/v1/admin/pay-notifications/associate", notificationID, s, fmt.Sprintf(`{"orderId":%q,"method":%q}`, orderID, method))
+		if wrong.Code != 400 {
+			t.Fatalf("changing the provider method must fail: %d %s", wrong.Code, wrong.Body.String())
+		}
+	}
+	associatedRec := call("POST", "/v1/admin/pay-notifications/associate", notificationID, s, fmt.Sprintf(`{"orderId":%q,"method":"yape"}`, orderID))
 	if associatedRec.Code != 200 {
 		t.Fatalf("associate: %d %s", associatedRec.Code, associatedRec.Body.String())
 	}
@@ -316,6 +382,13 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	}
 	if paymentCount != 1 {
 		t.Fatalf("la asociación debe registrar 1 cobro, hay %d", paymentCount)
+	}
+	var paymentMethod, paymentReference string
+	if err := pool.QueryRow(context.Background(), `SELECT method, reference FROM payments WHERE id=$1`, verified.PaymentID).Scan(&paymentMethod, &paymentReference); err != nil {
+		t.Fatal(err)
+	}
+	if paymentMethod != "yape" || paymentReference != "Fudia Pay · Yape · Operación 0012345678" {
+		t.Fatalf("payment provenance: %q %q", paymentMethod, paymentReference)
 	}
 	againRec := call("POST", "/v1/admin/pay-notifications/associate", notificationID, s, fmt.Sprintf(`{"orderId":%q,"method":"card"}`, orderID))
 	if againRec.Code != 409 {

@@ -73,7 +73,7 @@ func Audiences(service, cashier bool) []string {
 // Normalize recorta los textos a sus límites y rechaza tipos o audiencias desconocidos.
 func Normalize(in Input) (Input, bool) {
 	switch in.Kind {
-	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount, KindDeliveryUnassigned, KindDeliveryPickupDelayed:
+	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount, KindDeliveryUnassigned, KindDeliveryPickupDelayed, KindPayDetected:
 	default:
 		return in, false
 	}

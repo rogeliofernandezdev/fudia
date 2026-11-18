@@ -12,6 +12,51 @@ import org.junit.Test
  * legibles; lo ambiguo o irrelevante no se registra nunca. */
 class NotificationParserTest {
 
+    @Test
+    fun `yape conserva el numero de operacion y sus ceros iniciales`() {
+        val payment = parse("yape", "Yape", "Recibiste S/ 35.00 de Rosa Quispe\nNúmero de operación: 0012345678")!!
+        assertEquals("0012345678", payment.operationNumber)
+        assertEquals("Rosa Quispe", payment.senderName)
+        assertEquals(35.0, payment.amount, 0.001)
+    }
+
+    @Test
+    fun `plin conserva la referencia explicita del banco`() {
+        val payment = parse("plin", "Interbank", "Ana Villanueva te ha plineado S/ 10.00\nN° de operación: IBK-001234")!!
+        assertEquals("IBK-001234", payment.operationNumber)
+        assertEquals("Ana Villanueva", payment.senderName)
+    }
+
+    @Test
+    fun `no inventa numero de operacion desde monto seguridad o clave tecnica`() {
+        assertNull(parse("yape", "Yape", "Maria Torres te envió un pago por S/ 62.50")!!.operationNumber)
+        assertNull(parse("yape", "Yape", "Maria Torres te envió un pago por S/ 62.50\nCódigo de seguridad: 123456")!!.operationNumber)
+        assertNull(parse("plin", "Plin", "Ana Villanueva te ha plineado S/ 10.00")!!.operationNumber)
+    }
+
+    @Test
+    fun `referencias contradictorias no se presentan como una operacion cierta`() {
+        val payment = parse("yape", "Yape", "Maria Torres te envió un pago por S/ 10\nOperación: 001234\nOperación: 005678")!!
+        assertNull(payment.operationNumber)
+    }
+
+    @Test
+    fun `la referencia antes del monto no se interpreta como importe`() {
+        val payment = parse("yape", "Yape", "Nro. de operación: 0012345678\nRecibiste S/ 35.00 de Rosa Quispe")!!
+        assertEquals(35.0, payment.amount, 0.001)
+        assertEquals("0012345678", payment.operationNumber)
+    }
+
+    @Test
+    fun `el texto expandido aporta operacion sin cambiar la clave idempotente`() {
+        val summary = "Maria Torres te envió un pago por S/ 10"
+        val original = NotificationParser.parse("yape", KnownApps.YAPE, "Yape", summary, 1000, "stable-key")!!
+        val expanded = NotificationParser.parse("yape", KnownApps.YAPE, "Yape", summary, 1000, "stable-key", summary + "\nOperación: 0012345678")!!
+        assertEquals(original.eventKey, expanded.eventKey)
+        assertEquals("0012345678", expanded.operationNumber)
+        assertEquals(original.amount, expanded.amount, 0.001)
+    }
+
     private fun parse(provider: String, title: String, text: String) = NotificationParser.parse(
         provider = provider,
         packageName = "com.yape.android",

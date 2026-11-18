@@ -71,7 +71,9 @@ class PayNotificationListener : NotificationListenerService() {
         }
         val extras = sbn.notification.extras
         val title = extras.getCharSequence("android.title")?.toString()
+        // El texto expandido puede incluir la referencia que no cabe en el resumen.
         val text = extras.getCharSequence("android.text")?.toString()
+        val expandedText = extras.getCharSequence("android.bigText")?.toString()
         val whenMillis = sbn.notification.`when`
         val key = sbn.key
         // Fire-and-forget con su propio scope de E/S: el insert es corto y el
@@ -85,6 +87,7 @@ class PayNotificationListener : NotificationListenerService() {
                 text = text,
                 whenMillis = whenMillis,
                 key = key,
+                expandedText = expandedText,
             )
             if (payment == null) {
                 if (BuildConfig.DEBUG) Log.d(TAG, "parser sin confianza: descartada")
@@ -101,6 +104,7 @@ class PayNotificationListener : NotificationListenerService() {
                 amount = payment.amount,
                 occurredAtMillis = payment.occurredAtMillis,
                 createdAtMillis = System.currentTimeMillis(),
+                operationNumber = payment.operationNumber,
             )
             // El insert idempotente decide: si la clave ya está en la cola,
             // la notificación repetida no se encola otra vez.

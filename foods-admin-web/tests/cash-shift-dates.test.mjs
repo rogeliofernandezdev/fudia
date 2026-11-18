@@ -20,6 +20,7 @@ function mountPage(value=shift,tab="registers",permissions=["cash.manage","cash.
  let index=0;
  const resolve=name=>{
   if(name==="react")return{...require(name),useState:initial=>[index++===0?tab:initial,()=>{}]};
+  if(name==="next/navigation")return{useRouter:()=>({replace:()=>{}})};
   if(name==="@tanstack/react-query")return{useQueryClient:()=>({invalidateQueries:()=>{}}),useMutation:()=>({}),useQuery:options=>({data:options.queryKey[0]==="cash-registers"?{items:[{id:"register-1",code:"CAJ",name:"Caja principal",active:true,openShift:value}]}:options.queryKey[0]==="cash-shifts"?{items:[value],total:1}:{},isLoading:false,isError:false})};
   if(name==="@/design-system")return new Proxy({},{get:(_,key)=>String(key)});
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};

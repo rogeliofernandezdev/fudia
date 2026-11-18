@@ -54,7 +54,7 @@ func scanDevice(row pgx.Row) (domain.Device, error) {
 }
 
 const notificationColumns = `
-	n.id::text, n.device_id::text, d.name, n.provider, n.event_key, n.sender_name,
+	n.id::text, n.device_id::text, d.name, n.provider, n.event_key, n.operation_number, n.sender_name,
 	n.amount::text, n.currency, n.occurred_at, n.status,
 	COALESCE(n.order_id::text, ''), COALESCE(n.payment_id::text, ''),
 	COALESCE(n.confirmed_by::text, ''), n.confirmed_at, n.created_at`
@@ -65,7 +65,7 @@ func scanNotification(row pgx.Row) (domain.Notification, error) {
 	var confirmed *time.Time
 	if err := row.Scan(
 		&notification.ID, &notification.DeviceID, &notification.DeviceName, &notification.Provider,
-		&notification.EventKey, &notification.SenderName, &notification.Amount, &notification.Currency,
+		&notification.EventKey, &notification.OperationNumber, &notification.SenderName, &notification.Amount, &notification.Currency,
 		&occurred, &notification.Status, &notification.OrderID, &notification.PaymentID,
 		&notification.ConfirmedBy, &confirmed, &created,
 	); err != nil {
@@ -430,11 +430,11 @@ func (r *Pay) ReportEvents(ctx context.Context, session domain.DeviceSession, ev
 	for _, event := range events {
 		var id *string
 		err := r.db(ctx).QueryRow(ctx, `
-			INSERT INTO pay_notifications (device_id, organization_id, location_id, provider, event_key, sender_name, amount, currency, occurred_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			INSERT INTO pay_notifications (device_id, organization_id, location_id, provider, event_key, sender_name, amount, currency, occurred_at, operation_number)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 			ON CONFLICT (device_id, event_key) DO NOTHING
 			RETURNING id::text
-		`, session.DeviceID, session.OrganizationID, session.LocationID, event.Provider, event.EventKey, event.SenderName, event.Amount, currency, event.OccurredAt).Scan(&id)
+		`, session.DeviceID, session.OrganizationID, session.LocationID, event.Provider, event.EventKey, event.SenderName, event.Amount, currency, event.OccurredAt, event.OperationNumber).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			outcomes = append(outcomes, domain.EventOutcome{EventKey: event.EventKey, Status: "duplicate"})
 			continue

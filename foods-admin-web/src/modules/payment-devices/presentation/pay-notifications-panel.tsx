@@ -73,9 +73,9 @@ export function PayNotificationsPanel({dateTime}:Props){
           const meta=payStatusMeta[item.status];
           return <tr className={index%2?"alternate":""} key={item.id}>
             <td><PayProviderTag provider={item.provider}/></td>
-            <td className="pay-notification-sender"><strong>{item.senderName||"Sin remitente"}</strong></td>
+            <td className="pay-notification-sender"><strong>{item.senderName||"Sin remitente"}</strong>{item.operationNumber&&<small>Operación {item.operationNumber}</small>}</td>
             <td className="pay-amount">{money(item.amount)}</td>
-            <td className="pay-notification-received"><time dateTime={item.occurredAt}>{dateTime(item.occurredAt)}</time><small>{item.deviceName}</small></td>
+            <td className="pay-notification-received"><time dateTime={item.occurredAt}>{dateTime(item.occurredAt)}</time></td>
             <td><Status tone={meta.tone} icon={item.status==="associated"?"circleCheck":undefined}>{meta.label}</Status></td>
             <td><div className="table-actions">
               <IconButton icon="eye" label={`Ver el detalle del pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDetail(item)}/>

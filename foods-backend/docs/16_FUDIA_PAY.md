@@ -76,6 +76,26 @@ nuevo crea una nueva. La credencial anterior no vuelve a servir.
 
 ## Contratos
 
+Desde 2026-11-18 (migración `000135_pay_operation_number`), los eventos admiten
+`operationNumber` opcional: el número bancario que el proveedor incluye
+explícitamente en la notificación, como texto para conservar ceros iniciales
+(máximo 64 caracteres alfanuméricos o guiones). Se persiste y se devuelve en
+`PayNotification`. No se deriva de `eventKey`, del ID interno, del monto ni de
+un código de seguridad. Los eventos anteriores o de proveedores que omiten el
+número conservan el campo vacío; Caja muestra «No informado».
+Android lee también `android.bigText`, extrae referencias con etiqueta explícita
+de operación y conserva la clave idempotente construida con el resumen original.
+La cola Room migra de versión 1 a 2 sin borrar pagos pendientes.
+
+La asociación exige `method == provider` (`yape` o `plin`), validado en backend;
+el catálogo operativo sigue validando que ese medio esté activo para ventas.
+El selector web está preseleccionado y deshabilitado. Si el medio falta, la
+asociación queda bloqueada con indicación de activarlo en Configuración.
+La referencia del cobro usa el proveedor y el número de operación cuando está
+disponible; nunca publica la clave técnica del evento como número bancario.
+Desplegar la migración y API antes de actualizar el frontend y el APK. No se
+puede reconstruir el número de notificaciones históricas que no lo guardaron.
+
 - `billing/contracts.PayRegisterer`: **asociar registra el cobro real** con el
   `Create` de pagos (turno, movimientos de caja, comprobante y cierre). Nada de
   segunda lógica de caja; un importe superior al saldo lo rechaza el propio
@@ -113,6 +133,20 @@ el dispositivo nunca los envía. Los reintentos con WorkManager y la cola local
 de la app hacen el resto; el sweep horario purga códigos vencidos.
 
 ## Experiencia en `foods-admin-web`
+
+Corrección 2026-11-18 (migración `000136_pay_staff_notices`): el tipo
+`pay_detected` estaba declarado pero faltaba tanto en la normalización como
+en la restricción SQL de avisos. Se admite en ambas y se recuperan, sin
+duplicados, los avisos de pagos todavía detectados de las últimas 24 horas.
+La campana los muestra a caja y abre `/cash?tab=pagos`. La tarjeta flotante
+es independiente: X o 8 segundos la ocultan sin descartar ni asociar el pago;
+el tiempo se pausa con hover, foco o pestaña oculta. Solo emergen pagos nuevos
+después de cargar el historial, y el contexto se reinicia al cambiar de usuario,
+empresa o local. El teléfono aparece plegado en «Origen del aviso».
+
+La app no captura automáticamente la pantalla de la constancia dentro de
+Yape/Plin: el acceso a notificaciones no proporciona esa imagen. El soporte
+para adjuntar o compartir una constancia real sigue pendiente de definición.
 
 - Aviso flotante global en cualquier pantalla del cajero (sondeo cada 10 s,
   tarjetas apilables por encima de los modales, clic → detalle).

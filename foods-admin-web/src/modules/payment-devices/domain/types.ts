@@ -26,6 +26,8 @@ export type PayNotification={
   deviceName:string;
   provider:PayProvider;
   eventKey:string;
+  /** Número bancario informado por el proveedor; nunca es la clave técnica del evento. */
+  operationNumber?:string;
   senderName:string;
   /** Monto como texto decimal, como el resto de montos del sistema. */
   amount:string;

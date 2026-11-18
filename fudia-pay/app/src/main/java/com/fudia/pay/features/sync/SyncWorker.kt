@@ -62,6 +62,7 @@ class SyncWorker @AssistedInject constructor(
                     senderName = event.senderName,
                     amount = event.amount,
                     occurredAt = isoUtc(event.occurredAtMillis),
+                    operationNumber = event.operationNumber,
                 )
             }))
             if (BuildConfig.DEBUG) {

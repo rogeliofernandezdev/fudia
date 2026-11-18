@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -39,8 +40,9 @@ const (
 	SenderNameLimit = 80
 	// EventKeyMin y EventKeyMax acotan la identidad estable del evento,
 	// que la app construye a partir de la notificación de origen.
-	EventKeyMin = 8
-	EventKeyMax = 200
+	EventKeyMin        = 8
+	EventKeyMax        = 200
+	OperationNumberMax = 64
 )
 
 // Device es un teléfono del local vinculado a Fudia Pay. El token nunca vive
@@ -103,37 +105,41 @@ func (c PairingCode) Redeemable(now time.Time) bool {
 
 // Event es lo que el dispositivo reporta en su solicitud de sincronización.
 type Event struct {
-	Provider   string    `json:"provider"`
-	EventKey   string    `json:"eventKey"`
-	SenderName string    `json:"senderName"`
-	Amount     float64   `json:"amount"`
-	OccurredAt time.Time `json:"occurredAt"`
+	Provider        string    `json:"provider"`
+	EventKey        string    `json:"eventKey"`
+	OperationNumber string    `json:"operationNumber,omitempty"`
+	SenderName      string    `json:"senderName"`
+	Amount          float64   `json:"amount"`
+	OccurredAt      time.Time `json:"occurredAt"`
 }
 
 // Notification es un pago detectado, tal como Caja lo lee. El monto viaja como
 // texto decimal, como el resto de montos del sistema.
 type Notification struct {
-	ID          string `json:"id"`
-	DeviceID    string `json:"deviceId"`
-	DeviceName  string `json:"deviceName"`
-	Provider    string `json:"provider"`
-	EventKey    string `json:"eventKey"`
-	SenderName  string `json:"senderName"`
-	Amount      string `json:"amount"`
-	Currency    string `json:"currency"`
-	OccurredAt  string `json:"occurredAt"`
-	Status      string `json:"status"`
-	OrderID     string `json:"orderId,omitempty"`
-	PaymentID   string `json:"paymentId,omitempty"`
-	ConfirmedBy string `json:"confirmedBy,omitempty"`
-	ConfirmedAt string `json:"confirmedAt,omitempty"`
-	CreatedAt   string `json:"createdAt"`
+	ID              string `json:"id"`
+	DeviceID        string `json:"deviceId"`
+	DeviceName      string `json:"deviceName"`
+	Provider        string `json:"provider"`
+	EventKey        string `json:"eventKey"`
+	OperationNumber string `json:"operationNumber,omitempty"`
+	SenderName      string `json:"senderName"`
+	Amount          string `json:"amount"`
+	Currency        string `json:"currency"`
+	OccurredAt      string `json:"occurredAt"`
+	Status          string `json:"status"`
+	OrderID         string `json:"orderId,omitempty"`
+	PaymentID       string `json:"paymentId,omitempty"`
+	ConfirmedBy     string `json:"confirmedBy,omitempty"`
+	ConfirmedAt     string `json:"confirmedAt,omitempty"`
+	CreatedAt       string `json:"createdAt"`
 }
 
 // NormalizeEvent valida y normaliza un evento reportado por un dispositivo.
 // Si el contenido no alcanza la confianza mínima para registrarse como pago
 // detectado, devuelve el error que la app debe corregir; el backend no
 // infiere un pago a partir de datos ambiguos.
+var operationNumberPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]{0,63}$`)
+
 func NormalizeEvent(event Event) (Event, error) {
 	provider := strings.ToLower(strings.TrimSpace(event.Provider))
 	if provider != ProviderYape && provider != ProviderPlin {
@@ -147,15 +153,20 @@ func NormalizeEvent(event Event) (Event, error) {
 		return Event{}, fmt.Errorf("el monto de la notificación no es válido")
 	}
 	sender := []rune(strings.TrimSpace(event.SenderName))
+	operationNumber := strings.TrimSpace(event.OperationNumber)
+	if operationNumber != "" && !operationNumberPattern.MatchString(operationNumber) {
+		return Event{}, fmt.Errorf("el número de operación debe tener hasta %d letras, números o guiones", OperationNumberMax)
+	}
 	if length := len(sender); length > SenderNameLimit {
 		sender = sender[:SenderNameLimit]
 	}
 	return Event{
-		Provider:   provider,
-		EventKey:   key,
-		SenderName: string(sender),
-		Amount:     event.Amount,
-		OccurredAt: event.OccurredAt.UTC().Truncate(time.Second),
+		Provider:        provider,
+		EventKey:        key,
+		OperationNumber: operationNumber,
+		SenderName:      string(sender),
+		Amount:          event.Amount,
+		OccurredAt:      event.OccurredAt.UTC().Truncate(time.Second),
 	}, nil
 }
 

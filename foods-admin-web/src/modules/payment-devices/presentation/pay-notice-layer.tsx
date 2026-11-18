@@ -1,65 +1,87 @@
 "use client";
 
-import {useEffect,useRef,useState} from "react";
-import {useQuery} from "@tanstack/react-query";
-import {useSession} from "@/providers";
+import {useCallback,useEffect,useRef,useState} from "react";
+import {useQuery,useQueryClient} from "@tanstack/react-query";
+import {IconButton} from "@/design-system";
+import {useMoney,useSession} from "@/providers";
 import {PayProviderTag} from "./pay-status-tag";
+import {payProviderLabel} from "../domain/pay-status";
 import type {PayNotification} from "../domain/types";
 import {listPayNotifications} from "../infrastructure/pay-devices-api";
 import {PayNotificationDetail} from "./pay-notification-detail";
 
-/** Capa global de pagos detectados (§1): en cualquier pantalla del cajero,
- * cada notificación nueva de Yape o Plin aparece como tarjeta flotante
- * apilable, sin cerrar ni alterar los modales abiertos. El clic abre el
- * detalle para asociar; si se cierra, el movimiento queda pendiente en el
- * historial de Caja.
- *
- * Sondea SOLO con sesión de cajero vigente: sin sesión el BFF responde 401 y
- * cada sondeo forzaría el cierre de sesión — por eso la capa se silencia sin
- * usuario, sin permiso o ante el primer 401. */
+const NOTICE_DURATION_MS=8000;
+
+/** Avisos de pagos para el cajero; cambiar de usuario, empresa o local reinicia
+ * el feed y sus avisos. Cerrar la tarjeta nunca modifica el pago detectado. */
 export function PayNoticeLayer(){
   const session=useSession();
+  const sessionOk=Boolean(session.user&&session.organization&&session.location)
+    &&session.can("cash.read")&&session.can("cash.manage")&&!session.isUnauthorized&&!session.isLoading;
+  if(!sessionOk)return null;
+  const scopeKey=[session.organization!.id,session.location!.id,session.user!.id];
+  return <PayNoticeFeed key={scopeKey.join(":")} scopeKey={scopeKey}/>;
+}
+
+function PayNoticeFeed({scopeKey}:{scopeKey:string[]}){
+  const qc=useQueryClient();
   const [visible,setVisible]=useState<PayNotification[]>([]);
   const [detail,setDetail]=useState<PayNotification|null>(null);
-  const seen=useRef<Set<string>>(new Set());
-
-  // Sondea SOLO con sesión de cajero vigente: sin sesión el BFF responde 401 y
-  // cada sondeo forzaría el cierre de sesión. Un 401 detiene el intervalo; el
-  // próximo ingreso reinicia el cliente de consultas y la capa vuelve sola.
-  // Un fallo pasajero del API (503, red) no mata la capa: el sondeo sigue
-  // cada 10 s y conserva el último dato bueno, para que un tropiezo no
-  // silencie los avisos hasta recargar la página.
-  const sessionOk=Boolean(session.user)&&session.can("cash.read")&&!session.isUnauthorized&&!session.isLoading;
+  const seen=useRef<Set<string>|null>(null);
   const feed=useQuery({
-    queryKey:["pay-notice-feed"],
+    queryKey:["pay-notice-feed",...scopeKey],
     queryFn:()=>listPayNotifications({status:"detected",provider:""}),
-    enabled:sessionOk,
-    refetchInterval:query=>sessionOk?10000:false,
+    refetchInterval:10000,
     refetchOnWindowFocus:false,
     retry:1,
     gcTime:0,
   });
 
   useEffect(()=>{
-    const items=feed.data?.items??[];
-    const fresh=items.filter(item=>!seen.current.has(item.id));
-    if(fresh.length){
-      fresh.forEach(item=>seen.current.add(item.id));
-      setVisible(current=>[...fresh,...current.filter(stale=>items.some(item=>item.id===stale.id))].slice(0,4));
-      return;
-    }
-    setVisible(current=>current.filter(stale=>items.some(item=>item.id===stale.id)));
-  },[feed.data]);
+    if(!feed.data)return;
+    const items=feed.data.items;
+    // El historial inicial queda en la campana; solo los nuevos pagos emergen.
+    if(seen.current===null){seen.current=new Set(items.map(item=>item.id));return;}
+    const fresh=items.filter(item=>!seen.current!.has(item.id));
+    fresh.forEach(item=>seen.current!.add(item.id));
+    if(fresh.length)void qc.invalidateQueries({queryKey:["staff-notices"]});
+    setVisible(current=>[...fresh,...current.filter(stale=>items.some(item=>item.id===stale.id))].slice(0,4));
+  },[feed.data,qc]);
 
-  if(!sessionOk)return null;
+  const closeNotice=useCallback((id:string)=>setVisible(current=>current.filter(item=>item.id!==id)),[]);
+  const openNotice=useCallback((item:PayNotification)=>{closeNotice(item.id);setDetail(item)},[closeNotice]);
   return <>
     {visible.length>0&&<div className="pay-notice-layer" role="region" aria-label="Pagos detectados por Yape y Plin">
-      {visible.map(item=><button key={item.id} type="button" className="pay-notice" onClick={()=>setDetail(item)}>
-        <PayProviderTag provider={item.provider}/>
-        <span className="pay-notice-main"><strong>{item.currency} {item.amount}</strong><small>{item.senderName||"Sin remitente"} · {item.deviceName}</small></span>
-        <span className="pay-notice-hint">Ver pago detectado</span>
-      </button>)}
+      {visible.map(item=><PayNotice key={item.id} item={item} onOpen={openNotice} onClose={closeNotice}/>)}
     </div>}
-    <PayNotificationDetail notification={detail} onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void feed.refetch()}}/>
+    <PayNotificationDetail notification={detail} onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void feed.refetch();void qc.invalidateQueries({queryKey:["staff-notices"]})}}/>
   </>;
+}
+
+function PayNotice({item,onOpen,onClose}:{item:PayNotification;onOpen:(item:PayNotification)=>void;onClose:(id:string)=>void}){
+  const money=useMoney();
+  const [hovered,setHovered]=useState(false);
+  const [focused,setFocused]=useState(false);
+  const [hidden,setHidden]=useState(false);
+  const remaining=useRef(NOTICE_DURATION_MS);
+  useEffect(()=>{
+    const sync=()=>setHidden(document.hidden);
+    sync();document.addEventListener("visibilitychange",sync);
+    return()=>document.removeEventListener("visibilitychange",sync);
+  },[]);
+  useEffect(()=>{
+    if(hovered||focused||hidden)return;
+    const started=Date.now();
+    const timer=window.setTimeout(()=>onClose(item.id),remaining.current);
+    return()=>{window.clearTimeout(timer);remaining.current=Math.max(0,remaining.current-(Date.now()-started))};
+  },[item.id,onClose,hovered,focused,hidden]);
+  return <section className="pay-notice" aria-label={`Pago detectado por ${payProviderLabel[item.provider]}`}
+    onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}
+    onFocusCapture={()=>setFocused(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))setFocused(false)}}>
+    <button type="button" className="pay-notice-open" onClick={()=>onOpen(item)}>
+      <PayProviderTag provider={item.provider}/>
+      <span className="pay-notice-main"><strong>{money(item.amount)}</strong><small>{item.senderName||"Sin remitente"}</small><span className="pay-notice-hint">Pago detectado</span></span>
+    </button>
+    <IconButton icon="close" label="Cerrar aviso de pago" className="pay-notice-close" onClick={()=>onClose(item.id)}/>
+  </section>;
 }

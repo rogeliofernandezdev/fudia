@@ -4,6 +4,7 @@ import type {StaffNotice} from "./types";
 /** Pantallas donde se actúa sobre el aviso, en orden de preferencia; se usa la primera que el usuario puede abrir. */
 export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[]{
  switch(notice.kind){
+  case "pay_detected":return [pageRoutes.cash];
   case "table_order":case "assistance_requested":return [pageRoutes.diningRoom,pageRoutes.orders];
   case "bill_requested":return [pageRoutes.pos,pageRoutes.diningRoom];
   // Cuenta anterior sin cerrar: el mozo la revisa en Salón; caja la cobra en POS.
@@ -24,6 +25,7 @@ export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[
  * cuenta pedida abre el cobro del pedido; los demás avisos llegan a la pantalla.
  */
 export function noticeHref(target:string,notice:Pick<StaffNotice,"kind"|"orderId">){
+ if(notice.kind==="pay_detected"&&target===pageRoutes.cash)return `${target}?tab=pagos`;
  const opensDetail=target===pageRoutes.diningRoom||target===pageRoutes.orders||(target===pageRoutes.pos&&(notice.kind==="bill_requested"||notice.kind==="stale_account"));
  return notice.orderId&&opensDetail?`${target}?orderId=${encodeURIComponent(notice.orderId)}`:target;
 }
@@ -32,7 +34,7 @@ export function noticeHref(target:string,notice:Pick<StaffNotice,"kind"|"orderId
  *  cuenta pedida y cuenta anterior sin cerrar = naranja tenue (Por cobrar), llamado = celeste; pedidos nuevos usan el índigo de la marca. */
 export type NoticeTone="primary"|"purple"|"peach"|"sky";
 export function noticeTone(kind:StaffNotice["kind"]):NoticeTone{
- return kind==="order_ready"?"purple":kind==="bill_requested"||kind==="stale_account"||kind==="delivery_unassigned"||kind==="delivery_pickup_delayed"?"peach":kind==="assistance_requested"?"sky":"primary";
+ return kind==="order_ready"?"purple":kind==="bill_requested"||kind==="stale_account"||kind==="delivery_unassigned"||kind==="delivery_pickup_delayed"||kind==="pay_detected"?"peach":kind==="assistance_requested"?"sky":"primary";
 }
 
 /** Avisos que llegaron después de la última lectura del feed y siguen sin leer, del más reciente al más antiguo. */

@@ -444,7 +444,7 @@ func (a *Notifications) Associate(ctx context.Context, s scope, id, orderID, met
 		return domain.Notification{}, payFailure(apperror.Invalid, "pay_order_missing", "Selecciona el pedido al que corresponde el pago.", nil)
 	}
 	if method == "" {
-		return domain.Notification{}, payFailure(apperror.Invalid, "pay_method_missing", "Elige el medio de pago con el que se registrará el cobro.", nil)
+		return domain.Notification{}, payFailure(apperror.Invalid, "pay_method_missing", "El medio de pago se determina por el proveedor detectado.", nil)
 	}
 	notification, err := a.repo.Notification(ctx, s, id)
 	if errors.Is(err, ErrNotificationNotFound) {
@@ -455,6 +455,9 @@ func (a *Notifications) Associate(ctx context.Context, s scope, id, orderID, met
 	}
 	if notification.Status != domain.NotificationDetected {
 		return domain.Notification{}, ErrNotificationConflict
+	}
+	if (notification.Provider != domain.ProviderYape && notification.Provider != domain.ProviderPlin) || method != notification.Provider {
+		return domain.Notification{}, payFailure(apperror.Invalid, "pay_method_provider_mismatch", "El medio de pago debe corresponder al proveedor detectado: Yape o Plin.", nil)
 	}
 	if a.orders == nil || a.registerer == nil {
 		return domain.Notification{}, payFailure(apperror.Unavailable, "paydetect_unavailable", "No pudimos registrar el cobro.", nil)
@@ -473,11 +476,16 @@ func (a *Notifications) Associate(ctx context.Context, s scope, id, orderID, met
 	// El pago detectado se registra con el flujo de cobros existente: turno,
 	// movimientos de caja y reglas del módulo de pagos. Un importe superior al
 	// saldo lo rechaza el mismo cobro con sus reglas; la UI lo explica.
+	providerName := strings.ToUpper(notification.Provider[:1]) + notification.Provider[1:]
+	reference := fmt.Sprintf("Fudia Pay · %s", providerName)
+	if notification.OperationNumber != "" {
+		reference += " · Operación " + notification.OperationNumber
+	}
 	registered, err := a.registerer.PayRegister(ctx, s, billingcontracts.PayRegisterInput{
 		OrderID:   order.ID,
-		Method:    method,
+		Method:    notification.Provider,
 		Amount:    amount,
-		Reference: strings.TrimSpace(fmt.Sprintf("Fudia Pay · %s", notification.EventKey)),
+		Reference: reference,
 	})
 	if err != nil {
 		return domain.Notification{}, err
