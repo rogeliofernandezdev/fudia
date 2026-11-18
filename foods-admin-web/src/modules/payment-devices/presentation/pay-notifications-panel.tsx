@@ -8,7 +8,7 @@ import {useFeedback,useMoney} from "@/providers";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
 import type {PayNotification} from "../domain/types";
 import {PayProviderTag} from "./pay-status-tag";
-import {dismissPayNotification,listPayNotificationPage,payProviderOptions} from "../infrastructure/pay-devices-api";
+import {dismissPayNotification,listPayNotificationPage,payProviderOptions,payStatusOptions} from "../infrastructure/pay-devices-api";
 import {PayNotificationDetail} from "./pay-notification-detail";
 
 type Props={dateTime:(value:string)=>string};
@@ -54,7 +54,7 @@ export function PayNotificationsPanel({dateTime}:Props){
       <div className="pay-notifications-filters">
         <Select chip aria-label="Filtrar por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todos los estados</option>
-          {Object.entries(payStatusMeta).map(([value,meta])=><option key={value} value={value}>{meta.label}</option>)}
+          {payStatusOptions.map(value=><option key={value} value={value}>{payStatusMeta[value].label}</option>)}
         </Select>
         <Select chip aria-label="Filtrar por proveedor" value={provider} onChange={event=>{setProvider(event.target.value);setPage(1)}}>
           <option value="">Yape y Plin</option>
@@ -72,7 +72,7 @@ export function PayNotificationsPanel({dateTime}:Props){
         {items.map((item,index)=>{
           const meta=payStatusMeta[item.status];
           return <tr className={index%2?"alternate":""} key={item.id}>
-            <td><PayProviderTag provider={item.provider}/></td>
+            <td><PayProviderTag provider={item.provider} size="sm"/></td>
             <td className="pay-notification-sender"><strong>{item.senderName||"Sin remitente"}</strong>{item.operationNumber&&<small>Operación {item.operationNumber}</small>}</td>
             <td className="pay-amount">{money(item.amount)}</td>
             <td className="pay-notification-received"><time dateTime={item.occurredAt}>{dateTime(item.occurredAt)}</time></td>

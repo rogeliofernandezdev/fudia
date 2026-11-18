@@ -70,5 +70,5 @@ export function payOrderDetail(orderId:string){
   }>(`pos/orders/${encodeURIComponent(orderId)}`);
 }
 
-export const payStatusOptions:PayNotificationStatus[]=["detected","associated","confirmed","dismissed"];
+export const payStatusOptions:PayNotificationStatus[]=["detected","dismissed"];
 export const payProviderOptions:PayProvider[]=["yape","plin"];

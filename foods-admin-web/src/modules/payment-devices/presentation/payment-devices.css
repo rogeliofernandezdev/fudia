@@ -22,10 +22,13 @@
 /* El archivo de Yape incluye márgenes blancos; se amplía el recurso dentro
    del mismo marco para igualar el tamaño óptico sin deformar el logotipo. */
 .pay-provider-tag.yape .pay-provider-logo{width:var(--size-88);height:var(--size-88)}
+.pay-provider-tag.is-small{width:var(--size-32);height:var(--size-32)}
+.pay-provider-tag.is-small .pay-provider-logo{width:var(--size-32);height:var(--size-32)}
+.pay-provider-tag.yape.is-small .pay-provider-logo{width:var(--size-48);height:var(--size-48)}
 
 /* Tabla de pagos detectados: columnas cuadradas, sin saltos en datos de una
    sola línea y acciones alineadas a la derecha. */
-.pay-notifications-table .pay-col-provider{width:var(--size-120)}
+.pay-notifications-table .pay-col-provider{width:var(--size-88)}
 .pay-notifications-table .pay-col-state{white-space:nowrap}
 .pay-notification-sender{min-width:var(--size-160);max-width:var(--size-240);white-space:normal;overflow-wrap:anywhere;color:var(--ink-950)}
 .pay-notification-received{max-width:var(--size-200);white-space:normal;overflow-wrap:anywhere}

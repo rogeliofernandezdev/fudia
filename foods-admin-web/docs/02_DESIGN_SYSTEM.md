@@ -3436,6 +3436,12 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Pagos detectados de Yape y Plin en Caja (2026-11-15)
 
+En la tabla, Yape y Plin usan el mismo marco de icono de 32 px, sin repetir el
+nombre. Se compensa el margen blanco del recurso de Yape para equilibrar su
+tamaño óptico con Plin. El detalle y el aviso conservan su tamaño propio.
+El filtro ofrece «Todos los estados», «Detectado» y «Descartado»; no ofrece
+«Asociado» ni «Confirmado» (ajuste solicitado por el usuario, 2026-11-18).
+
 Los avisos nuevos de pago tienen X y se ocultan a los 8 segundos. El tiempo se
 pausa al señalar o enfocar la tarjeta, o con la pestaña oculta. Cerrar o agotar
 el tiempo no marca el pago como descartado ni cobra nada; la consulta sigue en

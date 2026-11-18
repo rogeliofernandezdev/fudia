@@ -63,6 +63,7 @@ const wait=async kind=>{record(kind,[]);const scenario=window.payFixture.scenari
  if(scenario===kind+'-loading')await new Promise(resolve=>setTimeout(resolve,60000));
  if(scenario===kind+'-error')throw new Error('No hay conexión con el servicio.');};
 export const payProviderOptions=['yape','plin'];
+export const payStatusOptions=['detected','dismissed'];
 export const listPayNotifications=async()=>{await wait('feed');return {items:[...window.payFixture.items],total:window.payFixture.items.length}};
 export const paySalesMethods=async()=>{await wait('methods');const scenario=window.payFixture.scenario;return {items:scenario==='methods-empty'?[]:scenario==='wrong-method'?[{code:'cash',name:'Yape'}]:scenario==='renamed-method'?[{code:'yape',name:'Cobro con billetera'}]:[{code:'cash',name:'Efectivo'},{code:'yape',name:'Yape'},{code:'plin',name:'Plin'}]}};
 export const searchPayOrders=async q=>{await wait('orders');return {items:['empty','orders-empty'].includes(window.payFixture.scenario)||q==='sin resultados'?[]:[{id:'fixture-order',code:'PED-0042',channel:'salon',customerName:'Ana Quispe',total:'10.50',paymentStatus:'pending'}]}};
