@@ -317,6 +317,9 @@ func TestKardexUsesReadableInventoryEntryReference(t *testing.T) {
 	if item.MovementType != "entry" || item.SourceReference != "Entrada manual" {
 		t.Fatalf("expected readable inventory entry reference, got type=%q reference=%q", item.MovementType, item.SourceReference)
 	}
+	if item.UnitName == "" {
+		t.Fatalf("kardex movement must expose the readable unit name for its cells")
+	}
 	if item.Note != "recepción proveedor" {
 		t.Fatalf("expected traceability note, got %q", item.Note)
 	}
@@ -753,7 +756,7 @@ func TestInventoryAdjustmentTracksBalancesAndRejectsNegativeStock(t *testing.T) 
 	if err := json.Unmarshal(listRec.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload.Items) != 1 || payload.Items[0].BalanceBefore != "10.000" || payload.Items[0].Reason == nil || *payload.Items[0].Reason != "shortage_adjustment" || payload.Items[0].CreatedByName != s.Name {
+	if len(payload.Items) != 1 || payload.Items[0].BalanceBefore != "10.000000" || payload.Items[0].Reason == nil || *payload.Items[0].Reason != "shortage_adjustment" || payload.Items[0].CreatedByName != s.Name {
 		t.Fatalf("unexpected kardex traceability: %#v", payload.Items)
 	}
 

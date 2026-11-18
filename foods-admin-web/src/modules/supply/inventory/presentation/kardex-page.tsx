@@ -63,9 +63,9 @@ export function KardexPage(){
        <td>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</td>
        <td><Status tone={delta<0?"orange":"green"}>{movementLabel(item)}</Status></td>
        <td><div className="kardex-reason"><b>{traceLabel(item)}</b>{item.note&&<small>{item.note}</small>}</div></td>
-       <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</b></td>
-       <td>{formatRegionalNumber(Number(item.balanceBefore),location?.country,{maximumFractionDigits:3})}</td>
-       <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</td>
+       <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:6})} {item.unitName}</b></td>
+       <td>{formatRegionalNumber(Number(item.balanceBefore),location?.country,{maximumFractionDigits:6})} {item.unitName}</td>
+       <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:6})} {item.unitName}</td>
        <td>{formatRegionalNumber(Number(item.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
        <td>{formatRegionalNumber(Number(item.valueDelta),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
        <td><b>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
@@ -76,8 +76,8 @@ export function KardexPage(){
      {items.map((item,index)=>{const delta=Number(item.quantityDelta);return <article key={item.id}>
       <header><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><div><b>{item.itemName}</b><small>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</small></div><Status tone={delta<0?"orange":"green"}>{movementLabel(item)}</Status></header>
       <dl>
-       <div><dt>Cantidad</dt><dd>{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</dd></div>
-       <div><dt>Stock resultante</dt><dd>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</dd></div>
+       <div><dt>Cantidad</dt><dd>{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:6})} {item.unitName}</dd></div>
+       <div><dt>Stock resultante</dt><dd>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:6})} {item.unitName}</dd></div>
        <div><dt>Valor mov.</dt><dd>{formatRegionalNumber(Number(item.valueDelta),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</dd></div>
        <div><dt>Valor saldo</dt><dd>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</dd></div>
       </dl>

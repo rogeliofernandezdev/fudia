@@ -521,6 +521,7 @@ func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilte
 	}
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT sm.id,sm.inventory_item_id,sm.product_id,COALESCE(p.name,ii.name),
+		       COALESCE(u.name,ii.unit),
 		       sm.movement_type,ia.movement_type,ia.reason,sm.quantity_delta::text,
 		       COALESCE(ia.stock_before,sm.balance_after-sm.quantity_delta)::text,sm.balance_after::text,
 		       sm.unit_cost::text,sm.value_delta::text,sm.balance_value_after::text,
@@ -560,12 +561,13 @@ func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilte
 		             JOIN locations tl ON tl.id=t.to_location_id AND tl.organization_id=t.organization_id
 		             WHERE t.id=sm.source_id AND t.organization_id=sm.organization_id)
 		         END,'Referencia no disponible'),
-		       sm.note,COALESCE(u.full_name,'Usuario no disponible'),sm.created_at
+		       sm.note,COALESCE(u2.full_name,'Usuario no disponible'),sm.created_at
 		FROM stock_movements sm
 		JOIN inventory_items ii ON ii.id=sm.inventory_item_id AND ii.organization_id=sm.organization_id
 		LEFT JOIN products p ON p.id=sm.product_id AND p.organization_id=sm.organization_id
 		LEFT JOIN inventory_adjustments ia ON ia.id=sm.source_id AND ia.organization_id=sm.organization_id AND sm.source_type='inventory_adjustment'
-		LEFT JOIN users u ON u.id=sm.created_by
+		LEFT JOIN inventory_units u ON u.organization_id=ii.organization_id AND u.code=ii.unit
+		LEFT JOIN users u2 ON u2.id=sm.created_by
 		WHERE `+where+`
 		ORDER BY sm.created_at DESC,sm.sequence_number DESC LIMIT $9 OFFSET $10`,
 		s.OrganizationID, s.LocationID, inventoryItemID, productID, movementType, sourceType, from, to, size, (page-1)*size)
@@ -577,7 +579,7 @@ func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilte
 	for rows.Next() {
 		var item domain.InventoryMovementView
 		if err := rows.Scan(
-			&item.ID, &item.InventoryItemID, &item.ProductID, &item.ItemName, &item.MovementType, &item.AdjustmentType, &item.Reason,
+			&item.ID, &item.InventoryItemID, &item.ProductID, &item.ItemName, &item.UnitName, &item.MovementType, &item.AdjustmentType, &item.Reason,
 			&item.QuantityDelta, &item.BalanceBefore, &item.BalanceAfter, &item.UnitCost, &item.ValueDelta, &item.BalanceValueAfter,
 			&item.SourceType, &item.SourceID, &item.SourceReference, &item.Note, &item.CreatedByName, &item.CreatedAt,
 		); err != nil {

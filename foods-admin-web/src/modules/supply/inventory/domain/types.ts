@@ -76,6 +76,7 @@ export type StockMovement={
   inventoryItemId:string;
   productId:string|null;
   itemName:string;
+  unitName:string;
   movementType:"entry"|"sale"|"sale_reversal"|"sale_adjustment"|"inventory_adjustment"|"supplier_return"|"receipt_correction"|"transfer_out"|"transfer_in"|"recipe_consumption"|"recipe_reversal";
   adjustmentType?:InventoryAdjustmentType|null;
   reason?:InventoryAdjustmentReason|null;

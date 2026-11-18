@@ -96,6 +96,7 @@ type InventoryMovementView struct {
 	InventoryItemID   string    `json:"inventoryItemId"`
 	ProductID         *string   `json:"productId"`
 	ItemName          string    `json:"itemName"`
+	UnitName          string    `json:"unitName"`
 	MovementType      string    `json:"movementType"`
 	AdjustmentType    *string   `json:"adjustmentType,omitempty"`
 	Reason            *string   `json:"reason,omitempty"`
@@ -150,6 +151,9 @@ type InventoryBalanceLock struct {
 
 // MaxStockQuantity is the exclusive bound of numeric(14,3) stock columns.
 const MaxStockQuantity = 1e11
+
+// RoundStockQuantity preserves six decimals in balances and stock movements.
+func RoundStockQuantity(value float64) float64 { return math.Round(value*1e6) / 1e6 }
 
 // MaxUnitCost is the exclusive bound of numeric(14,4) cost columns.
 const MaxUnitCost = 1e10
@@ -352,7 +356,9 @@ type PurchaseInventoryItemInput struct {
 	PresentationType     string                       `json:"presentationType"`
 	UnitsPerPresentation float64                      `json:"unitsPerPresentation"`
 	MinimumStock         float64                      `json:"minimumStock"`
-	Presentations        []InventoryPresentationInput `json:"presentations"`
+	// OptimalStock is optional; omitted values use the minimum for the active location.
+	OptimalStock  *float64                     `json:"optimalStock,omitempty"`
+	Presentations []InventoryPresentationInput `json:"presentations"`
 }
 
 // LinkableProduct is a sellable catalog product that does not control inventory yet
