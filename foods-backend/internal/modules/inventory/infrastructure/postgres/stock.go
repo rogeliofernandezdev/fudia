@@ -530,7 +530,9 @@ func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilte
 		         CASE
 		           WHEN sm.source_type='order' THEN (
 		             SELECT 'Pedido · '||CASE o.channel
-		               WHEN 'salon' THEN COALESCE('Mesa '||tb.name,'Salón')
+		               -- Los nombres de mesa suelen traer su propio prefijo («Mesa 1»):
+		               -- solo se antepone «Mesa» cuando el nombre no lo incluye.
+		               WHEN 'salon' THEN COALESCE(CASE WHEN tb.name ILIKE 'mesa%' THEN tb.name ELSE 'Mesa '||tb.name END,'Salón')
 		               WHEN 'mostrador' THEN 'Mostrador'
 		               WHEN 'recojo' THEN 'Recojo en local'
 		               WHEN 'delivery' THEN 'Delivery'
