@@ -68,7 +68,7 @@ export function KardexPage(){
        <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:6})} {item.unitName}</b></td>
        <td>{formatRegionalNumber(Number(item.balanceBefore),location?.country,{maximumFractionDigits:6})} {item.unitName}</td>
        <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:6})} {item.unitName}</td>
-       <td>{currency.symbol} {formatRegionalNumber(Number(item.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})} por {item.unitName}</td>
+       <td>{currency.symbol} {formatRegionalNumber(Number(item.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})} por {item.unitName}</td>
        <td>{formatRegionalNumber(Number(item.valueDelta),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
        <td><b>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td>{item.createdByName||"Usuario no disponible"}</td>
