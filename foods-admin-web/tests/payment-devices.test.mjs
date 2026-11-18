@@ -80,8 +80,10 @@ test("Fudia Pay: Caja revisa los pagos detectados y Mi restaurante vincula los d
   assert.doesNotMatch(nav,/detectedPayments/,"sin casilla de navegación para la página eliminada");
   const view=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
   assert.match(view,/refetchInterval:query=>query\.state\.data\?\.items\.some\(item=>item\.status==="detected"\)\?10000:30000/,"los pagos por revisar se consultan con más frecuencia");
-  assert.match(view,/La asociación registra el cobro real/);
-  assert.match(view,/Asociar el pago a un pedido/);
+  assert.match(view,/onClick=\{\(\)=>setDetail\(item\)\}/,"consulta y asociación comparten el detalle con revisión previa");
+  const detail=read("src/modules/payment-devices/presentation/pay-notification-detail.tsx");
+  assert.match(detail,/La asociación registra el cobro real/);
+  assert.match(detail,/Asociar pago a pedido/);
   const pos=read("src/modules/operations/pos/presentation/pos-page.tsx");
   assert.match(pos,/PayCollectionRegistration order=/,"el POS registra el pedido en cobro como sugerencia");
   const providers=read("src/providers/providers.tsx");

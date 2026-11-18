@@ -2,13 +2,12 @@
 
 import {payProviderLabel} from "../domain/pay-status";
 import type {PayProvider} from "../domain/types";
+import "./payment-devices.css";
 
-/** Identidad del proveedor: monograma con el color característico de Yape
- *  (morado) y Plin (verde azulado) más su nombre en texto. Sin logotipos de
- *  terceros: la identidad es de color y letra, no de marca registrada. */
+/** Logos originales, alojados localmente y sin filtros que alteren sus colores. */
 export function PayProviderTag({provider}:{provider:PayProvider}){
   return <span className={`pay-provider-tag ${provider}`}>
-    <span className="pay-provider-mark" aria-hidden="true">{provider==="yape"?"Y":"P"}</span>
-    {payProviderLabel[provider]}
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img className="pay-provider-logo" src={`/brands/${provider}.png`} width={56} height={56} alt={payProviderLabel[provider]}/>
   </span>;
 }

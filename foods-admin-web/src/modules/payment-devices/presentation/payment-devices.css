@@ -6,40 +6,43 @@
 .pay-devices-section,.pay-notifications-section{display:grid;min-width:0;background:var(--surface)}
 .pay-notifications-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2-5) var(--space-4);padding:var(--space-3) var(--space-3-5);border-bottom:var(--stroke-1) solid var(--line)}
 .pay-notifications-toolbar>p{margin:0;color:var(--ink-400);font-size:var(--font-size-label);line-height:var(--line-height-snug)}
-.pay-notifications-filters{display:flex;align-items:center;gap:var(--space-2-5);flex-shrink:0}
+.pay-notifications-filters{display:flex;align-items:center;gap:var(--space-2-5);min-width:0}
 .pay-devices-table table{min-width:var(--size-720)}
-.pay-notifications-table table{min-width:var(--size-900)}
+.pay-notifications-table table{min-width:var(--size-720)}
 .pay-devices-table td small{display:block}
 .pay-notifications-table .pay-amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pay-pairing-body{display:grid;justify-items:center;gap:var(--space-3);padding:var(--space-5);text-align:center}
 .pay-pairing-qr{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-done{margin:0;font-size:var(--font-size-md)}
-/* Identidad del proveedor sobre la etiqueta del sistema: monograma con el
-   color de Yape (morado) y Plin (verde azulado) y su nombre en texto; la
-   identidad es de color y letra, sin logotipos ajenos. */
-.pay-provider-tag{display:inline-flex;align-items:center;gap:var(--space-1-5);padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);border:var(--stroke-1) solid transparent;white-space:nowrap}
-.pay-provider-tag.yape{color:var(--purple-600);background:var(--purple-100);border-color:var(--purple-200)}
-.pay-provider-tag.plin{color:var(--teal-700);background:var(--teal-100);border-color:var(--teal-200)}
-.pay-provider-mark{display:inline-flex;align-items:center;justify-content:center;width:var(--size-18);height:var(--size-18);border-radius:var(--radius-tile);color:var(--surface);background:var(--purple-600);font-size:var(--font-size-xs)}
-.pay-provider-tag.plin .pay-provider-mark{background:var(--teal-700)}
+/* La identidad de cada billetera vive en el recurso oficial, sin recolorear
+   etiquetas de estado ni aproximar sus colores con la paleta de Fudia. */
+.pay-provider-tag{display:inline-flex;flex:none;align-items:center;justify-content:center;width:var(--size-56);height:var(--size-56);overflow:hidden;vertical-align:middle}
+.pay-provider-logo{display:block;flex:none;width:var(--size-48);height:var(--size-48);max-width:none;object-fit:contain}
+/* El archivo de Yape incluye márgenes blancos; se amplía el recurso dentro
+   del mismo marco para igualar el tamaño óptico sin deformar el logotipo. */
+.pay-provider-tag.yape .pay-provider-logo{width:var(--size-88);height:var(--size-88)}
 
 /* Tabla de pagos detectados: columnas cuadradas, sin saltos en datos de una
    sola línea y acciones alineadas a la derecha. */
-.pay-notifications-table .pay-col-provider{width:var(--size-88)}
-.pay-notifications-table .pay-col-when,.pay-notifications-table .pay-col-device,.pay-notifications-table .pay-col-state{white-space:nowrap}
+.pay-notifications-table .pay-col-provider{width:var(--size-120)}
+.pay-notifications-table .pay-col-state{white-space:nowrap}
+.pay-notification-sender{min-width:var(--size-160);max-width:var(--size-240);white-space:normal;overflow-wrap:anywhere;color:var(--ink-950)}
+.pay-notification-received{max-width:var(--size-200);white-space:normal;overflow-wrap:anywhere}
 .pay-notifications-table .pay-col-actions{width:var(--size-96);text-align:right}
-.pay-notifications-table .pay-col-actions .table-actions{justify-content:flex-end}
+.pay-notifications-table .table-actions{justify-content:flex-end}
 
 /* Escaneado: el QR cede su lugar al progreso, con la misma altura para que el modal no salte. */
 .pay-pairing-progress{display:grid;justify-items:center;align-content:center;gap:var(--space-3);min-height:var(--size-240);color:var(--primary-600)}
 .pay-pairing-progress.is-done{color:var(--brand-600)}
 .pay-pairing-progress>p{margin:0}
 .pay-pairing-progress-title{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-semibold)}
-.pay-order-search{display:grid;gap:var(--space-3);min-width:0}
 .pay-order-options{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
-.pay-order-options li{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile)}
-@media(max-width:700px){.pay-notifications-toolbar{padding:var(--space-2-5)}.pay-notifications-filters{display:grid;grid-template-columns:1fr 1fr;width:100%}}
+.pay-order-option{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:var(--stroke-1) solid var(--line)}
+.pay-order-option>span{display:grid;gap:var(--space-1);min-width:0;color:var(--ink-950);font-size:var(--font-size-base);overflow-wrap:anywhere}
+.pay-order-option small{color:var(--ink-500);font-size:var(--font-size-label)}
+.pay-order-option .button{flex:none}
+@media(max-width:700px){.pay-notifications-toolbar{padding:var(--space-3)}.pay-notifications-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}.pay-notifications-filters .ds-select{width:100%}}
 
 /* Capa global del aviso flotante: por encima de modales y hojas, apilable. */
 .pay-notice-layer{position:fixed;top:calc(var(--space-4) + var(--space-2));right:var(--space-4);z-index:var(--z-tooltip);display:grid;gap:var(--space-2);width:min(var(--size-320),calc(100vw - var(--space-8)))}
@@ -51,10 +54,17 @@
 
 /* Detalle del pago detectado y asociación: identidad con DetailHero, datos en
    dos columnas con DetailFacts (el detalle del pedido continúa con detalle). */
-.pay-detail-body,.pay-order-search{display:grid;gap:var(--space-3);padding:var(--space-4) var(--space-5) var(--space-5)}
-.pay-detail-title{display:inline-flex;align-items:center;gap:var(--space-2)}
-.pay-detail-field{display:grid;gap:var(--space-0-5);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}
-.pay-associate{display:grid;gap:var(--space-3);padding-top:var(--space-3);border-top:var(--stroke-1) solid var(--line)}
-.pay-associate h3{margin:0;font-size:var(--font-size-md);font-weight:var(--weight-bold)}
-.pay-detail-actions{display:flex;gap:var(--space-2-5);justify-content:flex-end}
-@media(max-width:600px){.pay-detail-actions{grid-template-columns:1fr 1fr}.pay-detail-actions .button{width:100%;justify-content:center}}
+.pay-detail-body{display:grid;gap:var(--space-5);min-width:0}
+.pay-detail-body .detail-hero-head{justify-content:space-between}
+.pay-detail-amount{display:grid;gap:var(--space-1);margin:0}
+.pay-detail-amount dt{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.pay-detail-amount dd{margin:0;color:var(--ink-950);font-size:var(--font-size-2xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);overflow-wrap:anywhere}
+.pay-detail-field{display:grid;gap:var(--space-1-5);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}
+.pay-associate{display:grid;gap:var(--space-3);min-width:0;padding-top:var(--space-5);border-top:var(--stroke-1) solid var(--line)}
+.pay-associate-heading{display:grid;gap:var(--space-1)}
+.pay-associate-heading .form-help{margin:0}
+.pay-associate h3{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold)}
+.pay-detail-state{min-height:0;padding:var(--space-5) var(--space-3)}
+.pay-order-loading{display:grid;gap:var(--space-3);padding-block:var(--space-3)}
+.pay-detail-selection{display:grid;gap:var(--space-4)}
+.pay-detail-footer-note{margin:0;color:var(--ink-500);font-size:var(--font-size-label)}

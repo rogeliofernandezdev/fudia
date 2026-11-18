@@ -3436,6 +3436,23 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Pagos detectados de Yape y Plin en Caja (2026-11-15)
 
+Refinamiento aprobado por solicitud del usuario (2026-11-18): los proveedores
+usan sus logos originales de los sitios oficiales, alojados en `public/brands`,
+sin filtros ni recoloreado. Sustituyen los monogramas Y/P y se muestran solos,
+sin repetir el nombre junto al logotipo (solicitud del usuario). El marco de
+56 px equilibra su tamaño óptico: Yape compensa los márgenes blancos de su
+archivo original. El texto alternativo identifica al proveedor para lectores
+de pantalla. La matriz de estados de Fudia conserva sus tonos y variantes. La
+procedencia de los archivos está en `public/brands/README.md`.
+La tabla agrupa fecha y dispositivo en «Recepción» para reducir el ancho. Tanto
+consultar como asociar abren el mismo detalle: logo y estado, monto destacado
+una sola vez, remitente, fecha y dispositivo, y asociación separada por una
+línea. El detalle usa `ModalBody` desplazable y `ModalFooter` fijo al revisar un
+pedido. Los pagos ya asociados o descartados son de lectura. Las consultas de
+medios, pedidos y saldo presentan skeleton, error con reintento y vacío propio;
+no se muestra un vacío antes de consultar. El medio sugerido corresponde al
+proveedor del evento y la confirmación requiere haber cargado el saldo.
+
 Módulo `payment-devices`: los pagos se revisan en Caja (pestaña «Pagos
 detectados»), los dispositivos se vinculan en Configuración › Mi restaurante
 y una capa global avisa al cajero en el panel:

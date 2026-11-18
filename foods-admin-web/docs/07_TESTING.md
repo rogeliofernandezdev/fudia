@@ -1,5 +1,22 @@
 # Pruebas
 
+## Pagos detectados
+
+Después de compilar, `node tests/helpers/pay-notifications-preview.mjs` sirve
+los componentes reales con datos ficticios en `http://127.0.0.1:5198`, sin sesión
+ni escrituras al backend. `?table` muestra la tabla; `?provider=plin` cambia el
+proveedor del detalle. `?case=` permite `long`, `empty`, `orders-error`,
+`orders-loading`, `methods-error`, `methods-empty`, `detail-error`, `associated`,
+`dismissed`, `suggestion`, `paid` y `over`.
+Revisar desde 390 px, también con 480 px de alto: logos cargados y sin
+deformaciones, ningún desborde de página, controles táctiles de 44 px, cuerpo
+desplazable y confirmación fija sin texto cortado. Probar la revisión previa,
+la preselección del medio según proveedor y el bloqueo al fallar el saldo o
+estar pagado. El caso `over` registra solo el saldo en el adaptador ficticio;
+`window.payFixture.calls` permite inspeccionar las llamadas sin guardar cobros.
+
+## Otras comprobaciones
+
 `delivery-dispatch.test.mjs` cubre la prioridad de incidencias/ofertas/asignaciones,
 filtros por etapa, historial por fecha, búsqueda sin tildes y carga por motorizado
 sin contar entregas terminadas ni ofertas. Tras build,
