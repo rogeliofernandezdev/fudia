@@ -39,6 +39,24 @@
 .crud-modal.location-dialog>div.location-dialog-tabs{flex:none;overflow:visible;padding:var(--space-3) var(--space-6) var(--space-1);background:var(--surface)}
 .crud-modal.location-dialog>.modal-form[hidden]{display:none}
 .location-dialog-tabs .ds-tabs{width:100%}
+/* Modal amplio (size-lg, 880 px) con una sola grilla de 3 columnas para todas
+   las secciones: obligatorios primero (Nombre ancho + Perfil fiscal), opcionales
+   en una fila (Teléfono · Horario · Fecha); en Ubicación, departamento,
+   provincia y distrito caen sobre las mismas columnas y el mapa usa todo el ancho. */
+.form-grid.location-form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.form-grid.location-form-grid>.location-field-wide{grid-column:span 2}
+.location-dialog .geographic-fields-grid{gap:var(--space-4)}
+.location-dialog .tip-settings-form{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--space-4)}
+.location-dialog .tip-settings-form>:is(.tip-checkbox,.tip-channels,.tip-help){grid-column:1/-1}
+/* Tableta: con 3 columnas el horario se corta; 2 columnas y Nombre a todo el ancho. */
+@media (600px<width<=760px){
+ .form-grid.location-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .form-grid.location-form-grid>.location-field-wide{grid-column:1/-1}
+ .location-dialog .tip-settings-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media (width<=600px){
  .crud-modal.location-dialog>div.location-dialog-tabs{padding-inline:var(--space-4)}
+ .form-grid.location-form-grid{grid-template-columns:minmax(0,1fr)}
+ .form-grid.location-form-grid>.location-field-wide{grid-column:auto}
+ .location-dialog .tip-settings-form{grid-template-columns:minmax(0,1fr)}
 }

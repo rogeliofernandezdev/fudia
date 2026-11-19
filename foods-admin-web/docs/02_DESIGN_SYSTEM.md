@@ -823,6 +823,40 @@ sección), con la misma geometría de modal y hoja inferior móvil:
 6. «Ver resumen de pago» (`secondary`, icono `eye`) en `ModalFooter` solo con un
    pago registrado; no se añade una acción vacía ni otro cierre.
 
+### Detalle del cliente (organización)
+
+Modal de solo lectura (`CustomerDetail`, Clientes), 2026-11-19. Cuerpo
+`cloud-50` con 20 px entre bloques (16 px a ≤760 px):
+
+1. **Identidad** (`DetailHero`): nombre; a su lado `Status` suave
+   Activo/Inactivo y el segmento como `Tag` neutro («Nuevo», «Frecuente»…), más
+   `Tag` «VIP» con icono `star` solo si es VIP manual y el segmento no lo dice.
+   Sin línea gris debajo del nombre.
+2. **Contacto** (`DetailContact`): icono `phone` (o `user` sin teléfono),
+   celular agrupado «+51 941 452 580» (`formatCustomerPhone`) y debajo
+   «DNI 41452580 · correo» (o «Sin correo registrado»); el documento vive aquí
+   y se omite si no existe. A ≤600 px documento y correo van uno por línea, sin
+   el punto medio (`customer-contact-meta`), y el correo largo parte donde haga
+   falta. «Llamar» secundario con `tel:`.
+3. **Compras** (`customer-detail-relation`): tarjeta blanca con borde `line`,
+   como la de contacto (`primary-50` no se distingue del cuerpo `cloud-50`). Con
+   compras, tres columnas Visitas · Acumulado · Última compra separadas por regla
+   `line`; etiqueta 12 px / 600 `ink-600` y cifra
+   18 px / 700 tabular (énfasis semántico de total). A ≤600 px pasan a filas
+   etiqueta/cifra (16 px) alineadas a la derecha. Sin compras, una sola línea
+   con icono `receipt`: «Aún no registra compras.» — nunca «0», «S/ 0.00» y «—».
+4. **Preferencias** (`DetailFacts`, sin título): «Promociones por WhatsApp»
+   siempre (Acepta, No acepta, Retiró su permiso, Consultado sin respuesta, Sin
+   consultar); «Canal preferido» desde `channelOptions` del API, solo si no es
+   «none»; «Preferencias» y «Notas» a todo el ancho solo si tienen texto.
+5. **Dirección de entrega**: `modal-section-title modal-section-rule` sin
+   tarjeta (plural con varias); dirección 14 px `ink-950`, debajo en 12 px
+   `ink-500` «Ubicada en el mapa» (`mapPin`) y «Ref.: …»; «Predeterminada» es
+   `Tag` neutro y solo aparece con varias, separadas por 16 px sin regla.
+   Vacía: «Sin dirección registrada.».
+
+El skeleton reproduce los cinco bloques. Sin footer: la X es el único cierre.
+
 ### Detalle de cobro en POS (organización)
 
 Igual que «Detalle de venta»: cabecera con mesa, cliente o «Venta directa»,
@@ -3536,6 +3570,21 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   `DataTable` (cabecera marino, filas alternas, `table-actions` de iconos:
   asociar `link`, descartar `cancel` danger) y paginación en el servidor con
   `Pagination` (20 por página); el monto va a la derecha con cifras tabulares.
+- **Locales › Nuevo / Editar local: distribución** (2026-11-19). Modal
+  `size-lg` (880 px; antes `compact` de 480 px dejaba la Ubicación apretada
+  y la zona horaria y el perfil fiscal a todo el ancho). Una sola grilla de 3
+  columnas (`location-form-grid`) en todas las secciones: fila 1 «Nombre»
+  (2 columnas, `location-field-wide`) y «Perfil fiscal» — obligatorio y antes
+  de Ubicación porque su país decide si se piden departamento, provincia y
+  distrito —; fila 2 los opcionales «Teléfono» · «Horario de atención» ·
+  «Fecha de apertura». En Ubicación los tres selectores caen sobre las mismas
+  columnas (separación 16 px, igual que la grilla), dirección y mapa ocupan
+  todo el ancho y «Zona horaria» una columna. Propinas usa la misma grilla
+  (Funcionamiento · Porcentaje; casillas, tipos de atención y ayuda a todo el
+  ancho). Ya no hay sección suelta «Configuración fiscal». Entre 601 y 760 px
+  la grilla pasa a 2 columnas con Nombre a todo el ancho (con 3 el horario se
+  cortaba); a ≤600 px todo va en una columna en el mismo orden del DOM. El skeleton de carga usa el mismo
+  `size-lg`.
 - **Locales › Editar local › Dispositivos de pago** (2026-11-19; antes era
   una sección de Mi restaurante que no decía a qué local pertenecía cada
   teléfono): el modal del local muestra `Tabs` «Datos» (`store`) y

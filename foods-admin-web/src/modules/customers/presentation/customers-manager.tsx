@@ -5,7 +5,8 @@ import {LocationMap} from "@/design-system/location-map";
 import "./customers.css";
 import {useRef,useState} from "react";import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,ModalHeader,ModalForm,ModalBody,ModalFooter,FormSection,DetailHero,DetailContact,DetailFacts} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,ModalHeader,ModalForm,ModalBody,ModalFooter,FormSection,DetailHero,DetailContact,DetailFacts,Tag,type DetailFact} from "@/design-system";
+import {formatCustomerPhone,hasPurchases,marketingConsentLabel} from "../domain/customer-display";
 import {customerResolver} from "../domain/customer-schema";import type {Address,Customer,CustomerDraft,Option} from "../domain/types";
 import {getCustomer,listCustomers,saveCustomer,setCustomerActive} from "../infrastructure/customers-api";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -25,7 +26,7 @@ export function CustomersManager(){const qc=useQueryClient();const{notify}=useFe
  async function edit(id:string){cancelledDraft.current=null;setDraftLoading(true);setCustomerDraft({...empty,id});try{const c=await getCustomer(id);if(cancelledDraft.current===id){cancelledDraft.current=null;return}setCustomerDraft({id:c.id,customerType:c.customerType,displayName:c.displayName,documentType:c.documentType,documentNumber:c.documentNumber,phone:c.phone,email:c.email,preferredChannel:c.preferredChannel,preferences:c.preferences,notes:c.notes,marketingConsent:c.marketingConsent,vipOverride:c.vipOverride,addresses:c.addresses??[]})}catch(e){if(cancelledDraft.current!==id){setCustomerDraft(null);notify({tone:"danger",title:"No se pudo cargar",message:(e as Error).message})}}finally{setDraftLoading(false)}}
  const items=list.data?.items??[];const filtered=Boolean(debouncedQ||status||segment);return <><PageHeader title="Clientes" description="Directorio maestro, preferencias e historial de relación con tus clientes." action={canManage?<Button icon="plus" onClick={()=>setCustomerDraft({...empty})}>Nuevo cliente</Button>:undefined}/><section className="panel management standardized-management customers-panel"><div className="toolbar"><SearchField value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por nombre, documento, teléfono o correo…" label="Buscar clientes"/><Select chip aria-label="Filtrar por segmento" value={segment} onChange={e=>{setSegment(e.target.value);setPage(1)}}><option value="">Todos los segmentos</option>{(list.data?.segmentOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select><Select chip aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></Select></div>
  {list.isLoading?<TableSkeleton columns={columns} label="Cargando clientes"/>:list.isError?<ErrorState title="No pudimos cargar los clientes" text={list.error.message} onRetry={()=>void list.refetch()} retrying={list.isFetching}/>:!items.length?(filtered?<EmptyState icon="search" title="Sin coincidencias" text="No hay clientes que coincidan con la búsqueda o los filtros."/>:<EmptyState icon="users" title="Aún no hay clientes" text={canManage?"Registra el primer cliente para guardar sus datos y preferencias.":"Los clientes registrados aparecerán aquí."} action={canManage?<Button icon="plus" onClick={()=>setCustomerDraft({...empty})}>Nuevo cliente</Button>:undefined}/>):<><DataTable label="Listado de clientes" containerClassName="hover-scroll"><thead><tr>{columns.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{items.map((c,i)=><tr className={i%2?"alternate":""} key={c.id}><td><span className={`row-icon r${i%3}`}><Icon name="users" size={18}/></span><b>{c.displayName}</b>{c.documentNumber?<small className="doc-beside">{c.documentType} {c.documentNumber}</small>:null}</td><td>{c.phone||c.email||"Sin contacto"}<small>{c.phone&&c.email?c.email:""}</small></td><td><Status tone={c.segment==="vip"?"blue":c.segment==="frequent"?"green":"gray"}>{segmentLabels[c.segment]}</Status></td><td><b>{c.visitCount} visitas</b><small>{money(c.totalSpent)} acumulado</small></td><td><Status active={c.active}>{c.active?"Activo":"Inactivo"}</Status></td><td><div className="table-actions"><RowActionButton action="view" onClick={()=>setDetailId(c.id)}/>{canManage&&<><RowActionButton action="edit" onClick={()=>void edit(c.id)}/><RowActionButton action={c.active?"deactivate":"activate"} stateLabel={`Estado de ${c.displayName}`} onClick={()=>setTarget(c)}/></>}</div></td></tr>)}</tbody></DataTable><div className="management-cards">{items.map(c=><article key={c.id}><header><span className="row-icon r0"><Icon name="users"/></span><div><b>{c.displayName}</b>{c.documentNumber?<small className="doc-beside">{c.documentType} {c.documentNumber}</small>:null}</div><Status active={c.active}>{c.active?"Activo":"Inactivo"}</Status></header><dl><div><dt>Contacto</dt><dd>{c.phone||c.email||"Sin contacto"}</dd></div><div><dt>Segmento</dt><dd>{segmentLabels[c.segment]}</dd></div><div><dt>Actividad</dt><dd>{c.visitCount} visitas · {money(c.totalSpent)}</dd></div></dl><footer><RowActionButton action="view" onClick={()=>setDetailId(c.id)}/>{canManage&&<><RowActionButton action="edit" onClick={()=>void edit(c.id)}/><RowActionButton action={c.active?"deactivate":"activate"} stateLabel={`Estado de ${c.displayName}`} onClick={()=>setTarget(c)}/></>}</footer></article>)}</div></>}
- <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/></section>{draft&&(draftLoading||list.isLoading?<RemoteModalSkeleton className="customer-modal" label="Cargando cliente" title={draft.id?"Editar cliente":"Nuevo cliente"} close={()=>{if(draft.id)cancelledDraft.current=draft.id;setCustomerDraft(null);setDraftLoading(false)}}/>:<CustomerDialog initial={draft} documentTypes={list.data?.documentTypeOptions??[]} busy={save.isPending} close={()=>setCustomerDraft(null)} save={v=>save.mutate(v)}/>)} {detailId&&<CustomerDetail loading={detail.isLoading} customer={detail.data} error={detail.error?.message} retry={()=>void detail.refetch()} retrying={detail.isFetching} close={()=>setDetailId(null)}/>}<ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar cliente":"Activar cliente"} subject={target?{label:"Cliente",name:target.displayName}:undefined} description={target?.active?"Dejará de estar disponible; su historial y preferencias se conservarán.":"Volverá a estar disponible para nuevos pedidos."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&changeStatus.mutate(target)}/></>}
+ <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/></section>{draft&&(draftLoading||list.isLoading?<RemoteModalSkeleton className="customer-modal" label="Cargando cliente" title={draft.id?"Editar cliente":"Nuevo cliente"} close={()=>{if(draft.id)cancelledDraft.current=draft.id;setCustomerDraft(null);setDraftLoading(false)}}/>:<CustomerDialog initial={draft} documentTypes={list.data?.documentTypeOptions??[]} busy={save.isPending} close={()=>setCustomerDraft(null)} save={v=>save.mutate(v)}/>)} {detailId&&<CustomerDetail channelOptions={list.data?.channelOptions??[]} loading={detail.isLoading} customer={detail.data} error={detail.error?.message} retry={()=>void detail.refetch()} retrying={detail.isFetching} close={()=>setDetailId(null)}/>}<ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar cliente":"Activar cliente"} subject={target?{label:"Cliente",name:target.displayName}:undefined} description={target?.active?"Dejará de estar disponible; su historial y preferencias se conservarán.":"Volverá a estar disponible para nuevos pedidos."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&changeStatus.mutate(target)}/></>}
 
 const blankAddress:Address={label:"Principal",address:"",reference:"",district:"",city:"",countryCode:"PE",default:true,latitude:null,longitude:null};
 /** El formulario edita una sola dirección: la predeterminada va primero; las demás se conservan sin cambios al guardar. */
@@ -66,46 +67,65 @@ function CustomerDialog({initial,documentTypes,busy,close,save}:{initial:Custome
    </div></FormSection></div>
   </ModalBody><ModalFooter><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm></Dialog></div>
 }
-function CustomerDetail({customer,loading,error,retry,retrying,close}:{customer?:Customer;loading:boolean;error?:string;retry:()=>void;retrying:boolean;close:()=>void}){
+function CustomerDetail({customer,channelOptions,loading,error,retry,retrying,close}:{customer?:Customer;channelOptions:Option[];loading:boolean;error?:string;retry:()=>void;retrying:boolean;close:()=>void}){
  const{location}=useSession();const money=useMoney();
- const lastPurchase=customer?.lastPurchaseAt?formatRegionalDateTime(customer.lastPurchaseAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"}):"—";
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={loading}>
-
   {loading?<CustomerDetailSkeleton close={close}/>:<>
    <ModalHeader title="Detalle del cliente" onClose={close} closeLabel="Cerrar"/>
-   {error?<div className="customer-detail-body"><ErrorState title="No pudimos cargar el detalle" text={error} onRetry={retry} retrying={retrying}/></div>:customer&&<div className="customer-detail-body">
-    <DetailHero title={customer.displayName} status={<Status active={customer.active}>{customer.active?"Activo":"Inactivo"}</Status>} meta={`${segmentLabels[customer.segment]}${customer.vipOverride?" · Cliente VIP":""}`}/>
-    <DetailContact icon="user" name={customer.phone||"Sin teléfono registrado"} detail={customer.email||"Sin correo registrado"} actions={customer.phone&&<a className="button secondary" href={`tel:${customer.phone.replace(/\s+/g,"")}`} aria-label={`Llamar a ${customer.phone}`}><Icon name="phone" size={16}/><span>Llamar</span></a>}/>
-    <DetailFacts label="Relación con el cliente" items={[
-     {label:"Visitas",value:String(customer.visitCount)},
-     {label:"Acumulado",value:money(customer.totalSpent)},
-     {label:"Última compra",value:lastPurchase},
-     {label:"Documento",value:customer.documentNumber?`${customer.documentType} ${customer.documentNumber}`:"No registrado"},
-    ]}/>
-    <section className="customer-detail-section">
-     <h3 className="modal-section-title modal-section-rule">Dirección de entrega</h3>
-     {customer.addresses?.length?customer.addresses.map(a=><div className="customer-detail-address" key={a.id}><div><b>{a.label}</b>{a.default&&customer.addresses!.length>1&&<span>Predeterminada</span>}</div><p>{a.address}{a.district?`, ${a.district}`:""}{a.city?`, ${a.city}`:""}</p>{a.latitude!=null&&a.longitude!=null&&<small className="customer-detail-located"><Icon name="mapPin" size={14}/>Ubicada en el mapa</small>}{a.reference&&<small>{a.reference}</small>}</div>):<p className="customer-detail-empty">No registrada.</p>}
-    </section>
-   </div>}
+   {error?<div className="customer-detail-body"><ErrorState title="No pudimos cargar el detalle" text={error} onRetry={retry} retrying={retrying}/></div>:customer&&<CustomerDetailContent customer={customer} channelOptions={channelOptions} money={money} lastPurchase={customer.lastPurchaseAt?formatRegionalDateTime(customer.lastPurchaseAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"}):"—"}/>}
   </>}
 </Dialog></div>
+}
+
+function CustomerDetailContent({customer,channelOptions,money,lastPurchase}:{customer:Customer;channelOptions:Option[];money:(value:string)=>string;lastPurchase:string}){
+ const document=customer.documentNumber?`${customer.documentType} ${customer.documentNumber}`:"";
+ const contactName=customer.phone?formatCustomerPhone(customer.phone):customer.email||"Sin teléfono registrado";
+ const contactParts=[document,customer.phone?customer.email||"Sin correo registrado":customer.email?"":"Sin correo registrado"].filter(Boolean);
+ const contactDetail=contactParts.length?<span className="customer-contact-meta">{contactParts.map(part=><span key={part}>{part}</span>)}</span>:undefined;
+ const channel=customer.preferredChannel&&customer.preferredChannel!=="none"?channelOptions.find(o=>o.value===customer.preferredChannel)?.label:undefined;
+ const facts:DetailFact[]=[
+  {label:"Promociones por WhatsApp",value:marketingConsentLabel(customer)},
+  ...(channel?[{label:"Canal preferido",value:channel}]:[]),
+  ...(customer.preferences?.trim()?[{label:"Preferencias",value:customer.preferences,wide:true}]:[]),
+  ...(customer.notes?.trim()?[{label:"Notas",value:customer.notes,wide:true}]:[]),
+ ];
+ const addresses=customer.addresses??[];
+ return <div className="customer-detail-body">
+  <DetailHero title={customer.displayName} status={<><Status active={customer.active}>{customer.active?"Activo":"Inactivo"}</Status><Tag>{segmentLabels[customer.segment]??customer.segment}</Tag>{customer.vipOverride&&customer.segment!=="vip"&&<Tag icon="star">VIP</Tag>}</>}/>
+  <DetailContact icon={customer.phone?"phone":"user"} name={contactName} detail={contactDetail} actions={customer.phone&&<a className="button secondary" href={`tel:${customer.phone.replace(/[\s-]+/g,"")}`} aria-label={`Llamar a ${contactName}`}><Icon name="phone" size={16}/><span>Llamar</span></a>}/>
+  <section className="customer-detail-relation" aria-label="Compras">
+   {hasPurchases(customer)?<dl>
+    <div><dt>Visitas</dt><dd>{customer.visitCount}</dd></div>
+    <div><dt>Acumulado</dt><dd>{money(customer.totalSpent)}</dd></div>
+    <div><dt>Última compra</dt><dd>{lastPurchase}</dd></div>
+   </dl>:<p><Icon name="receipt" size={18}/>Aún no registra compras.</p>}
+  </section>
+  <DetailFacts label="Preferencias del cliente" items={facts}/>
+  <section className="customer-detail-section">
+   <h3 className="modal-section-title modal-section-rule">{addresses.length>1?"Direcciones de entrega":"Dirección de entrega"}</h3>
+   {addresses.length?addresses.map(a=><div className="customer-detail-address" key={a.id??a.address}>
+    {(addresses.length>1||a.label)&&<div><b>{a.label}</b>{a.default&&addresses.length>1&&<Tag>Predeterminada</Tag>}</div>}
+    <p>{[a.address,a.district,a.city].filter(Boolean).join(", ")}</p>
+    {(a.latitude!=null&&a.longitude!=null||a.reference)&&<small>{a.latitude!=null&&a.longitude!=null&&<span className="customer-detail-located"><Icon name="mapPin" size={14}/>Ubicada en el mapa</span>}{a.reference&&<span>Ref.: {a.reference}</span>}</small>}
+   </div>):<p className="customer-detail-empty">Sin dirección registrada.</p>}
+  </section>
+ </div>;
 }
 
 function CustomerDetailSkeleton({close}:{close:()=>void}){
  return <>
   <ModalHeader title="Detalle del cliente" onClose={close} closeLabel="Cerrar" initialFocusClose/>
   <div className="customer-detail-body customer-detail-skeleton-body" aria-label="Cargando detalle del cliente">
-   <section className="customer-detail-summary customer-detail-skeleton-summary">
-    {Array.from({length:4},(_,i)=><div key={i}><i/><b/></div>)}
-    <span className="customer-detail-skeleton-block customer-detail-skeleton-status"/>
-   </section>
+   <section className="customer-detail-skeleton-hero"><b/><i/><i/></section>
+   <section className="detail-contact customer-detail-skeleton-contact"><span/><div><b/><i/></div></section>
+   <section className="customer-detail-relation customer-detail-skeleton-relation"><dl>{Array.from({length:3},(_,i)=><div key={i}><dt><i/></dt><dd><b/></dd></div>)}</dl></section>
    <section className="customer-detail-fields customer-detail-skeleton-fields">
-    {Array.from({length:4},(_,i)=><div key={i}><i/><b/></div>)}
+    {Array.from({length:2},(_,i)=><div key={i}><small><i/></small><b/></div>)}
    </section>
-   {Array.from({length:1},(_,i)=><section className="customer-detail-section customer-detail-skeleton-section" key={i}>
-    <header><div><i/><b/></div></header>
-    <div className="customer-detail-skeleton-lines"><i/><i/><i/></div>
-   </section>)}
+   <section className="customer-detail-section customer-detail-skeleton-section">
+    <header><b/></header>
+    <div className="customer-detail-skeleton-lines"><i/><i/></div>
+   </section>
   </div>
  </>;
 }
