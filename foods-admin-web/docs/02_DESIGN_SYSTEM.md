@@ -3545,8 +3545,9 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   desmontarse para no perder cambios; el pie Guardar/Cancelar es solo de
   «Datos». La pestaña tiene un filtro `Select chip` (Activos por defecto,
   Revocados, Todos) y «Vincular dispositivo» (primario, `plus`) en una fila;
-  `DataTable` de tres columnas (Dispositivo, Estado, Acciones) que cabe en
-  390 px: el `row-icon` muestra la plataforma (`android` en verde
+  `DataTable` que cabe en 390 px: Dispositivo y Acciones con el filtro
+  Activos, solo Dispositivo en Revocados y la columna Estado únicamente en
+  «Todos» (con filtro sería redundante); el `row-icon` muestra la plataforma (`android` en verde
   restaurante, `apple` neutro, con `aria-label`) y bajo el nombre va solo
   «Visto …», «Aún sin contacto» o «Revocado …», que salta de línea en vez de
   cortarse; `Pagination mode="simple"` de 10 en el servidor.
@@ -3566,7 +3567,9 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   se cierra solo y `FeedbackProvider` avisa «Dispositivo vinculado». Un código
   vencido muestra «El código venció sin usarse.» y «Generar otro código»
   (primario, `refresh`). La X cierra en cualquier estado; revocar usa
-  ConfirmDialog danger.
+  ConfirmDialog danger («Revocar», en una línea). El QR (640 px, hoja inferior
+  en móvil) y la confirmación se montan con `createPortal` en `document.body`:
+  dentro del modal del local, su `backdrop-filter` y `overflow` los recortaban.
 
 ### Panel de reparto del proveedor (2026-11-14)
 

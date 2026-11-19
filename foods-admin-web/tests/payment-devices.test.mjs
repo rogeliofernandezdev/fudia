@@ -34,7 +34,9 @@ test("Fudia Pay: la vinculación es como WhatsApp Web: QR, «Vinculando…» al 
   assert.match(dialog,/Generar otro código/,"un código vencido se renueva sin cerrar el modal");
   assert.doesNotMatch(dialog,/token/i,"el QR y la pantalla nunca muestran la credencial del dispositivo");
   const panel=read("src/modules/payment-devices/presentation/pay-devices-panel.tsx");
-  assert.match(panel,/\{pairing&&<PayPairingDialog locationId=\{locationId\} locationName=\{locationName\} onClose=\{closePairing\} onLinked=\{linked\}\/>\}/,"el diálogo se monta solo al abrirlo, ligado al local, y cierra con la X, Cancelar o al vincular");
+  assert.match(panel,/\{pairing&&createPortal\(<PayPairingDialog locationId=\{locationId\} locationName=\{locationName\} onClose=\{closePairing\} onLinked=\{linked\}\/>,document\.body\)\}/,"el diálogo se monta solo al abrirlo, ligado al local, fuera del modal del local para no recortarse");
+  assert.match(panel,/\{revokeTarget&&createPortal\(<ConfirmDialog open tone="danger"/,"la confirmación de revocar tampoco queda recortada por el modal del local");
+  assert.match(read("src/modules/payment-devices/presentation/payment-devices.css"),/\.crud-modal\.pay-pairing-modal\{width:min\(var\(--size-640\),100%\)\}/,"el QR tiene su propio ancho");
   assert.match(panel,/title:"Dispositivo vinculado"/);
   assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/\$\{locationDevices\(locationId\)\}\/pairing\/\$\{encodeURIComponent\(id\)\}/);
   assert.match(dialog,/Android de «\{locationName\}»/,"el QR dice a qué local quedará ligado el teléfono");
@@ -132,5 +134,6 @@ test("Fudia Pay: dispositivos del local sin edición, con filtro de estado, pagi
   assert.match(panel,/<Pagination mode="simple" page=\{page\} size=\{PAGE_SIZE\} total=\{devices\.data\?\.total\?\?0\}/,"pagina en el servidor");
   assert.match(panel,/ANDROID:\{label:"Android",icon:"android"\},IOS:\{label:"iPhone",icon:"apple"\}/,"Android e iPhone con su ícono");
   assert.match(panel,/device\.active&&<IconButton icon="cancel"/,"un revocado no vuelve a revocarse");
+  assert.match(panel,/const showState=status===""/,"la columna Estado solo en «Todos»: con filtro sería redundante");
   assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/status:filter\.status,page:String\(filter\.page\),size:String\(filter\.size\)/);
 });

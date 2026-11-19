@@ -1,6 +1,7 @@
 "use client";
 
 import {useCallback,useState} from "react";
+import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,Pagination,Select,Status,TableSkeleton} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
@@ -63,8 +64,11 @@ export function PayDevicesPanel({locationId,locationName,dateTime}:Props){
   });
 
   const items=devices.data?.items??[];
+  // Con el filtro Activos o Revocados el estado ya lo dice el filtro: la
+  // columna solo aparece en «Todos» y el nombre gana ancho en 390 px.
+  const showState=status==="";
   const showActions=status!=="revoked";
-  const columns=showActions?["Dispositivo","Estado","Acciones"]:["Dispositivo","Estado"];
+  const columns=["Dispositivo",...(showState?["Estado"]:[]),...(showActions?["Acciones"]:[])];
   const empty=status==="revoked"
     ?{title:"Sin dispositivos revocados",text:"Aquí quedan los teléfonos que dejaron de reportar pagos."}
     :{title:"Aún no hay dispositivos vinculados",text:"Pulsa «Vincular dispositivo» y escanea el QR con Fudia Pay desde el Android del local."};
@@ -88,7 +92,7 @@ export function PayDevicesPanel({locationId,locationName,dateTime}:Props){
             :`Revocado ${dateTime(device.revokedAt??device.createdAt)}`;
           return <tr className={index%2?"alternate":""} key={device.id}>
             <td><div className="pay-device-cell"><span className={`row-icon pay-device-platform ${device.platform==="IOS"?"is-ios":"is-android"}`} role="img" aria-label={platform.label} title={platform.label}><Icon name={platform.icon}/></span><div><b className="pay-device-name">{device.name}</b><small className="pay-device-contact">{contact}</small></div></div></td>
-            <td><Status tone={device.active?"green":"gray"} icon={device.active?"circleCheck":"circleMinus"}>{device.active?"Activo":"Revocado"}</Status></td>
+            {showState&&<td><Status tone={device.active?"green":"gray"} icon={device.active?"circleCheck":"circleMinus"}>{device.active?"Activo":"Revocado"}</Status></td>}
             {showActions&&<td><div className="table-actions">
               {device.active&&<IconButton icon="cancel" label={`Revocar ${device.name}`} className="danger" onClick={()=>setRevokeTarget(device)}/>}
             </div></td>}
@@ -97,12 +101,14 @@ export function PayDevicesPanel({locationId,locationName,dateTime}:Props){
       </tbody>
     </DataTable>}
     <Pagination mode="simple" page={page} size={PAGE_SIZE} total={devices.data?.total??0} onPage={setPage}/>
-    {pairing&&<PayPairingDialog locationId={locationId} locationName={locationName} onClose={closePairing} onLinked={linked}/>}
-    <ConfirmDialog open={Boolean(revokeTarget)} tone="danger" title="Revocar dispositivo"
-      description={`«${revokeTarget?.name}» dejará de reportar pagos de inmediato. Podrás vincularlo de nuevo con un QR nuevo.`}
-      subject={revokeTarget?{label:"Dispositivo",name:revokeTarget.name}:undefined}
-      confirmLabel="Revocar dispositivo" pending={revoke.isPending} onCancel={()=>setRevokeTarget(null)}
-      onConfirm={()=>revokeTarget&&revoke.mutate(revokeTarget.id)}/>
+    {/* El panel vive dentro del modal del local, cuyo fondo (backdrop-filter) y
+        overflow recortarían otro modal fijo: el QR y la confirmación van al body. */}
+    {pairing&&createPortal(<PayPairingDialog locationId={locationId} locationName={locationName} onClose={closePairing} onLinked={linked}/>,document.body)}
+    {revokeTarget&&createPortal(<ConfirmDialog open tone="danger" title="Revocar dispositivo"
+      description={`«${revokeTarget.name}» dejará de reportar pagos de inmediato. Podrás vincularlo de nuevo con un QR nuevo.`}
+      subject={{label:"Dispositivo",name:revokeTarget.name}}
+      confirmLabel="Revocar" pending={revoke.isPending} onCancel={()=>setRevokeTarget(null)}
+      onConfirm={()=>revoke.mutate(revokeTarget.id)}/>,document.body)}
   </section>;
 }
 

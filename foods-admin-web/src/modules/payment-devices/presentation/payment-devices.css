@@ -24,7 +24,11 @@
 .pay-devices-table .pay-device-cell b.pay-device-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pay-devices-table .pay-device-cell small.pay-device-contact{max-width:none;margin-left:0;overflow:visible;white-space:normal}
 .pay-notifications-table .pay-amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.pay-pairing-body{display:grid;justify-items:center;gap:var(--space-3);padding:var(--space-5);text-align:center}
+/* Modal del QR: ancho propio (no hereda el compacto del local) y cuerpo con
+   desplazamiento para que en móvil la cabecera y «Cancelar» sigan visibles. */
+.crud-modal.pay-pairing-modal{width:min(var(--size-640),100%)}
+.pay-pairing-body{display:grid;justify-items:center;gap:var(--space-3);min-height:0;padding:var(--space-6);overflow-y:auto;text-align:center}
+.pay-pairing-body>p{max-width:var(--size-480);margin:0}
 .pay-pairing-qr{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-done{margin:0;font-size:var(--font-size-md)}
