@@ -4,8 +4,9 @@ import {useEffect,useId,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useRouter} from "next/navigation";
 import {Button,EmptyState,ErrorState,Icon,IconButton,IconTile,Skeleton,type IconName} from "@/design-system";
+import {PayProviderTag} from "@/modules/payment-devices";
 import {useNotices} from "../application/use-notices";
-import {freshNotices,noticeAge,noticeHref,noticeTargets,noticeTone,unreadLabel} from "../domain/notice-rules";
+import {freshNotices,noticeAge,noticeHref,noticePaymentProvider,noticeTargets,noticeTone,unreadLabel} from "../domain/notice-rules";
 import type {NoticeKind,StaffNotice} from "../domain/types";
 
 /** Icono de cada aviso: el mismo dominio que la pantalla donde se atiende. */
@@ -111,11 +112,13 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
    {feed.isLoading?<div className="notification-loading" role="status" aria-label="Cargando avisos">{Array.from({length:3},(_,index)=><div key={index}><Skeleton width="var(--size-40)" height="var(--size-40)" radius="var(--radius-tile)"/><span><Skeleton width="70%"/><Skeleton width="45%"/></span></div>)}</div>
    :feed.isError&&!feed.data?<ErrorState className="notification-state" title="No pudimos cargar los avisos" text={feed.error.message} onRetry={()=>void feed.refetch()} retrying={feed.isFetching}/>
    :!items.length?<EmptyState className="notification-state" icon="bell" title="Sin avisos" text="Aquí verás los pedidos, pagos, cuentas y llamados de las últimas 24 horas."/>
-   :<ul className="notification-list">{items.map(item=><li key={item.id}><button type="button" className="notification-item" data-read={item.read} onClick={()=>choose(item)}>
-     <IconTile name={noticeIcons[item.kind]??"bell"} tone={item.read?"neutral":noticeTone(item.kind)} size="lg"/>
+   :<ul className="notification-list">{items.map(item=>{
+    const provider=noticePaymentProvider(item);
+    return <li key={item.id}><button type="button" className="notification-item" data-read={item.read} onClick={()=>choose(item)}>
+     {provider?<span className="notification-provider" aria-hidden="true"><PayProviderTag provider={provider} size="sm"/></span>:<IconTile name={noticeIcons[item.kind]??"bell"} tone={item.read?"neutral":noticeTone(item.kind)} size="lg"/>}
      <span className="notification-item-copy"><b>{item.title}</b>{item.detail&&<small>{item.detail}</small>}<time dateTime={item.createdAt}>{noticeAge(item.createdAt)}</time></span>
      {!item.read&&<i className="notification-unread" aria-label="Sin leer"/>}
-    </button></li>)}</ul>}
+    </button></li>})}</ul>}
   </section>}
   {/* Portal: la barra superior crea su propio contexto y atraparía el `position:fixed` del aviso. */}
   {/* La `key` reinicia entrada y barra de tiempo cuando un aviso nuevo reemplaza al visible. */}

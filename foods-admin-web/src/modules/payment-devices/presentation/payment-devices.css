@@ -57,10 +57,9 @@
 .pay-notice-hint{color:var(--ink-500);font-size:var(--font-size-xs)}
 @media(hover:hover) and (pointer:fine){.pay-notice-open:hover{background:var(--cloud-50)}}
 
-/* Detalle del pago detectado y asociación: identidad con DetailHero, datos en
-   dos columnas con DetailFacts (el detalle del pedido continúa con detalle). */
+/* Consulta del pago y tarea de asociación con un resumen compacto compartido. */
 .pay-detail-body{display:grid;gap:var(--space-5);min-width:0}
-.pay-detail-body .detail-hero-head{justify-content:space-between}
+.pay-detail-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-3)}
 .pay-detail-amount{display:grid;gap:var(--space-1);margin:0}
 .pay-detail-amount dt{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 .pay-detail-amount dd{margin:0;color:var(--ink-950);font-size:var(--font-size-2xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);overflow-wrap:anywhere}

@@ -25,7 +25,7 @@ function Preview(){const [shown,setShown]=useState(true),[ready,setReady]=useSta
 {scenario==='suggestion'&&<PayCollectionRegistration order={{id:'fixture-order',code:'PED-0042',pending:'10.50'}}/>}
 {params.has('notices')?<><header style={{height:64,display:'flex',justifyContent:'flex-end',padding:'8px 16px'}}><NotificationBell/></header><PayNoticeLayer/></>
 :params.has('table')?<main style={{padding:16,maxWidth:1100,margin:'auto'}}><section className='panel'><PayNotificationsPanel dateTime={value=>new Intl.DateTimeFormat('es-PE',{dateStyle:'medium',timeStyle:'short',timeZone:'America/Lima'}).format(new Date(value))}/></section></main>
-:ready&&shown&&<PayNotificationDetail notification={notification} onClose={()=>setShown(false)} onDone={()=>setShown(false)}/>}
+:ready&&shown&&<PayNotificationDetail notification={notification} mode={params.has('associate')?'associate':'detail'} onClose={()=>setShown(false)} onDone={()=>setShown(false)}/>}
 </PayCollectionProvider>}
 const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0,refetchOnWindowFocus:false}}});
 let sequence=0;
@@ -35,6 +35,7 @@ createRoot(document.getElementById('root')).render(<QueryClientProvider client={
 `},bundle:true,outfile:resolve(out,"bundle.js"),jsx:"automatic",alias:{"@":resolve(root,"src")},define:{"process.env.NODE_ENV":'"development"'},plugins:[{name:"fixture",setup(b){
  b.onResolve({filter:/^@\/providers(?:\/session-context)?$/},()=>({path:"providers",namespace:"fixture"}));
  b.onResolve({filter:/^@\/design-system$/},()=>({path:"design-system",namespace:"fixture"}));
+ b.onResolve({filter:/^@\/modules\/payment-devices$/},()=>({path:"pay-provider",namespace:"fixture"}));
  b.onResolve({filter:/pay-devices-api$/},()=>({path:"api",namespace:"fixture"}));
  b.onResolve({filter:/notices-api$/},()=>({path:"notices-api",namespace:"fixture"}));
  b.onResolve({filter:/^next\/navigation$/},()=>({path:"navigation",namespace:"fixture"}));
@@ -52,7 +53,8 @@ export {Skeleton,TableSkeleton} from './src/design-system/skeleton';
 export {Modal,ModalBody,ModalFooter} from './src/design-system/modal';
 export {FormDisclosure} from './src/design-system/form-controls';
 export {Icon} from './src/design-system/icons';export {IconTile} from './src/design-system/icon-tile';
-`:path==="navigation"?`export const useRouter=()=>({push:route=>{window.payFixture.route=route}});`
+`:path==="pay-provider"?`export {PayProviderTag} from './src/modules/payment-devices/presentation/pay-status-tag';`
+:path==="navigation"?`export const useRouter=()=>({push:route=>{window.payFixture.route=route}});`
 :path==="notices-api"?`
 export const getNotices=async()=>({items:[...window.payFixture.notices],unread:window.payFixture.notices.filter(item=>!item.read).length});
 export const markNoticeRead=async id=>{window.payFixture.calls.push({kind:'read',args:[id]});window.payFixture.notices=window.payFixture.notices.map(item=>item.id===id?{...item,read:true}:item)};
@@ -79,10 +81,11 @@ const css=(await Promise.all((await readdir(cssDir)).filter(name=>name.endsWith(
 if(!css.includes(".pay-provider-logo"))throw new Error("Build first: the production CSS must include the payment styles.");
 const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
 if(!font)throw new Error("Build first to load the production font.");
+const fontData=await readFile(resolve(root,".next/static/media",font));
 createServer(async(req,res)=>{
  const url=new URL(req.url,"http://localhost");
  if(url.pathname==="/bundle.js"){res.setHeader("content-type","text/javascript");res.end(await readFile(resolve(out,"bundle.js")));return;}
- if(url.pathname==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(await readFile(resolve(root,".next/static/media",font)));return;}
+ if(url.pathname==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(fontData);return;}
  if(["/brands/yape.png","/brands/plin.png"].includes(url.pathname)){res.setHeader("content-type","image/png");res.end(await readFile(resolve(root,"public",url.pathname.slice(1))));return;}
  res.setHeader("content-type","text/html; charset=utf-8");
  res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pagos detectados · prueba local</title><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);

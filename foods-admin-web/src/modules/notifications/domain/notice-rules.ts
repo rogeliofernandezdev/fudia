@@ -1,5 +1,13 @@
 import {pageRoutes} from "@/shared/routing/page-routes";
 import type {StaffNotice} from "./types";
+import type {PayProvider} from "@/modules/payment-devices";
+
+/** Solo los avisos de pago con el título canónico del backend identifican una billetera. */
+export function noticePaymentProvider(notice:Pick<StaffNotice,"kind"|"title">):PayProvider|null{
+ if(notice.kind!=="pay_detected")return null;
+ const provider=/^Pago recibido por (Yape|Plin)$/i.exec(notice.title.trim())?.[1].toLowerCase();
+ return provider==="yape"||provider==="plin"?provider:null;
+}
 
 /** Pantallas donde se actúa sobre el aviso, en orden de preferencia; se usa la primera que el usuario puede abrir. */
 export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[]{

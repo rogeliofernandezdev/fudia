@@ -16,6 +16,7 @@
 @media (hover:hover) and (pointer:fine){.notification-head .notification-close:hover{background:var(--cloud-100);color:var(--ink-800)}}
 .notification-list{list-style:none;margin:0;padding:var(--space-1-5);overflow:auto;overscroll-behavior:contain}
 .notification-item{display:grid;grid-template-columns:var(--size-40) minmax(0,1fr) var(--size-8);align-items:start;gap:var(--space-3);width:100%;min-height:var(--size-56);padding:var(--space-2-5);border:0;border-radius:var(--radius-tile);background:transparent;text-align:left;cursor:pointer;transition:background var(--duration-fast)}
+.notification-provider{display:grid;place-items:center;width:var(--size-40);height:var(--size-40)}
 .notification-list li+li{margin-top:var(--space-1)}
 /* Jerarquía: sin leer con fondo índigo tenue, icono con el tono de su tipo y título en negrita; leído neutro. */
 .notification-item[data-read=false]{background:var(--primary-50)}

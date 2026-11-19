@@ -16,6 +16,13 @@ function compile(path){
 }
 const rules=compile("src/modules/notifications/domain/notice-rules.ts");
 
+test("campana: identifica el logo de Yape o Plin solo en los avisos de pago correspondientes",()=>{
+ assert.equal(rules.noticePaymentProvider({kind:"pay_detected",title:"Pago recibido por Yape"}),"yape");
+ assert.equal(rules.noticePaymentProvider({kind:"pay_detected",title:"Pago recibido por Plin"}),"plin");
+ assert.equal(rules.noticePaymentProvider({kind:"order_ready",title:"Pago recibido por Yape"}),null);
+ assert.equal(rules.noticePaymentProvider({kind:"pay_detected",title:"Pago recibido por otra billetera"}),null);
+});
+
 test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de preferencia",()=>{
  assert.deepEqual([...rules.noticeTargets({kind:"table_order"})],[routes.diningRoom,routes.orders]);
  assert.deepEqual([...rules.noticeTargets({kind:"assistance_requested"})],[routes.diningRoom,routes.orders]);

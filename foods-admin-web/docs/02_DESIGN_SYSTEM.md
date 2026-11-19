@@ -3448,8 +3448,12 @@ el tiempo no marca el pago como descartado ni cobra nada; la consulta sigue en
 Caja y la campana. La carga inicial del historial no dispara avisos flotantes.
 La campana admite `pay_detected` y abre directamente «Pagos detectados» de
 Caja (`/cash?tab=pagos`), sin un segundo aviso emergente del mismo pago.
-El teléfono se conserva como dato de trazabilidad dentro de «Origen del aviso»,
-plegado por defecto, y se retira de la tabla y del aviso emergente.
+Las filas de pago de la campana muestran el logo original de Yape o Plin en
+un marco de 32 px centrado en el espacio de icono de 40 px. Se reconoce solo
+el título canónico del aviso de pago; los demás avisos conservan su icono.
+El teléfono de origen permanece visible en los datos superiores del pago,
+junto al remitente, sin desplegable. No se repite en la tabla ni en el aviso
+emergente (ajuste solicitado por el usuario, 2026-11-18).
 
 El número de operación bancario se muestra en el detalle (o «No informado» si
 el proveedor no lo incluyó) y debajo del remitente en la tabla cuando existe.
@@ -3466,11 +3470,13 @@ sin repetir el nombre junto al logotipo (solicitud del usuario). El marco de
 archivo original. El texto alternativo identifica al proveedor para lectores
 de pantalla. La matriz de estados de Fudia conserva sus tonos y variantes. La
 procedencia de los archivos está en `public/brands/README.md`.
-La tabla agrupa fecha y dispositivo en «Recepción» para reducir el ancho. Tanto
-consultar como asociar abren el mismo detalle: logo y estado, monto destacado
-una sola vez, remitente, fecha y dispositivo, y asociación separada por una
-línea. El detalle usa `ModalBody` desplazable y `ModalFooter` fijo al revisar un
-pedido. Los pagos ya asociados o descartados son de lectura. Las consultas de
+La columna «Recepción» muestra la fecha. Las acciones tienen destinos distintos:
+el ojo abre «Detalle del pago», con remitente, teléfono de origen, fecha y número
+de operación; el enlace abre «Asociar pago a pedido», con un resumen compacto
+de logo, monto, estado, remitente y teléfono, seguido de la selección y revisión
+del pedido. La consulta permite pasar a la asociación con una acción explícita.
+Ambas vistas usan `ModalBody` desplazable y `ModalFooter` fijo cuando corresponde.
+Los pagos ya asociados o descartados son de lectura. Las consultas de
 medios, pedidos y saldo presentan skeleton, error con reintento y vacío propio;
 no se muestra un vacío antes de consultar. El medio sugerido corresponde al
 proveedor del evento y la confirmación requiere haber cargado el saldo.
@@ -3482,15 +3488,15 @@ y una capa global avisa al cajero en el panel:
 - **Aviso flotante global:** capa fija (por encima de los modales, sin cerrar
   nada) que sondea los pagos detectados cada 10 s y apila las tarjetas nuevas
   (máx. 4). Cada tarjeta: etiqueta del proveedor (Yape/Plin), monto, remitente
-  y dispositivo; el clic abre el detalle. Sin permiso de cobro, la capa no
+  y remitente; el clic abre el detalle. Sin permiso de cobro, la capa no
   consulta. También queda registrado en la campana (`pay_detected`).
-- **Detalle y asociación:** medio, remitente, monto, fecha, número de
-  operación y estado; sección «Asociar pago a pedido» con el medio de pago del
+- **Detalle y asociación:** la consulta presenta los datos completos del pago;
+  la tarea de asociación presenta el resumen y el medio de pago del
   catálogo (preselecciona Yape/Plin). El pedido que el cajero está cobrando en
   el POS se **sugiere** (contexto `PayCollectionContext`, registrado al abrir
   el modal de cobro); nunca se asocia automáticamente. «Cambiar pedido» abre
   los pedidos con saldo pendiente (mesas, delivery, venta rápida), los de
-  monto exacto primero; «Ver detalle» muestra pedido, pagos y saldo antes de
+  monto exacto primero; «Revisar» muestra pedido, pagos y saldo antes de
   confirmar. Un pago superior al saldo se registra parcial del saldo y la
   diferencia queda explicada. Cerrar sin asociar deja el movimiento pendiente
   (lista y campana); la asociación registra el cobro real por el flujo de

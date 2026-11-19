@@ -1,9 +1,9 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormDisclosure,Modal,ModalBody,ModalFooter,SearchField,Select,Skeleton,Status} from "@/design-system";
-import {DetailFacts,DetailHero} from "@/design-system/detail-view";
+import {Button,EmptyState,ErrorState,Modal,ModalBody,ModalFooter,SearchField,Select,Skeleton,Status} from "@/design-system";
+import {DetailFacts} from "@/design-system/detail-view";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
@@ -12,37 +12,41 @@ import {PayProviderTag} from "./pay-status-tag";
 import {associatePayNotification,payOrderDetail,paySalesMethods,searchPayOrders} from "../infrastructure/pay-devices-api";
 import {usePayCollection} from "./pay-collection-context";
 
-type Props={notification:PayNotification|null;onClose:()=>void;onDone:()=>void};
+type PayNotificationMode="detail"|"associate";
+type Props={notification:PayNotification|null;mode?:PayNotificationMode;onClose:()=>void;onDone:()=>void};
 
 const channelLabel=(channel:string)=>({salon:"Mesa",delivery:"Delivery",mostrador:"Venta rápida",recojo:"Recojo",whatsapp:"WhatsApp"}[channel]??channel);
 
 /** Revisar el pedido y su saldo siempre precede al registro del cobro. */
-export function PayNotificationDetail({notification,onClose,onDone}:Props){
+export function PayNotificationDetail({notification,mode="detail",onClose,onDone}:Props){
   if(!notification)return null;
-  return <DetailBody key={notification.id} notification={notification} onClose={onClose} onDone={onDone}/>;
+  return <DetailBody key={`${notification.id}:${mode}`} notification={notification} mode={mode} onClose={onClose} onDone={onDone}/>;
 }
 
-function DetailBody({notification,onClose,onDone}:{notification:PayNotification;onClose:()=>void;onDone:()=>void}){
+function DetailBody({notification,mode:initialMode,onClose,onDone}:Omit<Props,"notification"|"mode">&{notification:PayNotification;mode:PayNotificationMode}){
   const qc=useQueryClient();
   const {notify}=useFeedback();
   const money=useMoney();
   const {location}=useSession();
   const {open}=usePayCollection();
+  const [mode,setMode]=useState(initialMode);
   const [view,setView]=useState<"suggestion"|"orders"|"detail">(open?"suggestion":"orders");
   const [q,setQ]=useState("");
   const [selected,setSelected]=useState<PayOrderRef|null>(null);
-  const [sourceOpen,setSourceOpen]=useState(false);
+  const associationHeading=useRef<HTMLHeadingElement>(null);
   const canAssociate=notification.status==="detected";
+  const associating=canAssociate&&mode==="associate";
+  useEffect(()=>{if(associating)associationHeading.current?.focus({preventScroll:true})},[associating,view]);
   const dateTime=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
 
-  const methods=useQuery({queryKey:["pay-sales-methods"],queryFn:paySalesMethods,enabled:canAssociate});
+  const methods=useQuery({queryKey:["pay-sales-methods"],queryFn:paySalesMethods,enabled:associating});
   // El código estable del catálogo identifica al proveedor, aunque se renombre.
   const detectedMethod=methods.data?.items.find(item=>item.code===notification.provider);
   const effectiveMethod=detectedMethod?.code??"";
   const pending=useQuery({
     queryKey:["pay-pending-orders",notification.id,q],
     queryFn:()=>searchPayOrders(q),
-    enabled:canAssociate&&(view==="orders"||view==="suggestion"&&!open),
+    enabled:associating&&(view==="orders"||view==="suggestion"&&!open),
   });
   const suggestions=(pending.data?.items??[])
     .filter(item=>item.paymentStatus!=="paid")
@@ -52,12 +56,12 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
   const detail=useQuery({
     queryKey:["pay-order-detail",selected?.id],
     queryFn:()=>payOrderDetail(selected!.id),
-    enabled:canAssociate&&Boolean(selected),
+    enabled:associating&&Boolean(selected),
   });
   const remaining=detail.data?Number(detail.data.remainingAmount):null;
   const amount=Number(notification.amount);
   const over=remaining!==null&&amount>remaining;
-  const payable=canAssociate&&Boolean(selected)&&!detail.isFetching&&!detail.isError&&remaining!==null&&remaining>0
+  const payable=associating&&Boolean(selected)&&!detail.isFetching&&!detail.isError&&remaining!==null&&remaining>0
     &&!methods.isFetching&&!methods.isError&&Boolean(methods.data?.items.some(item=>item.code===effectiveMethod));
   const choose=(order:PayOrderRef)=>{setSelected(order);setView("detail")};
   const back=()=>{setSelected(null);setView("orders")};
@@ -75,19 +79,25 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
   });
   const meta=payStatusMeta[notification.status];
 
-  return <Modal title="Pago detectado" className="pay-detail-modal" busy={associate.isPending} onClose={onClose}>
+  return <Modal title={associating?"Asociar pago a pedido":"Detalle del pago"} className="pay-detail-modal" busy={associate.isPending} onClose={onClose}>
     <ModalBody className="pay-detail-body">
-      <DetailHero title={<PayProviderTag provider={notification.provider}/>} status={<Status tone={meta.tone}>{meta.label}</Status>}/>
-      <dl className="pay-detail-amount"><dt>Monto recibido</dt><dd>{money(notification.amount)}</dd></dl>
+      <div className="pay-detail-summary">
+        <PayProviderTag provider={notification.provider}/>
+        <dl className="pay-detail-amount"><dt>Monto recibido</dt><dd>{money(notification.amount)}</dd></dl>
+        <Status tone={meta.tone}>{meta.label}</Status>
+      </div>
       <DetailFacts label="Datos del pago" items={[
-        {label:"Remitente",value:notification.senderName||"Sin remitente",wide:true},
-        {label:"Número de operación",value:notification.operationNumber||"No informado",wide:true},
-        {label:"Fecha y hora",value:<time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time>},
+        {label:"Remitente",value:notification.senderName||"Sin remitente",wide:!associating},
+        {label:"Teléfono de origen",value:notification.deviceName||"No informado"},
+        ...(!associating?[
+          {label:"Fecha y hora",value:<time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time>},
+          {label:"Número de operación",value:notification.operationNumber||"No informado",wide:true},
+        ]:[]),
       ]}/>
 
-      {canAssociate?<section aria-label="Asociar pago a pedido" className="pay-associate">
+      {associating?<section aria-label="Asociar pago a pedido" className="pay-associate">
         <div className="pay-associate-heading">
-          <h3>Asociar pago a pedido</h3>
+          <h3 ref={associationHeading} tabIndex={-1}>{view==="detail"?"Revisa el pedido":"Pedido por cobrar"}</h3>
           <p className="form-help">La asociación registra el cobro real. Revisa el pedido antes de confirmar.</p>
         </div>
         {methods.isLoading?<div role="status" aria-label="Cargando medios de pago"><Skeleton height="var(--control-height)"/></div>
@@ -135,12 +145,12 @@ function DetailBody({notification,onClose,onDone}:{notification:PayNotification;
             {over&&remaining!==0&&<p className="form-help" role="status">El pago supera el saldo pendiente en {money(amount-remaining!)}. Se registrará solo el saldo y la diferencia quedará sin aplicar.</p>}
           </>}
         </div>}
-      </section>:<p className="pay-detail-footer-note">{notification.status==="dismissed"?"Este pago fue descartado y se conserva en el historial.":"Este pago ya fue asociado a un pedido."}</p>}
-      <FormDisclosure title="Origen del aviso" summary="" open={sourceOpen} onToggle={()=>setSourceOpen(value=>!value)}>
-        <DetailFacts label="Origen del aviso" items={[{label:"Teléfono de origen",value:notification.deviceName}]}/>
-      </FormDisclosure>
+      </section>:!canAssociate&&<p className="pay-detail-footer-note">{notification.status==="dismissed"?"Este pago fue descartado y se conserva en el historial.":"Este pago ya fue asociado a un pedido."}</p>}
     </ModalBody>
-    {canAssociate&&view==="detail"&&<ModalFooter>
+    {canAssociate&&!associating&&<ModalFooter>
+      <div className="modal-action-layout"><Button icon="link" onClick={()=>setMode("associate")}>Asociar a pedido</Button></div>
+    </ModalFooter>}
+    {associating&&view==="detail"&&<ModalFooter>
       <div className="modal-action-layout">
         <Button action="back" onClick={back} disabled={associate.isPending}>Volver a pedidos</Button>
         <Button disabled={!payable} loading={associate.isPending} onClick={()=>associate.mutate()}>Confirmar asociación</Button>

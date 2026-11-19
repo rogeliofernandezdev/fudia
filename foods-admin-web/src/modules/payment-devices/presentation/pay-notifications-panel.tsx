@@ -29,6 +29,8 @@ export function PayNotificationsPanel({dateTime}:Props){
   const [size,setSize]=useState(20);
   const [dismissTarget,setDismissTarget]=useState<PayNotification|null>(null);
   const [detail,setDetail]=useState<PayNotification|null>(null);
+  const [detailMode,setDetailMode]=useState<"detail"|"associate">("detail");
+  const openPayment=(item:PayNotification,mode:"detail"|"associate")=>{setDetailMode(mode);setDetail(item)};
 
   const notifications=useQuery({
     queryKey:["pay-notifications",status,provider,page,size],
@@ -78,15 +80,15 @@ export function PayNotificationsPanel({dateTime}:Props){
             <td className="pay-notification-received"><time dateTime={item.occurredAt}>{dateTime(item.occurredAt)}</time></td>
             <td><Status tone={meta.tone} icon={item.status==="associated"?"circleCheck":undefined}>{meta.label}</Status></td>
             <td><div className="table-actions">
-              <IconButton icon="eye" label={`Ver el detalle del pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDetail(item)}/>
-              {item.status==="detected"&&<IconButton icon="link" label={`Asociar el pago de ${item.senderName||payProviderLabel[item.provider]} a un pedido`} onClick={()=>setDetail(item)}/>}
+              <IconButton icon="eye" label={`Ver el detalle del pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>openPayment(item,"detail")}/>
+              {item.status==="detected"&&<IconButton icon="link" label={`Asociar el pago de ${item.senderName||payProviderLabel[item.provider]} a un pedido`} onClick={()=>openPayment(item,"associate")}/>}
               {item.status==="associated"&&<IconButton icon="cancel" className="danger" label={`Descartar el pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDismissTarget(item)}/>}
             </div></td>
           </tr>;
         })}
       </tbody>
     </DataTable>}
-    <PayNotificationDetail notification={detail} onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void notifications.refetch()}}/>
+    <PayNotificationDetail notification={detail} mode={detailMode} onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void notifications.refetch()}}/>
     {!notifications.isLoading&&!notifications.isError&&<Pagination page={page} size={size} total={notifications.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     <ConfirmDialog open={Boolean(dismissTarget)} tone="danger" title="Descartar el pago detectado"
       description="El evento queda registrado con su traza, pero ya no aparecerá como pendiente de revisión."
