@@ -39,24 +39,34 @@
 .crud-modal.location-dialog>div.location-dialog-tabs{flex:none;overflow:visible;padding:var(--space-3) var(--space-6) var(--space-1);background:var(--surface)}
 .crud-modal.location-dialog>.modal-form[hidden]{display:none}
 .location-dialog-tabs .ds-tabs{width:100%}
-/* Modal amplio (size-lg, 880 px) con una sola grilla de 3 columnas para todas
-   las secciones: obligatorios primero (Nombre ancho + Perfil fiscal), opcionales
-   en una fila (Teléfono · Horario · Fecha); en Ubicación, departamento,
-   provincia y distrito caen sobre las mismas columnas y el mapa usa todo el ancho. */
+/* Modal amplio (size-lg, 880 px) con una sola grilla de 3 columnas y sin
+   huecos: Datos en 3×2 (Nombre · Perfil fiscal · Zona horaria / Teléfono ·
+   Horario · Fecha); Ubicación con departamento, provincia y distrito sobre las
+   mismas columnas y el mapa a todo el ancho; Propinas con Funcionamiento en 2
+   columnas y Porcentaje en 1 (desactivadas, Funcionamiento ocupa la fila);
+   Delivery en orden de lectura: etiqueta, QR alineado a la izquierda y una
+   fila con las tres acciones, una por columna. */
 .form-grid.location-form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.form-grid.location-form-grid>.location-field-wide{grid-column:span 2}
 .location-dialog .geographic-fields-grid{gap:var(--space-4)}
 .location-dialog .tip-settings-form{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--space-4)}
+.location-dialog .tip-settings-form>:first-child{grid-column:span 2}
+.location-dialog .tip-settings-form:not(:has(>:nth-child(3)))>:first-child{grid-column:1/-1}
 .location-dialog .tip-settings-form>:is(.tip-checkbox,.tip-channels,.tip-help){grid-column:1/-1}
-/* Tableta: con 3 columnas el horario se corta; 2 columnas y Nombre a todo el ancho. */
+.location-dialog .delivery-link{gap:var(--space-1-5)}
+.location-dialog .delivery-link-content{grid-template-columns:minmax(0,1fr);align-items:start}
+.location-dialog .delivery-link-preview{justify-content:flex-start;padding-block:0}
+.location-dialog .delivery-link-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2-5) var(--space-4)}
+/* Tableta: 2 columnas (con 3 el horario se corta); Datos queda en 2×3. */
 @media (600px<width<=760px){
  .form-grid.location-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
- .form-grid.location-form-grid>.location-field-wide{grid-column:1/-1}
  .location-dialog .tip-settings-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .location-dialog .tip-settings-form>:first-child{grid-column:auto}
 }
 @media (width<=600px){
  .crud-modal.location-dialog>div.location-dialog-tabs{padding-inline:var(--space-4)}
  .form-grid.location-form-grid{grid-template-columns:minmax(0,1fr)}
- .form-grid.location-form-grid>.location-field-wide{grid-column:auto}
  .location-dialog .tip-settings-form{grid-template-columns:minmax(0,1fr)}
+ .location-dialog .tip-settings-form>:first-child{grid-column:auto}
+ .location-dialog .delivery-link-preview{justify-content:center}
+ .location-dialog .delivery-link-actions{grid-template-columns:minmax(0,1fr)}
 }

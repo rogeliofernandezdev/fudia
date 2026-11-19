@@ -3571,20 +3571,30 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   asociar `link`, descartar `cancel` danger) y paginación en el servidor con
   `Pagination` (20 por página); el monto va a la derecha con cifras tabulares.
 - **Locales › Nuevo / Editar local: distribución** (2026-11-19). Modal
-  `size-lg` (880 px; antes `compact` de 480 px dejaba la Ubicación apretada
-  y la zona horaria y el perfil fiscal a todo el ancho). Una sola grilla de 3
-  columnas (`location-form-grid`) en todas las secciones: fila 1 «Nombre»
-  (2 columnas, `location-field-wide`) y «Perfil fiscal» — obligatorio y antes
-  de Ubicación porque su país decide si se piden departamento, provincia y
-  distrito —; fila 2 los opcionales «Teléfono» · «Horario de atención» ·
-  «Fecha de apertura». En Ubicación los tres selectores caen sobre las mismas
-  columnas (separación 16 px, igual que la grilla), dirección y mapa ocupan
-  todo el ancho y «Zona horaria» una columna. Propinas usa la misma grilla
-  (Funcionamiento · Porcentaje; casillas, tipos de atención y ayuda a todo el
-  ancho). Ya no hay sección suelta «Configuración fiscal». Entre 601 y 760 px
-  la grilla pasa a 2 columnas con Nombre a todo el ancho (con 3 el horario se
-  cortaba); a ≤600 px todo va en una columna en el mismo orden del DOM. El skeleton de carga usa el mismo
-  `size-lg`.
+  `size-lg` (880 px; antes `compact` de 480 px dejaba la Ubicación apretada).
+  Una sola grilla de 3 columnas (`location-form-grid`) en todas las secciones y
+  **ninguna fila con huecos** (rechazado: zona horaria o Funcionamiento solos
+  en un tercio, QR centrado en media columna):
+  - **Datos** en 3×2: «Nombre» · «Perfil fiscal» · «Zona horaria» (obligatorios;
+    el perfil va antes de Ubicación porque su país decide si se piden
+    departamento, provincia y distrito) y debajo los opcionales «Teléfono» ·
+    «Horario de atención» · «Fecha de apertura». Ya no hay sección suelta
+    «Configuración fiscal».
+  - **Ubicación**: departamento, provincia y distrito sobre las mismas columnas
+    (separación 16 px, igual que la grilla); dirección y mapa a todo el ancho.
+  - **Propinas**: «Funcionamiento» en 2 columnas y «Porcentaje» en 1; con
+    propinas desactivadas Funcionamiento ocupa la fila. Casillas, tipos de
+    atención y ayuda a todo el ancho.
+  - **Delivery** en orden de lectura, como un campo: etiqueta «QR para hacer
+    pedidos» (6 px sobre el contenido, igual que etiqueta y control), QR de
+    200 px alineado a la izquierda sin margen propio y debajo una fila con
+    «Descargar QR» · «Copiar enlace» · «Regenerar QR», cada una del ancho de una
+    columna (rechazado: botones flotando centrados junto al QR y «Regenerar»
+    solo en un 2 + 1).
+  Entre 601 y 760 px la grilla pasa a 2 columnas (con 3 el horario se cortaba):
+  Datos en 2×3 y Porcentaje junto a Funcionamiento; las tres acciones del QR
+  siguen en una fila. A ≤600 px todo va en una columna en el orden del DOM, el
+  QR se centra y las acciones se apilan. El skeleton de carga usa el mismo `size-lg`.
 - **Locales › Editar local › Dispositivos de pago** (2026-11-19; antes era
   una sección de Mi restaurante que no decía a qué local pertenecía cada
   teléfono): el modal del local muestra `Tabs` «Datos» (`store`) y
