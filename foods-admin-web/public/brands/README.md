@@ -12,5 +12,7 @@ y colores, sin filtros CSS ni recreaciones del logotipo.
 
 El logo se muestra sin repetir su nombre al lado, por solicitud del usuario.
 El texto alternativo identifica al proveedor para lectores de pantalla. Un
-marco de dimensiones explícitas evita saltos al cargar; Yape se amplía dentro
-del marco para compensar los márgenes blancos del recurso original.
+marco de dimensiones explícitas evita saltos al cargar. Los dos logos se
+igualan por su ancho visible: Yape se amplía dentro del marco para compensar
+los márgenes blancos del recurso original y Plin, que llena su lienzo, se
+reduce (32 px: Plin 24, Yape 48; 56 px: Plin 44, Yape 88).

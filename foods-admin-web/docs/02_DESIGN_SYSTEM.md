@@ -3437,8 +3437,12 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 ### Pagos detectados de Yape y Plin en Caja (2026-11-15)
 
 En la tabla, Yape y Plin usan el mismo marco de icono de 32 px, sin repetir el
-nombre. Se compensa el margen blanco del recurso de Yape para equilibrar su
-tamaño óptico con Plin. El detalle y el aviso conservan su tamaño propio.
+nombre. Ambos logos se igualan por su ancho visible, no por el tamaño del
+archivo (ajuste solicitado por el usuario, 2026-11-19): Plin es un disco que
+llena su lienzo y Yape un logotipo que ocupa la mitad del ancho del suyo, así
+que en el marco de 32 px Plin se dibuja a 24 px y Yape a 48 px (24 px visibles),
+y en el marco de 56 px Plin a 44 px y Yape a 88 px (44 px visibles). Cada
+proveedor y tamaño tiene su regla explícita en `payment-devices.css`.
 El filtro ofrece «Todos los estados», «Detectado» y «Descartado»; no ofrece
 «Asociado» ni «Confirmado» (ajuste solicitado por el usuario, 2026-11-18).
 

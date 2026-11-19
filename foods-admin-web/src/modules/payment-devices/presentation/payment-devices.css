@@ -16,14 +16,16 @@
 .pay-pairing-qr-placeholder{width:var(--size-240);height:var(--size-240)}
 .pay-pairing-done{margin:0;font-size:var(--font-size-md)}
 /* La identidad de cada billetera vive en el recurso oficial, sin recolorear
-   etiquetas de estado ni aproximar sus colores con la paleta de Fudia. */
+   etiquetas de estado ni aproximar sus colores con la paleta de Fudia.
+   Tamaño óptico igual (2026-11-19): Plin es un disco que llena su lienzo y
+   Yape un logotipo que ocupa el 50 % del ancho del suyo, así que se igualan
+   por el ancho visible (sm 24 px, md 44 px) y no por el tamaño del archivo. */
 .pay-provider-tag{display:inline-flex;flex:none;align-items:center;justify-content:center;width:var(--size-56);height:var(--size-56);overflow:hidden;vertical-align:middle}
-.pay-provider-logo{display:block;flex:none;width:var(--size-48);height:var(--size-48);max-width:none;object-fit:contain}
-/* El archivo de Yape incluye márgenes blancos; se amplía el recurso dentro
-   del mismo marco para igualar el tamaño óptico sin deformar el logotipo. */
-.pay-provider-tag.yape .pay-provider-logo{width:var(--size-88);height:var(--size-88)}
 .pay-provider-tag.is-small{width:var(--size-32);height:var(--size-32)}
-.pay-provider-tag.is-small .pay-provider-logo{width:var(--size-32);height:var(--size-32)}
+.pay-provider-logo{display:block;flex:none;max-width:none;object-fit:contain}
+.pay-provider-tag.plin .pay-provider-logo{width:var(--size-44);height:var(--size-44)}
+.pay-provider-tag.yape .pay-provider-logo{width:var(--size-88);height:var(--size-88)}
+.pay-provider-tag.plin.is-small .pay-provider-logo{width:var(--size-24);height:var(--size-24)}
 .pay-provider-tag.yape.is-small .pay-provider-logo{width:var(--size-48);height:var(--size-48)}
 
 /* Tabla de pagos detectados: columnas cuadradas, sin saltos en datos de una

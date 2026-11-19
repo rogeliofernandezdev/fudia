@@ -68,6 +68,8 @@ test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisa
   assert.match(detail,/Monto exacto/,"marca los pedidos cuyo monto coincide con el pago");
   const css=read("src/modules/payment-devices/presentation/payment-devices.css");
   assert.match(css,/\.pay-notice-layer\{position:fixed/);
+  assert.match(css,/\.pay-provider-tag\.plin\.is-small \.pay-provider-logo\{width:var\(--size-24\)/,"Plin llena su lienzo: se reduce para igualar el ancho visible de Yape");
+  assert.match(css,/\.pay-provider-tag\.yape\.is-small \.pay-provider-logo\{width:var\(--size-48\)/,"Yape se amplía para compensar sus márgenes blancos");
   assert.match(css,/z-index:var\(--z-tooltip\)/,"la capa queda por encima de los modales sin cerrarlos");
 });
 
