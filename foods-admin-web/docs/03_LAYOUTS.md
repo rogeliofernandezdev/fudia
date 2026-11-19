@@ -56,7 +56,7 @@ páginas no agregan márgenes laterales propios.
 6. `Pagination` del servidor, oculta durante la carga y el error.
 7. Acciones por fila: `table-actions` con `RowActionButton` únicamente.
 
-Aplica a Ventas, Punto de venta, Pedidos, Carta y productos, Mesas, Menús y
+Aplica a Ventas, Cobros, Pedidos, Carta y productos, Mesas, Menús y
 combos, Recetas, Inventario, Kárdex, Compras, Clientes, Gastos, Reservas,
 Locales, Usuarios y roles, Medios de pago y Empresas.
 

@@ -88,7 +88,7 @@ Plataforma y fuera del plan.
 
 | Módulo | Clave | Emprende | Impulso | Escala |
 | --- | --- | :---: | :---: | :---: |
-| Punto de venta | `pos` | ✓ | ✓ | ✓ |
+| Cobros | `pos` | ✓ | ✓ | ✓ |
 | Pedidos | `pedidos` | ✓ | ✓ | ✓ |
 | Cocina | `cocina` | ✓ | ✓ | ✓ |
 | Mesas y zonas | `mesas` | ✓ | ✓ | ✓ |

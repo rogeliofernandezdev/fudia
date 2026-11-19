@@ -159,7 +159,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 
 | Módulo | Clave | Estado | Observación |
 | --- | --- | --- | --- |
-| Punto de venta | `pos` | 🟢 Ready / activable | Flujo real de cobro; medios de pago dinámicos y pago dividido integrados. Auditoría final de cierre pendiente. |
+| Cobros | `pos` | 🟢 Ready / activable | Cola de pedidos con saldo (lo pagado se consulta y devuelve en Ventas); flujo real de cobro; medios de pago dinámicos y pago dividido integrados. Auditoría final de cierre pendiente. |
 | Pedidos | `pedidos` | 🟢 Ready / activable | Módulo habilitado en MVP. Auditoría de cierre pendiente. |
 | Cocina | `cocina` | 🟢 Ready / activable | KDS habilitado en MVP. Auditoría de cierre pendiente. |
 | Mesas y zonas | `mesas` | 🟢 Ready / activable | Gestión por local implementada; zona inicial creada por onboarding. Auditoría de cierre pendiente. |

@@ -2,10 +2,11 @@
 import "./sales.css";
 import {useState} from "react";
 import dynamic from "next/dynamic";
-import {useQuery} from "@tanstack/react-query";
+import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,DataTable,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Status} from "@/design-system";
 import {deliveredDocument,ticketNoticeFor} from "@/modules/einvoicing";
-import {useMoney,useSession} from "@/providers";
+import {useFeedback,useMoney,useSession} from "@/providers";
+import {getPOSCollectionAccess,refundPayment,type Payment,type RefundDraft} from "@/modules/operations/pos";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {getSaleDetail,listSales} from "../infrastructure/sales-api";
@@ -13,13 +14,18 @@ import type {Sale} from "../domain/types";
 import {localToday,periodRange,salesPeriods,type DateRange,type SalesPeriod} from "../domain/sales-periods";
 import {SaleDetailDialog} from "./sale-detail-dialog";
 const PaymentTicketDialog=dynamic(()=>import("./payment-ticket-dialog").then(module=>module.PaymentTicketDialog),{ssr:false});
+const RefundDialog=dynamic(()=>import("@/modules/operations/pos").then(module=>module.RefundDialog),{ssr:false});
 const FiscalPrintDialog=dynamic(()=>import("@/modules/einvoicing").then(module=>module.FiscalPrintDialog),{ssr:false});
 
 const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
 const paymentMethodsLabel=(sale:Sale)=>(sale.paymentMethods??[]).join(" · ")||"—";
 
 export function SalesPage(){
-  const{location}=useSession();
+  const{can,location,organization,user}=useSession();
+  const qc=useQueryClient();
+  const{notify}=useFeedback();
+  // Las devoluciones de pedidos pagados se hacen aquí: Cobros solo lista lo que falta cobrar.
+  const canRefund=can("cash.manage");
   const[q,setQ]=useState("");
   const debouncedQ=useDebouncedValue(q);
   const[page,setPage]=useState(1);
@@ -30,6 +36,7 @@ export function SalesPage(){
   const[ticket,setTicket]=useState<{orderId:string;notice?:string}|null>(null);
   const[period,setPeriod]=useState<SalesPeriod>("today");
   const[fiscal,setFiscal]=useState<{documentId:string;orderId:string}|null>(null);
+  const[refundTarget,setRefundTarget]=useState<Payment|null>(null);
   // Los periodos rápidos se recalculan con la fecha del local en cada render: al pasar la medianoche local, «Hoy» avanza solo.
   const range:DateRange=period==="custom"?{from,to}:periodRange(period,localToday(location?.timezone));
   const invalidRange=Boolean(range.from&&range.to&&range.from>range.to);
@@ -39,6 +46,17 @@ export function SalesPage(){
   const custom=(next:Partial<DateRange>)=>{setFrom(next.from??range.from);setTo(next.to??range.to);setPeriod("custom");setPage(1)};
   const detail=useQuery({queryKey:["sale-detail",detailId],queryFn:()=>getSaleDetail(detailId!),enabled:Boolean(detailId)});
   const money=useMoney();
+  const cashAccess=useQuery({queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],queryFn:getPOSCollectionAccess,enabled:canRefund&&Boolean(detailId),refetchInterval:30000});
+  const refundShift=cashAccess.data?.canChooseShift?cashAccess.data.assignedShift:cashAccess.data?.shift;
+  const refund=useMutation({
+    mutationFn:({paymentId,draft}:{paymentId:string;draft:RefundDraft})=>refundPayment(paymentId,draft),
+    onSuccess:()=>{
+      setRefundTarget(null);
+      for(const key of ["sales","sale-detail","pos-orders","pos-order","orders","order","cash-registers","cash-shift","pos-cash-access","dashboard"])void qc.invalidateQueries({queryKey:[key]});
+      notify({tone:"success",title:"Devolución registrada",message:"El saldo devuelto quedó pendiente en Cobros y el turno de caja quedó actualizado."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo registrar la devolución",message:error.message}),
+  });
   const date=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   return <><PageHeader title="Ventas" description="Consulta los pedidos cobrados y sus pagos en tu local."/>
     <section className="panel standardized-management sales-panel" aria-label="Ventas del local">
@@ -51,11 +69,12 @@ export function SalesPage(){
       :<SalesResults items={sales.data.items} money={money} date={date} view={setDetailId}/>}
       {!invalidRange&&!sales.isLoading&&!sales.isError&&<Pagination page={page} size={size} total={sales.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
     </section>
-    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} preview={sales.data?.items.find(sale=>sale.id===detailId)} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} ticket={()=>{
+    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} preview={sales.data?.items.find(sale=>sale.id===detailId)} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} refund={canRefund?payment=>setRefundTarget({...payment,methodName:payment.methodName||payment.method}):undefined} refundDisabled={!refundShift} ticket={()=>{
       // Reprint what was delivered: the electronic document, or the payment ticket.
       const document=deliveredDocument(detail.data?.fiscalDocument);setDetailId(null);
       if(document)setFiscal({documentId:document.id,orderId:detailId});else setTicket({orderId:detailId,notice:ticketNoticeFor(detail.data?.fiscalDocument)});
     }}/>}
+    {refundTarget&&refundShift&&canRefund&&<RefundDialog payment={refundTarget} busy={refund.isPending} formatMoney={money} close={()=>{if(!refund.isPending)setRefundTarget(null)}} save={draft=>refund.mutate({paymentId:refundTarget.id,draft})}/>}
     {ticket&&<PaymentTicketDialog orderId={ticket.orderId} notice={ticket.notice} close={()=>setTicket(null)}/>}
     {fiscal&&<FiscalPrintDialog documentId={fiscal.documentId} close={()=>setFiscal(null)} onShowTicket={()=>{setFiscal(null);setTicket({orderId:fiscal.orderId});}}/>}
   </>;

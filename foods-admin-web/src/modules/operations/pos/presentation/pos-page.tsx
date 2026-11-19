@@ -1,7 +1,7 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
 import {canChargeAccount,canCollectOrder} from "../../orders/domain/service-flow";
-import {lineServiceState,orderStatus,originLabel} from "../../orders/presentation/order-meta";
+import {lineServiceState,originLabel} from "../../orders/presentation/order-meta";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
 import Link from "next/link";
@@ -41,7 +41,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const cashScope=[organization?.id,location?.id,user?.id].join(":");
   const[q,setQ]=useState("");
   const debouncedQ=useDebouncedValue(q);
-  const[paymentStatus,setPaymentStatus]=useState("all");
+  // Cobros es la cola de lo que falta cobrar: lo pagado se consulta en Ventas.
+  const[paymentStatus,setPaymentStatus]=useState<"unpaid"|"pending"|"partial">("unpaid");
   const[page,setPage]=useState(1);
   const[size,setSize]=useState(10);
   const[paymentOrderId,setPaymentOrderId]=useState<string|null>(initialOrderId||null);
@@ -132,12 +133,18 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function actionsFor(item:POSOrderSummary){
     return <div className="pos-actions">
       <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
-      {canCollectOrder(item,user,canManage,canCollect)&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={hasCollectionShift?`Cobrar ${item.code}`:"Necesitas un turno abierto para cobrar"} disabled={!hasCollectionShift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>{setSelectedCash(null);setPaymentOrderId(item.id)}}/>}
+      {canCollectOrder(item,user,canManage,canCollect)&&item.paymentStatus!=="paid"&&chargeAction(item)}
     </div>;
+  }
+  // Sin la columna de preparación, el botón deshabilitado explica por qué aún no se puede cobrar.
+  function chargeAction(item:POSOrderSummary){
+    const ready=canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined});
+    const label=!hasCollectionShift?"Necesitas un turno abierto para cobrar":!ready?(item.channel==="salon"?"La cuenta aún no está cerrada para cobrar":"El pedido aún no está listo para cobrar"):`Cobrar ${item.code}`;
+    return <RowActionButton action="charge" label={label} disabled={!hasCollectionShift||!ready} onClick={()=>{setSelectedCash(null);setPaymentOrderId(item.id)}}/>;
   }
 
   return <div className="pos-page">
-    <PageHeader title="Punto de venta" description="Cobra pedidos existentes y mantiene Caja sincronizada con pagos y devoluciones."/>
+    <PageHeader title="Cobros" description="Cobra los pedidos con saldo pendiente y mantiene Caja sincronizada con pagos y devoluciones."/>
 
     <section className={"pos-shift-banner "+(shift?"active":"missing")}>
       <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={20}/></span>
@@ -151,27 +158,24 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     <section className="panel standardized-management pos-panel">
       <div className="pos-toolbar">
         <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar pedido, cliente o mesa…" label="Buscar pedidos por cliente o mesa"/>
-        <Select chip aria-label="Filtrar por estado de cobro" value={paymentStatus} onChange={event=>{setPaymentStatus(event.target.value);setPage(1)}}>
-          <option value="all">Todos</option>
+        <Select chip aria-label="Filtrar por estado de cobro" value={paymentStatus} onChange={event=>{setPaymentStatus(event.target.value as typeof paymentStatus);setPage(1)}}>
+          <option value="unpaid">Todos</option>
           <option value="pending">Sin pagos</option>
           <option value="partial">Pago parcial</option>
-          <option value="paid">Pagado</option>
         </Select>
       </div>
 
       {orders.isLoading?<POSLoading/>
       :orders.isError?<ErrorState title="No pudimos cargar los pedidos" text={orders.error.message} onRetry={()=>void orders.refetch()}/>
-      :!items.length?<EmptyState icon={q?"search":"receipt"} title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":paymentStatus==="all"?"Aún no hay pedidos":"No hay pedidos con ese estado de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
-      :<DataTable label="Pedidos para cobrar" containerClassName="hover-scroll pos-table-wrap" className="pos-table">
-        <thead><tr><th>Pedido</th><th>Canal</th><th>Preparación</th><th className="pos-money">Total</th><th className="pos-money">Pagado</th><th className="pos-money">Saldo</th><th>Cobro</th><th className="pos-th-actions">Acciones</th></tr></thead>
+      :!items.length?<EmptyState icon={q?"search":"receipt"} title={q?"Sin coincidencias":paymentStatus==="unpaid"?"No hay cobros pendientes":"No hay pedidos con ese estado de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos con saldo por cobrar aparecerán aquí. Los pagados se consultan en Ventas."}/>
+      :<DataTable label="Pedidos por cobrar" containerClassName="hover-scroll pos-table-wrap" className="pos-table">
+        <thead><tr><th>Pedido</th><th>Canal</th><th className="pos-money">Total</th><th className="pos-money">Pagado</th><th className="pos-money">Saldo</th><th>Cobro</th><th className="pos-th-actions">Acciones</th></tr></thead>
         <tbody>{items.map((item,index)=>{
           const meta=paymentMeta[item.paymentStatus];
-          const preparation=orderStatus(item.status);
           const subject=item.tableName||item.customerName||item.code;
           return <tr className={index%2?"alternate":""} key={item.id}>
             <td><span className="pos-order-identity"><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><span className="pos-order-copy"><b>{subject}</b>{item.origin==="counter"?<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>:subject!==item.code&&<small className="pos-order-reference">{item.code}</small>}</span></span></td>
             <td><span className="pos-channel-cell"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span></td>
-            <td><Status tone={preparation.tone} solid>{preparation.label}</Status></td>
             <td className="pos-money"><b>{money(Number(item.total))}</b></td>
             <td className="pos-money">{money(Number(item.paidAmount))}</td>
             <td className="pos-money"><strong className="pos-balance">{money(Number(item.remainingAmount))}</strong></td>
@@ -186,7 +190,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         const subject=item.tableName||item.customerName||item.code;
         return <article key={item.id}>
           <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b>{item.origin==="counter"?<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>:subject!==item.code&&<small className="pos-order-reference">{item.code}</small>}</div><Status tone={meta.tone}>{meta.label}</Status></header>
-          <div className="pos-card-channel"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/><span>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span><Status tone={orderStatus(item.status).tone} solid>{orderStatus(item.status).label}</Status></div>
+          <div className="pos-card-channel"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/><span>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span></div>
           <dl><div><dt>Total</dt><dd>{money(Number(item.total))}</dd></div><div><dt>Pagado</dt><dd>{money(Number(item.paidAmount))}</dd></div><div className="remaining"><dt>Saldo</dt><dd>{money(Number(item.remainingAmount))}</dd></div></dl>
           <footer>{actionsFor(item)}</footer>
         </article>;

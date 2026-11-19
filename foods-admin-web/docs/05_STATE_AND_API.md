@@ -443,6 +443,12 @@ documentos, existencias ni conversiones persistidas.
 ## Acceso directo al cobro
 
 `/pos?orderId=...` representa una intención de cobrar desde Salón o Pedidos.
+La pantalla se llama «Cobros» (la ruta y el módulo `pos` conservan su nombre
+técnico). Su listado consulta `pos/orders?paymentStatus=unpaid` por defecto
+(Sin pagos y Pago parcial); Ventas consulta `paymentStatus=paid` y es quien
+devuelve pagos de pedidos saldados mediante la API pública
+`@/modules/operations/pos` (`getPOSCollectionAccess`, `refundPayment`,
+`RefundDialog`).
 El POS inicia la misma consulta de saldo usada por la acción Cobrar de su tabla
 y abre el formulario de pago, no el detalle de lectura. No depende de encontrar
 el pedido en la página visible ni del filtro activo. Cambiar el `orderId` remonta
@@ -654,10 +660,10 @@ Abrir un aviso lo marca como leído al instante (actualización optimista con
 reversión si falla) y navega a la primera pantalla permitida para su tipo:
 pedidos y llamados de mesa → Salón; ventas por mostrador, delivery y recojo →
 Pedidos (su detalle tiene «Enviar comanda», porque el pedido del bot espera a caja)
-o Punto de venta; cuenta pedida → Punto de venta o Salón; comanda lista → Salón si
+o Cobros; cuenta pedida → Cobros o Salón; comanda lista → Salón si
 tiene mesa y Pedidos si no. Si el aviso trae `orderId`, Salón y Pedidos abren
 directamente el detalle de ese pedido (`?orderId=`), listo para actuar (por
-ejemplo, el mozo pulsa «Confirmar entrega»); en Punto de venta solo la cuenta
+ejemplo, el mozo pulsa «Confirmar entrega»); en Cobros solo la cuenta
 pedida abre el cobro del pedido. `useOrderDeepLink` consume el parámetro al
 abrir el detalle y devuelve la URL a la pantalla, así el mismo aviso puede
 reabrirlo. Las acciones del detalle siguen sujetas a los permisos de siempre.

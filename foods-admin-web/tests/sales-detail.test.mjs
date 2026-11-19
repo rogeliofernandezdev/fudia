@@ -15,7 +15,7 @@ function compile(file,resolve,extra=""){
 }
 const regional=compile("src/shared/i18n/regional-format.ts",require);
 const orderMeta=compile("src/modules/operations/orders/presentation/order-meta.ts",name=>name==="@/shared/i18n/regional-format"?regional:require(name));
-const resolve=name=>name==="../domain/sales-periods"?compile("src/modules/sales/domain/sales-periods.ts",require):name==="@/modules/operations/orders"?{lineServiceState:orderMeta.lineServiceState}:name==="react"?{...require("react"),useState:value=>[value,()=>{}]}:name==="@/design-system"?{DetailHero:"DetailHero",DetailContact:"DetailContact",DetailFacts:"DetailFacts",DetailTimeline:"DetailTimeline",Tabs:"Tabs",Skeleton:"Skeleton",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",ModalWorkspace:"ModalWorkspace",ModalItemList:"ModalItemList",Icon:"Icon",IconTile:"IconTile",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState",DataTable:"DataTable"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
+const resolve=name=>name==="@/modules/operations/pos"?{getPOSCollectionAccess:async()=>({shift:null}),refundPayment:async()=>{}}:name==="../domain/sales-periods"?compile("src/modules/sales/domain/sales-periods.ts",require):name==="@/modules/operations/orders"?{lineServiceState:orderMeta.lineServiceState}:name==="react"?{...require("react"),useState:value=>[value,()=>{}]}:name==="@/design-system"?{DetailHero:"DetailHero",DetailContact:"DetailContact",DetailFacts:"DetailFacts",DetailTimeline:"DetailTimeline",Tabs:"Tabs",Skeleton:"Skeleton",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",ModalWorkspace:"ModalWorkspace",ModalItemList:"ModalItemList",Icon:"Icon",IconTile:"IconTile",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState",DataTable:"DataTable"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
 const {SaleDetailDialog}=compile("src/modules/sales/presentation/sale-detail-dialog.tsx",resolve);
 const data={order:{id:"sale-1",code:"PED-TEST",channel:"salon",status:"entregado",customerName:"Familia Pérez",tableName:"Mesa 5",subtotal:"50",deliveryFee:"5",total:"55",createdAt:"2026-10-06T14:30:00+00",notes:"Sin sal",items:[{id:"item-1",name:"Menú criollo",qty:"2",unitPrice:"25",note:"Sin hielo",selections:[{groupName:"Segundo",name:"Lomo saltado"}],modifiers:[{groupName:"Extras",name:"Ensalada"}]}]},paidAmount:"55",remainingAmount:"0",paymentStatus:"paid",payments:[{id:"pay-1",method:"custom",methodName:"Convenio empresa",amount:"65",refundedAmount:"10",netAmount:"55",reference:"REF-1",cashRegisterName:"Caja principal",createdByName:"Ana",createdAt:"2026-10-06T15:00:00+00"}]};
 const money=value=>`MON ${Number(value).toFixed(2)}`;
@@ -160,8 +160,8 @@ test("cambiar fechas reinicia la página, limpiar conserva búsqueda y un rango 
   const state=["Mesa",3,10,null,from,to,null,"custom"];
   const {SalesPage}=compile("src/modules/sales/presentation/sales-page.tsx",name=>{
    if(name==="react")return {...require("react"),useState:()=>{const slot=index++;return [state[slot],value=>changes.push([slot,value])]} };
-   if(name==="@tanstack/react-query")return {useQuery:options=>{queries.push(options);return {isLoading:false,isError:false,data:{items:[],total:0,amountTotal:"0"}}}};
-   if(name==="@/providers")return {useSession:()=>({location:{country:"PE",timezone:"America/Lima"}}),useMoney:()=>money};
+   if(name==="@tanstack/react-query")return {useQuery:options=>{queries.push(options);return {isLoading:false,isError:false,data:{items:[],total:0,amountTotal:"0"}}},useMutation:()=>({mutate(){},isPending:false}),useQueryClient:()=>({invalidateQueries(){}})};
+   if(name==="@/providers")return {useSession:()=>({can:()=>false,location:{country:"PE",timezone:"America/Lima"}}),useMoney:()=>money,useFeedback:()=>({notify(){}})};
    if(name==="@/providers/settings-context")return {useSettings:()=>({})};
    if(name==="@/shared/hooks/use-debounced-value")return {useDebouncedValue:value=>value};
    if(name==="../infrastructure/sales-api")return {listSales:async input=>requests.push(input)};
@@ -352,8 +352,8 @@ test("Ventas abre en Hoy con la fecha del local y muestra el total de todo el fi
  const state=["",1,10,null,"","",null,"today"];
  const {SalesPage}=compile("src/modules/sales/presentation/sales-page.tsx",name=>{
   if(name==="react")return {...require("react"),useState:()=>{const slot=index++;return [state[slot],value=>changes.push([slot,value])]} };
-  if(name==="@tanstack/react-query")return {useQuery:options=>{queries.push(options);return {isLoading:false,isError:false,data:{items:[],total:4,amountTotal:"150.00"}}}};
-  if(name==="@/providers")return {useSession:()=>({location:{country:"PE",timezone:"Pacific/Kiritimati"}}),useMoney:()=>money};
+  if(name==="@tanstack/react-query")return {useQuery:options=>{queries.push(options);return {isLoading:false,isError:false,data:{items:[],total:4,amountTotal:"150.00"}}},useMutation:()=>({mutate(){},isPending:false}),useQueryClient:()=>({invalidateQueries(){}})};
+  if(name==="@/providers")return {useSession:()=>({can:()=>false,location:{country:"PE",timezone:"Pacific/Kiritimati"}}),useMoney:()=>money,useFeedback:()=>({notify(){}})};
   if(name==="@/providers/settings-context")return {useSettings:()=>({})};
   if(name==="@/shared/hooks/use-debounced-value")return {useDebouncedValue:value=>value};
   if(name==="../infrastructure/sales-api")return {listSales:async input=>requests.push(input)};
@@ -395,4 +395,18 @@ test("los periodos se recorren con flechas, Home y End sin agregar cinco paradas
  buttons[0].props.onKeyDown(event("Tab"));
  assert.deepEqual(changes,["custom","today","today","custom"]);
  assert.deepEqual(focus,[4,0,0,4]);
+});
+
+test("Ventas permite devolver un pago mientras el pedido siga abierto y lo oculta al cerrarse",()=>{
+ const refunded=[];
+ const steps=view=>view.find(node=>node.type==="DetailTimeline").props.steps;
+ const refundButton=step=>nodes(step.aside).find(node=>node.type==="Button"&&node.props.className==="sales-refund-action");
+ const open=mount({refund:payment=>refunded.push(payment.id)});
+ const button=refundButton(steps(open)[0]);
+ assert.ok(button,"con permiso de caja y pedido abierto se ofrece «Devolver»");
+ button.props.onClick();assert.deepEqual(refunded,["pay-1"]);
+ assert.equal(refundButton(steps(mount({refund:()=>{},refundDisabled:true}))[0]).props.disabled,true,"sin turno de caja la devolución queda bloqueada");
+ assert.equal(refundButton(steps(mount())[0]),undefined,"sin permiso de caja no hay devolución");
+ assert.equal(refundButton(steps(mount({refund:()=>{},data:{...data,order:{...data.order,completedAt:"2026-10-06T16:00:00Z"}}}))[0]),undefined,"un pedido finalizado no admite devoluciones");
+ assert.equal(refundButton(steps(mount({refund:()=>{},data:{...data,order:{...data.order,channel:"delivery",status:"entregado"}}}))[0]),undefined,"entregado fuera de salón ya está cerrado");
 });

@@ -58,6 +58,8 @@
 /* Productos y pagos remetidos dentro de la sección de las pestañas (16 px; 12 px en móvil). */
 .sales-detail-panel{min-width:0;padding-inline:var(--space-4)}
 .sales-detail-lines .modal-item-row>div{min-width:0;overflow-wrap:anywhere}
+.sales-payment-values{display:grid;justify-items:end;gap:var(--space-0-5)}
+.sales-refund-action{height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);font-size:var(--font-size-label)}
 .sales-detail-empty{margin:0;color:var(--ink-500);font-size:var(--font-size-base);line-height:var(--line-height-normal)}
 .sales-detail-notes>span{display:grid;place-items:center;flex:none;color:var(--ink-600);padding-top:var(--space-0-5)}
 .sales-detail-notes div{min-width:0;display:grid;gap:var(--space-1)}

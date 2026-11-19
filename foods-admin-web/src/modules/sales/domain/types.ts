@@ -13,13 +13,14 @@ export type SaleItem={
   modifiers?:{groupName:string;name:string}[];
 };
 export type SalePayment={
-  id:string;method:string;methodName?:string;amount:string;refundedAmount:string;netAmount:string;
+  id:string;orderId:string;orderCode:string;shiftId:string;affectsCash:boolean;
+  method:string;methodName?:string;amount:string;refundedAmount:string;netAmount:string;
   reference:string;cashRegisterName:string;createdByName:string;createdAt:string;
 };
 export type SaleDetail={
   tipPolicy?:TipPolicy;tip?:TipReceipt;
   receiptContext?:PaymentReceiptContext;
-  order:Pick<Sale,"id"|"code"|"channel"|"status"|"customerName"|"tableName"|"total"|"createdAt">&{waiterName?:string;subtotal:string;deliveryFee:string;notes:string;items?:SaleItem[];serviceItems?:ServiceItem[]};
+  order:Pick<Sale,"id"|"code"|"channel"|"status"|"customerName"|"tableName"|"total"|"createdAt">&{completedAt?:string;waiterName?:string;subtotal:string;deliveryFee:string;notes:string;items?:SaleItem[];serviceItems?:ServiceItem[]};
   paidAmount:string;remainingAmount:string;paymentStatus:"pending"|"partial"|"paid";
   payments:SalePayment[];
   /** Electronic document delivered for the order; absent when charged without one. */

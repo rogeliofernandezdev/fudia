@@ -810,6 +810,13 @@ sección), con la misma geometría de modal y hoja inferior móvil:
    Por decisión explícita de producto, `amount-paid` resuelve al verde exacto
    `brand-600` (`#03C056`): Pedidos, Ventas y POS comparten el mismo color de cifra.
    Las etiquetas auxiliares usan `brand-700` y el estado Pagada conserva su tono.
+6. **Devoluciones** (2026-11-19): como Cobros solo lista lo que falta cobrar,
+   un pago de un pedido pagado se devuelve desde aquí. Con permiso `cash.manage`
+   cada pago con neto positivo muestra «Devolver» (`Button kind="ghost"`, icono
+   `undo`) en su fila de «Pagos», mientras el pedido siga abierto (no
+   finalizado, no cancelado y no entregado fuera de salón, la misma regla del
+   backend). Sin turno de caja el botón queda deshabilitado. Abre el mismo
+   `RefundDialog` de Cobros; al confirmar, el saldo devuelto vuelve a Cobros.
    Excepción de contraste: este acento sobre el pie claro no alcanza AA para
    texto; no se presenta como una variante accesible de texto ni se extiende
    a etiquetas, botones o estados. No oscurecer el importe de forma local.
@@ -1620,10 +1627,19 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   «Limpiar filtros» es secundaria con icono `close` y los estados vacío y de
   error del Kárdex usan `EmptyState` y `ErrorState`. En Recepciones, «Recibir»
   por fila es secundaria: una tabla no repite acciones primarias.
-- Punto de venta (`/pos`) usa un único panel de gestión con búsqueda y filtro de
-  estado. El filtro ofrece exactamente los estados de la columna Cobro: Todos,
-  Sin pagos, Pago parcial y Pagado; no se agregan opciones que sumen otras
-  (como «Con saldo pendiente»), porque repiten lo mismo. En escritorio presenta tabla estándar y en móvil tarjetas equivalentes;
+- Cobros (`/pos`, antes «Punto de venta»; renombrado 2026-11-19) es la cola de
+  lo que falta cobrar y no repite Pedidos ni Ventas: Pedidos sigue la
+  preparación y el despacho, Cobros registra pagos y Ventas consulta lo cobrado.
+  Usa un único panel de gestión con búsqueda y filtro de estado. Lista solo
+  pedidos con saldo (`paymentStatus=unpaid`); un pedido saldado sale de la cola
+  y se consulta en Ventas. El filtro ofrece exactamente los estados de la
+  columna Cobro dentro de la cola: Todos (con saldo), Sin pagos y Pago parcial;
+  no hay opción «Pagado» ni opciones que sumen otras (como «Con saldo
+  pendiente»). La tabla no tiene columna «Preparación»: Pedido, Canal, Total,
+  Pagado, Saldo, Cobro y Acciones. Cuando el pedido aún no se puede cobrar, el
+  tooltip del botón deshabilitado explica el motivo («La cuenta aún no está
+  cerrada para cobrar» en salón, «El pedido aún no está listo para cobrar» en
+  los demás canales). En escritorio presenta tabla estándar y en móvil tarjetas equivalentes;
   la acción de cobrar es iconográfica, usa `RowActionButton` y muestra tooltip,
   igual que el resto de acciones de fila. El turno de caja se presenta como
   contexto compacto y no como una segunda cabecera de página.
@@ -1632,13 +1648,12 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   mesa sin añadir fecha, hora ni columnas. Si el número ya es la identidad
   principal (sin mesa ni cliente), no se repite. Mostrador conserva su línea
   existente de número y productos.
-- Venta por mostrador en la bandeja del POS (2026-11-02): la columna
-  «Preparación» muestra el estado del pedido con `orderStatus` (matriz de
-  operación, sin tonos locales) junto a «Cobro», porque preparación y pago son
-  independientes. Un pedido con `origin=counter` muestra en «Canal» el origen
+- Venta por mostrador en la bandeja de Cobros (2026-11-02; sin columna
+  «Preparación» desde 2026-11-19): preparación y pago son independientes y la
+  preparación se sigue en Pedidos. Un pedido con `origin=counter` muestra en «Canal» el origen
   «Mostrador» (icono `store`) y bajo el cliente una línea `ink-500` de 12 px
   con el número `PED-…` y los productos (`itemsText`), recortada con elipsis a
-  260 px. En móvil la tarjeta repite origen y preparación en la fila del canal.
+  260 px. En móvil la tarjeta muestra el origen en la fila del canal.
   Se cobra aunque Cocina no haya terminado.
 - El skeleton del POS conserva la geometría de cabecera, columnas, filas y
   acciones; el detalle reproduce resumen, productos y pagos. No se reemplaza
@@ -3137,7 +3152,7 @@ permisos de operación, pero no transfiere la responsabilidad del turno.
 En el historial de turnos cerrados, «Cerrado por» identifica a quien realizó el
 cierre; el detalle conserva también «Abierto por» y ambas fechas. La autoría de
 cada movimiento permanece en su propia fila. Asignar o retirar usuarios refresca
-las cajas, el historial y el detalle inmediatamente. Punto de venta muestra al
+las cajas, el historial y el detalle inmediatamente. Cobros muestra al
 mismo cajero del turno activo. El cambio de responsable se realiza cerrando el
 turno y abriendo uno nuevo; no se infiere por la sesión que consulta la pantalla.
 
@@ -3263,7 +3278,7 @@ En móvil conserva el formato cuadrado y se apila sobre los campos.
 
 La pestaña Acciones y el detalle de rol muestran sección → módulo → acciones.
 Los títulos, iconos y orden provienen de `shell/navigation.ts`: por ejemplo,
-Operación → Punto de venta, Pedidos, Salón, Cocina, Mesas y zonas, Caja y turnos.
+Operación → Cobros, Pedidos, Salón, Cocina, Mesas y zonas, Caja y turnos.
 Las etiquetas y acciones disponibles siguen proviniendo de `permission-catalog`;
 `permission-navigation.ts` solo relaciona claves técnicas con rutas existentes.
 Se omiten módulos y secciones sin acciones del catálogo efectivo. Un permiso

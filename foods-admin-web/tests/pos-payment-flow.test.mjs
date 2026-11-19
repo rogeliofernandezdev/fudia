@@ -383,13 +383,13 @@ test("el administrador usa una caja automáticamente y elige si hay varias, sin 
  assert.equal(nodes(noBoxes.POSPaymentEntry(noBoxes.entry.props)).some(node=>node.type==="PaymentForm"),false);
 });
 
-test("venta por mostrador: la bandeja muestra origen, número, productos y preparación, y se cobra antes de prepararse",()=>{
+test("venta por mostrador: la bandeja muestra origen, número y productos sin repetir la preparación, y se cobra antes de prepararse",()=>{
  const counter={id:"counter-1",code:"PED-7A9A049D",channel:"recojo",origin:"counter",status:"confirmado",customerName:"Ana",tableName:"",itemsText:"2 × Ceviche, 1 × Chicha",total:"55",paidAmount:"0",remainingAmount:"55",paymentStatus:"pending",createdAt:"2026-11-02T12:00:00Z"};
  const view=mountPage({initialOrderId:"",listed:[counter]});
  const text=JSON.stringify(nodes(view.tree).map(node=>node.props?.children).filter(child=>typeof child==="string"||Array.isArray(child)));
  assert.ok(text.includes("Mostrador"),"origen «Mostrador»");
  assert.ok(text.includes("PED-7A9A049D · 2 × Ceviche, 1 × Chicha"),"número del pedido y productos");
- assert.ok(nodes(view.tree).some(node=>node.type==="Status"&&node.props.children==="Confirmado"),"estado de preparación");
+ assert.equal(nodes(view.tree).some(node=>node.type==="Status"&&node.props.children==="Confirmado"),false,"la preparación se sigue en Pedidos, no en Cobros");
  const charge=nodes(view.tree).find(node=>node.type==="RowActionButton"&&node.props.action==="charge");
  assert.ok(charge&&!charge.props.disabled,"preparación y pago son independientes");
  assert.equal(serviceFlowExports.canChargeAccount({...counter,origin:"counter",status:"cancelado"}),false);

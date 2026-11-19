@@ -4,12 +4,13 @@ import {Button,DetailContact,DetailTimeline,EmptyState,ErrorState,Icon,IconTile,
 import {Dialog} from "@/design-system/dialog";
 import {FiscalStatus} from "@/modules/einvoicing";
 import {lineServiceState} from "@/modules/operations/orders";
-import type {SaleDetail} from "../domain/types";
+import type {SaleDetail,SalePayment} from "../domain/types";
 import "./sales.css";
 
 /** Datos que ya trae la fila del listado: bastan para la cabecera mientras carga el detalle. */
 export type SaleDetailPreview={tableName?:string;customerName?:string;channel:string};
-type Props={loading:boolean;error?:string;data?:SaleDetail;preview?:SaleDetailPreview;money:(value:string|number)=>string;date:(value:string)=>string;close:()=>void;retry:()=>void;ticket?:()=>void};
+/** `refund` solo llega con permiso de caja; `refundDisabled` lo bloquea mientras no haya turno para registrar la salida. */
+type Props={loading:boolean;error?:string;data?:SaleDetail;preview?:SaleDetailPreview;money:(value:string|number)=>string;date:(value:string)=>string;close:()=>void;retry:()=>void;ticket?:()=>void;refund?:(payment:SalePayment)=>void;refundDisabled?:boolean};
 const channels:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
 const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
 const paymentStates={paid:{label:"Pagada",tone:"green" as const},partial:{label:"Pago parcial",tone:"orange" as const},pending:{label:"Sin pagos",tone:"gray" as const}};
@@ -19,7 +20,7 @@ const titleId="sales-detail-title";
  * Detalle de venta con el patrón de Detalle de pedido: cabecera con la mesa o el cliente,
  * identidad (estado y fecha), tarjeta de cliente, pestañas y resumen fijo al pie.
  */
-export function SaleDetailDialog({loading,error,data,preview,money,date,close,retry,ticket}:Props){
+export function SaleDetailDialog({loading,error,data,preview,money,date,close,retry,ticket,refund,refundDisabled=false}:Props){
   const status=data?paymentStates[data.paymentStatus]:null;
   // La cabecera no espera al API: con la fila del listado ya se conocen mesa, cliente y canal.
   const head=data?.order??preview;
@@ -34,6 +35,8 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
   // El resumen no repite el importe principal: el desglose solo aparece cuando explica una diferencia
   // (delivery, o pagos registrados que dejan saldo); sin nada que explicar queda solo la franja.
   const breakdown=hasDelivery||(pending&&hasPayments);
+  // Misma regla que el backend: un pedido finalizado, cancelado o entregado fuera de salón ya no admite devoluciones.
+  const refundable=Boolean(refund&&data&&!data.order.completedAt&&data.order.status!=="cancelado"&&!(data.order.status==="entregado"&&data.order.channel!=="salon"));
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal sales-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={loading}>
     {loading?<SaleDetailSkeleton close={close} withFooter={Boolean(ticket)} heading={head?{title}:undefined} withContact={!head||Boolean(head.customerName)}/>:<>
     <ModalHeader title={title} titleId={titleId} onClose={close} closeLabel="Cerrar detalle"/>
@@ -90,7 +93,7 @@ export function SaleDetailDialog({loading,error,data,preview,money,date,close,re
             title:payment.methodName||payment.method,
             time:date(payment.createdAt),
             description:[payment.cashRegisterName,`Cobrado por: ${payment.createdByName||"Sin información"}`,payment.reference?.trim()&&`Número de operación: ${payment.reference}`].filter(Boolean).join(" · "),
-            aside:<>{money(payment.netAmount)}{Number(payment.refundedAmount)>0&&<small>Cobrado {money(payment.amount)} · Devuelto {money(payment.refundedAmount)}</small>}</>,
+            aside:<span className="sales-payment-values">{money(payment.netAmount)}{Number(payment.refundedAmount)>0&&<small>Cobrado {money(payment.amount)} · Devuelto {money(payment.refundedAmount)}</small>}{refundable&&Number(payment.netAmount)>0&&<Button kind="ghost" className="sales-refund-action" icon="undo" disabled={refundDisabled} onClick={()=>refund!(payment)}>Devolver</Button>}</span>,
           }))}/>:<p className="sales-detail-empty">No hay pagos registrados.</p>}
         </section>      </div>
     </div></ModalWorkspace>}

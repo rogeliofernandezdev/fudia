@@ -373,10 +373,14 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
   const route=read("src/app/(admin)/pos/page.tsx");
 
   assert.ok(route.includes("POSPage"),"/pos ya no es un placeholder");
-  assert.equal(route.includes("ComingSoonPage"),false,"Punto de venta tiene implementación operativa");
+  assert.equal(route.includes("ComingSoonPage"),false,"Cobros tiene implementación operativa");
   assert.ok(page.includes('<option value="partial">Pago parcial</option>'),"POS conserva pagos parciales en la cola de cobro");
   assert.equal(page.includes("Con saldo pendiente"),false,"el filtro no repite Sin pagos + Pago parcial en otra opción");
-  assert.ok(page.includes('useState("all")'),"POS muestra todos los cobros por defecto");
+  assert.ok(page.includes('useState<"unpaid"|"pending"|"partial">("unpaid")'),"Cobros abre en la cola de lo que falta cobrar");
+  assert.ok(page.includes('<option value="unpaid">Todos</option>'),"«Todos» en Cobros son los pedidos con saldo");
+  assert.equal(page.includes('<option value="paid">'),false,"lo pagado se consulta en Ventas, no en Cobros");
+  assert.equal(page.includes("<th>Preparación</th>"),false,"Cobros no repite el estado de preparación de Pedidos");
+  assert.ok(page.includes('<PageHeader title="Cobros"'),"la pantalla se llama como el menú");
   assert.ok(page.includes("getPOSCollectionAccess"),"POS exige un turno asignado sin consultar saldos administrativos");
   assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
   assert.ok(page.includes("PaymentForm"),"POS registra cobros desde la bandeja dentro del modal estable");
@@ -601,7 +605,7 @@ test("se preservan contratos visuales base",()=>{
   const css=read("src/styles/variables.css").replace(/\s+/g,"");
   for(const token of ["--brand-700","--primary-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
   const navigation=read("src/shell/navigation.ts");
-  for(const label of ["Dashboard","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
+  for(const label of ["Dashboard","Cobros","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
 });
 
 
@@ -954,7 +958,7 @@ test("el POS comparte patrones de tabla, móvil y modales",()=>{
   assert.equal(dialogs.includes('type="submit" icon="check"'),false,"El botón primario no duplica el icono aportado por el estilo global");
   assert.equal(dialogs.includes('className="modal-busy"'),false,"La mutación no cubre ni oculta el contexto del formulario");
   assert.ok(styles.includes(".pos-method.active .pos-method-check{opacity:1"),"El método elegido muestra una marca visible además del borde");
-  assert.ok(designSystem.includes("Punto de venta (`/pos`)"),"El comportamiento queda documentado en la autoridad visual local");
+  assert.ok(designSystem.includes("Cobros (`/pos`, antes «Punto de venta»"),"El comportamiento queda documentado en la autoridad visual local");
 });
 
 test("Pedidos no expone el identificador técnico como información visual",()=>{

@@ -1,4 +1,4 @@
-/* Punto de venta: cobros y devoluciones. Tokens Foods:
+/* Cobros: cola de cobro y devoluciones. Tokens Foods:
    azul para acciones y saldo, verde solo para éxito, ámbar para pago
    parcial. Montos con cifras tabulares y tamaño legible. */
 .pos-page{display:grid}

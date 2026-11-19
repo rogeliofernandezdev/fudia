@@ -628,7 +628,7 @@ En navegador (build de producción, sesión real): el toque en el menú lateral
 cambia URL y muestra el skeleton en 16–80 ms; una pantalla nueva aparece hacia
 los ~340 ms (React mantiene un fallback de Suspense ~300 ms; el payload RSC
 tarda 10–60 ms) y una visitada en los últimos 30 s abre en 50–70 ms. Se revisaron
-Dashboard, Punto de venta, Salón, Pedidos y Menús y combos (incluido el buscador
+Dashboard, Cobros, Salón, Pedidos y Menús y combos (incluido el buscador
 diferido «Agregar opción») en escritorio y, con el iframe de 427 × 933 y 390 px,
 en móvil. Los sondeos de 10 s de Salón, Cocina y del saldo del catálogo se
 mantienen: son comportamiento aprobado y tienen pruebas propias.

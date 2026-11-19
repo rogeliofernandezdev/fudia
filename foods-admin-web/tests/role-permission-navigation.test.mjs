@@ -24,7 +24,7 @@ test("Acciones usa exactamente secciones, módulos, iconos y orden del menú",()
  const sections=sectionsOf(catalog);
  assert.ok(Object.keys(screenActions).length>20,"se leyeron las acciones por pantalla del backend");
  assert.deepEqual(plain(sections.map(section=>section.name)),["Control","Operación","Carta y producción","Configuración"]);
- assert.deepEqual(plain(sections[1].modules.map(module=>module.name)),["Punto de venta","Pedidos","Salón","Cocina","Mesas y zonas","Caja y turnos"]);
+ assert.deepEqual(plain(sections[1].modules.map(module=>module.name)),["Cobros","Pedidos","Salón","Cocina","Mesas y zonas","Caja y turnos"]);
  for(const section of sections)for(const feature of section.modules){const nav=navigation.navigationGroups.flatMap(group=>group.items).find(item=>item.href===feature.id);assert.equal(feature.name,nav.name);assert.equal(feature.icon,nav.icon);}
  assert.equal(sections.some(section=>section.name==="Administración"),false);
  assert.deepEqual(plain(permissionSections([])),[]);
@@ -41,7 +41,7 @@ test("el catálogo remoto se conserva completo sin inventar acciones ni perder p
  const receipts=sections.flatMap(section=>section.modules).find(module=>module.name==="Comprobantes");
  assert.deepEqual(plain(receipts.items.map(item=>item.label)),["Ver y descargar comprobantes","Reenviar comprobantes a SUNAT"]);
  assert.ok(receipts.items[0].sharedWith.includes("Pedidos"),"la acción compartida avisa dónde más aplica");
- assert.equal(grouping.sharedNote(["Ventas","Pedidos","Salón","Cocina","Punto de venta"]),"También en Ventas, Pedidos, Salón y 2 más");
+ assert.equal(grouping.sharedNote(["Ventas","Pedidos","Salón","Cocina","Cobros"]),"También en Ventas, Pedidos, Salón y 2 más");
  assert.equal(grouping.sharedNote(["Caja y turnos"]),"También en Caja y turnos");
  assert.equal(grouping.sharedNote(["Pedidos","Salón"]),"También en Pedidos y Salón");
  const future=sectionsOf([{group:"API",items:[item("future.manage","Acción nueva del API")]}]);assert.equal(future[0].modules[0].items[0].label,"Acción nueva del API");
@@ -85,7 +85,7 @@ test("cada módulo incluye su permiso de lectura oficial aunque sea compartido",
   assert.ok(feature?.items.some(item=>item.value===entry.permission),entry.name);
  }
  const scoped=sectionsOf([{group:"API",items:[item("orders.read"),item("orders.manage")]}],[{group:"Operación",items:[item("pos")]}]);
- assert.equal(scoped[0].modules[0].name,"Punto de venta");assert.deepEqual(plain(scoped[0].modules[0].items.map(item=>item.value)),["orders.read"]);
+ assert.equal(scoped[0].modules[0].name,"Cobros");assert.deepEqual(plain(scoped[0].modules[0].items.map(item=>item.value)),["orders.read"]);
  // Sin una pantalla del plan que la muestre, la acción sigue editable en «Otros permisos».
  assert.deepEqual(plain(scoped.map(section=>section.name)),["Operación","Otros permisos"]);
 });

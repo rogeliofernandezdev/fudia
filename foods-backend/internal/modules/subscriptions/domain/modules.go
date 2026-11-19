@@ -31,7 +31,7 @@ var ModuleCatalog = []ModuleDef{
 	{Key: "reportes", Name: "Reportes", Description: "Informes de ventas, financieros y consolidados", Icon: "grid", Category: "Control"},
 
 	// Operación
-	{Key: "pos", Name: "Punto de venta", Description: "Cobro rápido, comprobantes y facturación", Icon: "sales", Category: "Operación"},
+	{Key: "pos", Name: "Cobros", Description: "Cobro de pedidos, pago dividido y comprobantes", Icon: "sales", Category: "Operación"},
 	{Key: "pedidos", Name: "Pedidos", Description: "Pedidos de salón, para llevar y delivery", Icon: "receipt", Category: "Operación"},
 	{Key: "cocina", Name: "Cocina", Description: "KDS con tiempos y estados de preparación", Icon: "kitchen", Category: "Operación"},
 	{Key: "mesas", Name: "Mesas y zonas", Description: "Gestión de mesas, zonas y estado de ocupación", Icon: "grid", Category: "Operación"},
