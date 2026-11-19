@@ -479,15 +479,15 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
-
       static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
 
-      @KeepFieldType
-      PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
+      static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
 
       @KeepFieldType
       SessionViewModel com_fudia_pay_SessionViewModel2;
+
+      @KeepFieldType
+      PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -621,9 +621,9 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     private Provider<FudiaPayApi> provideApiProvider;
 
-    private Provider<SyncWorker_AssistedFactory> syncWorker_AssistedFactoryProvider;
-
     private Provider<ListenerStatus> listenerStatusProvider;
+
+    private Provider<SyncWorker_AssistedFactory> syncWorker_AssistedFactoryProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -649,8 +649,8 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
       this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<PayDatabase>(singletonCImpl, 1));
       this.deviceCredentialsProvider = DoubleCheck.provider(new SwitchingProvider<DeviceCredentials>(singletonCImpl, 3));
       this.provideApiProvider = DoubleCheck.provider(new SwitchingProvider<FudiaPayApi>(singletonCImpl, 2));
-      this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
       this.listenerStatusProvider = DoubleCheck.provider(new SwitchingProvider<ListenerStatus>(singletonCImpl, 4));
+      this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
     }
 
     @Override
@@ -696,7 +696,7 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
           return (T) new SyncWorker_AssistedFactory() {
             @Override
             public SyncWorker create(Context context, WorkerParameters params) {
-              return new SyncWorker(context, params, singletonCImpl.pendingEventDao(), singletonCImpl.provideApiProvider.get());
+              return new SyncWorker(context, params, singletonCImpl.pendingEventDao(), singletonCImpl.provideApiProvider.get(), singletonCImpl.listenerStatusProvider.get());
             }
           };
 

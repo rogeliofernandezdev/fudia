@@ -45,7 +45,7 @@ public final class PendingEventDao_Impl implements PendingEventDao {
       @Override
       @NonNull
       protected String createQuery() {
-        return "INSERT OR IGNORE INTO `pending_events` (`providerEventKey`,`provider`,`senderName`,`amount`,`occurredAtMillis`,`attempts`,`createdAtMillis`) VALUES (?,?,?,?,?,?,?)";
+        return "INSERT OR IGNORE INTO `pending_events` (`providerEventKey`,`provider`,`senderName`,`amount`,`occurredAtMillis`,`attempts`,`createdAtMillis`,`operationNumber`) VALUES (?,?,?,?,?,?,?,?)";
       }
 
       @Override
@@ -58,6 +58,11 @@ public final class PendingEventDao_Impl implements PendingEventDao {
         statement.bindLong(5, entity.getOccurredAtMillis());
         statement.bindLong(6, entity.getAttempts());
         statement.bindLong(7, entity.getCreatedAtMillis());
+        if (entity.getOperationNumber() == null) {
+          statement.bindNull(8);
+        } else {
+          statement.bindString(8, entity.getOperationNumber());
+        }
       }
     };
     this.__preparedStmtOfMarkAttempt = new SharedSQLiteStatement(__db) {
@@ -163,6 +168,7 @@ public final class PendingEventDao_Impl implements PendingEventDao {
           final int _cursorIndexOfOccurredAtMillis = CursorUtil.getColumnIndexOrThrow(_cursor, "occurredAtMillis");
           final int _cursorIndexOfAttempts = CursorUtil.getColumnIndexOrThrow(_cursor, "attempts");
           final int _cursorIndexOfCreatedAtMillis = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAtMillis");
+          final int _cursorIndexOfOperationNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "operationNumber");
           final List<PendingEvent> _result = new ArrayList<PendingEvent>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final PendingEvent _item;
@@ -180,7 +186,13 @@ public final class PendingEventDao_Impl implements PendingEventDao {
             _tmpAttempts = _cursor.getInt(_cursorIndexOfAttempts);
             final long _tmpCreatedAtMillis;
             _tmpCreatedAtMillis = _cursor.getLong(_cursorIndexOfCreatedAtMillis);
-            _item = new PendingEvent(_tmpProviderEventKey,_tmpProvider,_tmpSenderName,_tmpAmount,_tmpOccurredAtMillis,_tmpAttempts,_tmpCreatedAtMillis);
+            final String _tmpOperationNumber;
+            if (_cursor.isNull(_cursorIndexOfOperationNumber)) {
+              _tmpOperationNumber = null;
+            } else {
+              _tmpOperationNumber = _cursor.getString(_cursorIndexOfOperationNumber);
+            }
+            _item = new PendingEvent(_tmpProviderEventKey,_tmpProvider,_tmpSenderName,_tmpAmount,_tmpOccurredAtMillis,_tmpAttempts,_tmpCreatedAtMillis,_tmpOperationNumber);
             _result.add(_item);
           }
           return _result;
@@ -214,6 +226,7 @@ public final class PendingEventDao_Impl implements PendingEventDao {
           final int _cursorIndexOfOccurredAtMillis = CursorUtil.getColumnIndexOrThrow(_cursor, "occurredAtMillis");
           final int _cursorIndexOfAttempts = CursorUtil.getColumnIndexOrThrow(_cursor, "attempts");
           final int _cursorIndexOfCreatedAtMillis = CursorUtil.getColumnIndexOrThrow(_cursor, "createdAtMillis");
+          final int _cursorIndexOfOperationNumber = CursorUtil.getColumnIndexOrThrow(_cursor, "operationNumber");
           final List<PendingEvent> _result = new ArrayList<PendingEvent>(_cursor.getCount());
           while (_cursor.moveToNext()) {
             final PendingEvent _item;
@@ -231,7 +244,13 @@ public final class PendingEventDao_Impl implements PendingEventDao {
             _tmpAttempts = _cursor.getInt(_cursorIndexOfAttempts);
             final long _tmpCreatedAtMillis;
             _tmpCreatedAtMillis = _cursor.getLong(_cursorIndexOfCreatedAtMillis);
-            _item = new PendingEvent(_tmpProviderEventKey,_tmpProvider,_tmpSenderName,_tmpAmount,_tmpOccurredAtMillis,_tmpAttempts,_tmpCreatedAtMillis);
+            final String _tmpOperationNumber;
+            if (_cursor.isNull(_cursorIndexOfOperationNumber)) {
+              _tmpOperationNumber = null;
+            } else {
+              _tmpOperationNumber = _cursor.getString(_cursorIndexOfOperationNumber);
+            }
+            _item = new PendingEvent(_tmpProviderEventKey,_tmpProvider,_tmpSenderName,_tmpAmount,_tmpOccurredAtMillis,_tmpAttempts,_tmpCreatedAtMillis,_tmpOperationNumber);
             _result.add(_item);
           }
           return _result;

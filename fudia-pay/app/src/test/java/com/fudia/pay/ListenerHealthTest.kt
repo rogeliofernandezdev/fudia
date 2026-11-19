@@ -3,8 +3,11 @@ package com.fudia.pay
 import com.fudia.pay.features.notifications.ListenerHealth
 import com.fudia.pay.features.settings.livenessText
 import com.fudia.pay.features.settings.sinceLabel
+import com.fudia.pay.features.sync.shouldRequestRebind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -32,5 +35,15 @@ class ListenerHealthTest {
     fun `sin conexiones registradas el texto lo admite`() {
         val health = ListenerHealth(0, 0)
         assertEquals("El servicio de escucha aún no se ha conectado.", livenessText(health, now = 1_000))
+    }
+
+    @Test
+    fun `el barrido pide reenlace solo con permiso activo y servicio sin señal en el proceso`() {
+        // Permiso concedido y sin señal (proceso muerto o servicio desconectado): reparar.
+        assertTrue(shouldRequestRebind(listenerEnabled = true, boundInProcess = false))
+        // Servicio enlazado en este proceso: nada que hacer.
+        assertFalse(shouldRequestRebind(listenerEnabled = true, boundInProcess = true))
+        // Sin permiso, la app no puede hacer nada: no llamar al sistema.
+        assertFalse(shouldRequestRebind(listenerEnabled = false, boundInProcess = false))
     }
 }

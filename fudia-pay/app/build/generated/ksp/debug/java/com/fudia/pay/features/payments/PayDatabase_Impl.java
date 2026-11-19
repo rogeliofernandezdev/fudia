@@ -31,12 +31,12 @@ public final class PayDatabase_Impl extends PayDatabase {
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(1) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(2) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
-        db.execSQL("CREATE TABLE IF NOT EXISTS `pending_events` (`providerEventKey` TEXT NOT NULL, `provider` TEXT NOT NULL, `senderName` TEXT NOT NULL, `amount` REAL NOT NULL, `occurredAtMillis` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, `createdAtMillis` INTEGER NOT NULL, PRIMARY KEY(`providerEventKey`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `pending_events` (`providerEventKey` TEXT NOT NULL, `provider` TEXT NOT NULL, `senderName` TEXT NOT NULL, `amount` REAL NOT NULL, `occurredAtMillis` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, `createdAtMillis` INTEGER NOT NULL, `operationNumber` TEXT, PRIMARY KEY(`providerEventKey`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3032027e12c34442bbd1d684e0417d90')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6374adf3b2a4a9d084f3d14e9f8dea1f')");
       }
 
       @Override
@@ -85,7 +85,7 @@ public final class PayDatabase_Impl extends PayDatabase {
       @NonNull
       public RoomOpenHelper.ValidationResult onValidateSchema(
           @NonNull final SupportSQLiteDatabase db) {
-        final HashMap<String, TableInfo.Column> _columnsPendingEvents = new HashMap<String, TableInfo.Column>(7);
+        final HashMap<String, TableInfo.Column> _columnsPendingEvents = new HashMap<String, TableInfo.Column>(8);
         _columnsPendingEvents.put("providerEventKey", new TableInfo.Column("providerEventKey", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPendingEvents.put("provider", new TableInfo.Column("provider", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPendingEvents.put("senderName", new TableInfo.Column("senderName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
@@ -93,6 +93,7 @@ public final class PayDatabase_Impl extends PayDatabase {
         _columnsPendingEvents.put("occurredAtMillis", new TableInfo.Column("occurredAtMillis", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPendingEvents.put("attempts", new TableInfo.Column("attempts", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
         _columnsPendingEvents.put("createdAtMillis", new TableInfo.Column("createdAtMillis", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsPendingEvents.put("operationNumber", new TableInfo.Column("operationNumber", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
         final HashSet<TableInfo.ForeignKey> _foreignKeysPendingEvents = new HashSet<TableInfo.ForeignKey>(0);
         final HashSet<TableInfo.Index> _indicesPendingEvents = new HashSet<TableInfo.Index>(0);
         final TableInfo _infoPendingEvents = new TableInfo("pending_events", _columnsPendingEvents, _foreignKeysPendingEvents, _indicesPendingEvents);
@@ -104,7 +105,7 @@ public final class PayDatabase_Impl extends PayDatabase {
         }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "3032027e12c34442bbd1d684e0417d90", "adbca6878fa1f265a7c8b8d0e3e7aebc");
+    }, "6374adf3b2a4a9d084f3d14e9f8dea1f", "b987a8ca780e99dbe71da3e170aa200e");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;

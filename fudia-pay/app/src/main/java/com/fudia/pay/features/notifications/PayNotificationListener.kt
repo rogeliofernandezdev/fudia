@@ -38,8 +38,20 @@ class PayNotificationListener : NotificationListenerService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    companion object {
+        const val TAG = "FudiaPay"
+
+        /** Señal en memoria: no nula solo mientras el servicio está enlazado
+         *  en ESTE proceso. El worker (mismo proceso) la lee para decidir el
+         *  reenlace: si el sistema mató el proceso, el proceso nuevo nace con
+         *  null y el barrido repara sin abrir la app. */
+        @Volatile
+        var connectionEpoch: Long? = null
+    }
+
     override fun onListenerConnected() {
         super.onListenerConnected()
+        connectionEpoch = System.currentTimeMillis()
         scope.launch { listenerStatus.markConnected() }
         if (BuildConfig.DEBUG) Log.d(TAG, "servicio de escucha conectado")
     }
@@ -49,11 +61,13 @@ class PayNotificationListener : NotificationListenerService() {
         // fabricante): se solicita el reenlace para recuperarlo sin abrir la
         // app, y queda registrado en la salud que muestra la pantalla.
         if (BuildConfig.DEBUG) Log.d(TAG, "desconectado por el sistema: solicitando reenlace")
+        connectionEpoch = null
         scope.launch { listenerStatus.markDisconnected() }
         requestRebind(ComponentName(this, PayNotificationListener::class.java))
     }
 
     override fun onDestroy() {
+        connectionEpoch = null
         scope.cancel()
         super.onDestroy()
     }
@@ -116,9 +130,5 @@ class PayNotificationListener : NotificationListenerService() {
                 Log.d(TAG, "pago duplicado en cola: ignorado")
             }
         }
-    }
-
-    private companion object {
-        const val TAG = "FudiaPay"
     }
 }
