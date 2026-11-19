@@ -62,11 +62,11 @@ func (a *API) Routes() *http.ServeMux {
 		// pagos de Yape y Plin que Caja revisa y confirma con el flujo de pagos
 		// existente; una notificación nunca marca una venta pagada por sí sola.
 		// Dispositivos de pago: configuración del restaurante (Mi restaurante).
-		m.Handle("POST /v1/admin/pay-devices/pairing", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.CreatePairing))))
-		m.Handle("GET /v1/admin/pay-devices/pairing/{id}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.PairingStatus))))
-		m.Handle("GET /v1/admin/pay-devices", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(p.Devices))))
-		m.Handle("PATCH /v1/admin/pay-devices/{id}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.RenameDevice))))
-		m.Handle("POST /v1/admin/pay-devices/{id}/revoke", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.RevokeDevice))))
+		// Dispositivos de pago de cada local (Locales › Dispositivos de pago).
+		m.Handle("POST /v1/admin/locations/{locationId}/pay-devices/pairing", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.CreatePairing))))
+		m.Handle("GET /v1/admin/locations/{locationId}/pay-devices/pairing/{pairingId}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.PairingStatus))))
+		m.Handle("GET /v1/admin/locations/{locationId}/pay-devices", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(p.Devices))))
+		m.Handle("POST /v1/admin/locations/{locationId}/pay-devices/{deviceId}/revoke", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.RevokeDevice))))
 		m.Handle("GET /v1/admin/pay-notifications", a.auth(a.requirePermission("cash.read", http.HandlerFunc(p.Notifications))))
 		m.Handle("POST /v1/admin/pay-notifications/{id}/associate", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.AssociateNotification))))
 		m.Handle("POST /v1/admin/pay-notifications/{id}/dismiss", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.DismissNotification))))

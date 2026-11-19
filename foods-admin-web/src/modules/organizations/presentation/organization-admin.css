@@ -32,3 +32,13 @@
 
 /* Fiscal y moneda: aviso de vencimiento del IGV reducido MYPE sobre la tabla de perfiles. */
 .special-tax-notice{margin-bottom:var(--space-3)}
+
+/* Locales › Editar local: pestañas «Datos» y «Dispositivos de pago» bajo la
+   cabecera. El formulario se oculta (sin desmontarse) para no perder cambios
+   sin guardar al revisar los dispositivos. */
+.crud-modal.location-dialog>div.location-dialog-tabs{flex:none;overflow:visible;padding:var(--space-3) var(--space-6) var(--space-1);background:var(--surface)}
+.crud-modal.location-dialog>.modal-form[hidden]{display:none}
+.location-dialog-tabs .ds-tabs{width:100%}
+@media (width<=600px){
+ .crud-modal.location-dialog>div.location-dialog-tabs{padding-inline:var(--space-4)}
+}

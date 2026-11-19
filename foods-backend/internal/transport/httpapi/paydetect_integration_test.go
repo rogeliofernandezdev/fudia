@@ -39,7 +39,11 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		req := httptest.NewRequest(method, path, bytes.NewReader([]byte(body)))
 		if id != "" {
 			req.SetPathValue("id", id)
+			req.SetPathValue("pairingId", id)
+			req.SetPathValue("deviceId", id)
 		}
+		// Locales elige el local en la ruta; el backend lo valida contra la empresa.
+		req.SetPathValue("locationId", subject.LocationID)
 		if subject.OrganizationID != "" {
 			req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, subject))
 		}
@@ -65,10 +69,6 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		case path == "/v1/admin/pay-notifications":
 			handler.Notifications(rec, req)
 		default:
-			if method == "PATCH" {
-				handler.RenameDevice(rec, req)
-				return rec
-			}
 			switch {
 			case path == "/v1/admin/pay-devices/revoke":
 				handler.RevokeDevice(rec, req)
@@ -409,10 +409,35 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	if len(devices.Items) != 1 {
 		t.Fatalf("el local debe ver 1 dispositivo, vio %d", len(devices.Items))
 	}
+	// Un local de otra empresa no se puede elegir en la ruta.
+	foreign := s
+	foreign.LocationID = other.LocationID
+	if list := call("GET", "/v1/admin/pay-devices", "", foreign, ""); list.Code != 404 {
+		t.Fatalf("un local de otra empresa debe responder 404, fue %d", list.Code)
+	}
 	if revoked := call("POST", "/v1/admin/pay-devices/revoke", devices.Items[0].ID, s, ""); revoked.Code != 200 {
 		t.Fatalf("revoke: %d", revoked.Code)
 	}
 	if blocked := call("POST", "/v1/mobile/notifications", "", scope{}, `{"events":[{"provider":"yape","eventKey":"yape-op-dead12","amount":5,"occurredAt":"2026-11-15T13:00:00Z"}]}`); blocked.Code != 401 {
 		t.Fatalf("un dispositivo revocado debe recibir 401, fue %d", blocked.Code)
+	}
+	// El filtro por estado separa los activos del historial de revocados.
+	countDevices := func(status string) int {
+		t.Helper()
+		req := httptest.NewRequest("GET", "/v1/admin/pay-devices?status="+status+"&page=1&size=10", nil)
+		req.SetPathValue("locationId", s.LocationID)
+		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+		rec := httptest.NewRecorder()
+		handler.Devices(rec, req)
+		var page struct {
+			Total int `json:"total"`
+		}
+		if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &page) != nil {
+			t.Fatalf("devices %s: %d %s", status, rec.Code, rec.Body.String())
+		}
+		return page.Total
+	}
+	if active, revoked := countDevices("active"), countDevices("revoked"); active != 0 || revoked != 1 {
+		t.Fatalf("activos=%d revocados=%d, se esperaba 0 y 1", active, revoked)
 	}
 }

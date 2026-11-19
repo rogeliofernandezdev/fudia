@@ -1,27 +1,27 @@
 import {apiFetch} from "@/shared/api/client";
-import type {PayDevice,PayNotification,PayNotificationStatus,PayOrderRef,PayPairingDraft,PayPairingStatus,PayProvider} from "../domain/types";
+import type {PayDevice,PayDeviceStatusFilter,PayNotification,PayNotificationStatus,PayOrderRef,PayPairingDraft,PayPairingStatus,PayProvider} from "../domain/types";
 
-/** Caja genera el código temporal que se muestra como QR. */
-export function createPayPairing(){
-  return apiFetch<PayPairingDraft>("pay-devices/pairing",{method:"POST"});
+const locationDevices=(locationId:string)=>`locations/${encodeURIComponent(locationId)}/pay-devices`;
+
+/** Locales genera el código temporal del local que se muestra como QR. */
+export function createPayPairing(locationId:string){
+  return apiFetch<PayPairingDraft>(`${locationDevices(locationId)}/pairing`,{method:"POST"});
 }
 
 /** Estado del código mientras el QR está a la vista (como WhatsApp Web). */
-export function getPayPairingStatus(id:string){
-  return apiFetch<PayPairingStatus>(`pay-devices/pairing/${encodeURIComponent(id)}`);
+export function getPayPairingStatus(locationId:string,id:string){
+  return apiFetch<PayPairingStatus>(`${locationDevices(locationId)}/pairing/${encodeURIComponent(id)}`);
 }
 
-export function listPayDevices(){
-  return apiFetch<{items:PayDevice[]}>("pay-devices");
-}
-
-export function renamePayDevice(id:string,name:string){
-  return apiFetch<PayDevice>(`pay-devices/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify({name})});
+/** Una página de dispositivos del local; status vacío trae activos y revocados. */
+export function listPayDevices(locationId:string,filter:{status:PayDeviceStatusFilter;page:number;size:number}){
+  const params=new URLSearchParams({status:filter.status,page:String(filter.page),size:String(filter.size)});
+  return apiFetch<{items:PayDevice[];total:number}>(`${locationDevices(locationId)}?${params.toString()}`);
 }
 
 /** Revoca la credencial: el dispositivo deja de autenticarse de inmediato. */
-export function revokePayDevice(id:string){
-  return apiFetch<PayDevice>(`pay-devices/${encodeURIComponent(id)}/revoke`,{method:"POST"});
+export function revokePayDevice(locationId:string,id:string){
+  return apiFetch<PayDevice>(`${locationDevices(locationId)}/${encodeURIComponent(id)}/revoke`,{method:"POST"});
 }
 
 export function listPayNotifications(filter:{status:string;provider:string}){

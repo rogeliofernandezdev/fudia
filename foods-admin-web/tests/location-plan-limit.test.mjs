@@ -31,7 +31,7 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
   if(name==="./geographic-fields")return {GeographicFields:"GeographicFields"};
   if(name==="@/modules/operations/tips")return {TipSettingsFields:"TipSettingsFields",getTipSettings:()=>{},tipDraftFromPolicy:value=>value};
   if(name==="@/modules/delivery")return {LocationDeliverySection:"LocationDeliverySection"};
-  if(name==="@/modules/payment-devices")return {PayDevicesPanel:"PayDevicesPanel"};
+  if(name==="@/modules/payment-devices")return {PayDevicesPanel:"PayDevicesPanel",useActivePayDeviceCount:()=>undefined};
   if(name==="@/shared/api/client")return {ApiClientError:class extends Error{}};
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};

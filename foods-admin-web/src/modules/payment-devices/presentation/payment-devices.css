@@ -1,5 +1,6 @@
 /* Fudia Pay: la pestaña «Pagos detectados» de Caja abre con su barra de
-   filtros, como el historial de Turnos, y Mi restaurante lista los dispositivos; las tablas son
+   filtros, como el historial de Turnos, y cada local lista sus dispositivos en
+   la pestaña «Dispositivos de pago» de su formulario; las tablas son
    DataTable con cabecera marino y las filas, cabeceras y acciones las pone el
    sistema (data-table.css, table-actions.css). */
 .pay-page-panel{overflow:hidden}
@@ -7,9 +8,21 @@
 .pay-notifications-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2-5) var(--space-4);padding:var(--space-3) var(--space-3-5);border-bottom:var(--stroke-1) solid var(--line)}
 .pay-notifications-toolbar>p{margin:0;color:var(--ink-400);font-size:var(--font-size-label);line-height:var(--line-height-snug)}
 .pay-notifications-filters{display:flex;align-items:center;gap:var(--space-2-5);min-width:0}
-.pay-devices-table table{min-width:var(--size-720)}
+/* Pestaña del local (modal compacto): filtro de estado y «Vincular» en una
+   fila; la tabla cabe en 390 px porque contacto y plataforma van bajo el nombre. */
+.pay-devices-section{gap:var(--space-3)}
+.pay-devices-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.pay-devices-table table.data-table{width:100%;min-width:0}
+.pay-device-platform.is-android{background:var(--brand-100);color:var(--brand-700)}
+.pay-device-platform.is-ios{background:var(--primary-50);color:var(--ink-800)}
 .pay-notifications-table table{min-width:var(--size-720)}
-.pay-devices-table td small{display:block}
+/* El ícono ya dice la plataforma; la fecha de contacto puede ir en dos líneas
+   antes que cortarse (la tabla del sistema la trunca en móvil). */
+.pay-device-cell{display:flex;align-items:center;gap:var(--space-2-5);min-width:0}
+.pay-device-cell>div{display:grid;min-width:0}
+.pay-device-cell .row-icon{flex:none;margin-right:0}
+.pay-devices-table .pay-device-cell b.pay-device-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pay-devices-table .pay-device-cell small.pay-device-contact{max-width:none;margin-left:0;overflow:visible;white-space:normal}
 .pay-notifications-table .pay-amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pay-pairing-body{display:grid;justify-items:center;gap:var(--space-3);padding:var(--space-5);text-align:center}
 .pay-pairing-qr{width:var(--size-240);height:var(--size-240)}

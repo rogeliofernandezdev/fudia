@@ -8,6 +8,9 @@ import type {PayPairingDraft} from "../domain/types";
 import {createPayPairing,getPayPairingStatus} from "../infrastructure/pay-devices-api";
 
 type Props={
+  /** Local al que quedará ligado el teléfono (elegido en Locales). */
+  locationId:string;
+  locationName:string;
   onClose:()=>void;
   /** El teléfono quedó vinculado: el panel cierra el modal, avisa y refresca la lista. */
   onLinked:(deviceName:string)=>void;
@@ -24,7 +27,7 @@ const STATUS_POLL_MS=1500;
  * solo el código de un solo uso; las credenciales viajan del backend al
  * dispositivo y nunca por esta pantalla. Se monta solo cuando se abre.
  */
-export function PayPairingDialog({onClose,onLinked}:Props){
+export function PayPairingDialog({locationId,locationName,onClose,onLinked}:Props){
   const [draft,setDraft]=useState<PayPairingDraft|null>(null);
   const [error,setError]=useState("");
   const [requesting,setRequesting]=useState(true);
@@ -33,10 +36,10 @@ export function PayPairingDialog({onClose,onLinked}:Props){
 
   // Pide un código nuevo; los estados se fijan cuando responde el backend.
   const request=useCallback((isCurrent:()=>boolean)=>{
-    void createPayPairing().then(result=>{if(isCurrent())setDraft(result)})
+    void createPayPairing(locationId).then(result=>{if(isCurrent())setDraft(result)})
       .catch((cause:Error)=>{if(isCurrent())setError(cause.message)})
       .finally(()=>{if(isCurrent())setRequesting(false)});
-  },[]);
+  },[locationId]);
   useEffect(()=>{
     let current=true;
     request(()=>current);
@@ -53,8 +56,8 @@ export function PayPairingDialog({onClose,onLinked}:Props){
 
   // Pendiente → escaneado → vinculado (o vencido): lo decide el backend.
   const status=useQuery({
-    queryKey:["pay-pairing-status",draft?.id],
-    queryFn:()=>getPayPairingStatus(draft!.id),
+    queryKey:["pay-pairing-status",locationId,draft?.id],
+    queryFn:()=>getPayPairingStatus(locationId,draft!.id),
     enabled:Boolean(draft?.id),
     refetchInterval:query=>["linked","expired"].includes(query.state.data?.status??"")?false:STATUS_POLL_MS,
     refetchIntervalInBackground:true,
@@ -90,7 +93,7 @@ export function PayPairingDialog({onClose,onLinked}:Props){
       </>}
       {!error&&!draft&&<><Skeleton className="pay-pairing-qr-placeholder"/><p className="form-help">Generando el código de vinculación…</p></>}
       {!error&&draft&&state==="pending"&&<>
-        <p>Instala Fudia Pay en el Android del local y escanea este QR.</p>
+        <p>Instala Fudia Pay en el Android de «{locationName}» y escanea este QR.</p>
         <canvas ref={canvas} className="pay-pairing-qr" aria-label="QR de vinculación del dispositivo de pagos" role="img"/>
         <p className="form-help">El código vence a los 10 minutos y sirve una sola vez.</p>
         <p role="status">Esperando el escaneo…</p>

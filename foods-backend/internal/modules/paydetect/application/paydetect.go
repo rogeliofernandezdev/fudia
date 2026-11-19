@@ -32,6 +32,7 @@ var (
 	ErrNotificationNotFound = apperror.New(apperror.NotFound, "pay_notification_not_found", "No encontramos el pago detectado.")
 	ErrNotificationConflict = apperror.New(apperror.Conflict, "pay_notification_processed", "El pago detectado ya se procesó; recarga la pantalla.")
 	ErrDeviceNotFound       = apperror.New(apperror.NotFound, "pay_device_not_found", "No encontramos el dispositivo.")
+	ErrLocationNotFound     = apperror.New(apperror.NotFound, "pay_location_not_found", "No encontramos el local.")
 	ErrPairingInvalid       = apperror.New(apperror.Invalid, "pay_pairing_invalid", "El código de vinculación no es válido.")
 	ErrPairingUsed          = apperror.New(apperror.Conflict, "pay_pairing_used", "El código de vinculación ya se usó. Genera otro.")
 	ErrPairingExpired       = apperror.New(apperror.Invalid, "pay_pairing_expired", "El código de vinculación expiró. Genera otro.")
@@ -52,8 +53,10 @@ type AdminRepository interface {
 	CreatePairingCode(ctx context.Context, s scope, createdBy string, expires time.Time) (domain.PairingDraft, error)
 	// PairingState lee el código del local; ErrPairingInvalid si no es suyo o no existe.
 	PairingState(ctx context.Context, s scope, id string) (domain.PairingState, error)
-	ListDevices(ctx context.Context, s scope) ([]domain.Device, error)
-	RenameDevice(ctx context.Context, s scope, deviceID, name string) (domain.Device, error)
+	// LocationExists confirma que el local pertenece a la empresa de la sesión.
+	LocationExists(ctx context.Context, s scope, locationID string) (bool, error)
+	ListDevices(ctx context.Context, s scope, filter domain.DeviceFilter) ([]domain.Device, error)
+	CountDevices(ctx context.Context, s scope, filter domain.DeviceFilter) (int, error)
 	RevokeDevice(ctx context.Context, s scope, deviceID string) (domain.Device, error)
 	ListNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) ([]domain.Notification, error)
 	CountNotifications(ctx context.Context, s scope, filter domain.NotificationFilter) (int, error)
@@ -86,8 +89,9 @@ type OrderLooker interface {
 	PayOrderRef(ctx context.Context, scope requestscope.Scope, orderID string) (ordercontracts.PayOrderRef, error)
 }
 
-// PayDevices manages the devices of a location from Cash: pairing QR, list,
-// rename and revoke.
+// PayDevices manages the devices of a location from Locales: pairing QR,
+// paginated list and revoke. The name is the model the app declares when it
+// pairs; re-pairing creates a new record, so there is nothing to edit.
 type PayDevices struct {
 	repo AdminRepository
 }
@@ -123,30 +127,40 @@ func (a *PayDevices) PairingStatus(ctx context.Context, s scope, id string, now 
 	return state.StatusOf(now), nil
 }
 
-// Devices lists the devices of the location, active and revoked, with their
-// connection status.
-func (a *PayDevices) Devices(ctx context.Context, s scope) ([]domain.Device, error) {
-	devices, err := a.repo.ListDevices(ctx, s)
-	if err != nil {
-		return nil, payFailure(apperror.Unavailable, "pay_devices_unavailable", "No pudimos leer los dispositivos.", err)
+// ForLocation returns the session scope pointed at a location of the same
+// organization, chosen in Locales. The location is validated here; the client
+// never decides the organization.
+func (a *PayDevices) ForLocation(ctx context.Context, s scope, locationID string) (scope, error) {
+	locationID = strings.TrimSpace(locationID)
+	if !isUUID(locationID) || s.OrganizationID == "" {
+		return scope{}, ErrLocationNotFound
 	}
-	return devices, nil
+	exists, err := a.repo.LocationExists(ctx, s, locationID)
+	if err != nil {
+		return scope{}, payFailure(apperror.Unavailable, "pay_devices_unavailable", "No pudimos leer el local.", err)
+	}
+	if !exists {
+		return scope{}, ErrLocationNotFound
+	}
+	s.LocationID = locationID
+	return s, nil
 }
 
-// Rename adjusts the administrative name of the device.
-func (a *PayDevices) Rename(ctx context.Context, s scope, deviceID, name string) (domain.Device, error) {
-	name, err := domain.DeviceName(name)
+// Devices pages the devices of the location, filtered by status (active,
+// revoked or all), with their connection status.
+func (a *PayDevices) Devices(ctx context.Context, s scope, filter domain.DeviceFilter) (domain.DevicePage, error) {
+	if filter.Status != domain.DeviceStatusActive && filter.Status != domain.DeviceStatusRevoked {
+		filter.Status = ""
+	}
+	devices, err := a.repo.ListDevices(ctx, s, filter)
 	if err != nil {
-		return domain.Device{}, payFailure(apperror.Invalid, "pay_device_name_invalid", err.Error(), nil)
+		return domain.DevicePage{}, payFailure(apperror.Unavailable, "pay_devices_unavailable", "No pudimos leer los dispositivos.", err)
 	}
-	device, err := a.repo.RenameDevice(ctx, s, deviceID, name)
-	if errors.Is(err, ErrDeviceNotFound) {
-		return domain.Device{}, ErrDeviceNotFound
-	}
+	total, err := a.repo.CountDevices(ctx, s, filter)
 	if err != nil {
-		return domain.Device{}, payFailure(apperror.Unavailable, "pay_devices_unavailable", "No pudimos actualizar el dispositivo.", err)
+		return domain.DevicePage{}, payFailure(apperror.Unavailable, "pay_devices_unavailable", "No pudimos leer los dispositivos.", err)
 	}
-	return device, nil
+	return domain.DevicePage{Items: devices, Total: total}, nil
 }
 
 // Revoke disables the device: its credential stops working immediately and

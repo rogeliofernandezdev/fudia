@@ -33,21 +33,24 @@ var (
 	_ application.MaintenanceRepository = (*Pay)(nil)
 )
 
-const deviceColumns = `d.id::text, d.name, d.platform, d.model, d.token_suffix, d.active, d.last_seen_at, d.created_at`
+const deviceColumns = `d.id::text, d.name, d.platform, d.model, d.token_suffix, d.active, d.last_seen_at, d.created_at, d.revoked_at`
 
 // deviceReturning es la lista de columnas sin alias de tabla, para el
 // RETURNING de los INSERT que no pueden nombrar la tabla.
-const deviceReturning = `id::text, name, platform, model, token_suffix, active, last_seen_at, created_at`
+const deviceReturning = `id::text, name, platform, model, token_suffix, active, last_seen_at, created_at, revoked_at`
 
 func scanDevice(row pgx.Row) (domain.Device, error) {
 	var device domain.Device
-	var lastSeen *time.Time
+	var lastSeen, revoked *time.Time
 	var created time.Time
-	if err := row.Scan(&device.ID, &device.Name, &device.Platform, &device.Model, &device.TokenSuffix, &device.Active, &lastSeen, &created); err != nil {
+	if err := row.Scan(&device.ID, &device.Name, &device.Platform, &device.Model, &device.TokenSuffix, &device.Active, &lastSeen, &created, &revoked); err != nil {
 		return domain.Device{}, err
 	}
 	if lastSeen != nil {
 		device.LastSeenAt = lastSeen.Format(time.RFC3339)
+	}
+	if revoked != nil {
+		device.RevokedAt = revoked.Format(time.RFC3339)
 	}
 	device.CreatedAt = created.Format(time.RFC3339)
 	return device, nil
@@ -133,14 +136,47 @@ func (r *Pay) MarkPairingScanned(ctx context.Context, code, model string) (bool,
 	return tag.RowsAffected() == 1, nil
 }
 
-// ListDevices returns all the devices of the location, active and revoked.
-func (r *Pay) ListDevices(ctx context.Context, s scope) ([]domain.Device, error) {
+// LocationExists confirms the location belongs to the session organization.
+func (r *Pay) LocationExists(ctx context.Context, s scope, locationID string) (bool, error) {
+	var exists bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM locations WHERE id=$1 AND organization_id=$2)`, locationID, s.OrganizationID).Scan(&exists)
+	return exists, err
+}
+
+func deviceWhere(s scope, filter domain.DeviceFilter) (string, []any) {
+	where := ` WHERE d.organization_id=$1 AND d.location_id=$2`
+	switch filter.Status {
+	case domain.DeviceStatusActive:
+		where += ` AND d.active`
+	case domain.DeviceStatusRevoked:
+		where += ` AND NOT d.active`
+	}
+	return where, []any{s.OrganizationID, s.LocationID}
+}
+
+// CountDevices counts the devices of the location that match the filter.
+func (r *Pay) CountDevices(ctx context.Context, s scope, filter domain.DeviceFilter) (int, error) {
+	where, args := deviceWhere(s, filter)
+	var total int
+	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM pay_devices d`+where, args...).Scan(&total)
+	return total, err
+}
+
+// ListDevices pages the devices of the location: active first, then the most
+// recently paired.
+func (r *Pay) ListDevices(ctx context.Context, s scope, filter domain.DeviceFilter) ([]domain.Device, error) {
+	where, args := deviceWhere(s, filter)
+	limit := filter.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	args = append(args, limit, max(filter.Offset, 0))
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT `+deviceColumns+`
-		FROM pay_devices d
-		WHERE d.organization_id=$1 AND d.location_id=$2
-		ORDER BY d.created_at DESC, d.id
-	`, s.OrganizationID, s.LocationID)
+		FROM pay_devices d`+where+`
+		ORDER BY d.active DESC, d.created_at DESC, d.id
+		LIMIT $3 OFFSET $4
+	`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -154,19 +190,6 @@ func (r *Pay) ListDevices(ctx context.Context, s scope) ([]domain.Device, error)
 		devices = append(devices, device)
 	}
 	return devices, rows.Err()
-}
-
-// RenameDevice adjusts the administrative name of a device.
-func (r *Pay) RenameDevice(ctx context.Context, s scope, deviceID, name string) (domain.Device, error) {
-	device, err := scanDevice(r.db(ctx).QueryRow(ctx, `
-		UPDATE pay_devices SET name=$3, updated_at=now()
-		WHERE id=$2 AND organization_id=$1 AND location_id=$4
-		RETURNING `+deviceReturning,
-		s.OrganizationID, deviceID, name, s.LocationID))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.Device{}, application.ErrDeviceNotFound
-	}
-	return device, err
 }
 
 // RevokeDevice disables the credential: the device stops being usable from

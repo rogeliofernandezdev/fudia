@@ -12,8 +12,8 @@ registra con el flujo de pagos existente de `billing`.
 
 ### 1. Primera vez — vinculación (una por teléfono)
 
-1. Configuración › Mi restaurante › Dispositivos de pago › «Vincular
-   dispositivo»: código temporal de 10 minutos, un solo uso, mostrado como QR.
+1. Configuración › Locales › Editar local › pestaña «Dispositivos de pago»
+   › «Vincular dispositivo» (el teléfono queda ligado a ese local): código temporal de 10 minutos, un solo uso, mostrado como QR.
 2. La app lo escanea y lo canjea, como WhatsApp Web (migración 000131): al
    leer el QR avisa el escaneo (`POST /v1/mobile/pair/scan`, con el modelo) y
    Caja, que consulta el estado del código cada 1,5 s, cambia el QR por
@@ -110,11 +110,15 @@ Cajeros (permisos `cash.read`/`cash.manage`, sesión del panel):
 
 | Ruta | Uso |
 | --- | --- |
-| `POST /v1/admin/pay-devices/pairing` | Código temporal para el QR (10 min, un solo uso); devuelve `id`, `code` y `expiresAt` |
-| `GET /v1/admin/pay-devices/pairing/{id}` | Estado del código: `pending`, `scanned` (con `model`), `linked` (con `deviceName`) o `expired`; solo del local |
-| `GET /v1/admin/pay-devices` | Dispositivos del local, activos y revocados |
-| `PATCH /v1/admin/pay-devices/{id}` | Renombrar |
-| `POST /v1/admin/pay-devices/{id}/revoke` | Revocar la credencial (401 inmediato) |
+| `POST /v1/admin/locations/{locationId}/pay-devices/pairing` | Código temporal para el QR (10 min, un solo uso); devuelve `id`, `code` y `expiresAt` |
+| `GET /v1/admin/locations/{locationId}/pay-devices/pairing/{pairingId}` | Estado del código: `pending`, `scanned` (con `model`), `linked` (con `deviceName`) o `expired`; solo del local |
+| `GET /v1/admin/locations/{locationId}/pay-devices?status=&page=&size=` | Dispositivos del local: `active`, `revoked` o todos; `{items,total}`, activos primero |
+| `POST /v1/admin/locations/{locationId}/pay-devices/{deviceId}/revoke` | Revocar la credencial (401 inmediato) |
+
+El local de la ruta se valida contra la empresa de la sesión (`ForLocation`);
+uno ajeno responde 404 `pay_location_not_found`. Los dispositivos piden
+`organizations.read` para listar y `organizations.manage` para vincular y
+revocar.
 | `GET /v1/admin/pay-notifications?status=&provider=` | Pagos detectados |
 | `POST /v1/admin/pay-notifications/{id}/associate` | Asocia y registra el cobro (`{orderId, method, amount?}`); una sola vez (409) |
 | `POST /v1/admin/pay-notifications/{id}/dismiss` | Descarta con traza |
@@ -159,8 +163,12 @@ para adjuntar o compartir una constancia real sigue pendiente de definición.
   propia: la habilita el acceso a Caja): filtros y paginación en el servidor
   (`?page=&size=`, respuesta `{items,total}`). Consulta y revisión posterior;
   los movimientos sin asociar permanecen pendientes sin afectar pedidos.
-- Configuración › Mi restaurante › Dispositivos de pago: vincular, renombrar y
-  revocar los Android del local. (La casilla de menú `pagos_detectados` de la
+- Configuración › Locales › Editar local › «Dispositivos de pago» (desde
+  2026-11-19; antes vivía en Mi restaurante y usaba el local de la sesión sin
+  decirlo): vincular y revocar los teléfonos de ese local, con filtro
+  Activos/Revocados/Todos y paginación en el servidor. No hay renombrar: el
+  nombre es el modelo que declara la app y volver a vincular crea un registro
+  nuevo; los revocados quedan como historial. (La casilla de menú `pagos_detectados` de la
   página separada que existió el 2026-11-16 se retiró; la migración 000133 la
   limpia de los roles.)
 
@@ -169,6 +177,8 @@ para adjuntar o compartir una constancia real sigue pendiente de definición.
 Contratos independientes de la plataforma (`ANDROID|IOS`). iOS no ofrece un
 equivalente general a `NotificationListenerService`: la futura versión iOS
 requerirá otro mecanismo autorizado; no se desarrolla en esta etapa.
+El panel ya distingue la plataforma (ícono Android o iPhone en la lista del
+local) para que un futuro dispositivo `IOS` no requiera cambios de interfaz.
 
 **Permisos restringidos (HONOR/Huawei/Xiaomi/Oppo):** al instalar el APK por
 fuera de la tienda, MagicOS/HyperOS/ColorOS bloquea permisos delicados («Fudia

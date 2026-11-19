@@ -1,5 +1,5 @@
-// Package http exposes the Fudia Pay endpoints: Cash manages the devices
-// (pairing QR, list, rename, revoke) and reviews the detected payments; the
+// Package http exposes the Fudia Pay endpoints: Locales manages the devices
+// of each location (pairing QR, list, revoke) and reviews the detected payments; the
 // device authenticates with its own revocable credential and the backend
 // resolves its tenancy from the pairing, never from the request.
 package http
@@ -15,6 +15,7 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
 	"github.com/foods-platform/foods-backend/internal/modules/paydetect/domain"
 	shared "github.com/foods-platform/foods-backend/internal/platform/httpapi"
+	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 )
 
 type Handler struct {
@@ -73,9 +74,24 @@ func decode(w http.ResponseWriter, r *http.Request, in any) bool {
 	return true
 }
 
-// CreatePairing generates the temporary code that Cash shows as a QR.
+// locationScope resolves the location chosen in Locales ({locationId}) within
+// the session organization.
+func (h *Handler) locationScope(w http.ResponseWriter, r *http.Request) (requestscope.Scope, bool) {
+	session, ok := shared.Scope(w, r)
+	if !ok {
+		return session, false
+	}
+	located, err := h.devices.ForLocation(r.Context(), session, r.PathValue("locationId"))
+	if err != nil {
+		shared.WriteError(w, err)
+		return located, false
+	}
+	return located, true
+}
+
+// CreatePairing generates the temporary code that Locales shows as a QR.
 func (h *Handler) CreatePairing(w http.ResponseWriter, r *http.Request) {
-	scope, ok := shared.Scope(w, r)
+	scope, ok := h.locationScope(w, r)
 	if !ok {
 		return
 	}
@@ -83,51 +99,45 @@ func (h *Handler) CreatePairing(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, draft, err)
 }
 
-// PairingStatus tells Cash whether the code it shows is still waiting, was
+// PairingStatus tells Locales whether the code it shows is still waiting, was
 // scanned by the app, linked a device or expired.
 func (h *Handler) PairingStatus(w http.ResponseWriter, r *http.Request) {
-	scope, ok := shared.Scope(w, r)
+	scope, ok := h.locationScope(w, r)
 	if !ok {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	status, err := h.devices.PairingStatus(r.Context(), scope, r.PathValue("id"), h.now())
+	status, err := h.devices.PairingStatus(r.Context(), scope, r.PathValue("pairingId"), h.now())
 	respond(w, http.StatusOK, status, err)
 }
 
-// Devices lists the devices of the location.
+// Devices pages the devices of the location: ?status=active|revoked (empty:
+// all), page from 1 and size from 10 to 100 (20 by default).
 func (h *Handler) Devices(w http.ResponseWriter, r *http.Request) {
-	scope, ok := shared.Scope(w, r)
+	scope, ok := h.locationScope(w, r)
 	if !ok {
 		return
 	}
-	devices, err := h.devices.Devices(r.Context(), scope)
-	respond(w, http.StatusOK, map[string]any{"items": devices}, err)
-}
-
-// RenameDevice adjusts the administrative name of a device.
-func (h *Handler) RenameDevice(w http.ResponseWriter, r *http.Request) {
-	scope, ok := shared.Scope(w, r)
-	if !ok {
-		return
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	size, _ := strconv.Atoi(query.Get("size"))
+	page = max(page, 1)
+	if size < 10 {
+		size = 20
 	}
-	var in struct {
-		Name string `json:"name"`
-	}
-	if !decode(w, r, &in) {
-		return
-	}
-	device, err := h.devices.Rename(r.Context(), scope, r.PathValue("id"), in.Name)
-	respond(w, http.StatusOK, device, err)
+	size = min(size, 100)
+	filter := domain.DeviceFilter{Status: strings.TrimSpace(query.Get("status")), Limit: size, Offset: (page - 1) * size}
+	result, err := h.devices.Devices(r.Context(), scope, filter)
+	respond(w, http.StatusOK, result, err)
 }
 
 // RevokeDevice disables a device credential.
 func (h *Handler) RevokeDevice(w http.ResponseWriter, r *http.Request) {
-	scope, ok := shared.Scope(w, r)
+	scope, ok := h.locationScope(w, r)
 	if !ok {
 		return
 	}
-	device, err := h.devices.Revoke(r.Context(), scope, r.PathValue("id"))
+	device, err := h.devices.Revoke(r.Context(), scope, r.PathValue("deviceId"))
 	respond(w, http.StatusOK, device, err)
 }
 

@@ -3511,8 +3511,8 @@ no se muestra un vacío antes de consultar. El medio corresponde al proveedor
 del evento y la confirmación requiere haber cargado el saldo.
 
 Módulo `payment-devices`: los pagos se revisan en Caja (pestaña «Pagos
-detectados»), los dispositivos se vinculan en Configuración › Mi restaurante
-y una capa global avisa al cajero en el panel:
+detectados»), los dispositivos se vinculan en el formulario de cada local
+(Configuración › Locales › Editar local › «Dispositivos de pago») y una capa global avisa al cajero en el panel:
 
 - **Aviso flotante global:** capa fija (por encima de los modales, sin cerrar
   nada) que sondea los pagos detectados cada 10 s y apila las tarjetas nuevas
@@ -3536,11 +3536,28 @@ y una capa global avisa al cajero en el panel:
   `DataTable` (cabecera marino, filas alternas, `table-actions` de iconos:
   asociar `link`, descartar `cancel` danger) y paginación en el servidor con
   `Pagination` (20 por página); el monto va a la derecha con cifras tabulares.
-- **Mi restaurante › Dispositivos de pago** (sección `.panel` para quien
-  gestiona la empresa): título, descripción y «Vincular dispositivo»
-  (primario, `plus`); `DataTable` con último contacto, renombrar y revocar.
+- **Locales › Editar local › Dispositivos de pago** (2026-11-19; antes era
+  una sección de Mi restaurante que no decía a qué local pertenecía cada
+  teléfono): el modal del local muestra `Tabs` «Datos» (`store`) y
+  «Dispositivos» (`phoneApp`, contador de activos; etiqueta corta para no
+  partirse en 390 px) solo al editar un
+  local existente y con `organizations.manage`. El formulario se oculta sin
+  desmontarse para no perder cambios; el pie Guardar/Cancelar es solo de
+  «Datos». La pestaña tiene un filtro `Select chip` (Activos por defecto,
+  Revocados, Todos) y «Vincular dispositivo» (primario, `plus`) en una fila;
+  `DataTable` de tres columnas (Dispositivo, Estado, Acciones) que cabe en
+  390 px: el `row-icon` muestra la plataforma (`android` en verde
+  restaurante, `apple` neutro, con `aria-label`) y bajo el nombre va solo
+  «Visto …», «Aún sin contacto» o «Revocado …», que salta de línea en vez de
+  cortarse; `Pagination mode="simple"` de 10 en el servidor.
+  **Sin edición**: el nombre es el modelo que declara la app y volver a
+  vincular crea un registro nuevo; la única acción es revocar (`cancel`
+  danger), y un revocado queda como historial sin acciones. iPhone figura en
+  el contrato y la interfaz, pero no hay app iOS: iOS no permite leer las
+  notificaciones de Yape/Plin.
 - **Dispositivos de pago:** modal «Vincular dispositivo» con el QR del código
-  temporal y sondeo hasta que el Android aparece vinculado. Se monta solo al
+  temporal del local (el texto lo nombra: «Instala Fudia Pay en el Android de
+  «Local»…») y sondeo hasta que el Android aparece vinculado. Se monta solo al
   pulsar «Vincular dispositivo» (el código se genera entonces, nunca al entrar
   a la pantalla) y funciona como WhatsApp Web: QR con «Esperando el escaneo…» y
   «Cancelar»; en cuanto la app lo escanea, el QR cede su lugar (misma altura)
@@ -3548,8 +3565,8 @@ y una capa global avisa al cajero en el panel:
   Fudia Pay abierto en el teléfono hasta que termine.»; al vincular, el modal
   se cierra solo y `FeedbackProvider` avisa «Dispositivo vinculado». Un código
   vencido muestra «El código venció sin usarse.» y «Generar otro código»
-  (primario, `refresh`). La X cierra en cualquier estado; lista con último
-  contacto, renombrar y revocar (ConfirmDialog danger).
+  (primario, `refresh`). La X cierra en cualquier estado; revocar usa
+  ConfirmDialog danger.
 
 ### Panel de reparto del proveedor (2026-11-14)
 

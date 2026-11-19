@@ -56,15 +56,7 @@ type Device struct {
 	Active      bool   `json:"active"`
 	LastSeenAt  string `json:"lastSeenAt,omitempty"`
 	CreatedAt   string `json:"createdAt"`
-}
-
-// DeviceName normaliza el nombre administrativo del dispositivo.
-func DeviceName(name string) (string, error) {
-	name = strings.TrimSpace(name)
-	if length := len([]rune(name)); length < 1 || length > DeviceNameLimit {
-		return "", fmt.Errorf("el nombre del dispositivo debe tener entre 1 y %d caracteres", DeviceNameLimit)
-	}
-	return name, nil
+	RevokedAt   string `json:"revokedAt,omitempty"`
 }
 
 // ValidPlatform verifica la plataforma declarada por el dispositivo.
@@ -217,6 +209,26 @@ type NotificationFilter struct {
 	Limit    int
 	// Offset salta las filas de las páginas anteriores (página 1: 0).
 	Offset int
+}
+
+// Device statuses that filter the list of a location: active ones report
+// payments; revoked ones remain as history.
+const (
+	DeviceStatusActive  = "active"
+	DeviceStatusRevoked = "revoked"
+)
+
+// DeviceFilter pagina los dispositivos de un local por estado (vacío: todos).
+type DeviceFilter struct {
+	Status string
+	Limit  int
+	Offset int
+}
+
+// DevicePage es una página de dispositivos con el total que cumple el filtro.
+type DevicePage struct {
+	Items []Device `json:"items"`
+	Total int      `json:"total"`
 }
 
 // NotificationPage es una página de pagos detectados con el total que cumple

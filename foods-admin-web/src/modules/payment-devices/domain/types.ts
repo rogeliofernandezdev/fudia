@@ -13,11 +13,14 @@ export type PayDevice={
   active:boolean;
   lastSeenAt?:string;
   createdAt:string;
+  revokedAt?:string;
 };
+/** Filtro de la lista: activos (por defecto), revocados o todos (""). */
+export type PayDeviceStatusFilter="active"|"revoked"|"";
 
 /** Código temporal de vinculación: un solo uso, expira; nunca trae credenciales. */
 export type PayPairingDraft={id:string;code:string;expiresAt:string};
-/** Estado del código que Caja muestra: esperando, escaneado por la app, vinculado o vencido. */
+/** Estado del código que Locales muestra: esperando, escaneado por la app, vinculado o vencido. */
 export type PayPairingStatus={status:"pending"|"scanned"|"linked"|"expired";model?:string;deviceName?:string;expiresAt:string};
 
 export type PayNotification={

@@ -1,4 +1,4 @@
-export {PayDevicesPanel} from "./presentation/pay-devices-panel";
+export {PayDevicesPanel,useActivePayDeviceCount} from "./presentation/pay-devices-panel";
 export {PayNotificationsPanel} from "./presentation/pay-notifications-panel";
 export {PayNoticeLayer} from "./presentation/pay-notice-layer";
 export {PayProviderTag} from "./presentation/pay-status-tag";
