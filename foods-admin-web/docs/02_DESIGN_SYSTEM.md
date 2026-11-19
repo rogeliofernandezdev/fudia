@@ -3457,9 +3457,9 @@ emergente (ajuste solicitado por el usuario, 2026-11-18).
 
 El número de operación bancario se muestra en el detalle (o «No informado» si
 el proveedor no lo incluyó) y debajo del remitente en la tabla cuando existe.
-Nunca sustituirlo por la clave técnica del evento. El selector «Medio de pago»
-se autoselecciona por el código estable del proveedor y permanece deshabilitado;
-no ofrece otros medios. Si Yape o Plin no están disponibles para ventas en el
+Nunca sustituirlo por la clave técnica del evento. El medio de pago se toma
+del código estable del proveedor y no se muestra como selector bloqueado: el
+logo del resumen ya lo identifica (2026-11-19); no se ofrecen otros medios. Si Yape o Plin no están disponibles para ventas en el
 catálogo remoto, se explica cómo activarlos y no se permite confirmar el cobro.
 
 Refinamiento aprobado por solicitud del usuario (2026-11-18): los proveedores
@@ -3474,12 +3474,22 @@ La columna «Recepción» muestra la fecha. Las acciones tienen destinos distint
 el ojo abre «Detalle del pago», con remitente, teléfono de origen, fecha y número
 de operación; el enlace abre «Asociar pago a pedido», con un resumen compacto
 de logo, monto, estado, remitente y teléfono, seguido de la selección y revisión
-del pedido. La consulta permite pasar a la asociación con una acción explícita.
-Ambas vistas usan `ModalBody` desplazable y `ModalFooter` fijo cuando corresponde.
+del pedido. La consulta es de solo lectura y no lleva pie ni botón «Asociar a
+pedido»: esa acción ya existe en la fila (enlace) y en el aviso flotante, que
+abre directo la asociación (ajuste solicitado por el usuario, 2026-11-19).
+Ambas vistas abren con una tarjeta suave (`cloud-50`, `radius-card`) con logo,
+monto y estado, y los datos en `DetailFacts` de dos columnas (consulta:
+Remitente · Número de operación, Teléfono de origen · Fecha y hora). En la
+asociación, «Elige el pedido» lista filas completas pulsables (≥ 56 px) con
+código, canal y cliente, total a la derecha y chevron, sin un botón «Revisar»
+por fila; el pedido cuyo total coincide con el pago muestra `Tag` «Monto
+exacto». La revisión destaca el saldo pendiente en una franja propia antes de
+«Asociar pago». La asociación usa `ModalBody` desplazable y
+`ModalFooter` fijo solo en la revisión del pedido.
 Los pagos ya asociados o descartados son de lectura. Las consultas de
 medios, pedidos y saldo presentan skeleton, error con reintento y vacío propio;
-no se muestra un vacío antes de consultar. El medio sugerido corresponde al
-proveedor del evento y la confirmación requiere haber cargado el saldo.
+no se muestra un vacío antes de consultar. El medio corresponde al proveedor
+del evento y la confirmación requiere haber cargado el saldo.
 
 Módulo `payment-devices`: los pagos se revisan en Caja (pestaña «Pagos
 detectados»), los dispositivos se vinculan en Configuración › Mi restaurante
@@ -3488,13 +3498,13 @@ y una capa global avisa al cajero en el panel:
 - **Aviso flotante global:** capa fija (por encima de los modales, sin cerrar
   nada) que sondea los pagos detectados cada 10 s y apila las tarjetas nuevas
   (máx. 4). Cada tarjeta: etiqueta del proveedor (Yape/Plin), monto, remitente
-  y remitente; el clic abre el detalle. Sin permiso de cobro, la capa no
+  y remitente; el clic abre directo «Asociar pago a pedido». Sin permiso de cobro, la capa no
   consulta. También queda registrado en la campana (`pay_detected`).
 - **Detalle y asociación:** la consulta presenta los datos completos del pago;
-  la tarea de asociación presenta el resumen y el medio de pago del
-  catálogo (preselecciona Yape/Plin). El pedido que el cajero está cobrando en
+  la tarea de asociación presenta el resumen y valida contra el catálogo
+  el medio del proveedor (Yape/Plin), sin mostrarlo como selector. El pedido que el cajero está cobrando en
   el POS se **sugiere** (contexto `PayCollectionContext`, registrado al abrir
-  el modal de cobro); nunca se asocia automáticamente. «Cambiar pedido» abre
+  el modal de cobro); nunca se asocia automáticamente. «Buscar otro pedido» abre
   los pedidos con saldo pendiente (mesas, delivery, venta rápida), los de
   monto exacto primero; «Revisar» muestra pedido, pagos y saldo antes de
   confirmar. Un pago superior al saldo se registra parcial del saldo y la

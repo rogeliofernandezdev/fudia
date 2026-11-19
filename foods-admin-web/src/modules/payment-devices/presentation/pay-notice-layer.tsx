@@ -54,7 +54,7 @@ function PayNoticeFeed({scopeKey}:{scopeKey:string[]}){
     {visible.length>0&&<div className="pay-notice-layer" role="region" aria-label="Pagos detectados por Yape y Plin">
       {visible.map(item=><PayNotice key={item.id} item={item} onOpen={openNotice} onClose={closeNotice}/>)}
     </div>}
-    <PayNotificationDetail notification={detail} onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void feed.refetch();void qc.invalidateQueries({queryKey:["staff-notices"]})}}/>
+    <PayNotificationDetail notification={detail} mode="associate" onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void feed.refetch();void qc.invalidateQueries({queryKey:["staff-notices"]})}}/>
   </>;
 }
 

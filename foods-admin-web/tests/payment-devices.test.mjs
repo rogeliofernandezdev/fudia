@@ -60,6 +60,12 @@ test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisa
   assert.match(detail,/la asociación nunca es automática/,"el pedido abierto es sugerencia, no selección");
   assert.match(detail,/Se registrará solo el saldo/,"un pago superior al saldo se registra parcial");
   assert.match(detail,/Volver a pedidos/,"permite regresar a la lista antes de confirmar");
+  assert.match(layer,/PayNotificationDetail notification=\{detail\} mode="associate"/,"el aviso de un pago por revisar abre directo la asociación");
+  assert.doesNotMatch(detail,/Asociar a pedido/,"la consulta no repite la acción de asociar: ya existe el botón de enlace");
+  assert.doesNotMatch(detail,/setMode\(/,"la intención la decide quien abre el modal");
+  assert.doesNotMatch(detail,/<Select/,"el logo ya identifica el medio de pago: sin selector bloqueado");
+  assert.match(detail,/className="pay-order-option" aria-label=\{`Revisar el pedido \$\{code\}`\}/,"cada fila completa es el área táctil para revisar el pedido");
+  assert.match(detail,/Monto exacto/,"marca los pedidos cuyo monto coincide con el pago");
   const css=read("src/modules/payment-devices/presentation/payment-devices.css");
   assert.match(css,/\.pay-notice-layer\{position:fixed/);
   assert.match(css,/z-index:var\(--z-tooltip\)/,"la capa queda por encima de los modales sin cerrarlos");

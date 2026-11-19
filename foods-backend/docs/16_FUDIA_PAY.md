@@ -42,9 +42,9 @@ registra con el flujo de pagos existente de `billing`.
 ### 3. Revisión y cierre (web)
 
 - Con un modal de cobro abierto: el detalle **sugiere** ese pedido (nunca
-  automático); «Confirmar asociación» o «Cambiar pedido».
+  automático); «Asociar pago» o «Buscar otro pedido».
 - Sin modal: lista de pedidos con saldo pendiente, monto exacto primero;
-  «Ver detalle» y «Confirmar asociación».
+  la fila completa abre la revisión del saldo y «Asociar pago».
 - La asociación **registra el cobro real** (turno y movimientos) y actualiza
   saldo/estado; parciales y excedentes con sus reglas.
 - Cerrar sin asociar deja el movimiento `detected` (lista y campana), sin

@@ -45,7 +45,7 @@ export const useMoney=()=>value=>'S/ '+Number(value||0).toFixed(2);
 export const useSession=()=>({user:{id:'cashier'},organization:{id:'restaurant'},location:{id:'location',country:'PE',timezone:'America/Lima'},can:()=>true});
 export const useFeedback=()=>({notify:message=>window.payFixture.calls.push({kind:'feedback',message})});
 `:path==="design-system"?`
-export {Button,IconButton,Select,Pagination,Status} from './src/design-system/page-header';
+export {Button,IconButton,Select,Pagination,Status,Tag} from './src/design-system/page-header';
 export {ConfirmDialog} from './src/design-system/confirm-dialog';
 export {EmptyState,ErrorState} from './src/design-system/states';
 export {SearchField} from './src/design-system/search-field';
