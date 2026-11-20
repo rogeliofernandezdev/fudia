@@ -3,9 +3,10 @@ import "./dashboard.css";
 import Link from "next/link";
 import {useState,type CSSProperties} from "react";
 import {keepPreviousData,useQuery} from "@tanstack/react-query";
-import {Icon,type IconName} from "@/design-system/icons";
+import {Icon} from "@/design-system/icons";
 import {IconTile} from "@/design-system/icon-tile";
 import {PageHeader} from "@/design-system/page-header";
+import {Tabs} from "@/design-system/tabs";
 import {useSession} from "@/providers/session-context";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -13,7 +14,7 @@ import {pageRoutes} from "@/shared/routing/page-routes";
 import {canOpenNavigationItem,navigationItemForPath} from "@/shell/navigation";
 import {getDashboard} from "../infrastructure/dashboard-api";
 import type {DashboardData,DashboardPeriodKey} from "../domain/types";
-import {BarList,CountUp,DonutChart,RankTrack,Sparkline,TrendChart,type BarListItem,type TrendPoint} from "./dashboard-charts";
+import {BarList,CountUp,DonutChart,RankTrack,TrendChart,type BarListItem,type DashTone,type TrendPoint} from "./dashboard-charts";
 
 const periods:Array<{key:DashboardPeriodKey;label:string;title:string}>=[
   {key:"today",label:"Hoy",title:"Hoy"},
@@ -24,10 +25,21 @@ const periods:Array<{key:DashboardPeriodKey;label:string;title:string}>=[
 function day(value:string,options:Intl.DateTimeFormatOptions){return new Intl.DateTimeFormat("es",{...options,timeZone:"UTC"}).format(new Date(value+"T12:00:00Z"))}
 function formatDate(value:string){return day(value,{day:"numeric",month:"long",weekday:"long"})}
 const capitalize=(text:string)=>text.charAt(0).toUpperCase()+text.slice(1);
+/** Combinación elegida por el dueño (2026-11-20): canales en índigo; medios de pago con el efectivo en violeta y los
+ * digitales en petróleo y celeste según su orden en el catálogo (después índigo, marino y durazno). El color sigue
+ * al medio, nunca a su posición en el anillo. */
+const digitalTones:DashTone[]=["teal","sky","indigo","navy","peach"];
+function methodTone(item:{affectsCash?:boolean;digitalIndex?:number}):DashTone{return item.affectsCash?"violet":item.digitalIndex===undefined?"gray":digitalTones[item.digitalIndex%digitalTones.length]}
+/** Duración legible: «45 min», «1 h», «1 h 35 min». */
+function formatMinutes(total:number){const hours=Math.floor(total/60),minutes=total%60;return hours?`${hours} h${minutes?` ${minutes} min`:""}`:`${minutes} min`}
 
-type Change={value:string;text:string;direction:"up"|"down"|"flat"};
-type AlertItem={count:number;title:string;detail:string;href:string;tone:"warning"|"info";icon:IconName};
-type AreaPanel={title:string;icon:IconName;href:string;rows:{label:string;value:string;tone?:"primary"|"green"|"purple"}[]};
+type Change={value:string;direction:"up"|"down"|"flat"};
+type RankItem={key:string;name:string;qty:number;revenue:number;ranked:boolean};
+/** Cada cifra de «Ahora mismo» lleva el color de su estado (versión de texto, con contraste sobre blanco). */
+type AreaTone="primary"|"indigo"|"orange"|"purple"|"green"|"navy";
+type AreaPanel={title:string;href:string;rows:{label:string;value:string;tone?:AreaTone}[]};
+type ReviewItem={count:number;title:string;href:string};
+type Ranking="products"|"categories";
 
 export function DashboardView(){
   const session=useSession();
@@ -36,6 +48,7 @@ export function DashboardView(){
   const canOpen=(href:string)=>{const item=navigationItemForPath(href);return Boolean(item&&user&&canOpenNavigationItem(item,{...session,user,modules:modules??{}}))};
   const settings=useSettings();
   const[period,setPeriod]=useState<DashboardPeriodKey>("today");
+  const[ranking,setRanking]=useState<Ranking>("products");
   const query=useQuery({queryKey:["dashboard",organization?.id,location?.id,period],queryFn:()=>getDashboard(period),refetchInterval:30000,placeholderData:keepPreviousData});
   const data=query.data;
   const money=(value:string|number)=>{
@@ -46,187 +59,186 @@ export function DashboardView(){
   };
   const compact=(value:string|number)=>formatRegionalNumber(Number(value||0),location?.country,{maximumFractionDigits:0});
   const firstName=(user?.name??"Admin").split(" ")[0];
-  const selected=periods.find(item=>item.key===period)??periods[0];
-  const header=<PageHeader title={`Hola, ${firstName}`} description={`${location?.name??"Tu local"}${data?.businessDate?" · "+capitalize(formatDate(data.businessDate)):""}`} action={canOpen(pageRoutes.sales)?<Link href={pageRoutes.sales} className="button secondary"><Icon name="sales" size={18}/><span>Ver ventas</span></Link>:undefined}/>;
-  const toolbar=<div className="dash-toolbar">
+  const header=<PageHeader title={`Hola, ${firstName}`} description={`${location?.name??"Tu local"}${data?.businessDate?" · "+capitalize(formatDate(data.businessDate)):""}`}/>;
+  // La base de la comparación se dice una sola vez, junto al periodo que la define.
+  const toolbar=(comparison?:string)=><div className="dash-toolbar">
     <div className="dash-periods" role="radiogroup" aria-label="Periodo del resumen">
       {periods.map(item=><button key={item.key} type="button" role="radio" aria-checked={period===item.key} className={period===item.key?"active":""} onClick={()=>setPeriod(item.key)}>{item.label}</button>)}
     </div>
-    <span className="dash-refresh" aria-live="polite">{query.isFetching&&!query.isLoading?"Actualizando…":"Se actualiza cada 30 s"}</span>
+    {comparison&&<span className="dash-compare">Comparado con {comparison}</span>}
   </div>;
 
-  if(query.isLoading)return <>{header}{toolbar}<DashboardSkeleton/></>;
+  if(query.isLoading)return <>{header}{toolbar()}<DashboardSkeleton/></>;
   if(query.isError)return <><PageHeader title="No pudimos cargar el panel" description="Los datos no se reemplazan por valores simulados."/><section className="panel catalog-state error"><span><Icon name="alert"/></span><b>Error de lectura</b><p>{query.error.message}</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
   if(!data?.operations)return <>{header}<section className="panel catalog-state error"><Icon name="alert"/><b>Resumen no disponible</b><p>No pudimos leer el estado del restaurante. Inténtalo nuevamente.</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
   const operations=data.operations;
   // Las etiquetas siguen al periodo de los datos mostrados, también mientras llega el siguiente.
-  const shown=periods.find(item=>item.key===data.period?.key)??selected;
+  const shown=periods.find(item=>item.key===data.period?.key)??periods.find(item=>item.key===period)??periods[0];
 
-  // Comparación: mismo día de la semana pasada para hoy; ventana anterior para 7 y 30 días.
+  // Comparación cortada a la misma hora local: mismo día de la semana pasada para hoy; ventana anterior para 7 y 30 días.
   const previous=data.previous;
-  const comparison=data.period?.key==="today"&&previous?.from?`el ${day(previous.from,{weekday:"long"})} pasado`:`los ${data.period?.days??0} días anteriores`;
+  const isToday=data.period?.key==="today";
+  const lastWeekday=isToday&&previous?.from?day(previous.from,{weekday:"long"}):"";
+  const comparison=lastWeekday?`el ${lastWeekday} pasado a esta hora`:`los ${data.period?.days??0} días anteriores`;
   const change=(current:number,before:number|undefined):Change|undefined=>{
     if(before===undefined||before<=0)return undefined;
     const value=Math.round(((current-before)/before)*100);
-    return {value:`${value>0?"+":""}${value}%`,text:`vs. ${comparison}`,direction:value>0?"up":value<0?"down":"flat"};
+    return {value:`${value>0?"+":""}${value}%`,direction:value>0?"up":value<0?"down":"flat"};
   };
   const salesNet=Number(data.salesNet)||0;
   const salesChange=change(salesNet,previous?Number(previous.salesNet)||0:undefined);
   const ordersChange=change(data.paidOrders,previous?.paidOrders);
-  const ticketChange=change(Number(data.averageTicket)||0,previous?Number(previous.averageTicket)||0:undefined);
+  // Sin pedidos no hay promedio que comparar: se omite la variación.
+  const ticketChange=data.paidOrders>0?change(Number(data.averageTicket)||0,previous?Number(previous.averageTicket)||0:undefined):undefined;
+  const compared=Boolean(salesChange||ordersChange||ticketChange);
 
-  // Tendencia: horas con movimiento (hoy) o todos los días del periodo.
+  // Tendencia: horas con movimiento hoy o el mismo día de la semana pasada, hasta la hora en curso (hoy),
+  // o todos los días del periodo. La serie anterior va completa como referencia; la actual se detiene en «now».
   const rawPoints=data.trend?.points??[];
   const hourly=data.trend?.granularity==="hour";
+  const nowHour=hourly&&data.trend?.now?Number(data.trend.now):undefined;
   const points:TrendPoint[]=hourly?(()=>{
     const byHour=new Map(rawPoints.map(point=>[Number(point.key),point]));
     if(!byHour.size)return [];
-    const hours=Array.from(byHour.keys());
-    const first=Math.max(0,Math.min(...hours)-(hours.length===1?1:0));
-    const last=Math.min(23,Math.max(...hours)+(hours.length===1?1:0));
+    const hours=Array.from(byHour.keys()).concat(nowHour===undefined?[]:[nowHour]);
+    const single=new Set(hours).size===1;
+    const first=Math.max(0,Math.min(...hours)-(single?1:0));
+    const last=Math.min(23,Math.max(...hours)+(single?1:0));
     return Array.from({length:last-first+1},(_,index)=>{
       const hour=first+index;const point=byHour.get(hour);
-      return {key:String(hour),tick:String(hour).padStart(2,"0"),title:`${String(hour).padStart(2,"0")}:00`,value:Number(point?.current)||0,orders:point?.orders??0};
+      return {key:String(hour),tick:String(hour).padStart(2,"0"),title:`${String(hour).padStart(2,"0")}:00`,value:Number(point?.current)||0,previous:Number(point?.previous)||0,orders:point?.orders??0,future:nowHour!==undefined&&hour>nowHour};
     });
-  })():rawPoints.map((point,index)=>({key:point.key,tick:index===rawPoints.length-1?"Hoy":data.period?.days===7?day(point.key,{weekday:"short"}):day(point.key,{day:"numeric"}),title:capitalize(day(point.key,{weekday:"long",day:"numeric",month:"short"})),value:Number(point.current)||0,orders:point.orders}));
-  const hasTrend=points.some(point=>point.value!==0);
-  const salesSeries=rawPoints.map(point=>Number(point.current)||0);
-  const orderSeries=rawPoints.map(point=>point.orders);
-  const ticketSeries=rawPoints.map(point=>point.orders>0?(Number(point.current)||0)/point.orders:0);
+  })():rawPoints.map((point,index)=>({key:point.key,tick:index===rawPoints.length-1?"Hoy":data.period?.days===7?day(point.key,{weekday:"short"}):day(point.key,{day:"numeric"}),title:capitalize(day(point.key,{weekday:"long",day:"numeric",month:"short"})),value:Number(point.current)||0,previous:Number(point.previous)||0,orders:point.orders,future:false}));
+  const hasTrend=points.some(point=>point.value!==0||point.previous!==0);
+  const trendSeries={current:shown.key==="today"?"Hoy":shown.title,previous:lastWeekday?capitalize(`${lastWeekday} pasado`):`${data.period?.days??0} días anteriores`};
   const peak=points.reduce<TrendPoint|null>((best,point)=>!best||point.value>best.value?point:best,null);
 
-  const breakdown=(items:DashboardData["salesByChannel"]|undefined):BarListItem[]=>(items??[]).map(item=>({key:item.value,label:item.label,value:Number(item.total)||0,detail:`${item.count} ${item.count===1?"cobro":"cobros"}`}));
-  const categories=(data.salesByCategory??[]).map(item=>({name:item.name,qty:Number(item.qty)||0,revenue:Number(item.revenue)||0}));
-  const otherCategories=categories.slice(5);
-  const categoryItems:BarListItem[]=[
-    ...categories.slice(0,5).map(item=>({key:item.name,label:item.name,value:item.revenue,detail:`${item.qty} ${item.qty===1?"unidad":"unidades"}`})),
-    ...(otherCategories.length?[{key:"__other",label:`Otras ${otherCategories.length} categorías`,value:otherCategories.reduce((sum,item)=>sum+item.revenue,0),detail:`${otherCategories.reduce((sum,item)=>sum+item.qty,0)} unidades`}]:[]),
+  // Ritmo del día: lo cobrado hoy frente al día completo de la semana pasada (solo «Hoy»).
+  const previousDayTotal=isToday?points.reduce((sum,point)=>sum+point.previous,0):0;
+  const pace=previousDayTotal>0?Math.max(0,salesNet)/previousDayTotal:undefined;
+  // Canal y medio de pago muestran importe y participación; el canal suma sus pedidos y promedio (su suma es «Pedidos»).
+  const breakdown=(items:DashboardData["salesByChannel"]|undefined,tone:(item:DashboardData["salesByChannel"][number])=>DashTone):BarListItem[]=>(items??[]).map(item=>({key:item.value,label:item.label,value:Number(item.total)||0,tone:tone(item),detail:item.orders?`${item.orders} ${item.orders===1?"pedido":"pedidos"} · promedio ${money(item.averageTicket??0)}`:undefined}));
+  const products:RankItem[]=data.topProducts.map(product=>({key:product.name,name:product.name,qty:Number(product.qty)||0,revenue:Number(product.revenue)||0,ranked:true}));
+  const allCategories=(data.salesByCategory??[]).map(item=>({key:item.name,name:item.name,qty:Number(item.qty)||0,revenue:Number(item.revenue)||0,ranked:true}));
+  const otherCategories=allCategories.slice(5);
+  const categories:RankItem[]=[
+    ...allCategories.slice(0,5),
+    ...(otherCategories.length?[{key:"__other",name:`Otras ${otherCategories.length} categorías`,qty:otherCategories.reduce((sum,item)=>sum+item.qty,0),revenue:otherCategories.reduce((sum,item)=>sum+item.revenue,0),ranked:false}]:[]),
   ];
-  const topMax=Math.max(1,...data.topProducts.map(product=>Number(product.revenue)||0));
+  const rankItems=ranking==="products"?products:categories;
+  const rankMax=Math.max(1,...rankItems.map(item=>item.revenue));
 
+  // Cada número de la operación aparece una sola vez: lo pendiente de cobro vive en «Saldo por cobrar».
   const areas:AreaPanel[]=[];
-  if(enabled("pedidos")||enabled("mesas")||enabled("reservas"))areas.push({title:"Atención",icon:"tables",href:pageRoutes.diningRoom,rows:[
-    ...(enabled("mesas")?[{label:"Mesas ocupadas",value:`${operations.tablesOccupied} de ${operations.tablesTotal}`}]:[]),
+  if(enabled("pedidos")||enabled("mesas")||enabled("reservas"))areas.push({title:"Atención",href:enabled("mesas")?pageRoutes.diningRoom:pageRoutes.orders,rows:[
+    {label:"Pedidos activos",value:String(data.openOrders),tone:"primary"},
     ...(enabled("reservas")?[{label:"Reservas de hoy",value:String(data.reservationsToday)}]:[]),
-    {label:"Sin pagar",value:String(operations.unpaidOrders)},
   ]});
-  if(enabled("cocina"))areas.push({title:"Cocina",icon:"kitchen",href:pageRoutes.kitchen,rows:[
-    {label:"Por preparar",value:String(operations.kitchenConfirmed)},
-    {label:"En preparación",value:String(operations.kitchenPreparing)},
+  // Mesas con los mismos términos del Salón; los tiempos se miden desde el primer pedido aún activo de cada mesa.
+  if(enabled("mesas"))areas.push({title:"Mesas",href:pageRoutes.diningRoom,rows:[
+    {label:"Ocupadas",value:`${operations.tablesOccupied} de ${operations.tablesTotal}`,tone:"primary"},
+    {label:"Libres",value:String(Math.max(0,operations.tablesTotal-operations.tablesOccupied)),tone:"green"},
+    {label:"Por cobrar",value:String(operations.tablesBillRequested??0),tone:"orange"},
+    ...(operations.tableMinutesAverage!=null&&operations.tablesOccupied>0?[{label:"Tiempo promedio",value:formatMinutes(operations.tableMinutesAverage)}]:[]),
+    ...(operations.oldestTable?[{label:"Más tiempo",value:`Mesa ${operations.oldestTable.name} · ${formatMinutes(operations.oldestTable.minutes)}`}]:[]),
+  ]});
+  if(enabled("cocina"))areas.push({title:"Cocina",href:pageRoutes.kitchen,rows:[
+    {label:"Por preparar",value:String(operations.kitchenConfirmed),tone:"indigo"},
+    {label:"En preparación",value:String(operations.kitchenPreparing),tone:"orange"},
     {label:"Por entregar",value:String(operations.readyOrders),tone:"purple"},
   ]});
-  if(enabled("delivery"))areas.push({title:"Delivery",icon:"truck",href:pageRoutes.delivery,rows:[
-    {label:"Por despachar",value:String(operations.deliveryPending)},
-    {label:"En camino",value:String(operations.deliveryInTransit)},
+  if(enabled("delivery"))areas.push({title:"Delivery",href:pageRoutes.delivery,rows:[
+    {label:"Por despachar",value:String(operations.deliveryPending),tone:"orange"},
+    {label:"En camino",value:String(operations.deliveryInTransit),tone:"navy"},
   ]});
-  if(enabled("caja"))areas.push({title:"Caja",icon:"cash",href:pageRoutes.cash,rows:[
+  if(enabled("caja"))areas.push({title:"Caja",href:pageRoutes.cash,rows:[
     {label:"Turnos abiertos",value:`${operations.openCashShifts} de ${operations.activeCashRegisters}`},
-    {label:"Efectivo en caja",value:operations.cashBalance===null?"Importe reservado":money(operations.cashBalance),tone:"primary"},
+    {label:"Efectivo en caja",value:operations.cashBalance===null?"Importe reservado":money(operations.cashBalance),tone:"green"},
   ]});
-  const alerts=([
-    {count:data.criticalStock,title:"Stock crítico",detail:"Insumos en mínimo o agotados",href:pageRoutes.inventory,tone:"warning",icon:"stock"},
-    {count:data.purchasesToApprove,title:"Compras por aprobar",detail:"Órdenes pendientes de aprobación",href:pageRoutes.purchases,tone:"info",icon:"cart"},
-    {count:operations.soldOutProducts,title:"Productos agotados",detail:"Sin disponibilidad para vender hoy",href:pageRoutes.availability,tone:"warning",icon:"utensils"},
-  ] satisfies AlertItem[]).filter(item=>item.count>0&&enabled(navigationItemForPath(item.href)?.module??""));
+  const review=([
+    {count:data.criticalStock,title:"Stock crítico",href:pageRoutes.inventory},
+    {count:data.purchasesToApprove,title:"Compras por aprobar",href:pageRoutes.purchases},
+    {count:operations.soldOutProducts,title:"Productos agotados",href:pageRoutes.availability},
+  ] satisfies ReviewItem[]).filter(item=>item.count>0&&enabled(navigationItemForPath(item.href)?.module??""));
+  const pendingOrders=operations.unpaidOrders+operations.partialOrders;
 
   // Sin base de comparación (el periodo anterior no vendió) no hay porcentaje que mostrar: se omite la línea.
-  const changeLine=(item:Change|undefined,fallback?:string)=>item?<p className={"dash-change "+item.direction}><b><Icon name={item.direction==="up"?"arrowUpRight":item.direction==="down"?"arrowDownRight":"minus"} size={14}/>{item.value}</b> {item.text}</p>:fallback?<em>{fallback}</em>:null;
-  const kitchenShare=data.openOrders>0?Math.min(1,data.kitchenPending/data.openOrders):0;
-  // Cada indicador tiene su tono de identidad (solo icono, tinte, minigráfico y barra; nunca un estado).
-  // Entrada escalonada: indicadores, tendencia, desgloses y ranking; la columna en vivo acompaña a la tendencia.
+  const changeLine=(item:Change|undefined,before?:string)=>item?<p className={"dash-change "+item.direction}><b><Icon name={item.direction==="up"?"arrowUpRight":item.direction==="down"?"arrowDownRight":"minus"} size={14}/>{item.value}</b>{before&&<span>{before}</span>}</p>:null;
+  // Entrada escalonada en orden de lectura; la columna en vivo acompaña a la tendencia.
   const enter=(index:number):CSSProperties=>({animationDelay:`${index*50}ms`});
 
   return <>
     {header}
-    {toolbar}
+    {toolbar(compared?comparison:undefined)}
     <div className={"dash-board"+(query.isPlaceholderData?" refreshing":"")} aria-busy={query.isFetching}>
-      <section className="dash-kpis" aria-label="Indicadores del periodo">
+      <section className="dash-kpis" aria-label={`Indicadores · ${shown.title}`}>
         <article className="panel dash-kpi lead green dash-enter" style={enter(0)}>
-          <div className="dash-kpi-head"><small>Ventas · {shown.title}</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="sales" tone="brand" appearance="vivid" className="dash-kpi-icon"/></div>
+          <div className="dash-kpi-head"><small>Ventas</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="sales" tone="brand" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={salesNet} format={money}>{money(data.salesNet)}</CountUp></strong>
-          {changeLine(salesChange)}
-          {salesChange&&previous&&<em className="dash-kpi-before">Antes: {money(previous.salesNet)}</em>}
-          <Sparkline values={salesSeries}/>
+          {changeLine(salesChange,previous?`Antes: ${money(previous.salesNet)}`:undefined)}
+          {pace!==undefined&&<div className="dash-pace"><p><b>{Math.round(pace*100)}%</b> de lo vendido el {lastWeekday} completo</p><RankTrack ratio={Math.min(1,pace)} index={0}/></div>}
         </article>
         <article className="panel dash-kpi blue dash-enter" style={enter(1)}>
-          <div className="dash-kpi-head"><small>Pedidos cobrados</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver pedidos cobrados"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="receipt" tone="primary" appearance="vivid" className="dash-kpi-icon"/></div>
+          <div className="dash-kpi-head"><small>Pedidos</small><IconTile name="receipt" tone="primary" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={data.paidOrders} format={compact}>{String(data.paidOrders)}</CountUp></strong>
-          {changeLine(ordersChange,"Pagados por completo en el periodo")}
-          <Sparkline values={orderSeries}/>
+          {changeLine(ordersChange)}
         </article>
         <article className="panel dash-kpi violet dash-enter" style={enter(2)}>
-          <div className="dash-kpi-head"><small>Promedio por pedido</small><IconTile name="payment" tone="digital" appearance="vivid" className="dash-kpi-icon"/></div>
+          <div className="dash-kpi-head"><small>Promedio</small><IconTile name="payment" tone="digital" appearance="vivid" className="dash-kpi-icon"/></div>
           <strong><CountUp value={Number(data.averageTicket)||0} format={money}>{money(data.averageTicket)}</CountUp></strong>
-          {changeLine(ticketChange,"Por pedido cobrado")}
-          <Sparkline values={ticketSeries}/>
-        </article>
-        <article className="panel dash-kpi amber dash-enter" style={enter(3)}>
-          <div className="dash-kpi-head"><small>Pedidos activos</small>{canOpen(pageRoutes.orders)&&<Link href={pageRoutes.orders} className="stat-card-link" aria-label="Ver pedidos activos"><Icon name="arrowUpRight" size={16}/></Link>}<IconTile name="orders" tone="warning" appearance="vivid" className="dash-kpi-icon"/></div>
-          <strong><CountUp value={data.openOrders} format={compact}>{String(data.openOrders)}</CountUp></strong>
-          <em>{data.kitchenPending?`${data.kitchenPending} en cocina`:"Sin pedidos en cocina"}</em>
-          {data.openOrders>0&&<RankTrack ratio={kitchenShare} index={0}/>}
+          {changeLine(ticketChange)}
         </article>
       </section>
 
       <div className="dash-layout">
         <div className="dash-main">
-          <section className="panel dash-card dash-trend-card dash-enter" style={enter(4)} aria-label={`Ventas · ${shown.title}`}>
+          <section className="panel dash-card dash-trend-card dash-enter" style={enter(3)} aria-label={`Evolución de ventas · ${shown.title}`}>
             <header>
-              <span className="panel-icon"><Icon name="sales" size={18}/></span>
-              <div><small>{shown.title.toUpperCase()}</small><h2>Evolución de ventas</h2></div>
-              {peak&&peak.value>0&&<p className="dash-trend-peak"><small>{hourly?"Hora pico":"Mejor día"}</small><b>{peak.title}</b><em>{money(peak.value)}</em></p>}
+              <h2>Evolución de ventas</h2>
+              {/* El importe del pico ya está rotulado en el gráfico: aquí solo cuándo ocurrió. */}
+              {peak&&peak.value>0&&<p className="dash-trend-peak"><small>{hourly?"Hora pico":"Mejor día"}</small><b>{peak.title}</b></p>}
             </header>
-            {hasTrend?<TrendChart label={`Ventas · ${shown.title}`} points={points} format={money} compact={compact} live={shown.key==="today"}/>:<div className="dashboard-empty"><Icon name="sales" size={20}/><b>{shown.key==="today"?"Aún no hay ventas cobradas hoy":"Sin ventas en este periodo"}</b><p>El gráfico aparecerá con el primer cobro.</p></div>}
+            {hasTrend?<TrendChart label={`Ventas · ${shown.title}`} points={points} format={money} compact={compact} live={shown.key==="today"} series={trendSeries}/>:<div className="dashboard-empty"><Icon name="sales" size={20}/><b>{shown.key==="today"?"Aún no hay ventas cobradas hoy":"Sin ventas en este periodo"}</b><p>El gráfico aparecerá con el primer cobro.</p></div>}
           </section>
 
           <section className="dash-breakdowns" aria-label="Desglose de ventas">
+            <article className="panel dash-card dash-enter" style={enter(4)}>
+              <header><h2>Ventas por canal</h2></header>
+              <BarList label="Ventas por canal" items={breakdown(data.salesByChannel,()=>"indigo")} format={money} empty={{icon:"orders",title:"Sin ventas por canal",text:"Aparecerán con el primer cobro del periodo."}}/>
+            </article>
             <article className="panel dash-card dash-enter" style={enter(5)}>
-              <header><span className="panel-icon"><Icon name="orders" size={18}/></span><div><small>{shown.title.toUpperCase()}</small><h2>Ventas por canal</h2></div></header>
-              <BarList label="Ventas por canal" items={breakdown(data.salesByChannel)} format={money} empty={{icon:"orders",title:"Sin ventas por canal",text:"Aparecerán con el primer cobro del periodo."}}/>
-            </article>
-            <article className="panel dash-card dash-enter" style={enter(6)}>
-              <header><span className="panel-icon"><Icon name="payment" size={18}/></span><div><small>{shown.title.toUpperCase()}</small><h2>Medios de pago</h2></div></header>
-              <DonutChart label="Cobros por medio de pago" items={breakdown(data.salesByPaymentMethod)} format={money} empty={{icon:"payment",title:"Sin cobros registrados",text:"Los medios de pago aparecerán con el primer cobro."}}/>
-            </article>
-            <article className="panel dash-card dash-enter" style={enter(7)}>
-              <header><span className="panel-icon"><Icon name="layers" size={18}/></span><div><small>{shown.title.toUpperCase()}</small><h2>Ventas por categoría</h2></div></header>
-              <BarList label="Ventas por categoría" items={categoryItems} format={money} empty={{icon:"layers",title:"Sin categorías vendidas",text:"Se calculan con los pedidos pagados por completo."}}/>
+              <header><h2>Medios de pago</h2></header>
+              <DonutChart label="Cobros por medio de pago" items={breakdown(data.salesByPaymentMethod,methodTone)} format={money} empty={{icon:"payment",title:"Sin cobros registrados",text:"Los medios de pago aparecerán con el primer cobro."}}/>
             </article>
           </section>
 
-          <section className="panel dash-card top-products dash-enter" style={enter(8)}>
-            <header><span className="panel-icon"><Icon name="utensils" size={18}/></span><div><small>{shown.title.toUpperCase()}</small><h2>Productos más vendidos</h2></div>{canOpen(pageRoutes.products)&&<Link href={pageRoutes.products} className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link>}</header>
-            {data.topProducts.length?<ol className="top-list">{data.topProducts.map((product,index)=>{
-              const revenue=Number(product.revenue)||0;
-              return <li className="top-product" key={product.name}>
-                <span className="rank">{index+1}</span>
-                <div className="top-copy"><div><b>{product.name}</b><span className="qty">{Number(product.qty)} {Number(product.qty)===1?"unidad":"unidades"}</span><span className="top-revenue">{money(revenue)}</span></div><RankTrack ratio={revenue/topMax} index={index}/></div>
-              </li>;
-            })}</ol>:<div className="dashboard-empty compact"><Icon name="utensils" size={20}/><b>Sin productos vendidos todavía</b><p>Los productos aparecerán después de registrar cobros.</p></div>}
+          <section className="panel dash-card dash-ranking dash-enter" style={enter(6)} aria-label="Lo más vendido">
+            <header>
+              <h2>Lo más vendido</h2>
+              <Tabs label="Ver ranking por" value={ranking} onChange={setRanking} items={[{value:"products",label:"Productos",icon:"utensils"},{value:"categories",label:"Categorías",icon:"layers"}]}/>
+            </header>
+            {rankItems.length?<ol className="top-list">{rankItems.map((item,index)=><li className="top-product" key={item.key}>
+              <span className={"rank"+(item.ranked?"":" empty")} aria-hidden={!item.ranked||undefined}>{item.ranked?index+1:""}</span>
+              <div className="top-copy"><div><b>{item.name}</b><span className="qty">{item.qty} {item.qty===1?"unidad":"unidades"}</span><span className="top-revenue">{money(item.revenue)}</span></div><RankTrack ratio={item.revenue/rankMax} index={index}/></div>
+            </li>)}</ol>:<div className="dashboard-empty compact"><Icon name={ranking==="products"?"utensils":"layers"} size={20}/><b>{ranking==="products"?"Sin productos vendidos todavía":"Sin categorías vendidas"}</b><p>Aparecerán después de registrar cobros.</p></div>}
           </section>
         </div>
 
-        <aside className="dash-aside" aria-label="Estado actual del restaurante">
-          <section className="panel dash-now dash-enter" style={enter(4)}>
-            <header><h2>Ahora mismo</h2><span className="dash-live"><i aria-hidden="true"/>En vivo</span></header>
-            <div className="dash-now-figure">
-              <small>Saldo por cobrar</small>
-              <b><CountUp value={Number(operations.pendingBalance)||0} format={money}>{money(operations.pendingBalance)}</CountUp></b>
-              <em>{`${operations.unpaidOrders+operations.partialOrders} pedidos pendientes · ${operations.partialOrders} con pago parcial`}</em>
-            </div>
-            {areas.map(area=><div className="dash-area" key={area.title}>
-              <div className="dash-area-title"><Icon name={area.icon} size={16}/><h3>{area.title}</h3>{canOpen(area.href)&&<Link href={area.href} className="dash-area-link" aria-label={`Ver ${area.title.toLowerCase()}`}><Icon name="chevron" size={16}/></Link>}</div>
-              <dl>{area.rows.map(row=><div key={row.label}><dt>{row.label}</dt><dd className={row.tone??""}>{row.value}</dd></div>)}</dl>
-            </div>)}
-          </section>
-
-          <section className="panel alerts dash-enter" style={enter(5)}>
-            <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>Requiere atención</small><h2>Pendientes por revisar</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
-            {alerts.length?<div className="alert-list">{alerts.map(alert=>{const content=<><span className="alert-icon"><Icon name={alert.icon} size={18}/></span><span className="alert-copy"><b>{alert.title}</b><small>{alert.detail}</small></span><span className="alert-count">{alert.count}</span></>;return canOpen(alert.href)?<Link className={"alert-row "+alert.tone} key={alert.title} href={alert.href}>
-              {content}
-              <Icon name="chevron" size={16}/>
-            </Link>:<div className={"alert-row "+alert.tone} key={alert.title}>{content}</div>})}</div>:<div className="dashboard-empty ok compact"><Icon name="check" size={20}/><b>Sin pendientes por revisar</b><p>Sin alertas de disponibilidad o abastecimiento.</p></div>}
-          </section>
+        <aside className="panel dash-now dash-enter" style={enter(3)} aria-label="Estado actual del restaurante">
+          <header><h2>Ahora mismo</h2><span className="dash-live"><i aria-hidden="true"/>En vivo</span></header>
+          <div className="dash-now-figure">
+            <small>Saldo por cobrar</small>
+            <b><CountUp value={Number(operations.pendingBalance)||0} format={money}>{money(operations.pendingBalance)}</CountUp></b>
+            {pendingOrders>0&&<em>{`${pendingOrders} ${pendingOrders===1?"pedido":"pedidos"}${operations.partialOrders?` · ${operations.partialOrders} con pago parcial`:""}`}</em>}
+          </div>
+          {areas.length>0&&<div className="dash-now-areas">{areas.map(area=><div className="dash-area" key={area.title}>
+            <div className="dash-area-title"><h3>{area.title}</h3>{canOpen(area.href)&&<Link href={area.href} className="dash-area-link" aria-label={`Ver ${area.title.toLowerCase()}`}><Icon name="chevron" size={16}/></Link>}</div>
+            <dl>{area.rows.map(row=><div key={row.label}><dt>{row.label}</dt><dd className={row.tone??""}>{row.value}</dd></div>)}</dl>
+          </div>)}</div>}
+          <div className="dash-review">
+            <h3>Por revisar</h3>
+            {review.length?<ul>{review.map(item=>{const content=<><span>{item.title}</span><b>{item.count}</b></>;return <li key={item.title}>{canOpen(item.href)?<Link className="dash-review-row" href={item.href}>{content}<Icon name="chevron" size={16}/></Link>:<div className="dash-review-row">{content}</div>}</li>})}</ul>:<p className="dash-review-ok"><Icon name="check" size={16}/>Sin pendientes por revisar</p>}
+          </div>
         </aside>
       </div>
     </div>
@@ -234,25 +246,23 @@ export function DashboardView(){
 }
 
 function DashboardSkeleton(){
-  const head=<header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-tile)"}}/><div><i className="sk" style={{width:"var(--size-80)",height:"var(--size-9)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-14)"}}/></div></header>;
+  const head=<header><i className="sk" style={{width:"var(--size-150)",height:"var(--size-14)"}}/></header>;
   return <div className="dash-board dashboard-skeleton" aria-label="Cargando reportes" aria-busy="true">
-    <section className="dash-kpis">{Array.from({length:4},(_,index)=><article className={"panel dash-kpi dashboard-skeleton-kpi"+(index===0?" lead":"")} key={index}><div className="dash-kpi-head"><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-tile)"}}/><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/></div><i className="sk" style={{width:index===0?"var(--size-180)":"var(--size-80)",height:index===0?"var(--size-36)":"var(--size-28)"}}/><i className="sk" style={{width:"var(--size-140)",height:"var(--size-10)"}}/><i className="sk" style={{width:"100%",height:"var(--size-36)"}}/></article>)}</section>
+    <section className="dash-kpis">{Array.from({length:3},(_,index)=><article className={"panel dash-kpi dashboard-skeleton-kpi"+(index===0?" lead":"")} key={index}><div className="dash-kpi-head"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-40)",height:"var(--size-40)",borderRadius:"50%",marginLeft:"auto"}}/></div><i className="sk" style={{width:index===0?"var(--size-180)":"var(--size-80)",height:index===0?"var(--size-36)":"var(--size-28)"}}/><i className="sk" style={{width:"var(--size-100)",height:"var(--size-10)"}}/></article>)}</section>
     <div className="dash-layout">
       <div className="dash-main">
         <section className="panel dash-card dash-trend-card">
           {head}
           <div className="dashboard-skeleton-chart">{[30,42,36,55,48,64,52,70,58,76,62,84].map((height,index)=><span className="sk" key={index} style={{height:height+"%"}}/>)}</div>
         </section>
-        <section className="dash-breakdowns">{Array.from({length:3},(_,index)=><article className="panel dash-card" key={index}>{head}<ul className="dash-bars">{Array.from({length:3},(_,row)=><li key={row}><div className="dash-bar-copy"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-60)",height:"var(--size-11)"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-8)",borderRadius:"var(--radius-pill)"}}/></li>)}</ul></article>)}</section>
-        <section className="panel dash-card top-products">{head}<ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:"var(--size-26)",height:"var(--size-26)",borderRadius:"var(--radius-tile)"}}/><div className="top-copy"><div><i className="sk" style={{width:"var(--size-150)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-70)",height:"var(--size-11)",marginLeft:"auto"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-4)",borderRadius:"var(--radius-pill)"}}/></div></li>)}</ol></section>
+        <section className="dash-breakdowns">{Array.from({length:2},(_,index)=><article className="panel dash-card" key={index}>{head}<ul className="dash-bars">{Array.from({length:3},(_,row)=><li key={row}><div className="dash-bar-copy"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-60)",height:"var(--size-11)"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-8)",borderRadius:"var(--radius-pill)"}}/></li>)}</ul></article>)}</section>
+        <section className="panel dash-card dash-ranking">{head}<ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:"var(--size-26)",height:"var(--size-26)",borderRadius:"var(--radius-tile)"}}/><div className="top-copy"><div><i className="sk" style={{width:"var(--size-150)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-70)",height:"var(--size-11)",marginLeft:"auto"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-4)",borderRadius:"var(--radius-pill)"}}/></div></li>)}</ol></section>
       </div>
-      <aside className="dash-aside">
-        <section className="panel dash-now">
-          <header><i className="sk" style={{width:"var(--size-110)",height:"var(--size-14)"}}/></header>
-          <div className="dash-now-figure"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-24)"}}/></div>
-          {Array.from({length:4},(_,index)=><div className="dash-area dashboard-skeleton-operation" key={index}><i className="sk" style={{width:"var(--size-80)",height:"var(--size-12)"}}/><i className="sk" style={{width:"100%",height:"var(--size-10)"}}/><i className="sk" style={{width:"70%",height:"var(--size-10)"}}/></div>)}
-        </section>
-        <section className="panel alerts">{head}<div className="alert-list">{Array.from({length:3},(_,index)=><div className="alert-row dashboard-skeleton-alert" key={index}><i className="sk" style={{width:"var(--size-36)",height:"var(--size-36)",borderRadius:"var(--radius-tile)"}}/><span className="alert-copy"><i className="sk" style={{width:"var(--size-110)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-9)"}}/></span></div>)}</div></section>
+      <aside className="panel dash-now">
+        <header><i className="sk" style={{width:"var(--size-110)",height:"var(--size-14)"}}/></header>
+        <div className="dash-now-figure"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-24)"}}/></div>
+        <div className="dash-now-areas">{Array.from({length:4},(_,index)=><div className="dash-area dashboard-skeleton-operation" key={index}><i className="sk" style={{width:"var(--size-80)",height:"var(--size-12)"}}/><i className="sk" style={{width:"100%",height:"var(--size-10)"}}/><i className="sk" style={{width:"70%",height:"var(--size-10)"}}/></div>)}</div>
+        <div className="dash-review dashboard-skeleton-review"><i className="sk" style={{width:"var(--size-80)",height:"var(--size-12)"}}/><i className="sk" style={{width:"100%",height:"var(--size-10)"}}/></div>
       </aside>
     </div>
   </div>;

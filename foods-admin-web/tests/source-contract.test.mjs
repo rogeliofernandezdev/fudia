@@ -555,7 +555,7 @@ test("reportes y ventas usan skeleton con forma final",()=>{
   const salesCss=readCss("src/modules/sales/presentation/sales.css");
   assert.ok(dashboard.includes("<DashboardSkeleton/>"),"Reportes usa skeleton dedicado durante la carga");
   assert.ok(dashboard.includes('aria-label="Cargando reportes"'),"El skeleton de Reportes expone estado accesible");
-  for(const shape of ["dashboard-skeleton-kpi","dashboard-skeleton-chart","dashboard-skeleton-alert","dashboard-skeleton-product"])assert.ok(dashboard.includes(shape),`Reportes reproduce ${shape}`);
+  for(const shape of ["dashboard-skeleton-kpi","dashboard-skeleton-chart","dashboard-skeleton-review","dashboard-skeleton-product"])assert.ok(dashboard.includes(shape),`Reportes reproduce ${shape}`);
   assert.ok(dashboardCss.includes("@keyframes dashboard-shimmer"),"Reportes anima únicamente la geometría skeleton");
   assert.equal(dashboard.includes("Cargando datos reales…"),false,"Reportes no usa un estado de carga genérico");
 

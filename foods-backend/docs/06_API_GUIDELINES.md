@@ -127,13 +127,24 @@ instantánea. Cualquier error de lectura responde 503, nunca listas vacías fals
 ventana de `salesNet`, `paidOrders`, `averageTicket`, `topProducts`, `trend` y los
 desgloses `salesByChannel`, `salesByPaymentMethod` y `salesByCategory`.
 `hourlySales`, reservas y `operations` siempre son del momento actual.
-`paidOrders` cuenta pedidos no cancelados totalmente pagados con al menos un pago
-en la ventana, no cada pedido con un abono. `averageTicket` promedia los totales
-de esos pedidos. `previous` repite ventas, pedidos y promedio para la ventana de
-comparación: el mismo día de la semana anterior para `today` y la ventana
-inmediatamente anterior de igual duración para 7 y 30 días. `trend` es por hora
-para `today` (solo horas con movimientos de hoy o de la comparación) y por día
-para 7 y 30 días (todos los días, con 0 cuando no hubo ventas). Canal y medio de
+`paidOrders` cuenta pedidos no cancelados cuyos cobros, netos de devoluciones,
+cubren el total y cuyo último cobro cae en la ventana: cada pedido cuenta una sola
+vez, en el periodo en que se terminó de pagar, aunque tenga abonos de días
+anteriores. `averageTicket` promedia los totales de esos pedidos y los productos
+más vendidos usan la misma definición, ordenados por importe. `previous` repite
+ventas, pedidos y promedio para la ventana de comparación **cortada a la misma
+hora local**: el mismo día de la semana anterior hasta esta hora para `today` y la
+ventana inmediatamente anterior de igual duración hasta el mismo instante de hace
+7 o 30 días; nunca se compara un día en curso con uno completo. `trend` es por hora
+para `today` (horas con movimientos de hoy o de la comparación) y por día para 7 y
+30 días (todos los días, con 0 cuando no hubo ventas); `trend.now` indica el tramo
+en curso y cada punto trae `previous` completo como referencia del gráfico.
+`operations.tablesOccupied` solo cuenta mesas de servicio (`service_type='table'`),
+igual que `tablesTotal`; `tablesBillRequested` cuenta las ocupadas con la cuenta
+pedida, y `tableMinutesAverage`/`oldestTable` miden desde el primer pedido de
+salón aún activo de cada mesa (null sin mesas ocupadas). En `salesByChannel`,
+`orders` y `averageTicket` usan la definición de `paidOrders`; su suma es
+`paidOrders`. Canal y medio de
 pago restan las devoluciones en el canal y medio del cobro que revierten; las
 categorías usan la misma definición de pedido pagado que los productos.
 `salesByCategory[].revenue` se serializa como decimal con dos decimales: el

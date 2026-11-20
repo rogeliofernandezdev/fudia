@@ -20,14 +20,14 @@ function charts(){
 const walk=(node,visit)=>{if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(child=>walk(child,visit));return}visit(node);walk(node.props?.children,visit)};
 const all=(node,predicate)=>{const found=[];walk(node,item=>{if(predicate(item))found.push(item)});return found};
 
-test("el anillo de medios de pago reparte la circunferencia, agrupa desde el sexto medio y usa la rampa índigo",()=>{
+test("el anillo de medios de pago reparte la circunferencia, agrupa desde el sexto medio y pinta cada medio con su tono de identidad",()=>{
  const {DonutChart}=charts();
- const items=[["card",50],["cash",20],["yape",10],["plin",10],["transfer",6],["other",4]].map(([key,value])=>({key,label:key,value,detail:"1 cobro"}));
+ const items=[["card",50,"orange"],["cash",20,"green"],["yape",10,"violet"],["plin",10,"sky"],["transfer",6,"teal"],["other",4]].map(([key,value,tone])=>({key,label:key,value,detail:"1 cobro",tone}));
  const view=DonutChart({label:"Cobros",items,format:value=>`S/ ${value}`,empty:{icon:"payment",title:"Vacío",text:""}});
  const legend=all(view,node=>node.type==="li");
  assert.deepEqual(legend.map(node=>all(node,item=>item.type==="b")[0].props.children),["card","cash","yape","plin","Otros 2"]);
  const arcs=all(view,node=>node.type==="circle"&&node.props.className?.startsWith("dash-donut-arc"));
- assert.deepEqual(arcs.map(node=>node.props.className),["dash-donut-arc s0","dash-donut-arc s1","dash-donut-arc s2","dash-donut-arc s3","dash-donut-arc s4"]);
+ assert.deepEqual(arcs.map(node=>node.props.className),["dash-donut-arc dash-tone-orange","dash-donut-arc dash-tone-green","dash-donut-arc dash-tone-violet","dash-donut-arc dash-tone-sky","dash-donut-arc dash-tone-gray"]);
  const total=2*Math.PI*46;
  const drawn=arcs.reduce((sum,node)=>sum+Number(node.props.strokeDasharray.split(" ")[0]),0);
  assert.ok(Math.abs(drawn+arcs.length*2-total)<.001,"Los arcos más sus separaciones cubren el anillo completo");
@@ -35,7 +35,10 @@ test("el anillo de medios de pago reparte la circunferencia, agrupa desde el sex
  assert.equal(all(view,node=>node.props?.["aria-label"]==="Cobros").length,1,"La leyenda es la lectura accesible");
  const empty=DonutChart({label:"Cobros",items:[],format:String,empty:{icon:"payment",title:"Sin cobros registrados",text:"t"}});
  assert.ok(all(empty,node=>node.type==="b"&&node.props.children==="Sin cobros registrados").length);
- for(const tone of ["s0","s1","s2","s3","s4"])assert.ok(css.toString().includes(`.dash-donut-arc.${tone},.dash-donut-swatch.${tone}`),tone);
+ for(const tone of ["blue","indigo","orange","green","violet","purple","sky","teal","rose","peach","navy","gray"]){
+  assert.ok(css.toString().includes(`.dash-donut-arc.dash-tone-${tone}{stroke:`),`arco ${tone}`);
+  assert.ok(css.toString().includes(`.dash-tone-${tone} .dash-bar-track i,.dash-donut-swatch.dash-tone-${tone}{background:`),`barra y muestra ${tone}`);
+ }
 });
 
 test("las barras del dashboard se desplazan con transform y nunca animan el ancho",()=>{
@@ -54,8 +57,9 @@ test("el movimiento del dashboard solo usa transform, opacidad y recorte, y se a
  const reduced=[];css.walkAtRules("media",rule=>{if(rule.params.includes("prefers-reduced-motion"))rule.walkRules(item=>reduced.push(...item.selectors))});
  for(const selector of [".dash-enter",".dash-trend-live",".dash-trend-live::after",".dash-peak",".dash-donut-ring svg",".dash-bar-track i",".top-track i",".dash-live i::after"])assert.ok(reduced.includes(selector),selector);
  assert.ok(chartsSource.includes('matchMedia?.("(prefers-reduced-motion: reduce)")'),"El conteo y las líneas respetan el movimiento reducido");
- assert.ok(chartsSource.includes("const wave=useTweenedSeries(points.map(point=>point.value),0)"),"La onda crece desde la base y se transforma entre series");
- assert.ok(chartsSource.includes("const spark=useTweenedSeries(values,min)"),"Los minigráficos se transforman como la onda");
+ assert.ok(chartsSource.includes("const wave=useTweenedSeries(points.slice(0,reached).map(point=>point.value),0)"),"La onda crece desde la base y se transforma entre series");
+ assert.ok(chartsSource.includes("const ghost=useTweenedSeries(compared?points.map(point=>point.previous):[],0)"),"La comparación se transforma igual que la serie actual");
+ assert.equal(chartsSource.includes("Sparkline"),false,"Sin minigráficos: la evolución vive solo en el gráfico de ventas");
  assert.equal(/<svg key=/.test(chartsSource.slice(0,chartsSource.indexOf("export function DonutChart"))),false,"Las líneas no se remontan al cambiar de datos");
  assert.ok(chartsSource.includes('<span className="sr-only">{children}</span>'),"El conteo anuncia solo el valor final");
  let transitionAll=false;css.walkDecls("transition",decl=>{if(/\ball\b/.test(decl.value))transitionAll=true});

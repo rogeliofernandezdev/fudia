@@ -15,6 +15,15 @@ type DashboardOperations struct {
 	OpenCashShifts      int     `json:"openCashShifts"`
 	CashBalance         *string `json:"cashBalance"`
 	SoldOutProducts     int     `json:"soldOutProducts"`
+	// Mesas de servicio ocupadas cuya cuenta ya se pidió (Por cobrar en Salón).
+	TablesBillRequested int `json:"tablesBillRequested"`
+	// Minutos desde el primer pedido de salón aún activo de cada mesa ocupada; nil sin mesas ocupadas.
+	TableMinutesAverage *int            `json:"tableMinutesAverage"`
+	OldestTable         *DashboardTable `json:"oldestTable"`
+}
+type DashboardTable struct {
+	Name    string `json:"name"`
+	Minutes int    `json:"minutes"`
 }
 type DashboardPeriod struct {
 	Key  string
@@ -40,14 +49,23 @@ type DashboardTrendPoint struct {
 	Orders   int    `json:"orders"`
 }
 type DashboardTrend struct {
-	Granularity string                `json:"granularity"`
-	Points      []DashboardTrendPoint `json:"points"`
+	Granularity string `json:"granularity"`
+	// Now es el tramo en curso (hora HH u fecha de hoy): los tramos posteriores aún no ocurren.
+	Now    string                `json:"now"`
+	Points []DashboardTrendPoint `json:"points"`
 }
 type DashboardBreakdown struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
 	Total string `json:"total"`
 	Count int    `json:"count"`
+	// Solo en salesByChannel: pedidos que se terminaron de pagar en el periodo y su promedio.
+	Orders        *int    `json:"orders,omitempty"`
+	AverageTicket *string `json:"averageTicket,omitempty"`
+	// Solo en salesByPaymentMethod: identidad de color igual que en Cobros. El efectivo afecta caja;
+	// los demás medios llevan su posición entre los digitales del catálogo operativo de ventas.
+	AffectsCash  *bool `json:"affectsCash,omitempty"`
+	DigitalIndex *int  `json:"digitalIndex,omitempty"`
 }
 type DashboardCategorySale struct {
 	Name    string `json:"name"`

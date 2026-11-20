@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -68,6 +69,9 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 
 	empty := readDashboardTest(t, pool, s)
+	if empty.Operations.TableMinutesAverage != nil || empty.Operations.OldestTable != nil {
+		t.Fatalf("no occupied tables, no table time: %+v", empty.Operations)
+	}
 	if empty.PaidOrders != 0 || empty.OpenOrders != 0 || empty.Operations.PendingBalance != "0" || empty.HourlySales == nil || empty.TopProducts == nil || empty.Trend.Points == nil || empty.Trend.Granularity != "hour" || empty.Period.Key != "today" || empty.Previous.SalesNet != "0" || empty.SalesByChannel == nil || empty.SalesByPaymentMethod == nil || empty.SalesByCategory == nil {
 		t.Fatalf("empty dashboard: %+v", empty)
 	}
@@ -95,6 +99,7 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	otherLocation := id(`INSERT INTO locations(organization_id,name,code) VALUES($1,'Otro','OTHER') RETURNING id`, s.OrganizationID)
 	exec(`INSERT INTO orders(organization_id,location_id,channel,status,total,created_by) VALUES($1,$2,'delivery','preparando',999,$3)`, s.OrganizationID, otherLocation, s.UserID)
 	exec(`INSERT INTO reservations(organization_id,location_id,customer_name,starts_at,guests,status) VALUES($1,$2,'Ana',now(),2,'confirmed'),($1,$2,'Luis',now()+interval '2 days',2,'pending'),($1,$2,'Eva',now(),2,'cancelled')`, s.OrganizationID, s.LocationID)
+	exec(`INSERT INTO payment_methods(organization_id,code,name,affects_cash,sort_order) VALUES($1,'cash','Efectivo',true,10),($1,'card','Tarjeta',false,20),($1,'wallet','Billetera',false,40) ON CONFLICT (organization_id,code) DO UPDATE SET active=true,sales_enabled=true,affects_cash=EXCLUDED.affects_cash,sort_order=EXCLUDED.sort_order`, s.OrganizationID)
 	result := readDashboardTest(t, pool, s)
 	op := result.Operations
 	if result.SalesNet != "70.00" || result.PaidOrders != 1 || result.AverageTicket != "50.0000000000000000" {
@@ -120,6 +125,22 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 	if len(result.SalesByChannel) != 1 || result.SalesByChannel[0].Value != "recojo" || result.SalesByChannel[0].Label != "Recojo en local" || result.SalesByChannel[0].Total != "70.00" || result.SalesByChannel[0].Count != 2 {
 		t.Fatalf("sales by channel: %+v", result.SalesByChannel)
+	}
+	if m := result.SalesByPaymentMethod[0]; m.AffectsCash == nil || *m.AffectsCash || m.DigitalIndex == nil || *m.DigitalIndex != 0 {
+		t.Fatalf("card is the first digital method of the sales catalog: %+v", m)
+	}
+	if ch := result.SalesByChannel[0]; ch.Orders == nil || *ch.Orders != 1 || ch.AverageTicket == nil || !strings.HasPrefix(*ch.AverageTicket, "50") {
+		t.Fatalf("channel orders follow the paid-order definition: %+v", ch)
+	}
+	if op.TableMinutesAverage == nil || *op.TableMinutesAverage != 0 || op.OldestTable == nil || op.OldestTable.Name != "01" || op.OldestTable.Minutes != 0 {
+		t.Fatalf("table time measures occupied service tables: %+v %+v", op.TableMinutesAverage, op.OldestTable)
+	}
+	if op.TablesBillRequested != 0 {
+		t.Fatalf("no bill requested yet: %+v", op)
+	}
+	exec(`UPDATE orders SET bill_closed_at=now() WHERE table_id=$1`, table)
+	if billed := readDashboardTest(t, pool, s).Operations; billed.TablesBillRequested != 1 || billed.TablesOccupied != 1 {
+		t.Fatalf("a requested bill keeps the table occupied and counts it as por cobrar: %+v", billed)
 	}
 	if len(result.SalesByPaymentMethod) != 1 || result.SalesByPaymentMethod[0].Value != "card" || result.SalesByPaymentMethod[0].Total != "70.00" || result.SalesByPaymentMethod[0].Label == "" {
 		t.Fatalf("sales by payment method: %+v", result.SalesByPaymentMethod)
@@ -252,5 +273,78 @@ func TestDashboardAvailabilityMatchesProductControlsAndCombos(t *testing.T) {
 	exec(`UPDATE product_availability SET sold_quantity=0 WHERE product_id=$1`, portion)
 	if result := readDashboardTest(t, pool, s).Operations.SoldOutProducts; result != 2 {
 		t.Fatalf("replenished portion and combo must be available, got %d", result)
+	}
+}
+
+func TestDashboardComparesSameTimeAndCountsEachOrderOnce(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	id := func(query string, args ...any) string {
+		t.Helper()
+		var result string
+		if err := pool.QueryRow(ctx, query, args...).Scan(&result); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, query, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	register := id(`INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID)
+	shift := id(`INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,opened_by,opening_amount,business_date) SELECT $1,$2,$3,$4,0,(now() AT TIME ZONE timezone)::date FROM locations WHERE id=$2 RETURNING id`, s.OrganizationID, s.LocationID, register, s.UserID)
+	order := func(total int) string {
+		return id(`INSERT INTO orders(organization_id,location_id,channel,status,total,created_by) VALUES($1,$2,'mostrador','entregado',$3,$4) RETURNING id`, s.OrganizationID, s.LocationID, total, s.UserID)
+	}
+	pay := func(orderID string, amount int, at string) {
+		t.Helper()
+		exec(`INSERT INTO payments(organization_id,location_id,order_id,shift_id,method,amount,created_by,created_at)
+			SELECT $1,$2,$3,$4,'cash',$5,$6,`+at+` FROM locations l WHERE l.id=$2`, s.OrganizationID, s.LocationID, orderID, shift, amount, s.UserID)
+	}
+	// Mismo día de la semana pasada: un cobro antes de esta hora y otro después.
+	dayStart := `(((now() AT TIME ZONE l.timezone)::date)::timestamp AT TIME ZONE l.timezone)`
+	before := `now()-interval '7 days'-(now()-` + dayStart + `)/2`
+	after := `now()-interval '7 days'+(` + dayStart + `+interval '1 day'-now())/2`
+	pay(order(30), 30, before)
+	pay(order(80), 80, after)
+
+	result := readDashboardTest(t, pool, s)
+	if result.Previous.SalesNet != "30" && result.Previous.SalesNet != "30.00" {
+		t.Fatalf("previous sales must stop at the same local time: %+v", result.Previous)
+	}
+	if result.Previous.PaidOrders != 1 {
+		t.Fatalf("previous paid orders must stop at the same local time: %+v", result.Previous)
+	}
+	if len(result.Trend.Now) != 2 {
+		t.Fatalf("today trend must expose the current hour: %q", result.Trend.Now)
+	}
+
+	// Un pedido pagado en dos días cuenta una sola vez: el día en que se completó.
+	split := order(30)
+	pay(split, 10, `now()-interval '1 day'`)
+	pay(split, 20, `now()`)
+	// El ranking ordena por importe: 1 × 40 supera a 3 × 5.
+	cheap := id(`INSERT INTO products(organization_id,sku,name,price) VALUES($1,'TE','Té',5) RETURNING id`, s.OrganizationID)
+	dear := id(`INSERT INTO products(organization_id,sku,name,price) VALUES($1,'LOM','Lomo',40) RETURNING id`, s.OrganizationID)
+	ranked := order(55)
+	exec(`INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price) VALUES($1,$2,$3,'Té',3,5),($1,$2,$4,'Lomo',1,40)`, s.OrganizationID, ranked, cheap, dear)
+	pay(ranked, 55, `now()`)
+
+	today := readDashboardTest(t, pool, s)
+	if today.PaidOrders != 2 {
+		t.Fatalf("today counts the split order and the ranked order: %+v", today)
+	}
+	if len(today.TopProducts) != 2 || today.TopProducts[0]["name"] != "Lomo" {
+		t.Fatalf("top products must rank by revenue: %+v", today.TopProducts)
+	}
+	week := readDashboardPeriodTest(t, pool, s, "7d")
+	if week.PaidOrders != 2 {
+		t.Fatalf("a split order must not be counted on its partial-payment day: %+v", week)
+	}
+	if len(week.Trend.Now) != 10 || week.Trend.Now != week.BusinessDate {
+		t.Fatalf("day trend must expose today as the current point: %q", week.Trend.Now)
 	}
 }

@@ -3457,7 +3457,7 @@ components:
       properties:
         name: { type: string }
         qty: { type: string, description: Cantidad cobrada del producto }
-        revenue: { type: string, description: Importe cobrado del producto }
+        revenue: { type: string, description: Importe de los pedidos pagados por completo en el periodo; los productos se ordenan por este importe }
     DashboardPeriod:
       type: object
       required: [key, days, from, to]
@@ -3468,7 +3468,7 @@ components:
         to: { type: string, format: date, description: Día de negocio actual }
     DashboardPrevious:
       type: object
-      description: Ventana de comparación. Para today es el mismo día de la semana anterior; para 7d y 30d, la ventana inmediatamente anterior de igual duración.
+      description: Ventana de comparación cortada a la misma hora local. Para today es el mismo día de la semana anterior hasta esta hora; para 7d y 30d, la ventana inmediatamente anterior de igual duración hasta el mismo instante de hace 7 o 30 días.
       required: [salesNet, paidOrders, averageTicket, from, to]
       properties:
         salesNet: { type: string }
@@ -3482,13 +3482,14 @@ components:
       properties:
         key: { type: string, description: Hora de dos dígitos (granularity hour) o fecha YYYY-MM-DD de la ventana actual (granularity day) }
         current: { type: string, description: Cobros menos devoluciones del tramo }
-        previous: { type: string, description: Mismo tramo de la ventana de comparación }
+        previous: { type: string, description: Mismo tramo completo de la ventana de comparación (referencia del gráfico) }
         orders: { type: integer, minimum: 0, description: Pedidos con al menos un cobro en el tramo actual }
     DashboardTrend:
       type: object
-      required: [granularity, points]
+      required: [granularity, now, points]
       properties:
-        granularity: { type: string, enum: [hour, day], description: hour para today (solo horas con movimientos), day para 7d y 30d (todos los días del periodo) }
+        granularity: { type: string, enum: [hour, day], description: hour para today (horas con movimientos hoy o el mismo día de la semana anterior), day para 7d y 30d (todos los días del periodo) }
+        now: { type: string, description: Tramo en curso en la zona horaria del local (hora HH o fecha YYYY-MM-DD); los tramos posteriores aún no ocurren y solo tienen valor previous }
         points: { type: array, items: { $ref: "#/components/schemas/DashboardTrendPoint" } }
     DashboardBreakdown:
       type: object
@@ -3498,20 +3499,24 @@ components:
         label: { type: string }
         total: { type: string, description: Cobros del periodo menos devoluciones del periodo asignadas al canal o medio del cobro original }
         count: { type: integer, minimum: 0, description: Cobros registrados en el periodo }
+        orders: { type: integer, minimum: 0, description: Solo en salesByChannel. Pedidos del canal que se terminaron de pagar en el periodo (misma definición que paidOrders; su suma es paidOrders) }
+        averageTicket: { type: string, description: Solo en salesByChannel. Promedio del total de esos pedidos }
+        affectsCash: { type: boolean, description: Solo en salesByPaymentMethod y si el medio sigue en el catálogo operativo de ventas. El medio mueve efectivo de caja }
+        digitalIndex: { type: integer, minimum: 0, description: Solo en salesByPaymentMethod para medios que no afectan caja. Posición entre los medios digitales del catálogo operativo de ventas (orden sort_order, name), la misma que usa Cobros para su color }
     DashboardCategorySale:
       type: object
       required: [name, qty, revenue]
       properties:
         name: { type: string, description: Categoría de la carta o «Sin categoría» }
         qty: { type: string }
-        revenue: { type: string, description: Importe de los pedidos pagados por completo con un cobro en el periodo. Cadena decimal con dos decimales; se redondea después de sumar las líneas, example: "50.00" }
+        revenue: { type: string, description: Importe de los pedidos cuyo último cobro, que completa el total, cae en el periodo. Cadena decimal con dos decimales; se redondea después de sumar las líneas, example: "50.00" }
     Dashboard:
       type: object
       required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, businessDate, operations, hourlySales, topProducts, period, previous, trend, salesByChannel, salesByPaymentMethod, salesByCategory]
       properties:
         salesNet: { type: string, description: Cobros del periodo menos devoluciones del periodo }
-        paidOrders: { type: integer, minimum: 0, description: Pedidos no cancelados completamente pagados con al menos un cobro hoy, sin contar pagos parciales }
-        averageTicket: { type: string, description: Promedio del importe total de los pedidos completamente cobrados hoy }
+        paidOrders: { type: integer, minimum: 0, description: Pedidos no cancelados cuyos cobros netos de devoluciones cubren el total y cuyo último cobro cae en el periodo; cada pedido cuenta una sola vez, en el periodo en que se terminó de pagar }
+        averageTicket: { type: string, description: Promedio del importe total de esos pedidos }
         openOrders: { type: integer, minimum: 0 }
         criticalStock: { type: integer, minimum: 0 }
         purchasesToApprove: { type: integer, minimum: 0 }
@@ -3529,7 +3534,7 @@ components:
         salesByCategory: { type: array, items: { $ref: "#/components/schemas/DashboardCategorySale" } }
     DashboardOperations:
       type: object
-      required: [pendingBalance, unpaidOrders, partialOrders, tablesTotal, tablesOccupied, kitchenConfirmed, kitchenPreparing, readyOrders, deliveryPending, deliveryInTransit, activeCashRegisters, openCashShifts, cashBalance, soldOutProducts]
+      required: [pendingBalance, unpaidOrders, partialOrders, tablesTotal, tablesOccupied, kitchenConfirmed, kitchenPreparing, readyOrders, deliveryPending, deliveryInTransit, activeCashRegisters, openCashShifts, cashBalance, soldOutProducts, tablesBillRequested, tableMinutesAverage, oldestTable]
       properties:
         pendingBalance: { type: string, description: Suma del saldo pendiente de pedidos no cancelados ni finalizados, incluso de días anteriores }
         unpaidOrders: { type: integer, minimum: 0 }
@@ -3545,6 +3550,15 @@ components:
         openCashShifts: { type: integer, minimum: 0 }
         cashBalance: { type: [string, "null"], description: Efectivo esperado de turnos abiertos; null si una caja ciega impide consultar el importe }
         soldOutProducts: { type: integer, minimum: 0, description: Productos activos agotados hoy por control manual, cupos, inventario o composición de menú; excluye productos fuera de horario }
+        tablesBillRequested: { type: integer, minimum: 0, description: Mesas de servicio ocupadas cuya cuenta ya se pidió (Por cobrar en Salón) }
+        tableMinutesAverage: { type: [integer, "null"], minimum: 0, description: Minutos promedio desde el primer pedido de salón aún activo de cada mesa de servicio ocupada; null sin mesas ocupadas }
+        oldestTable:
+          type: [object, "null"]
+          description: Mesa de servicio ocupada desde hace más tiempo; null sin mesas ocupadas
+          required: [name, minutes]
+          properties:
+            name: { type: string }
+            minutes: { type: integer, minimum: 0 }
     ContextLocation: { type: object, required: [id, name, country, timezone], properties: { id: { type: string, format: uuid }, name: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$" }, timezone: { type: string } } }
     SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions, setupRequired, cashCollection], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } }, setupRequired: { type: boolean }, cashCollection: { type: boolean, description: Capacidad temporal de POS por asignación activa; no modifica roles ni permisos } } }
     RestaurantSetupInput: { type: object, required: [serviceMode], properties: { serviceMode: { type: string, enum: [counter, dine_in, mixed] } } }

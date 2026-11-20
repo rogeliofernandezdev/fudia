@@ -10,7 +10,8 @@ export function niceMax(value:number){
  return step*magnitude;
 }
 
-export type TrendPoint={key:string;tick:string;title:string;value:number;orders:number};
+/** `future`: el tramo aún no ocurre (horas después de la actual); solo tiene valor de comparación. */
+export type TrendPoint={key:string;tick:string;title:string;value:number;previous:number;orders:number;future:boolean};
 
 /**
  * Curva monótona (Fritsch–Carlson) como trazado SVG: suaviza sin crear picos ni
@@ -86,21 +87,28 @@ function useTweenedSeries(values:number[],base:number){
 }
 
 /**
- * Onda de ventas de una sola serie: curva suave con degradado índigo, el pico
- * etiquetado y un cursor que muestra importe y pedidos del tramo más cercano.
- * Las flechas del teclado recorren los tramos.
+ * Onda de ventas: curva suave con degradado índigo del periodo actual y, detrás,
+ * la línea gris del periodo de comparación en el mismo eje. La curva actual se
+ * detiene en el tramo en curso; el pico se etiqueta y un cursor muestra importe,
+ * pedidos y el valor de comparación del tramo. Las flechas del teclado recorren los tramos.
  */
-export function TrendChart({label,points,format,compact,live=false}:{label:string;points:TrendPoint[];format:(value:number)=>string;compact:(value:number)=>string;live?:boolean}){
+export function TrendChart({label,points,format,compact,live=false,series}:{label:string;points:TrendPoint[];format:(value:number)=>string;compact:(value:number)=>string;live?:boolean;series:{current:string;previous:string}}){
  const[active,setActive]=useState<number|null>(null);
- const wave=useTweenedSeries(points.map(point=>point.value),0);
+ const futureAt=points.findIndex(point=>point.future);
+ const reached=futureAt<0?points.length:futureAt;
+ const wave=useTweenedSeries(points.slice(0,reached).map(point=>point.value),0);
+ const compared=points.some(point=>point.previous>0);
+ const ghost=useTweenedSeries(compared?points.map(point=>point.previous):[],0);
  const plot=useRef<HTMLDivElement>(null);
  const id=useId().replace(/:/g,"");
- const max=niceMax(Math.max(0,...points.map(point=>point.value)));
+ // Un solo eje para ambas series: el máximo considera también la comparación.
+ const max=niceMax(Math.max(0,...points.map(point=>Math.max(point.value,point.previous))));
  const x=(index:number)=>points.length>1?(index/(points.length-1))*100:50;
  const y=(value:number)=>100-(Math.max(0,value)/max)*100;
  const line=smoothPath(wave.values.map((value,index)=>[x(index),y(value)] as const));
- const area=`${line} L${x(points.length-1)},100 L${x(0)},100 Z`;
- const peak=points.reduce((best,point,index)=>point.value>(points[best]?.value??0)?index:best,0);
+ const area=reached?`${line} L${x(reached-1)},100 L${x(0)},100 Z`:"";
+ const ghostLine=smoothPath(ghost.values.map((value,index)=>[x(index),y(value)] as const));
+ const peak=points.slice(0,reached).reduce((best,point,index)=>point.value>(points[best]?.value??0)?index:best,0);
  const pick=(event:PointerEvent<HTMLDivElement>)=>{
   const box=plot.current?.getBoundingClientRect();
   if(!box||!points.length)return;
@@ -115,11 +123,16 @@ export function TrendChart({label,points,format,compact,live=false}:{label:strin
  const point=active===null?null:points[active];
  const align=active===null?"":x(active)<18?" start":x(active)>82?" end":"";
  const ticks=points.length>14?Math.ceil(points.length/7):1;
- const last=points.length-1;
+ // Último tramo con datos del periodo actual: ahí late el punto en vivo y se resalta su etiqueta.
+ const last=reached-1;
  // Pico y punto en vivo esperan a que la línea se asiente.
  const settled=active===null&&!wave.animating;
 
  return <figure className="dash-trend">
+  {compared&&<figcaption className="dash-legend">
+   <span><i className="current" aria-hidden="true"/>{series.current}</span>
+   <span><i className="previous" aria-hidden="true"/>{series.previous}</span>
+  </figcaption>}
   <div className="dash-trend-frame">
    <div className="dash-trend-y" aria-hidden="true"><span>{compact(max)}</span><span>{compact(max/2)}</span><span>0</span></div>
    <div className="dash-trend-body">
@@ -132,7 +145,7 @@ export function TrendChart({label,points,format,compact,live=false}:{label:strin
      onPointerMove={pick}
      onPointerDown={pick}
      onPointerLeave={()=>setActive(null)}
-     onFocus={()=>setActive(points.length-1)}
+     onFocus={()=>setActive(Math.max(0,last))}
      onBlur={()=>setActive(null)}
      onKeyDown={move}
     >
@@ -144,7 +157,8 @@ export function TrendChart({label,points,format,compact,live=false}:{label:strin
         <stop offset="100%" className="dash-wave-stop fade"/>
        </linearGradient>
       </defs>
-      <path className="dash-wave-area" d={area} fill={`url(#${id}-fill)`}/>
+      {compared&&<path className="dash-ghost-line" d={ghostLine}/>}
+      {area&&<path className="dash-wave-area" d={area} fill={`url(#${id}-fill)`}/>}
       <path className="dash-wave-line" d={line}/>
      </svg>
      {/* El pico se funde cuando la línea se asienta; con el cursor activo solo se oculta. */}
@@ -156,47 +170,27 @@ export function TrendChart({label,points,format,compact,live=false}:{label:strin
      {live&&points[last]&&<span className={"dash-trend-live"+(settled?"":" hidden")} style={{left:`${x(last)}%`,top:`${y(points[last].value)}%`}} aria-hidden="true"/>}
      {point&&<>
       <span className="dash-trend-cursor" style={{left:`${x(active??0)}%`}} aria-hidden="true"/>
-      <span className="dash-trend-dot" style={{left:`${x(active??0)}%`,top:`${y(point.value)}%`}} aria-hidden="true"/>
+      {!point.future&&<span className="dash-trend-dot" style={{left:`${x(active??0)}%`,top:`${y(point.value)}%`}} aria-hidden="true"/>}
+      {compared&&<span className="dash-trend-dot previous" style={{left:`${x(active??0)}%`,top:`${y(point.previous)}%`}} aria-hidden="true"/>}
       <div className={"dash-tooltip"+align} style={{left:`${x(active??0)}%`}} role="status">
        <small>{point.title}</small>
-       <b>{format(point.value)}</b>
-       <em>{point.orders} {point.orders===1?"pedido con cobro":"pedidos con cobro"}</em>
+       {point.future?<em>Aún no llega esta hora</em>:<><b>{format(point.value)}</b><em>{point.orders} {point.orders===1?"pedido con cobro":"pedidos con cobro"}</em></>}
+       {compared&&<p className="dash-tooltip-previous"><span>{series.previous}</span><strong>{format(point.previous)}</strong></p>}
       </div>
      </>}
     </div>
-    <div className="dash-trend-x" aria-hidden="true">{points.map((item,index)=><span key={item.key} style={{left:`${x(index)}%`}} className={(index%ticks===0||index===points.length-1?"":"hidden")+(index===points.length-1?" last":"")}>{item.tick}</span>)}</div>
+    <div className="dash-trend-x" aria-hidden="true">{points.map((item,index)=><span key={item.key} style={{left:`${x(index)}%`}} className={(index%ticks===0||index===points.length-1||index===last?"":"hidden")+(index===last?" last":"")}>{item.tick}</span>)}</div>
    </div>
   </div>
   {/* Una tabla no respeta la altura de 1 px de sr-only; el contenedor sí la recorta. */}
   <div className="sr-only">
    <table>
     <caption>{label}</caption>
-    <thead><tr><th scope="col">Tramo</th><th scope="col">Ventas</th><th scope="col">Pedidos con cobro</th></tr></thead>
-    <tbody>{points.map(item=><tr key={item.key}><th scope="row">{item.title}</th><td>{format(item.value)}</td><td>{item.orders}</td></tr>)}</tbody>
+    <thead><tr><th scope="col">Tramo</th><th scope="col">{series.current}</th><th scope="col">Pedidos con cobro</th>{compared&&<th scope="col">{series.previous}</th>}</tr></thead>
+    <tbody>{points.map(item=><tr key={item.key}><th scope="row">{item.title}</th><td>{item.future?"—":format(item.value)}</td><td>{item.future?"—":item.orders}</td>{compared&&<td>{format(item.previous)}</td>}</tr>)}</tbody>
    </table>
   </div>
  </figure>;
-}
-
-/** Minigráfico de tendencia: curva recesiva con área tenue y el último valor resaltado; crece y se transforma como la onda. */
-export function Sparkline({values}:{values:number[]}){
- const id=useId().replace(/:/g,"");
- const min=values.length?Math.min(...values):0;
- const spark=useTweenedSeries(values,min);
- if(values.length<2)return null;
- const max=Math.max(...values);
- const range=max-min||1;
- const coords=spark.values.map((value,index)=>[(index/(values.length-1))*100,Math.min(100,Math.max(0,92-((value-min)/range)*84))] as const);
- const line=smoothPath(coords);
- const last=coords[coords.length-1];
- return <span className="dash-spark" aria-hidden="true">
-  <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-   <defs><linearGradient id={`${id}-spark`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" className="dash-spark-stop"/><stop offset="100%" className="dash-spark-stop fade"/></linearGradient></defs>
-   <path className="dash-spark-area" d={`${line} L100,100 L0,100 Z`} fill={`url(#${id}-spark)`}/>
-   <path className="dash-spark-line" d={line}/>
-  </svg>
-  <i style={{left:`${last[0]}%`,top:`${last[1]}%`}}/>
- </span>;
 }
 
 /**
@@ -225,7 +219,10 @@ export function CountUp({value,format,children}:{value:number;format:(value:numb
  return <><span className="dash-count" aria-hidden="true">{format(display)}</span><span className="sr-only">{children}</span></>;
 }
 
-export type BarListItem={key:string;label:string;value:number;detail?:string};
+/** Tono de identidad de la entidad (canal, medio de pago); nunca depende de su posición en el ranking. */
+export type DashTone="blue"|"indigo"|"orange"|"green"|"violet"|"purple"|"sky"|"teal"|"rose"|"peach"|"navy"|"gray";
+export type BarListItem={key:string;label:string;value:number;detail?:string;tone?:DashTone};
+const toneClass=(tone:DashTone|undefined)=>tone?` dash-tone-${tone}`:"";
 
 /** La barra ocupa toda la pista y se desplaza con transform (nunca con width); cada fila entra 60 ms después de la anterior. */
 const barStyle=(ratio:number,index:number):CSSProperties=>({transform:`translateX(${(Math.min(1,Math.max(0,ratio))-1)*100}%)`,animationDelay:`calc(var(--duration-slow) + ${index*60}ms)`});
@@ -238,7 +235,7 @@ export function BarList({label,items,format,empty}:{label:string;items:BarListIt
  return <ul className="dash-bars" aria-label={label}>
   {items.map((item,index)=>{
    const share=positive>0&&item.value>0?Math.round((item.value/positive)*100):0;
-   return <li key={item.key}>
+   return <li key={item.key} className={toneClass(item.tone).trim()||undefined}>
     <div className="dash-bar-copy"><span><b>{item.label}</b>{item.detail&&<small>{item.detail}</small>}</span><span className="dash-bar-value">{format(item.value)}<small>{share}%</small></span></div>
     <div className="dash-bar-track" aria-hidden="true"><i style={barStyle(item.value>0?Math.max(.01,item.value/max):0,index)}/></div>
    </li>;
@@ -256,8 +253,9 @@ const DONUT_RADIUS=46;
 const DONUT_LENGTH=2*Math.PI*DONUT_RADIUS;
 
 /**
- * Anillo de participación en la rampa índigo (de mayor a menor tono), con el
- * total al centro y una leyenda que da importe, detalle y porcentaje. Agrupa
+ * Anillo de participación en la rampa índigo (de mayor a menor tono) y una
+ * leyenda con importe y porcentaje; sin total al centro, porque ese total ya es
+ * el indicador de Ventas. Agrupa
  * desde el quinto elemento en «Otros». El anillo es decorativo: la leyenda es
  * la lectura accesible.
  */
@@ -265,8 +263,7 @@ export function DonutChart({label,items,format,empty}:{label:string;items:BarLis
  if(!items.length)return <div className="dashboard-empty compact"><Icon name={empty.icon} size={20}/><b>{empty.title}</b><p>{empty.text}</p></div>;
  const sorted=[...items].sort((a,b)=>b.value-a.value);
  const rest=sorted.slice(DONUT_SLICES);
- const slices=rest.length>1?[...sorted.slice(0,DONUT_SLICES),{key:"__other",label:`Otros ${rest.length}`,value:rest.reduce((sum,item)=>sum+item.value,0)}]:sorted;
- const total=slices.reduce((sum,item)=>sum+item.value,0);
+ const slices=rest.length>1?[...sorted.slice(0,DONUT_SLICES),{key:"__other",label:`Otros ${rest.length}`,value:rest.reduce((sum,item)=>sum+item.value,0),tone:"gray" as const}]:sorted;
  const positive=slices.reduce((sum,item)=>sum+Math.max(0,item.value),0);
  const gap=slices.filter(item=>item.value>0).length>1?2:0;
  const lengths=slices.map(item=>positive>0?(Math.max(0,item.value)/positive)*DONUT_LENGTH:0);
@@ -275,15 +272,14 @@ export function DonutChart({label,items,format,empty}:{label:string;items:BarLis
   <div className="dash-donut-ring" aria-hidden="true">
    <svg key={slices.map(item=>item.key+item.value).join("|")} viewBox="0 0 120 120">
     <circle className="dash-donut-base" cx="60" cy="60" r={DONUT_RADIUS}/>
-    <g transform="rotate(-90 60 60)">{arcs.map(arc=><circle key={arc.key} className={"dash-donut-arc s"+arc.index} cx="60" cy="60" r={DONUT_RADIUS} strokeDasharray={`${arc.dash} ${DONUT_LENGTH-arc.dash}`} strokeDashoffset={-arc.offset}/>)}</g>
+    <g transform="rotate(-90 60 60)">{arcs.map(arc=><circle key={arc.key} className={"dash-donut-arc"+toneClass(slices[arc.index].tone??"gray")} cx="60" cy="60" r={DONUT_RADIUS} strokeDasharray={`${arc.dash} ${DONUT_LENGTH-arc.dash}`} strokeDashoffset={-arc.offset}/>)}</g>
    </svg>
-   <span className="dash-donut-total"><small>Total</small><b>{format(total)}</b></span>
   </div>
   <ul className="dash-donut-legend" aria-label={label}>
-   {slices.map((item,index)=>{
+   {slices.map(item=>{
     const share=positive>0&&item.value>0?Math.round((item.value/positive)*100):0;
     return <li key={item.key}>
-     <i className={"dash-donut-swatch s"+index} aria-hidden="true"/>
+     <i className={"dash-donut-swatch"+toneClass(item.tone??"gray")} aria-hidden="true"/>
      <span className="dash-donut-copy"><b>{item.label}</b>{item.detail&&<small>{item.detail}</small>}</span>
      <span className="dash-bar-value">{format(item.value)}<small>{share}%</small></span>
     </li>;

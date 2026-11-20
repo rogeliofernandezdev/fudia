@@ -105,12 +105,16 @@ encabezado.
 
 ### Dashboard
 
-Encabezado estable incluso en error, `Tabs` para el periodo (Hoy, 7 días,
-30 días), mosaico de cuatro KPI a todo el ancho y, debajo, análisis del periodo
-separado de «Ahora mismo». Skeleton con la misma estructura y error recuperable
-sin reemplazar datos por ceros. Rejilla del mosaico: 4 columnas (Ventas 1.4×),
-2 × 2 bajo 1180 px y, en ≤600 px, Ventas y Pedidos activos a ancho completo
-con las otras dos en media columna; sin desborde horizontal a 390 y 427 px.
+Encabezado estable incluso en error y sin acciones, selector de periodo (Hoy,
+7 días, 30 días) con la base de comparación a su derecha, tres indicadores del
+periodo a todo el ancho y, debajo, análisis del periodo (Evolución de ventas,
+Ventas por canal y Medios de pago lado a lado, Lo más vendido con pestañas
+Productos | Categorías) separado del panel único «Ahora mismo» (operación en vivo
+y «Por revisar»). Skeleton con la misma estructura y error recuperable sin
+reemplazar datos por ceros. Rejilla de indicadores: 3 columnas (Ventas 1.4×);
+bajo 1180 px Ventas a ancho completo y las otras dos en media columna, y «Ahora
+mismo» pasa debajo con sus bloques en dos columnas; en ≤760 px todo en una
+columna; sin desborde horizontal a 390 y 427 px.
 
 ### Asistente
 
