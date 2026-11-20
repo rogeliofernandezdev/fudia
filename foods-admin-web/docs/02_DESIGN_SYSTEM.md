@@ -3248,6 +3248,7 @@ PostgreSQL para mantener compatibilidad durante el despliegue.
 
 ## Entrega del pedido y cuenta de mesa
 
+- El filtro de estado de Pedidos (2026-11-20) ofrece «Todos los estados», «Abiertos» y solo los estados que tienen pedidos en el canal y la búsqueda actuales, en el orden del catálogo del API; el estado elegido se conserva aunque quede sin pedidos. Nunca lista estados sin registros.
 - Salón/Pedidos distinguen preparación y cuenta sin códigos técnicos ni instrucciones redundantes. El destino y estado de cada producto se presentan en una fila compacta y alineada; el estado se omite cuando repite el del pedido (ver detalle compartido).
 - El pie muestra un único botón primario «Confirmar entrega» para todo el pedido cuando todos los productos pendientes están por entregar. No se muestran botones de entrega individuales: destino y estado de cada producto son datos de lectura. Cocina/Barra preparan; el mozo confirma todo con una acción. Las rondas adicionales incluyen solo productos aún sin entregar y no repiten las entregas anteriores. No se muestran modales exitosos en estas transiciones operativas.
 - «Agregar productos» reutiliza la comanda con solo líneas nuevas y aparece únicamente con cuenta Abierta. «Cerrar cuenta» es primaria y aparece solo después de entregar todos los productos de todas las rondas. Después se muestra el enlace a cobro solo con entrega completa, permiso y saldo; no se ofrecen más consumos ni reapertura.

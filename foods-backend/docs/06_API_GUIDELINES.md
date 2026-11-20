@@ -215,7 +215,11 @@ local, Delivery). El canal guardado no cambia: `whatsapp` sigue identificando el
 pedido QR de mesa creado por Concierge, pero `domain.ServiceChannel` lo agrupa en
 `salon` para `channelCounts`, y el filtro `channel=salon` incluye `whatsapp` en
 Pedidos y Cocina. `domain.Channels` (con WhatsApp) se mantiene para validación,
-etiquetas e historial de otros módulos.
+etiquetas e historial de otros módulos. `statusOptions` (2026-11-20) solo lista,
+en el orden del catálogo `domain.Statuses`, los estados con al menos un pedido
+para la búsqueda y el canal pedidos (sin aplicar el filtro de estado), más el
+estado elegido aunque ya no tenga pedidos; «Todos los estados» y «Abiertos» los
+agrega la interfaz.
 
 `POST /v1/admin/orders` conserva `orders.manage` y el alcance de empresa/local
 derivado de la sesión. Delivery requiere nombre, teléfono válido de 7 a 15 dígitos

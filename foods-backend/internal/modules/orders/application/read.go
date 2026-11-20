@@ -21,8 +21,11 @@ type Page struct {
 	ChannelOptions []map[string]string `json:"channelOptions"`
 	// ManualChannelOptions son los tipos que se registran sin mesa (Mostrador, Recojo y Delivery).
 	ManualChannelOptions []map[string]string `json:"manualChannelOptions"`
-	StatusOptions        []map[string]string `json:"statusOptions"`
-	CurrencySymbol       string              `json:"currencySymbol"`
+	// StatusOptions solo lista los estados con pedidos para la búsqueda y el canal actuales, más el elegido.
+	StatusOptions  []map[string]string `json:"statusOptions"`
+	CurrencySymbol string              `json:"currencySymbol"`
+	// PresentStatuses lo llena el repositorio; no se serializa.
+	PresentStatuses map[string]bool `json:"-"`
 }
 
 func (a *Orders) List(ctx context.Context, s scope, f Filter) (Page, error) {
@@ -33,8 +36,19 @@ func (a *Orders) List(ctx context.Context, s scope, f Filter) (Page, error) {
 	}
 	out.ChannelOptions = domain.ServiceChannels
 	out.ManualChannelOptions = domain.ManualChannels
-	out.StatusOptions = domain.Statuses
+	out.StatusOptions = PresentStatusOptions(out.PresentStatuses, f.Status)
 	return out, nil
+}
+// PresentStatusOptions conserva el orden del catálogo y deja solo los estados presentes; el estado
+// elegido se mantiene aunque ya no tenga pedidos, para que el filtro nunca muestre un valor ausente.
+func PresentStatusOptions(present map[string]bool, selected string) []map[string]string {
+	options := []map[string]string{}
+	for _, option := range domain.Statuses {
+		if present[option["value"]] || option["value"] == selected {
+			options = append(options, option)
+		}
+	}
+	return options
 }
 func (a *Orders) Floor(ctx context.Context, s scope) ([]domain.FloorTable, error) {
 	out, err := a.repo.Floor(ctx, s)
