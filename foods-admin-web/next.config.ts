@@ -18,6 +18,17 @@ const nextConfig: NextConfig = {
       {key:"X-Frame-Options",value:"SAMEORIGIN"},
       {key:"Referrer-Policy",value:"no-referrer"},
       {key:"X-Content-Type-Options",value:"nosniff"},
+    ]},
+    // prepare-pdfjs versiona con ?v= el motor, el worker y los scripts y hojas del
+    // visor: con la URL ligada al contenido, abrir otro PDF no los vuelve a validar.
+    {source:"/pdfjs/:path*",has:[{type:"query",key:"v"}],headers:[
+      {key:"Cache-Control",value:"public, max-age=31536000, immutable"},
+    ]},
+    // Fuentes estándar, CMaps, WASM, perfiles ICC, traducciones e iconos los pide
+    // PDF.js con rutas fijas: son de la versión instalada y cambian solo al
+    // actualizarla, así que basta con un día de caché.
+    {source:"/pdfjs/web/:dir(standard_fonts|cmaps|wasm|iccs|locale|images)/:path*",headers:[
+      {key:"Cache-Control",value:"public, max-age=86400"},
     ]}];
   },
   experimental:{

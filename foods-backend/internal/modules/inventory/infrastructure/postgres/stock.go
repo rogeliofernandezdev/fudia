@@ -117,20 +117,25 @@ func (r *Stock) LockBalance(ctx context.Context, s scope, inventoryItemID string
 	`, s.OrganizationID, s.LocationID, inventoryItemID).Scan(&out.ProductID, &out.Name, &out.Unit, &out.Quantity, &out.AverageUnitCost)
 	return out, stockError(err)
 }
-func (r *Stock) SaveMovement(ctx context.Context, s scope, m application.Movement) error {
-	var userID *string
-	if strings.TrimSpace(s.UserID) != "" {
-		v := s.UserID
-		userID = &v
-	}
-	_, err := r.db(ctx).Exec(ctx, `
+const insertMovementSQL = `
 		INSERT INTO stock_movements(
 		  organization_id,location_id,product_id,inventory_item_id,movement_type,
 		  quantity_delta,balance_after,source_type,source_id,note,created_by,
 		  unit_cost,value_delta,balance_value_after
 		)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-	`, s.OrganizationID, s.LocationID, m.ProductID, m.ItemID, m.Type, m.Delta, m.Balance, m.SourceType, m.SourceID, m.Note, userID, m.UnitCost, m.ValueDelta, m.BalanceValue)
+	`
+
+func movementUser(s scope) *string {
+	if strings.TrimSpace(s.UserID) == "" {
+		return nil
+	}
+	v := s.UserID
+	return &v
+}
+
+func (r *Stock) SaveMovement(ctx context.Context, s scope, m application.Movement) error {
+	_, err := r.db(ctx).Exec(ctx, insertMovementSQL, s.OrganizationID, s.LocationID, m.ProductID, m.ItemID, m.Type, m.Delta, m.Balance, m.SourceType, m.SourceID, m.Note, movementUser(s), m.UnitCost, m.ValueDelta, m.BalanceValue)
 	return err
 }
 func (r *Stock) RetailCategoryAllowed(ctx context.Context, s scope, organizationID string, in domain.InventoryEntryInput) (bool, error) {
@@ -507,10 +512,10 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilter) (application.MovementsPage, error) {
 	out := application.MovementsPage{Page: f.Page, PageSize: f.Size}
 	page, size := f.Page, f.Size
-	inventoryItemID, productID, movementType, sourceType, from, to := f.InventoryItemID, f.ProductID, f.MovementType, f.SourceType, f.From, f.To
+	inventoryItemID, productID, movementType, sourceType, from, to := database.UUIDArg(f.InventoryItemID), database.UUIDArg(f.ProductID), f.MovementType, f.SourceType, f.From, f.To
 	where := `sm.organization_id=$1 AND sm.location_id=$2
-	  AND ($3='' OR sm.inventory_item_id::text=$3)
-	  AND ($4='' OR sm.product_id::text=$4)
+	  AND ($3::uuid IS NULL OR sm.inventory_item_id=$3::uuid)
+	  AND ($4::uuid IS NULL OR sm.product_id=$4::uuid)
 	  AND ($5='' OR sm.movement_type=$5)
 	  AND ($6='' OR sm.source_type=$6)
 	  AND ($7='' OR sm.created_at >= ($7::date::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))

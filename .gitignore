@@ -21,3 +21,8 @@ tmp/pdfjs-6.4.299/
 
 # Temporary credentials created by google-github-actions/auth (OIDC).
 gha-creds-*.json
+
+# Salidas de compilación de Android (Gradle); el APK publicado vive en la raíz.
+fudia-pay/.gradle/
+fudia-pay/build/
+fudia-pay/app/build/

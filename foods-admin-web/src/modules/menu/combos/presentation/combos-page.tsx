@@ -61,9 +61,9 @@ export function CombosPage(){
   const combos=useQuery({queryKey:["combos",page,size,debouncedSearch,status],queryFn:()=>listCombos(page,size,debouncedSearch,status)});
   // La carta completa se descarga al abrir la hoja; cada 10 s solo se refrescan las
   // opciones ya elegidas (antes, toda la carta cada 10 s mientras la hoja seguía abierta).
-  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(canManage&&draft&&location?.id),staleTime:0});
+  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(canManage&&draft&&location?.id),staleTime:0,refetchOnWindowFocus:false});
   const chosenIds=Array.from(new Set(draft?.groups.flatMap(group=>group.options.map(option=>option.productId)).filter(Boolean)??[])).sort();
-  const chosen=useQuery({queryKey:["products","combo-picker-chosen",organization?.id,location?.id,chosenIds],queryFn:()=>listComboProductsByIds(chosenIds),enabled:Boolean(canManage&&draft&&location?.id&&products.data&&chosenIds.length),refetchInterval:10000,placeholderData:previous=>previous});
+  const chosen=useQuery({queryKey:["products","combo-picker-chosen",organization?.id,location?.id,chosenIds],queryFn:()=>listComboProductsByIds(chosenIds),enabled:Boolean(canManage&&draft&&location?.id&&products.data&&chosenIds.length),meta:{live:["availability","catalog"],poll:10000},placeholderData:previous=>previous});
   const pickerProducts=useMemo(()=>{
     const items=products.data?.items??[];
     const fresh=chosen.data;

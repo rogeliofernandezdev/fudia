@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"context"
 	"github.com/foods-platform/foods-backend/internal/modules/menu/domain"
 	"time"
@@ -41,10 +42,10 @@ func (r *Catalog) PublicMenu(ctx context.Context, s scope, terms []string, produ
 		) term_hits
 		WHERE p.organization_id=$1 AND p.active
 		  AND (cardinality($4::text[])=0 OR term_hits.hits>0)
-		  AND ($5='' OR p.id::text=$5)
+		  AND ($5::uuid IS NULL OR p.id=$5::uuid)
 		ORDER BY term_hits.hits DESC,p.featured DESC,c.sort_order NULLS LAST,c.name NULLS LAST,p.name
 		LIMIT 30
-	`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), terms, productID)
+	`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), terms, database.UUIDArg(productID))
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +88,8 @@ func (r *Catalog) PublicCombo(ctx context.Context, s scope, id string, day time.
 		LEFT JOIN product_availability pa
 		  ON pa.organization_id=p.organization_id AND pa.location_id=l.id
 		 AND pa.product_id=p.id AND pa.business_date=$4
-		WHERE p.id::text=$1 AND p.organization_id=$2
-	`, id, s.OrganizationID, s.LocationID, day.Format("2006-01-02")).
+		WHERE p.id=$1::uuid AND p.organization_id=$2
+	`, database.UUIDArg(id), s.OrganizationID, s.LocationID, day.Format("2006-01-02")).
 		Scan(&out.Name, &out.Description, &out.Price, &out.ImageURL, &available)
 	return out, available, menuError(err)
 }
@@ -96,25 +97,40 @@ func (r *Catalog) PublicComboGroups(ctx context.Context, s scope, id string, day
 	groupRows, err := r.db(ctx).Query(ctx, `
 		SELECT id::text,name,required,min_selections,max_selections
 		FROM menu_combo_groups
-		WHERE combo_product_id::text=$1 AND organization_id=$2
+		WHERE combo_product_id=$1::uuid AND organization_id=$2
 		ORDER BY sort_order,id
-	`, id, s.OrganizationID)
+	`, database.UUIDArg(id), s.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
-	defer groupRows.Close()
-
 	groups := []domain.PublicComboGroup{}
+	index := map[string]int{}
+	groupIDs := []string{}
 	for groupRows.Next() {
 		var group domain.PublicComboGroup
 		if err := groupRows.Scan(
 			&group.ID, &group.Name, &group.Required, &group.MinSelections, &group.MaxSelections,
 		); err != nil {
+			groupRows.Close()
 			return nil, err
 		}
+		group.Options = []domain.PublicComboOption{}
+		index[group.ID] = len(groups)
+		groupIDs = append(groupIDs, group.ID)
+		groups = append(groups, group)
+	}
+	groupRows.Close()
+	if err := groupRows.Err(); err != nil {
+		return nil, err
+	}
+	if len(groups) == 0 {
+		return groups, nil
+	}
 
-		rows, queryErr := r.db(ctx).Query(ctx, `
-			SELECT o.option_product_id::text,p.name,o.surcharge::text,
+	// Las opciones de todos los grupos en una consulta (antes, una por grupo en
+	// cada turno de Concierge que muestra el menú).
+	rows, err := r.db(ctx).Query(ctx, `
+			SELECT o.group_id::text,o.option_product_id::text,p.name,o.surcharge::text,
 			       p.active
 			       AND (p.available_from IS NULL OR now() >= p.available_from)
 			       AND (p.available_until IS NULL OR now() <= p.available_until)
@@ -142,8 +158,8 @@ func (r *Catalog) PublicComboGroups(ctx context.Context, s scope, id string, day
 			           JOIN order_items oi ON oi.id=sel.order_item_id AND oi.organization_id=sel.organization_id
 			           JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
 			           WHERE sel.organization_id=o.organization_id
-			             AND oi.product_id=$5
-			             AND lower(sel.group_name)=lower($6)
+			             AND oi.product_id=$5::uuid
+			             AND lower(sel.group_name)=lower(g.name)
 			             AND sel.option_product_id=o.option_product_id
 			             AND ord.location_id=l.id
 			             AND ord.status<>'cancelado'
@@ -152,37 +168,30 @@ func (r *Catalog) PublicComboGroups(ctx context.Context, s scope, id string, day
 			         ),0) < o.default_quota
 			       )
 			FROM menu_combo_options o
+			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
 			JOIN locations l ON l.id=$3 AND l.organization_id=o.organization_id AND l.active
 			LEFT JOIN product_availability pa
 			  ON pa.organization_id=p.organization_id AND pa.location_id=l.id
 			 AND pa.product_id=p.id AND pa.business_date=$4
-			WHERE o.group_id::text=$1 AND o.organization_id=$2
-			ORDER BY o.sort_order,o.id
-		`, group.ID, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), id, group.Name)
-		if queryErr != nil {
-			return nil, queryErr
-		}
-		group.Options = []domain.PublicComboOption{}
-		for rows.Next() {
-			var option domain.PublicComboOption
-			if scanErr := rows.Scan(&option.ProductID, &option.Name, &option.Surcharge, &option.Available); scanErr != nil {
-				rows.Close()
-				return nil, scanErr
-			}
-			group.Options = append(group.Options, option)
-		}
-		if rowsErr := rows.Err(); rowsErr != nil {
-			rows.Close()
-			return nil, rowsErr
-		}
-		rows.Close()
-		groups = append(groups, group)
-	}
-	if err := groupRows.Err(); err != nil {
+			WHERE o.group_id=ANY($1::uuid[]) AND o.organization_id=$2
+			ORDER BY o.group_id,o.sort_order,o.id
+		`, groupIDs, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), database.UUIDArg(id))
+	if err != nil {
 		return nil, err
 	}
-	return groups, nil
+	defer rows.Close()
+	for rows.Next() {
+		var groupID string
+		var option domain.PublicComboOption
+		if err := rows.Scan(&groupID, &option.ProductID, &option.Name, &option.Surcharge, &option.Available); err != nil {
+			return nil, err
+		}
+		if i, ok := index[groupID]; ok {
+			groups[i].Options = append(groups[i].Options, option)
+		}
+	}
+	return groups, rows.Err()
 }
 func (r *Catalog) PublicModifierProduct(ctx context.Context, s scope, productID string) (bool, bool, error) {
 	var exists bool

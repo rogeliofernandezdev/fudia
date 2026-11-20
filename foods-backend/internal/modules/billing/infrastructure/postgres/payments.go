@@ -88,8 +88,8 @@ func (r *Payments) RequireShiftAssignment(ctx context.Context, s scope, shiftID 
 func (r *Payments) OrderPayments(ctx context.Context, s scope, orderID string) ([]domain.PaymentView, error) {
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,pm.affects_cash,p.amount::text,
-		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
-		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
+		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)::text,
+		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0))::text,
 		       p.reference,u.full_name,to_char(p.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
 		FROM payments p
 		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id
@@ -118,8 +118,8 @@ func (r *Payments) Payment(ctx context.Context, s scope, id string) (domain.Paym
 	var item domain.PaymentView
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,pm.affects_cash,p.amount::text,
-		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
-		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
+		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)::text,
+		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0))::text,
 		       p.reference,u.full_name,to_char(p.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
 		FROM payments p
 		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id
@@ -153,7 +153,7 @@ func (r *Payments) PaidForOrder(ctx context.Context, s scope, in domain.PaymentI
 	var paid float64
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT COALESCE(sum(
-		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)
 		),0)::float8
 		FROM payments p
 		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
@@ -189,7 +189,7 @@ func (r *Payments) LockRefundPayment(ctx context.Context, s scope, id string) (b
 	var refunded float64
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT pm.affects_cash,o.code,o.status,p.amount::float8,o.completed_at IS NOT NULL,o.channel='salon',
-		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::float8
+		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)::float8
 		FROM payments p
 		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
@@ -236,7 +236,7 @@ func (r *Payments) BatchPaid(ctx context.Context, s scope, in domain.PaymentBatc
 	var paid float64
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT COALESCE(sum(
-		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)
 		),0)::float8
 		FROM payments p
 		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3

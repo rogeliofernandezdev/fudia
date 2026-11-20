@@ -4,14 +4,14 @@ import type {POSCollectionAccess,Payment,PaymentDraft,PaymentMethodOption,POSOrd
 export type POSCollectionShift={id:string;cashRegisterName:string;openedByName:string};
 export function getPOSCollectionAccess(){return apiFetch<POSCollectionAccess>("pos/access");}
 
-export function listPOSOrders(input:{q:string;paymentStatus:string;page:number;pageSize:number}){
+export function listPOSOrders(input:{q:string;paymentStatus:string;page:number;pageSize:number},signal?:AbortSignal){
   const params=new URLSearchParams({
     q:input.q,
     paymentStatus:input.paymentStatus,
     page:String(input.page),
     pageSize:String(input.pageSize),
   });
-  return apiFetch<POSOrdersResponse>(`pos/orders?${params.toString()}`);
+  return apiFetch<POSOrdersResponse>(`pos/orders?${params.toString()}`,{signal});
 }
 
 export function getPOSOrder(id:string){

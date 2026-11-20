@@ -30,14 +30,11 @@ func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination stri
 	if destination != "" && destination != "kitchen" && destination != "bar" {
 		return out, orderFailure(apperror.Invalid, "invalid_destination", "Selecciona Cocina o Barra.")
 	}
-	legacy, err := a.repo.LegacyKitchenOrders(ctx, s, channel, destination)
+	queues, err := a.repo.KitchenQueues(ctx, s, channel, destination)
 	if err != nil {
 		return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar las comandas de cocina.")
 	}
-	rounds, err := a.repo.KitchenRounds(ctx, s, channel, destination)
-	if err != nil {
-		return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar las rondas de cocina.")
-	}
+	legacy, rounds := queues.Legacy, queues.Rounds
 	refs := make([]domain.TicketRef, 0, len(legacy)+len(rounds))
 	for _, item := range legacy {
 		refs = append(refs, domain.TicketRef{OrderID: item.ID})
@@ -64,10 +61,7 @@ func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination stri
 		out.Items = []domain.KitchenTicket{}
 		out.Counts = map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}
 	}
-	current, err := a.repo.ServiceTickets(ctx, s, channel, destination)
-	if err != nil {
-		return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar la preparación por área.")
-	}
+	current := queues.Service
 	for _, ticket := range current {
 		out.Items = append(out.Items, ticket)
 		out.Counts[ticket.Status]++

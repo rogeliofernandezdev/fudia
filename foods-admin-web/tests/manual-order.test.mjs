@@ -243,7 +243,7 @@ test("comanda: refresca los productos elegidos por local aunque no estén en la 
  const view=mountComanda({initial:{...fields,tableId:"",lines:[line,{...line,lineKey:"combo",itemType:"combo",productId:"combo"}]}});
  view.render();const query=view.queries.findLast(query=>query.queryKey[0]==="order-selected-availability");
  assert.deepEqual(JSON.parse(JSON.stringify(query.queryKey)),["order-selected-availability","test-location",[line.productId]]);
- assert.equal(query.refetchInterval,10000);assert.equal(query.refetchIntervalInBackground,false);assert.equal(query.refetchOnWindowFocus,"always");assert.equal(query.enabled,true);
+ assert.equal(query.meta.poll,10000);assert.deepEqual([...query.meta.live],["availability","catalog"]);assert.equal(query.refetchIntervalInBackground,false);assert.equal(query.refetchOnWindowFocus,"always");assert.equal(query.enabled,true);
  const failed=mountComanda({initial:{...fields,tableId:"",lines:[line]},availabilityError:true});
  failed.render().find(node=>node.type==="ComandaCatalog").props.onAvailability([{id:line.productId,remaining:null,availabilityStatus:"available"}]);
  const rendered=failed.render();assert.equal(rendered.find(node=>node.type==="NumberStepper").props.max,line.qty);

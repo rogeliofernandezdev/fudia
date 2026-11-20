@@ -4,6 +4,11 @@ import "net/http"
 
 func (a *API) Routes() *http.ServeMux {
 	m := http.NewServeMux()
+	if a.handlers.Live != nil {
+		// Solo dice qué tema cambió (pedidos, cocina, caja…); cada pantalla vuelve a
+		// leer por su endpoint, que aplica sus permisos.
+		m.Handle("GET /v1/admin/events", a.auth(http.HandlerFunc(a.handlers.Live.Serve)))
+	}
 	if a.handlers.Organizations != nil {
 		m.Handle("GET /v1/admin/geographic-areas", a.auth(http.HandlerFunc(a.handlers.Organizations.GeographicAreas)))
 	}

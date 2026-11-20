@@ -152,7 +152,7 @@ test("Salón y Pedidos reutilizan el mismo detalle",()=>{
 });
 test("las vistas refrescan estado operativo hasta completar",()=>{
  for(const path of ["modules/operations/salon/presentation/salon-manager.tsx","modules/operations/orders/presentation/orders-manager.tsx"]){
-  assert.match(read(path),/refetchInterval:query=>query\.state\.data\?\.completedAt\?false:10000/);
+  assert.match(read(path),/poll:query=>\(query\.state\.data as \{completedAt\?:string\|null\}\|undefined\)\?\.completedAt\?false:10000/);
  }
 });
 test("agregar productos se impide tras cierre o finalización",()=>{

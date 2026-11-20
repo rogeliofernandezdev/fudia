@@ -87,6 +87,8 @@ type CatalogRepository interface {
 	CreateRecipeIngredient(ctx context.Context, s scope, recipeID string, x domain.RecipeIngredientInput) (int64, error)
 	Availability(context.Context, scope, CatalogFilter, time.Time, bool) ([]domain.AvailabilitySnapshot, int, error)
 	ComboAvailable(context.Context, scope, string, time.Time) (bool, error)
+	// BlockedCombos marca en una consulta los menús que hoy no se pueden vender.
+	BlockedCombos(context.Context, scope, []string, time.Time) (map[string]bool, error)
 	AvailabilityHistory(context.Context, scope, string, CatalogFilter) (AvailabilityHistoryPage, error)
 	ProductExists(context.Context, scope, string) (bool, error)
 	LockAvailabilityProduct(ctx context.Context, s scope, productID string) (string, error)

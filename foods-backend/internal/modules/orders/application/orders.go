@@ -128,9 +128,9 @@ type OrderRepository interface {
 	CompletionPending(ctx context.Context, s scope, id string) (bool, error)
 	DeliverPaidItems(ctx context.Context, s scope, id string) (int64, error)
 	CompletePaidOrder(ctx context.Context, s scope, id string) (int64, error)
-	LegacyKitchenOrders(context.Context, scope, string, string) ([]domain.Order, error)
-	KitchenRounds(context.Context, scope, string, string) ([]domain.KitchenTicket, error)
-	ServiceTickets(context.Context, scope, string, string) ([]domain.KitchenTicket, error)
+	// KitchenQueues lee en una ida y vuelta las comandas sin rondas, las rondas y
+	// la preparación por área de Cocina.
+	KitchenQueues(context.Context, scope, string, string) (domain.KitchenQueues, error)
 	TargetMinutes(context.Context, scope, string, string) (*int, error)
 	// TicketContents devuelve, en el mismo orden, líneas y tiempo objetivo de cada comanda.
 	TicketContents(ctx context.Context, s scope, refs []domain.TicketRef) ([]domain.TicketContent, error)

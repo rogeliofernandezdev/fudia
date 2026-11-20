@@ -18,6 +18,7 @@ import (
 	"github.com/foods-platform/foods-backend/internal/platform/config"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/foods-platform/foods-backend/internal/platform/httpapi"
+	"github.com/foods-platform/foods-backend/internal/platform/realtime"
 )
 
 var version = "dev"
@@ -52,7 +53,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer closeImages()
-	api, maintenance := newAPI(db, images)
+	// Canal en vivo: una conexión LISTEN por instancia reparte los avisos de
+	// PostgreSQL a las pantallas abiertas por SSE.
+	liveHub := realtime.NewHub()
+	go realtime.Listen(ctx, db, liveHub, logger)
+	api, maintenance := newAPI(db, images, realtime.Events{Hub: liveHub, Done: ctx.Done()})
 	mux := api.Routes()
 	go sweepDeliveryDispatch(ctx, logger, maintenance)
 	go sweepPayPairing(ctx, logger, paydetectapp.NewMaintenance(paydetectpg.New(db)))
@@ -148,8 +153,13 @@ func newServer(handler http.Handler) *http.Server {
 
 // Cancel database work before the socket's write deadline, leaving time to send
 // the handler's explicit error response instead of dropping the connection.
+// El canal en vivo (realtime.Path) queda abierto: no lleva plazo.
 func requestDeadline(timeout time.Duration, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == realtime.Path {
+			next.ServeHTTP(w, r)
+			return
+		}
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -190,6 +200,10 @@ func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 			"status", rw.status,
 			"duration_ms", duration.Milliseconds(),
 		}
+		if r.URL.Path == realtime.Path {
+			logger.Info("http_stream", attrs...)
+			return
+		}
 		if duration >= slowAfter {
 			logger.Warn("http_request_slow", attrs...)
 			return
@@ -207,3 +221,7 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
 }
+
+// Unwrap deja que http.ResponseController llegue al writer real (Flush y plazos
+// de escritura del canal en vivo).
+func (r *statusRecorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }

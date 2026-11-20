@@ -21,18 +21,22 @@ func (a *Catalog) Availability(ctx context.Context, s scope, f CatalogFilter, ex
 		return out, menuFailure(apperror.Unavailable, "availability_unavailable", "No pudimos cargar la disponibilidad de la carta.")
 	}
 	out.Total = total
+	combos := []string{}
 	for _, snapshot := range raw {
 		item := domain.ResolveAvailability(snapshot, out.BusinessDate)
 		if snapshot.IsCombo && item.Status == "available" {
-			available, err := a.repo.ComboAvailable(ctx, s, item.ProductID, day)
-			if err != nil {
-				return out, menuFailure(apperror.Unavailable, "availability_unavailable", "No pudimos validar las opciones de un menú.")
-			}
-			if !available {
-				item.Status, item.Source = "sold_out", "combo_components"
-			}
+			combos = append(combos, item.ProductID)
 		}
 		out.Items = append(out.Items, item)
+	}
+	blocked, err := a.repo.BlockedCombos(ctx, s, combos, day)
+	if err != nil {
+		return out, menuFailure(apperror.Unavailable, "availability_unavailable", "No pudimos validar las opciones de un menú.")
+	}
+	for i := range out.Items {
+		if blocked[out.Items[i].ProductID] {
+			out.Items[i].Status, out.Items[i].Source = "sold_out", "combo_components"
+		}
 	}
 	ids := make([]string, 0, len(out.Items))
 	for _, p := range out.Items {

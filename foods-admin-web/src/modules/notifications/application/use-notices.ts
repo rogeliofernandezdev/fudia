@@ -14,7 +14,7 @@ export function useNotices(){
  const queryClient=useQueryClient();
   // Al recuperar el foco solo consulta si la última respuesta tiene más de 10 s (antes,
  // siempre): el polling de 15 s y la apertura de la campana ya la mantienen al día.
- const feed=useQuery({queryKey,queryFn:getNotices,enabled,staleTime:10000,refetchInterval:NOTICES_REFRESH_MS,refetchOnWindowFocus:true});
+ const feed=useQuery({queryKey,queryFn:getNotices,enabled,staleTime:10000,meta:{live:["notices"],poll:NOTICES_REFRESH_MS},refetchOnWindowFocus:true});
  // La lectura se refleja al instante y se reconcilia con el servidor al terminar.
  const markRead=(update:(feed:NoticeFeed)=>NoticeFeed)=>({
   onMutate:async()=>{await queryClient.cancelQueries({queryKey});const previous=queryClient.getQueryData<NoticeFeed>(queryKey);if(previous)queryClient.setQueryData(queryKey,update(previous));return{previous}},

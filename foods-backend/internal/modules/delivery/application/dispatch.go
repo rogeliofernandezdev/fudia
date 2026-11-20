@@ -1,6 +1,7 @@
 package application
 
 import (
+	"sync"
 	"context"
 	"errors"
 
@@ -121,6 +122,10 @@ type Dispatcher struct {
 	notices noticecontracts.Publisher
 	handoff OrderHandoff
 	panel   PanelRepository
+	// sweeping evita barridos simultáneos: el ticker de la API y cada consulta de
+	// Concierge (Claim, cada 5 s) lo disparan, y dos barridos a la vez revisaban y
+	// bloqueaban los mismos pedidos.
+	sweeping sync.Mutex
 }
 
 func NewDispatcher(repo DispatchRepository, work unitofwork.Manager) *Dispatcher {
@@ -160,6 +165,13 @@ func (a *Dispatcher) OrderChanged(ctx context.Context, s scope, orderID string) 
 // Sweep revisa los pedidos con algo pendiente: despachos por crear, ofertas
 // vencidas, «listo para recoger» por avisar y pedidos cancelados.
 func (a *Dispatcher) Sweep(ctx context.Context) error {
+	if !a.sweeping.TryLock() {
+		// Ya hay un barrido en curso: se espera su resultado en vez de repetirlo.
+		a.sweeping.Lock()
+		a.sweeping.Unlock()
+		return nil
+	}
+	defer a.sweeping.Unlock()
 	refs, err := a.repo.DueOrders(ctx, SweepLimit)
 	if err != nil {
 		return err

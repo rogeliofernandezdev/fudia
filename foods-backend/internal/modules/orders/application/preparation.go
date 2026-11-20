@@ -13,6 +13,17 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 	prepared := make([]domain.PreparedOrderItem, 0, len(inputs))
 	subtotal := 0.0
 	plannedOptionUsage := map[domain.ComboOptionUsageKey]float64{}
+	// Un mismo menú pedido en varias líneas (p. ej. tres «Menú del día» con
+	// segundos distintos) se lee una sola vez: datos y grupos no cambian entre
+	// líneas de la misma petición y cada lectura es una ida y vuelta.
+	type comboLookup struct {
+		name       string
+		basePrice  float64
+		available  bool
+		groups     map[string]*domain.ComboGroup
+		groupOrder []string
+	}
+	combos := map[string]comboLookup{}
 
 	productIDs := make([]string, 0, len(inputs))
 	for _, in := range inputs {
@@ -162,28 +173,32 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 			}
 		}
 
-		var comboName string
-		var basePrice float64
-		var comboAvailable bool
-		err := func() error {
-			var err error
-			comboName, basePrice, comboAvailable, err = a.repo.ComboForOrder(ctx, s, productID)
-			return err
-		}()
-		if errors.Is(err, ErrNotFound) {
-			return nil, 0, orderFailure(apperror.NotFound, "combo_not_found", "El menú o combo ya no existe.")
+		combo, cached := combos[*productID]
+		if !cached {
+			err := func() error {
+				var err error
+				combo.name, combo.basePrice, combo.available, err = a.repo.ComboForOrder(ctx, s, productID)
+				return err
+			}()
+			if errors.Is(err, ErrNotFound) {
+				return nil, 0, orderFailure(apperror.NotFound, "combo_not_found", "El menú o combo ya no existe.")
+			}
+			if err != nil {
+				return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el menú o combo.")
+			}
+			if combo.available {
+				combo.groups, combo.groupOrder, err = a.repo.ComboGroups(ctx, s, *productID)
+				if err != nil {
+					return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar las opciones del menú.")
+				}
+			}
+			combos[*productID] = combo
 		}
-		if err != nil {
-			return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el menú o combo.")
-		}
-		if !comboAvailable {
+		comboName, basePrice := combo.name, combo.basePrice
+		if !combo.available {
 			return nil, 0, orderFailure(apperror.Conflict, "combo_unavailable", comboName+" no está disponible en este momento.")
 		}
-
-		groups, groupOrder, err := a.repo.ComboGroups(ctx, s, *productID)
-		if err != nil {
-			return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar las opciones del menú.")
-		}
+		groups, groupOrder := combo.groups, combo.groupOrder
 		selectedByGroup := map[string][]string{}
 		seen := map[string]bool{}
 		for _, selection := range in.Selections {

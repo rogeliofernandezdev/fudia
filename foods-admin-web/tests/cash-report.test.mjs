@@ -23,7 +23,7 @@ test("el resumen conserva cada producto, cantidades, precio, autor y egreso",()=
 });
 test("PDF real incluye logo y continúa las filas en múltiples páginas",async()=>{
  const builder=compile("modules/operations/cash/infrastructure/cash-report-pdf.ts",name=>name.endsWith("report-format")?format:require(name));
- const logo=new Uint8Array(readFileSync(new URL("../public/assets/images/logo.png",import.meta.url)));
+ const logo=new Uint8Array(readFileSync(new URL("../public/assets/images/logo-mark.png",import.meta.url)));
  const fixture=cashReportFixture(80);fixture.sales[79].name="PRODUCTO FINAL - Piña y limón";
  const blob=builder.buildCashReportPdf(fixture,logo,palette);assert.equal(blob.type,"application/pdf");const buffer=Buffer.from(await blob.arrayBuffer());assert.equal(buffer.subarray(0,5).toString(),"%PDF-");assert.ok((buffer.toString("latin1").match(/\/Type \/Page\b/g)??[]).length>4);assert.match(buffer.toString("latin1"),/\/Subtype \/Image/);
  if(process.env.CASH_REPORT_QA_DIR){mkdirSync(process.env.CASH_REPORT_QA_DIR,{recursive:true});writeFileSync(`${process.env.CASH_REPORT_QA_DIR}/cash-report-stress.pdf`,buffer);writeFileSync(`${process.env.CASH_REPORT_QA_DIR}/cash-report-sample.pdf`,Buffer.from(await builder.buildCashReportPdf(cashReportFixture(),logo,palette).arrayBuffer()));}

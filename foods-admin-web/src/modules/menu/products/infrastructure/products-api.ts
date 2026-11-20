@@ -32,7 +32,7 @@ export async function listAllCategories():Promise<List<Category>>{
  return {...first,items};
 }
 
-export function listProducts(query:ProductQuery){
+export function listProducts(query:ProductQuery,signal?:AbortSignal){
   const params=new URLSearchParams({
     q:query.search,
     categoryId:query.categoryId,
@@ -40,7 +40,7 @@ export function listProducts(query:ProductQuery){
     page:String(query.page),
     pageSize:String(query.pageSize),
   });
-  return apiFetch<List<ProductListItem>>(`products?${params.toString()}`);
+  return apiFetch<List<ProductListItem>>(`products?${params.toString()}`,{signal});
 }
 
 export async function saveProduct(draft:ProductDraft,file:File|null,scopeKey=""){

@@ -57,7 +57,7 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
   const registers=useQuery({
     queryKey:["cash-registers",organization?.id,location?.id,user?.id],
     queryFn:()=>listCashRegisters(),
-    refetchInterval:30000,
+    meta:{live:["cash","payments"],poll:30000},
   });
   const history=useQuery({
     queryKey:["cash-shifts",organization?.id,location?.id,user?.id,q,status,page,size],

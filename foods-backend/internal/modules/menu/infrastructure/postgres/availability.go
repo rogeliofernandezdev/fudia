@@ -63,13 +63,9 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 	return items, total, rows.Err()
 }
 
-func (r *Catalog) ComboAvailable(ctx context.Context, s scope, comboProductID string, day time.Time) (bool, error) {
-	var available bool
-	err := r.db(ctx).QueryRow(ctx, `
-		SELECT NOT EXISTS (
-		  SELECT 1
-		  FROM menu_combo_groups g
-		  WHERE g.combo_product_id=$1 AND g.organization_id=$2 AND g.required
+// comboShortSQL es verdadero cuando un grupo obligatorio del menú (g) no tiene
+// suficientes opciones disponibles hoy en el local $3 (día operativo $4).
+const comboShortSQL = `
 		    AND (
 		      SELECT count(*)
 		      FROM menu_combo_options o
@@ -95,9 +91,45 @@ func (r *Catalog) ComboAvailable(ctx context.Context, s scope, comboProductID st
 		              AND COALESCE(pa.sold_quantity,0) < pa.portion_quantity)
 		          OR (p.quantity_control='inventory' AND COALESCE(sb.quantity,0) > 0)
 		        )
-		    ) < GREATEST(g.min_selections, CASE WHEN g.required THEN 1 ELSE 0 END)
+		    ) < GREATEST(g.min_selections, CASE WHEN g.required THEN 1 ELSE 0 END)`
+
+func (r *Catalog) ComboAvailable(ctx context.Context, s scope, comboProductID string, day time.Time) (bool, error) {
+	var available bool
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT NOT EXISTS (
+		  SELECT 1
+		  FROM menu_combo_groups g
+		  WHERE g.combo_product_id=$1 AND g.organization_id=$2 AND g.required
+		`+comboShortSQL+`
 		)`, comboProductID, s.OrganizationID, s.LocationID, day.Format("2006-01-02")).Scan(&available)
 	return available, err
+}
+
+// BlockedCombos devuelve, de los menús indicados, los que hoy no se pueden vender
+// porque algún grupo obligatorio se quedó sin opciones. Una consulta para toda la
+// página (antes, una por menú en la carta de Concierge y en Disponibilidad).
+func (r *Catalog) BlockedCombos(ctx context.Context, s scope, comboProductIDs []string, day time.Time) (map[string]bool, error) {
+	out := map[string]bool{}
+	if len(comboProductIDs) == 0 {
+		return out, nil
+	}
+	rows, err := r.db(ctx).Query(ctx, `
+		SELECT DISTINCT g.combo_product_id::text
+		FROM menu_combo_groups g
+		WHERE g.combo_product_id=ANY($1::uuid[]) AND g.organization_id=$2 AND g.required
+		`+comboShortSQL, comboProductIDs, s.OrganizationID, s.LocationID, day.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out[id] = true
+	}
+	return out, rows.Err()
 }
 func (r *Catalog) LockAvailabilityProduct(ctx context.Context, s scope, productID string) (string, error) {
 	var quantityControl string

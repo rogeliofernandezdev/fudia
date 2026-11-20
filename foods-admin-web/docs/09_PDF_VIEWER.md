@@ -62,6 +62,15 @@ locales para el iframe; conservan las acciones oficiales de PDF.js.
 - `pdfjs-dist` aporta motor legacy, worker y recursos de la misma versión.
 - `scripts/prepare-pdfjs.mjs` comprueba versiones y genera `public/pdfjs` antes
   de dev, tests y build. Los assets generados no se versionan.
+- El visor carga el motor, el worker y el sandbox minificados (`pdf.min.mjs`,
+  `pdf.worker.min.mjs`, `pdf.sandbox.min.mjs`) y su `viewer.mjs` minificado con
+  esbuild al preparar (849 → 414 KB; el motor y el worker, cerca de la mitad). El
+  original de Mozilla en `vendor/` no cambia.
+- Cada script y hoja del visor lleva `?v=` (versión de PDF.js o huella del archivo
+  propio) y `next.config.ts` los sirve con `Cache-Control: public,
+  max-age=31536000, immutable`; fuentes estándar, CMaps, WASM, perfiles ICC,
+  traducciones e iconos (rutas fijas de PDF.js) con un día de caché. `viewer.html`
+  se revalida siempre. Abrir otro PDF ya no vuelve a pedir el visor.
 - El Dockerfile existente copia `public` al runtime: incluye visor, worker,
   traducciones, fuentes, CMaps y WASM. No usa CDN ni servicios externos.
 - El wrapper Next se carga con `ssr:false`. La API backend no cambia.

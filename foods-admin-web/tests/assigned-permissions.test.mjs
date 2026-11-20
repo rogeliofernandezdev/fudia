@@ -18,7 +18,7 @@ test("la sesión separa menú de acciones para cualquier rol y no autoriza por n
  for(const role of ["Administrador","Cocinero","Mozo","Rol personalizado"]){
   let data={user:{id:"user",name:"Usuario",role,platformAdmin:false},menuAccess:["products"],permissions:[]};
   const {SessionProvider}=compile("src/providers/session-context.tsx",name=>{
-   if(name==="react")return{createContext:()=>({Provider:"Provider"}),useEffect(){},useContext(){}};
+   if(name==="react")return{createContext:()=>({Provider:"Provider"}),useEffect(){},useContext(){},useMemo:factory=>factory()};
    if(name==="@tanstack/react-query")return{useQuery:()=>({data,isError:false,isLoading:false})};
    if(name.startsWith("@/"))return{};
    return require(name);

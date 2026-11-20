@@ -38,7 +38,9 @@ un segundo frontend operativo como proyecto independiente.
 - PostgreSQL como fuente de verdad.
 - REST con OpenAPI versionado.
 - Outbox para eventos que deban publicarse con garantía.
-- WebSocket o SSE para comandas y cocina en tiempo real.
+- SSE para las pantallas en vivo (`GET /v1/admin/events`): PostgreSQL avisa con
+  `pg_notify` qué tema cambió en qué local y la pantalla vuelve a leer por la API;
+  sin canal, cada pantalla sigue con su consulta periódica.
 - Redis únicamente para coordinación efímera demostrable; nunca como verdad.
 
 ## Frontend

@@ -51,12 +51,16 @@ type StockRepository interface {
 	// LockQuantityProducts bloquea en una consulta, en orden de id, los productos
 	// del pedido; los inexistentes no aparecen en el resultado.
 	LockQuantityProducts(ctx context.Context, s scope, productIDs []string) (map[string]domain.QuantityProduct, error)
-	LockPortions(ctx context.Context, s scope, productID string, businessDate string) (*int, int, string, error)
-	UpdateSoldPortions(ctx context.Context, s scope, productID string, businessDate string, nextSold int) (int64, error)
-	LockProductInventory(ctx context.Context, s scope, productID string) (string, error)
+	// Consumo por lotes: cada método resuelve todos los productos o insumos del
+	// pedido en una consulta, bloqueando en orden de id; ApplyStockWrites guarda
+	// porciones, saldos y Kárdex en una sola ida y vuelta.
+	LockPortionsFor(ctx context.Context, s scope, productIDs []string, businessDate string) (map[string]domain.PortionLock, error)
+	LockProductInventories(ctx context.Context, s scope, productIDs []string) (map[string]string, error)
+	LockBalances(ctx context.Context, s scope, itemIDs []string) (map[string]domain.InventoryBalanceLock, error)
+	ApplyStockWrites(ctx context.Context, s scope, w StockWrites) error
 	RecipeModules(context.Context, scope) (bool, bool, error)
 	ActiveRecipes(context.Context, scope, []string) (map[string]domain.ActiveRecipe, error)
-	RecipeIngredients(context.Context, scope, string) ([]domain.RecipeIngredient, error)
+	RecipeIngredientsFor(context.Context, scope, []string) (map[string][]domain.RecipeIngredient, error)
 	NetRecipeUsage(context.Context, scope, string) (map[string]float64, error)
 	SaveBalance(context.Context, scope, string, float64, float64) (int64, error)
 	// TransferDestination returns the destination's canonical id and its name.
@@ -171,7 +175,11 @@ func (a *Stock) movement(ctx context.Context, s scope, productID *string, item, 
 // inflow records stock valued at its own cost while the balance is valued at the
 // resulting average, which differs when an entry brings a new cost.
 func (a *Stock) inflow(ctx context.Context, s scope, productID *string, item, kind string, delta, balance, cost, average float64, source, sourceID, note string) error {
-	return a.repo.SaveMovement(ctx, s, Movement{ProductID: productID, ItemID: item, Type: kind, Delta: delta, Balance: balance, UnitCost: cost, ValueDelta: math.Round(delta*cost*10000) / 10000, BalanceValue: math.Round(balance*average*10000) / 10000, SourceType: source, SourceID: sourceID, Note: note})
+	return a.repo.SaveMovement(ctx, s, valuedMovement(productID, item, kind, delta, balance, cost, average, source, sourceID, note))
+}
+
+func valuedMovement(productID *string, item, kind string, delta, balance, cost, average float64, source, sourceID, note string) Movement {
+	return Movement{ProductID: productID, ItemID: item, Type: kind, Delta: delta, Balance: balance, UnitCost: cost, ValueDelta: math.Round(delta*cost*10000) / 10000, BalanceValue: math.Round(balance*average*10000) / 10000, SourceType: source, SourceID: sourceID, Note: note}
 }
 
 // weightedAverage blends an inflow into the moving average cost.

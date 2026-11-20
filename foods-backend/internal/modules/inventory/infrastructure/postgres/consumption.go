@@ -43,34 +43,6 @@ func (r *Stock) LockQuantityProducts(ctx context.Context, s scope, productIDs []
 	}
 	return out, rows.Err()
 }
-func (r *Stock) LockPortions(ctx context.Context, s scope, productID string, businessDate string) (*int, int, string, error) {
-	var portionQuantity *int
-	var soldQuantity int
-	var manualStatus string
-	err := r.db(ctx).QueryRow(ctx, `
-				SELECT portion_quantity,sold_quantity,manual_status
-				FROM product_availability
-				WHERE organization_id=$1 AND location_id=$2 AND product_id=$3 AND business_date=$4::date
-				FOR UPDATE`, s.OrganizationID, s.LocationID, productID, businessDate).Scan(&portionQuantity, &soldQuantity, &manualStatus)
-	return portionQuantity, soldQuantity, manualStatus, stockError(err)
-}
-func (r *Stock) UpdateSoldPortions(ctx context.Context, s scope, productID string, businessDate string, nextSold int) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `
-				UPDATE product_availability
-				SET sold_quantity=$5,updated_at=now()
-				WHERE organization_id=$1 AND location_id=$2 AND product_id=$3 AND business_date=$4::date`,
-		s.OrganizationID, s.LocationID, productID, businessDate, nextSold)
-	return tag.RowsAffected(), stockError(err)
-}
-func (r *Stock) LockProductInventory(ctx context.Context, s scope, productID string) (string, error) {
-	var inventoryItemID string
-	err := r.db(ctx).QueryRow(ctx, `
-				SELECT id
-				FROM inventory_items
-				WHERE organization_id=$1 AND product_id=$2 AND active
-				FOR UPDATE`, s.OrganizationID, productID).Scan(&inventoryItemID)
-	return inventoryItemID, stockError(err)
-}
 func (r *Stock) RecipeModules(ctx context.Context, s scope) (bool, bool, error) {
 	var recipes, inventory bool
 	err := r.db(ctx).QueryRow(ctx, `SELECT COALESCE((SELECT active FROM organization_modules WHERE organization_id=$1 AND module_key='recetas'),true),COALESCE((SELECT active FROM organization_modules WHERE organization_id=$1 AND module_key='inventario'),true)`, s.OrganizationID).Scan(&recipes, &inventory)
@@ -90,22 +62,6 @@ func (r *Stock) ActiveRecipes(ctx context.Context, s scope, productIDs []string)
 			return nil, err
 		}
 		out[productID] = v
-	}
-	return out, rows.Err()
-}
-func (r *Stock) RecipeIngredients(ctx context.Context, s scope, recipeID string) ([]domain.RecipeIngredient, error) {
-	rows, err := r.db(ctx).Query(ctx, `SELECT inventory_item_id::text,quantity::float8,waste_percent::float8 FROM product_recipe_items WHERE recipe_id=$1 AND organization_id=$2 ORDER BY inventory_item_id`, recipeID, s.OrganizationID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []domain.RecipeIngredient{}
-	for rows.Next() {
-		var v domain.RecipeIngredient
-		if err = rows.Scan(&v.ItemID, &v.Quantity, &v.WastePercent); err != nil {
-			return nil, err
-		}
-		out = append(out, v)
 	}
 	return out, rows.Err()
 }

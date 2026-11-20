@@ -200,27 +200,32 @@ func (r *Catalog) Combo(ctx context.Context, s scope, id string) (domain.Combo, 
 		return out, err
 	}
 	rows.Close()
-	for i := range out.Groups {
-		g := &out.Groups[i]
-		options, err := r.db(ctx).Query(ctx, `SELECT o.option_product_id,p.name,o.surcharge::text,o.default_quota FROM menu_combo_options o JOIN products p ON p.id=o.option_product_id WHERE o.group_id=$1 AND o.organization_id=$2 ORDER BY o.sort_order`, g.ID, s.OrganizationID)
-		if err != nil {
+	if len(out.Groups) == 0 {
+		return out, nil
+	}
+	// Las opciones de todos los grupos en una consulta (antes, una por grupo).
+	index := map[string]int{}
+	groupIDs := make([]string, 0, len(out.Groups))
+	for i, g := range out.Groups {
+		index[g.ID] = i
+		groupIDs = append(groupIDs, g.ID)
+	}
+	options, err := r.db(ctx).Query(ctx, `SELECT o.group_id::text,o.option_product_id,p.name,o.surcharge::text,o.default_quota FROM menu_combo_options o JOIN products p ON p.id=o.option_product_id WHERE o.group_id=ANY($1::uuid[]) AND o.organization_id=$2 ORDER BY o.group_id,o.sort_order`, groupIDs, s.OrganizationID)
+	if err != nil {
+		return out, err
+	}
+	defer options.Close()
+	for options.Next() {
+		var groupID string
+		var o domain.ComboOption
+		if err = options.Scan(&groupID, &o.ProductID, &o.Name, &o.Surcharge, &o.Quota); err != nil {
 			return out, err
 		}
-		for options.Next() {
-			var o domain.ComboOption
-			if err = options.Scan(&o.ProductID, &o.Name, &o.Surcharge, &o.Quota); err != nil {
-				options.Close()
-				return out, err
-			}
-			g.Options = append(g.Options, o)
-		}
-		err = options.Err()
-		options.Close()
-		if err != nil {
-			return out, err
+		if i, ok := index[groupID]; ok {
+			out.Groups[i].Options = append(out.Groups[i].Options, o)
 		}
 	}
-	return out, nil
+	return out, options.Err()
 }
 func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.Time) (domain.OrderCombo, bool, error) {
 	out := domain.OrderCombo{ID: id, Groups: []domain.OrderComboGroup{}}

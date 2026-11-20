@@ -87,14 +87,14 @@ export function SalonManager({initialOrderId}:{initialOrderId?:string}={}){
     queryKey:["salon-floor"],
     queryFn:getSalonFloor,
     // React Query refreshes only this cached resource, never the entire page.
-    refetchInterval:10000,
+    meta:{live:["orders","kitchen","payments","salon"],poll:10000},
     refetchIntervalInBackground:false,
   });
   const detail=useQuery({
     queryKey:["order",detailId],
     queryFn:()=>getSalonOrder(detailId!),
     enabled:Boolean(detailId),
-    refetchInterval:query=>query.state.data?.completedAt?false:10000,
+    meta:{live:["orders","kitchen","payments"],poll:query=>(query.state.data as {completedAt?:string|null}|undefined)?.completedAt?false:10000},
   });
 
   const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","products","sales","staff-notices"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);

@@ -7,11 +7,21 @@ export function listCombos(page:number,pageSize:number,q:string,status:string){
   return apiFetch<{items:Combo[];total:number;page:number;pageSize:number}>(`combos?${params.toString()}`);
 }
 export async function listComboProducts(){
-  const items:Product[]=[];
-  for(let page=1;;page++){
-    const result=await apiFetch<{items:Product[];total:number}>(`products?page=${page}&pageSize=100&status=active`);
+  const pageOf=(page:number)=>apiFetch<{items:Product[];total:number}>(`products?page=${page}&pageSize=100&status=active`);
+  const first=await pageOf(1);
+  const items:Product[]=[...first.items];
+  if(!first.items.length||items.length>=first.total)return {items};
+  if(Number.isFinite(first.total)){
+    // Con el total conocido, las páginas restantes se piden a la vez en vez de una
+    // tras otra (cada petición cruza el BFF y el API).
+    const rest=await Promise.all(Array.from({length:Math.ceil(first.total/100)-1},(_,index)=>pageOf(index+2)));
+    for(const result of rest)items.push(...result.items);
+    return {items};
+  }
+  for(let page=2;;page++){
+    const result=await pageOf(page);
     items.push(...result.items);
-    if(!result.items.length||items.length>=result.total||(!Number.isFinite(result.total)&&result.items.length<100))return {items};
+    if(!result.items.length||result.items.length<100)return {items};
   }
 }
 /** Solo las opciones elegidas, para refrescar sus cantidades sin volver a descargar toda la carta (lotes de 100). */

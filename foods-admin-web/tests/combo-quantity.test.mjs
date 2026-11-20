@@ -184,7 +184,7 @@ test("las cantidades del selector se aíslan por empresa/local y se refrescan co
  // La carta completa se descarga al abrir; cada 10 s solo se refrescan las opciones elegidas.
  assert.equal(query(a,"combo-picker").refetchInterval,undefined);assert.equal(query(a,"combo-picker").enabled,true);
  const chosen=query(a,"combo-picker-chosen");
- assert.equal(chosen.refetchInterval,10000);
+ assert.equal(chosen.meta.poll,10000);assert.deepEqual([...chosen.meta.live],["availability","catalog"]);
  assert.notDeepEqual(chosen.queryKey,query(b,"combo-picker-chosen").queryKey);assert.notDeepEqual(chosen.queryKey,query(c,"combo-picker-chosen").queryKey);
 });
 

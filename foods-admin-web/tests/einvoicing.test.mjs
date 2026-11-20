@@ -76,7 +76,8 @@ test("el detalle descarga XML y CDR por el BFF sin corromper binarios",()=>{
  const api=read("modules/einvoicing/infrastructure/einvoicing-api.ts");
  assert.ok(api.includes("/api/admin/fiscal-documents/${encodeURIComponent(id)}/files/${kind}"));
  const proxy=read("app/api/admin/[...path]/route.ts");
- assert.ok(proxy.includes("await response.arrayBuffer()")&&proxy.includes("Content-Disposition"));
+ // El cuerpo se transmite como bytes (sin pasar por texto) y conserva la descarga.
+ assert.ok(proxy.includes("new NextResponse(response.body,")&&!proxy.includes("response.text()")&&proxy.includes("Content-Disposition"));
 });
 
 test("el módulo Facturación es la única activación: sin segundo interruptor y con aviso en el cobro",()=>{

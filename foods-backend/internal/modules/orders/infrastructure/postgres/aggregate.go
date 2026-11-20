@@ -20,7 +20,7 @@ const netPaidSQL = `
 	COALESCE((
 	  SELECT sum(
 	    p.amount
-	    - COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+	    - COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)
 	  )
 	  FROM payments p
 	  WHERE p.order_id=o.id AND p.organization_id=o.organization_id AND p.location_id=o.location_id

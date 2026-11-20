@@ -18,21 +18,25 @@ func (a *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string) 
 		return nil, menuFailure(apperror.Unavailable, "concierge_unavailable", "No pudimos cargar la carta.")
 	}
 	items := []domain.PublicMenuItem{}
+	combos := []string{}
 	for _, v := range raw {
 		item := v.Item
 		resolved := domain.ResolveAvailability(v.Availability, day.Format("2006-01-02"))
 		item.Status = resolved.Status
 		item.Remaining = resolved.Remaining
 		if item.IsCombo && item.Status == "available" {
-			ok, err := a.repo.ComboAvailable(ctx, s, item.ProductID, day)
-			if err != nil {
-				return nil, menuFailure(apperror.Unavailable, "concierge_unavailable", "No pudimos validar un menú.")
-			}
-			if !ok {
-				item.Status = "sold_out"
-			}
+			combos = append(combos, item.ProductID)
 		}
 		items = append(items, item)
+	}
+	blocked, err := a.repo.BlockedCombos(ctx, s, combos, day)
+	if err != nil {
+		return nil, menuFailure(apperror.Unavailable, "concierge_unavailable", "No pudimos validar un menú.")
+	}
+	for i := range items {
+		if blocked[items[i].ProductID] {
+			items[i].Status = "sold_out"
+		}
 	}
 	ids := make([]string, 0, len(items))
 	for _, p := range items {

@@ -253,6 +253,18 @@ func (r *Payments) OperationInflow(ctx context.Context, s scope, operation domai
 	return tag.RowsAffected(), billingError(err)
 }
 
+// cashShiftFrom suma ingresos, egresos y movimientos del turno en una sola pasada
+// sobre cash_movements; antes eran cinco subconsultas por turno (dos repetidas).
+// Toda consulta que selecciona cashShiftColumns debe partir de aquí.
+const cashShiftFrom = `FROM cash_shifts cs
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(sum(cm.amount) FILTER (WHERE cm.movement_type='income'),0) AS income,
+		         COALESCE(sum(cm.amount) FILTER (WHERE cm.movement_type='expense'),0) AS expense,
+		         count(*) AS movements
+		  FROM cash_movements cm
+		  WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout')
+		) shift_totals ON true`
+
 const cashShiftColumns = `
 	cs.id::text,
 	cs.code,
@@ -261,12 +273,12 @@ const cashShiftColumns = `
 	cr.blind_close,
 	cs.status,
 	cs.opening_amount::text,
-	COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='income'),0)::text,
-	COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='expense'),0)::text,
+	shift_totals.income::text,
+	shift_totals.expense::text,
 	(
 	  cs.opening_amount
-	  + COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='income'),0)
-	  - COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='expense'),0)
+	  + shift_totals.income
+	  - shift_totals.expense
 	)::text,
 	CASE WHEN cs.closing_expected_amount IS NULL THEN NULL ELSE cs.closing_expected_amount::text END,
 	CASE WHEN cs.closing_counted_amount IS NULL THEN NULL ELSE cs.closing_counted_amount::text END,
@@ -289,7 +301,7 @@ const cashShiftColumns = `
 	cs.business_date::text,
 	to_char(cs.opened_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
 	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END,
-	(SELECT count(*) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout'))
+	shift_totals.movements
 `
 
 func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
@@ -324,7 +336,7 @@ func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
 func (r *Payments) Shift(ctx context.Context, s scope, id string) (domain.CashShiftView, error) {
 	shift, err := scanCashShift(r.db(ctx).QueryRow(ctx, `
 		SELECT `+cashShiftColumns+`
-		FROM cash_shifts cs
+		`+cashShiftFrom+`
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users opened ON opened.id=cs.opened_by AND opened.organization_id=cs.organization_id
 		LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
@@ -335,7 +347,7 @@ func (r *Payments) Shift(ctx context.Context, s scope, id string) (domain.CashSh
 func (r *Payments) OpenShiftForRegister(ctx context.Context, s scope, registerID string) (domain.CashShiftView, error) {
 	shift, err := scanCashShift(r.db(ctx).QueryRow(ctx, `
 		SELECT `+cashShiftColumns+`
-		FROM cash_shifts cs
+		`+cashShiftFrom+`
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users opened ON opened.id=cs.opened_by AND opened.organization_id=cs.organization_id
 		LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
@@ -347,7 +359,7 @@ func (r *Payments) OpenShiftForRegister(ctx context.Context, s scope, registerID
 func (r *Payments) UserShift(ctx context.Context, s scope) (domain.CashShiftView, error) {
 	shift, err := scanCashShift(r.db(ctx).QueryRow(ctx, `
 		SELECT `+cashShiftColumns+`
-		FROM cash_shifts cs
+		`+cashShiftFrom+`
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users opened ON opened.id=cs.opened_by AND opened.organization_id=cs.organization_id
 		LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
@@ -450,7 +462,7 @@ func (r *Payments) Shifts(ctx context.Context, s scope, f application.CashFilter
 
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT `+cashShiftColumns+`
-		FROM cash_shifts cs
+		`+cashShiftFrom+`
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users opened ON opened.id=cs.opened_by AND opened.organization_id=cs.organization_id
 		LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
@@ -550,7 +562,7 @@ func (r *Payments) BuildReport(ctx context.Context, s scope, id string) (domain.
 	out := domain.CashShiftReport{Version: 1, GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano), Sales: []domain.CashReportSale{}, Payments: []domain.CashReportPayment{}, Refunds: []domain.CashReportPayment{}, Methods: []domain.CashReportMethod{}, Counts: []domain.CashReportCount{}}
 	var err error
 	out.Shift, err = scanCashShift(r.db(ctx).QueryRow(ctx, `SELECT `+cashShiftColumns+`
- FROM cash_shifts cs JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
+ `+cashShiftFrom+` JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
  JOIN users opened ON opened.id=cs.opened_by AND opened.organization_id=cs.organization_id
  LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
  WHERE cs.id=$1 AND cs.organization_id=$2 AND cs.location_id=$3`, id, s.OrganizationID, s.LocationID))

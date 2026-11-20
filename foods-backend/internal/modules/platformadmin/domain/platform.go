@@ -187,6 +187,8 @@ var PaymentStandingOptions = []OptionView{
 
 const SubscriptionDueSoonDays = 7
 
+var whatsappPhonePattern = regexp.MustCompile(`^\+?[0-9 ()-]+$`)
+
 func NormalizeTenantOnboardingInput(in *TenantOnboardingInput) {
 	in.LegalName = strings.TrimSpace(in.LegalName)
 	in.TradeName = strings.TrimSpace(in.TradeName)
@@ -248,7 +250,7 @@ func ValidatePlatformWhatsAppChannel(in *PlatformWhatsAppChannelInput) (string, 
 		in.PhoneNumber = ""
 	} else {
 		phone := WhatsAppDigits(in.PhoneNumber)
-		if !regexp.MustCompile(`^\+?[0-9 ()-]+$`).MatchString(in.PhoneNumber) || len(phone) < 8 || len(phone) > 15 || phone[0] == '0' || len(in.PhoneNumber) > 40 {
+		if !whatsappPhonePattern.MatchString(in.PhoneNumber) || len(phone) < 8 || len(phone) > 15 || phone[0] == '0' || len(in.PhoneNumber) > 40 {
 			return "invalid_phone", "Ingresa un número de WhatsApp válido."
 		}
 		in.PhoneNumber = "+" + phone

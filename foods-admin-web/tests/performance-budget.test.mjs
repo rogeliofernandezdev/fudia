@@ -44,5 +44,8 @@ test("rendimiento: dependencias pesadas de interacción se cargan bajo demanda",
 test("rendimiento: las imágenes de interfaz usan versiones livianas",()=>{
   for(const [asset,limit] of [["public/assets/images/logo-mark.png",40_000],["public/assets/images/login-brand.png",120_000]])assert.ok(statSync(new URL(asset,root)).size<limit,`${asset} supera ${limit} bytes`);
   assert.match(read("src/design-system/logo.tsx"),/src="\/assets\/images\/logo-mark\.png"/);
+  // El PDF de caja y los QR de mesas dibujan el logo a 12 mm y 52 px: el original de
+  // 1254 px (889 KB) se decodificaba y volvía a comprimir dentro de cada PDF.
+  for(const file of ["src/modules/operations/cash/infrastructure/cash-report-pdf.ts","src/modules/operations/tables/presentation/tables-manager.tsx"])assert.doesNotMatch(read(file),/assets\/images\/logo\.png/);
   assert.match(read("src/modules/auth/presentation/login-form.tsx"),/src="\/assets\/images\/login-brand\.png" alt="fudIA" width=\{360\} height=\{240\}/);
 });

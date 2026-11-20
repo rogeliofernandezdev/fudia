@@ -134,7 +134,7 @@ y usuario y refresco al recuperar foco. «Nuevo local» consulta `maxLocations`
 y el uso activo devueltos por el API; no deduce capacidad por nombre de plan,
 filas de una página o total de locales inactivos. La carga, el error y la recarga
 que sigue a un cambio (alta, edición o desactivación invalidan la suscripción)
-bloquean el alta; el refresco periódico de 30 s ya no deshabilita los botones un
+bloquean el alta; el refresco periódico (cada 60 s) ya no deshabilita los botones un
 instante (`isInvalidated` de la consulta). El error ofrece reintento. Crear, editar y desactivar invalidan el uso.
 El backend conserva la validación transaccional definitiva del límite.
 
@@ -176,6 +176,54 @@ Refrescos y cargas revisados (2026-11-04):
   de CSS. Ninguna de esas rutas trae ya `react-select` ni el CSS de Mapbox al abrir.
 - Se mantienen a propósito: el perfil del restaurante consulta cada 60 s para
   renovar URLs firmadas antes de que expiren, y Productos cada 10 s con el listado visible.
+
+Revisión de rendimiento (2026-11-20):
+
+- Pantallas en vivo por SSE: ver «Actualizaciones en vivo». Con el canal
+  conectado, Cocina, Salón, comanda, Pedidos, POS, Caja, Ventas, Reservas,
+  Dashboard, Productos, Menús, campana, avisos y pagos de Fudia Pay se refrescan al
+  confirmarse un cambio del local y su consulta periódica baja a 60 s; los
+  intervalos de 10, 15 y 30 s de este documento son los de respaldo sin canal.
+- `regional-format` reutiliza un `Intl.NumberFormat`/`DateTimeFormat` por locale y
+  opciones: crearlos costaba más que usarlos en cada celda de dinero y fecha.
+- El proxy `/api/admin/[...path]` transmite el cuerpo del API tal como llega (también
+  binarios) en vez de esperarlo completo, y cancela la llamada al API si el navegador
+  abandona la petición.
+- Los listados con búsqueda o paginación (Pedidos, Ventas, POS, Clientes,
+  Productos y la carta de la comanda) pasan el `signal` de TanStack: cambiar de
+  filtro cancela la petición anterior en vez de dejarla correr.
+- El selector de opciones del editor de menús descarga las páginas restantes de la
+  carta a la vez (conocido el total) y no la vuelve a pedir al recuperar foco; las
+  opciones elegidas siguen refrescándose solas.
+- El contexto de sesión memoiza su valor: los consumidores de `useSession()` no se
+  vuelven a renderizar cuando el proveedor se renderiza sin cambios.
+- El PDF de cierre de caja y los QR de mesas usan `logo-mark.png` (16 KB) en lugar
+  del original de 1254 px (889 KB) que se decodificaba y comprimía en cada PDF.
+- La suscripción (plan y cupos) se revisa cada 60 s y al recuperar foco si el dato
+  tiene más de un minuto, en lugar de cada 30 s y en cada foco.
+
+## Actualizaciones en vivo
+
+`LiveUpdates` (montado en el layout de administración) abre
+`EventSource("/api/admin/events")` para el local de la sesión; la ruta BFF
+`app/api/admin/events` reenvía el flujo del API sin plazo ni almacenamiento y lo
+corta al cerrar la pestaña o cambiar de local. Cada evento `change` trae los temas
+confirmados (`orders`, `kitchen`, `payments`, `cash`, `notices`, `pay`,
+`availability`, `catalog`, `delivery`, `salon`, `reservations`) y solo invalida las
+consultas que los declararon.
+
+Una consulta en vivo no fija `refetchInterval`: declara
+`meta:{live:[temas],poll:intervalo}` (`poll` puede ser una función del estado, p. ej.
+`false` al completar el pedido; `live` también, como la carta de la comanda, que con
+varias páginas solo se recarga por cambios de productos). El `refetchInterval` por
+defecto del `QueryClient` (`liveRefetchInterval`) usa `poll` sin canal y
+`max(poll, 60 s)` con canal, como respaldo por si se pierde un aviso. Al conectar o
+perder el canal se refrescan todas las consultas en vivo, con `cancelRefetch:false`
+para reutilizar una lectura en curso. Si el API responde 503 (no está escuchando a
+la base) o la conexión cae, las pantallas siguen con su consulta normal y el canal
+se reintenta con espera creciente (5 → 60 s). La sesión, el perfil, el panel de
+reparto y el chat web conservan su propia consulta: no dependen del local de la
+sesión de administración.
 
 ## Fechas de venta en Menús y combos
 

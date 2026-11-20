@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"context"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"strings"
@@ -251,20 +252,29 @@ func (r *Orders) LockOptionQuota(ctx context.Context, s scope, key domain.ComboO
 func (r *Orders) ExternalOptionUsage(ctx context.Context, s scope, key domain.ComboOptionUsageKey, existingOrderID string) (float64, error) {
 	var externalUsage float64
 	err := r.db(ctx).QueryRow(ctx, `
+			WITH d AS (
+			  SELECT date_trunc('day',now() AT TIME ZONE l.timezone) AT TIME ZONE l.timezone AS day_start
+			  FROM locations l WHERE l.id=$5 AND l.organization_id=$1
+			)
 			SELECT COALESCE(sum(oi.qty),0)::float8
 			FROM order_item_combo_selections ssel
 			JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
 			JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
-			JOIN locations l ON l.id=ord.location_id AND l.organization_id=ord.organization_id
 			WHERE ssel.organization_id=$1
 			  AND oi.product_id=$2
 			  AND lower(ssel.group_name)=lower($3)
 			  AND ssel.option_product_id=$4
+			  AND ord.organization_id=$1
 			  AND ord.location_id=$5
 			  AND ord.status<>'cancelado'
-			  AND ord.created_at >= (date_trunc('day',now() AT TIME ZONE l.timezone) AT TIME ZONE l.timezone)
-			  AND ord.created_at < ((date_trunc('day',now() AT TIME ZONE l.timezone) + interval '1 day') AT TIME ZONE l.timezone)
-			  AND ($6='' OR ord.id::text<>$6)`,
-		s.OrganizationID, key.ComboProductID, key.GroupName, key.ProductID, s.LocationID, existingOrderID).Scan(&externalUsage)
+			  -- Los límites del día local salen de una subconsulta de una fila para
+			  -- que el planificador recorra solo los pedidos de hoy con
+			  -- orders_location_created_idx. Calculados en el JOIN con locations
+			  -- quedaban como filtro y la consulta leía las selecciones históricas de
+			  -- la opción mientras la opción está bloqueada (FOR UPDATE).
+			  AND ord.created_at >= (SELECT day_start FROM d)
+			  AND ord.created_at < (SELECT day_start + interval '1 day' FROM d)
+			  AND ($6::uuid IS NULL OR ord.id<>$6::uuid)`,
+		s.OrganizationID, key.ComboProductID, key.GroupName, key.ProductID, s.LocationID, database.UUIDArg(existingOrderID)).Scan(&externalUsage)
 	return externalUsage, orderError(err)
 }

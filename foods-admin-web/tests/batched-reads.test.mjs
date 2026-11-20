@@ -46,6 +46,7 @@ test("la comanda usa el lote de menús y el catálogo con varias páginas no las
   assert.ok(view.includes("listOrderComboDetails(selectedComboIds)"));
   assert.ok(!view.includes("Promise.all(selectedComboIds.map"));
   const catalog=read("src/modules/operations/salon/presentation/comanda-catalog.tsx");
-  assert.match(catalog,/refetchInterval:query=>\(query\.state\.data\?\.pages\.length\?\?1\)>1\?false:10000/);
+  // Con varias páginas no hay polling ni recarga por disponibilidad: solo un cambio de productos.
+  assert.ok(catalog.includes('meta:{live:query=>loadedPageCount(query.state.data)>1?["catalog"]:["availability","catalog"],poll:query=>loadedPageCount(query.state.data)>1?false:10000}'));
   assert.ok(catalog.includes('queryKey:["order-catalog-availability"'));
 });

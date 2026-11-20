@@ -11,3 +11,11 @@ type ActiveRecipe struct {
 	ID    string
 	Yield float64
 }
+
+// PortionLock es la disponibilidad por porciones de un producto en el día
+// operativo, bloqueada para descontar o devolver lo vendido.
+type PortionLock struct {
+	PortionQuantity *int
+	SoldQuantity    int
+	ManualStatus    string
+}

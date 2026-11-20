@@ -62,7 +62,7 @@ test("productos: caché por local y refresco del saldo sin cambiar paginación",
  assert.equal(query.queryKey[1],"local-a");
  assert.equal(b.queries.find(query=>query.queryKey[0]==="products").queryKey[1],"local-b");
  assert.equal(query.refetchOnWindowFocus,"always");
- assert.equal(query.refetchInterval,10000);
+ assert.equal(query.meta.poll,10000);assert.deepEqual([...query.meta.live],["availability","catalog"]);
 });
 
 test("productos: skeleton alineado a siete columnas sin segunda línea de descripción",()=>{

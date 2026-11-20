@@ -36,7 +36,7 @@ export function PayNotificationsPanel({dateTime}:Props){
     queryKey:["pay-notifications",status,provider,page,size],
     queryFn:()=>listPayNotificationPage({status,provider,page,size}),
     placeholderData:previous=>previous,
-    refetchInterval:query=>query.state.data?.items.some(item=>item.status==="detected")?10000:30000,
+    meta:{live:["pay"],poll:query=>(query.state.data as {items?:Array<{status:string}>}|undefined)?.items?.some(item=>item.status==="detected")?10000:30000},
   });
 
   const done=(message:string)=>{

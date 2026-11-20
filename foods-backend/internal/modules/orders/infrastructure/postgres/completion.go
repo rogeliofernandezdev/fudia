@@ -18,7 +18,7 @@ func (r *Orders) CompletionPaid(ctx context.Context, s scope, id string) (float6
 	var paid float64
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT COALESCE(sum(
-		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)
 		),0)::float8
 		FROM payments p
 		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3

@@ -49,7 +49,7 @@ export function DashboardView(){
   const settings=useSettings();
   const[period,setPeriod]=useState<DashboardPeriodKey>("today");
   const[ranking,setRanking]=useState<Ranking>("products");
-  const query=useQuery({queryKey:["dashboard",organization?.id,location?.id,period],queryFn:()=>getDashboard(period),refetchInterval:30000,placeholderData:keepPreviousData});
+  const query=useQuery({queryKey:["dashboard",organization?.id,location?.id,period],queryFn:()=>getDashboard(period),meta:{live:["orders","payments","cash","availability","reservations"],poll:30000},placeholderData:keepPreviousData});
   const data=query.data;
   const money=(value:string|number)=>{
     const n=Number(value||0);

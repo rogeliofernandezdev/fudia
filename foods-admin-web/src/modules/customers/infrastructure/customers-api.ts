@@ -9,7 +9,7 @@ export type CustomersQuery={
   pageSize:number;
 };
 
-export function listCustomers(query:CustomersQuery){
+export function listCustomers(query:CustomersQuery,signal?:AbortSignal){
   const params=new URLSearchParams({
     q:query.q,
     status:query.status,
@@ -17,7 +17,7 @@ export function listCustomers(query:CustomersQuery){
     page:String(query.page),
     pageSize:String(query.pageSize),
   });
-  return apiFetch<CustomersResponse>(`customers?${params.toString()}`);
+  return apiFetch<CustomersResponse>(`customers?${params.toString()}`,{signal});
 }
 
 export function getCustomer(id:string){

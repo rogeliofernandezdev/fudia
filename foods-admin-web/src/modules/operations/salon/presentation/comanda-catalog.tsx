@@ -31,6 +31,9 @@ function categoryTone(id:string){
  * Las páginas del API se cargan al llegar al final de la lista.
  * Enter en el buscador agrega el primer plato disponible.
  */
+
+// Páginas cargadas de la carta (infinite query); 1 mientras no hay datos.
+const loadedPageCount=(data:unknown)=>(data as {pages?:unknown[]}|undefined)?.pages?.length??1;
 export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityByProduct={},onAvailability,onPick,onConfigureCombo,disabled=false}:{
   qtyByProduct:Record<string,number>;
   reservedByProduct?:Record<string,number>;
@@ -55,7 +58,7 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityBy
   const cats=categories.data?.items??[];
   const salonCatalog=useInfiniteQuery({
     queryKey:["order-catalog","salon",cat,q,pageSize],
-    queryFn:({pageParam})=>listSalonProducts({categoryId:cat,q,page:pageParam,pageSize}),
+    queryFn:({pageParam,signal})=>listSalonProducts({categoryId:cat,q,page:pageParam,pageSize},signal),
     initialPageParam:1,
     getNextPageParam:(last,all)=>all.length*pageSize<last.total?all.length+1:undefined,
     enabled:!combos,
@@ -63,13 +66,15 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityBy
     // Con una sola página, refrescarla cuesta una petición. Con más páginas, TanStack
     // volvería a pedirlas todas cada 10 s: se refresca solo la disponibilidad de lo
     // cargado (loadedAvailability, lotes de 100) y la carta completa al recuperar foco.
-    refetchInterval:query=>(query.state.data?.pages.length??1)>1?false:10000,
+    // Con varias páginas, un aviso de disponibilidad tampoco recarga la carta: lo
+    // cubre loadedAvailability; solo un cambio de productos la vuelve a leer.
+    meta:{live:query=>loadedPageCount(query.state.data)>1?["catalog"]:["availability","catalog"],poll:query=>loadedPageCount(query.state.data)>1?false:10000},
     refetchIntervalInBackground:false,
     refetchOnWindowFocus:"always",
   });
   const comboCatalog=useInfiniteQuery({
     queryKey:["order-catalog","combos",q,pageSize],
-    queryFn:({pageParam})=>listOrderCombos({q,page:pageParam,pageSize}),
+    queryFn:({pageParam,signal})=>listOrderCombos({q,page:pageParam,pageSize},signal),
     initialPageParam:1,
     getNextPageParam:(last,all)=>all.length*pageSize<last.total?all.length+1:undefined,
     enabled:combos,
@@ -82,7 +87,7 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityBy
     queryKey:["order-catalog-availability",cat,q,loadedIds],
     queryFn:()=>listSelectedProductAvailability(loadedIds),
     enabled:!combos&&loadedIds.length>0,
-    refetchInterval:10000,
+    meta:{live:["availability","catalog"],poll:10000},
     refetchIntervalInBackground:false,
     placeholderData:previous=>previous,
   });
@@ -198,7 +203,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
     return result;
   });
   const money=useMoney();
-  const combo=useQuery({queryKey:["order-combo",comboId],queryFn:()=>getOrderCombo(comboId),staleTime:0,refetchOnMount:"always",refetchInterval:10000,refetchIntervalInBackground:false});
+  const combo=useQuery({queryKey:["order-combo",comboId],queryFn:()=>getOrderCombo(comboId),staleTime:0,refetchOnMount:"always",meta:{live:["availability","catalog","orders"],poll:10000},refetchIntervalInBackground:false});
   const data=combo.data;
   const initialMapped=useRef(false);
 

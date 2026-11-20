@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
+	"github.com/jackc/pgx/v5"
 	"strings"
 )
 
@@ -18,31 +19,52 @@ func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (appli
 	// scopeWhere es búsqueda + canal; el estado se suma aparte para saber qué estados existen en ese alcance.
 	scopeWhere := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4 OR ($4 IN ('recojo','mostrador') AND channel IN ('recojo','mostrador')) OR ($4='salon' AND channel='whatsapp'))`
 	where := scopeWhere + ` AND ($5='' OR ($5='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=$5)`
-	var total int
-	if err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status).Scan(&total); err != nil {
-		return out, err
-	}
-	rows, err := r.db(ctx).Query(ctx, `SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY `+listOrderSQL+` LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
-	if err != nil {
-		return out, err
-	}
-	defer rows.Close()
-	items := []domain.Order{}
-	for rows.Next() {
-		o, scanErr := scanOrder(rows)
-		if scanErr != nil {
-			return out, scanErr
-		}
-		items = append(items, o)
-	}
 	// Estados con al menos un pedido para la búsqueda y el canal actuales: una sonda EXISTS por estado del
 	// catálogo usa el índice (organización, local, estado) sin recorrer todo el historial.
 	catalog := make([]string, 0, len(domain.Statuses))
 	for _, option := range domain.Statuses {
 		catalog = append(catalog, option["value"])
 	}
+	// Las cinco lecturas son independientes y van en un pgx.Batch: una ida y vuelta
+	// en vez de cinco (Pedidos refresca el listado cada 10 s) y la misma instantánea.
+	batch := &pgx.Batch{}
+	batch.Queue(`SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status)
+	batch.Queue(`SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY `+listOrderSQL+` LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
+	batch.Queue(`SELECT st FROM unnest($5::text[]) st WHERE EXISTS(SELECT 1 FROM orders WHERE `+scopeWhere+` AND status=st)`, s.OrganizationID, s.LocationID, q, channel, catalog)
+	batch.Queue(`SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL)) GROUP BY channel`, s.OrganizationID, s.LocationID)
+	batch.Queue(`
+		SELECT p.currency_symbol
+		FROM locations l
+		JOIN organization_fiscal_profiles p
+		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		WHERE l.id=$1 AND l.organization_id=$2 AND l.active
+	`, s.LocationID, s.OrganizationID)
+	results := r.db(ctx).SendBatch(ctx, batch)
+	defer results.Close()
+
+	var total int
+	if err := results.QueryRow().Scan(&total); err != nil {
+		return out, err
+	}
+	items := []domain.Order{}
+	rows, err := results.Query()
+	if err != nil {
+		return out, err
+	}
+	for rows.Next() {
+		o, scanErr := scanOrder(rows)
+		if scanErr != nil {
+			rows.Close()
+			return out, scanErr
+		}
+		items = append(items, o)
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		return out, err
+	}
 	present := map[string]bool{}
-	statusRows, err := r.db(ctx).Query(ctx, `SELECT st FROM unnest($5::text[]) st WHERE EXISTS(SELECT 1 FROM orders WHERE `+scopeWhere+` AND status=st)`, s.OrganizationID, s.LocationID, q, channel, catalog)
+	statusRows, err := results.Query()
 	if err != nil {
 		return out, err
 	}
@@ -60,32 +82,32 @@ func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (appli
 	}
 	out.PresentStatuses = present
 	channelCounts := map[string]int{}
-	countRows, err := r.db(ctx).Query(ctx, `SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL)) GROUP BY channel`, s.OrganizationID, s.LocationID)
-	if err == nil {
-		defer countRows.Close()
-		for countRows.Next() {
-			var ch string
-			var n int
-			if countRows.Scan(&ch, &n) == nil {
-				channelCounts[domain.ServiceChannel(ch)] += n
-			}
+	countRows, err := results.Query()
+	if err != nil {
+		return out, err
+	}
+	for countRows.Next() {
+		var ch string
+		var n int
+		if err = countRows.Scan(&ch, &n); err != nil {
+			countRows.Close()
+			return out, err
 		}
+		channelCounts[domain.ServiceChannel(ch)] += n
+	}
+	countRows.Close()
+	if err = countRows.Err(); err != nil {
+		return out, err
 	}
 	var currencySymbol string
-	if err := r.db(ctx).QueryRow(ctx, `
-		SELECT p.currency_symbol
-		FROM locations l
-		JOIN organization_fiscal_profiles p
-		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
-		WHERE l.id=$1 AND l.organization_id=$2 AND l.active
-	`, s.LocationID, s.OrganizationID).Scan(&currencySymbol); err != nil {
+	if err := results.QueryRow().Scan(&currencySymbol); err != nil {
 		return out, err
 	}
 	out.Items = items
 	out.Total = total
 	out.ChannelCounts = channelCounts
 	out.CurrencySymbol = currencySymbol
-	return out, rows.Err()
+	return out, nil
 }
 func (r *Orders) Floor(ctx context.Context, s scope) ([]domain.FloorTable, error) {
 	rows, err := r.db(ctx).Query(ctx, `

@@ -54,7 +54,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const current=useQuery({
     queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],
     queryFn:getPOSCollectionAccess,
-    refetchInterval:30000,
+    meta:{live:["cash"],poll:30000},
   });
   const canCollect=canManage||(!current.isError&&Boolean(current.data?.shift));
   const methods=useQuery({
@@ -65,8 +65,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   });
   const orders=useQuery({
     queryKey:["pos-orders",debouncedQ,paymentStatus,page,size],
-    queryFn:()=>listPOSOrders({q:debouncedQ,paymentStatus,page,pageSize:size}),
-    refetchInterval:30000,
+    queryFn:context=>listPOSOrders({q:debouncedQ,paymentStatus,page,pageSize:size},context?.signal),
+    meta:{live:["orders","payments"],poll:30000},
   });
   const detail=useQuery({
     queryKey:["pos-order",detailId],

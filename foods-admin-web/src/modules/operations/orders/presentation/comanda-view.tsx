@@ -68,13 +68,13 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
     queryKey:["order-selected-availability",location?.id,selectedIds],
     queryFn:()=>listSelectedProductAvailability(selectedIds),
     enabled:selectedIds.length>0,
-    refetchInterval:10000,
+    meta:{live:["availability","catalog"],poll:10000},
     refetchIntervalInBackground:false,
     refetchOnWindowFocus:"always",
     staleTime:0,
   });
   const selectedComboIds=Array.from(new Set(v.lines.filter(line=>line.itemType==="combo").map(line=>line.productId))).sort();
-  const selectedCombos=useQuery({queryKey:["order-selected-combos",location?.id,selectedComboIds],queryFn:()=>listOrderComboDetails(selectedComboIds),enabled:selectedComboIds.length>0,refetchInterval:10000,refetchIntervalInBackground:false,refetchOnWindowFocus:"always",staleTime:0});
+  const selectedCombos=useQuery({queryKey:["order-selected-combos",location?.id,selectedComboIds],queryFn:()=>listOrderComboDetails(selectedComboIds),enabled:selectedComboIds.length>0,meta:{live:["availability","catalog","orders"],poll:10000},refetchIntervalInBackground:false,refetchOnWindowFocus:"always",staleTime:0});
   useEffect(()=>{if(selectedCombos.data)recordComboAvailability(selectedCombos.data)},[selectedCombos.data,selectedCombos.dataUpdatedAt,recordComboAvailability]);
   const stockFor=(line:LineDraft,lines:LineDraft[],details=comboAvailabilityRef.current)=>lineAvailability(line,lines,initial.lines,availabilityRef.current,details);
   useEffect(()=>{if(selectedAvailability.data)recordAvailability(selectedAvailability.data.items)},[selectedAvailability.data,selectedAvailability.dataUpdatedAt,recordAvailability]);

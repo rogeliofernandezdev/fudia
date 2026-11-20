@@ -125,7 +125,7 @@ test("la consulta compartida aísla suscripción por empresa/usuario y respeta p
  }
  const a=query("a","u1",true),b=query("b","u1",true),c=query("a","u2",true);
  assert.notDeepEqual(a.queryKey,b.queryKey);assert.notDeepEqual(a.queryKey,c.queryKey);
- assert.equal(a.enabled,true);assert.equal(a.staleTime,0);assert.equal(a.refetchOnWindowFocus,"always");assert.equal(a.refetchInterval,30000);
+ assert.equal(a.enabled,true);assert.equal(a.staleTime,60000);assert.equal(a.refetchOnWindowFocus,true);assert.equal(a.refetchInterval,60000);
  assert.equal(query("a","u1",false).enabled,false);assert.equal(query(null,"u1",true).enabled,false);
  assert.ok(readFileSync(new URL("modules/identity/presentation/profile-page.tsx",root),"utf8").includes("const subscription=useOrganizationSubscription()"));
 });

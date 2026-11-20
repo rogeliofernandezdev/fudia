@@ -114,7 +114,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
          const size=52;const x=(canvas.width-size)/2;const y=(canvas.height-size)/2;
          ctx.fillStyle=readCssToken("--surface");ctx.fillRect(x-5,y-5,size+10,size+10);
          ctx.save();ctx.beginPath();ctx.roundRect(x,y,size,size,10);ctx.clip();ctx.drawImage(logo,x,y,size,size);ctx.restore();
-       };logo.src="/assets/images/logo.png";
+       };logo.src="/assets/images/logo-mark.png";
      }));
    }
  },[qrUrl]);
@@ -139,7 +139,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
        link.download=`qr-mesa-${table.name.replace(/\s+/g,"-").toLowerCase()}.png`;
        link.href=c.toDataURL("image/png");link.click();
      };qrImg.src=qr;
-   };logo.src="/assets/images/logo.png";
+   };logo.src="/assets/images/logo-mark.png";
  }
 
  function share(){
@@ -204,7 +204,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
            const size=44;const x=(canvas.width-size)/2;const y=(canvas.height-size)/2;
            ctx.fillStyle=readCssToken("--surface");ctx.fillRect(x-4,y-4,size+8,size+8);
            ctx.save();ctx.beginPath();ctx.roundRect(x,y,size,size,8);ctx.clip();ctx.drawImage(logo,x,y,size,size);ctx.restore();
-         };logo.src="/assets/images/logo.png";
+         };logo.src="/assets/images/logo-mark.png";
        });
      }
    }));

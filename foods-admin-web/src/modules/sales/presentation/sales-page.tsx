@@ -41,12 +41,12 @@ export function SalesPage(){
   const range:DateRange=period==="custom"?{from,to}:periodRange(period,localToday(location?.timezone));
   const invalidRange=Boolean(range.from&&range.to&&range.from>range.to);
   const hasFilters=Boolean(q||period!=="today");
-  const sales=useQuery({queryKey:["sales",debouncedQ,range.from,range.to,page,size],queryFn:()=>listSales({q:debouncedQ,page,pageSize:size,from:range.from,to:range.to}),enabled:!invalidRange,refetchInterval:30000});
+  const sales=useQuery({queryKey:["sales",debouncedQ,range.from,range.to,page,size],queryFn:context=>listSales({q:debouncedQ,page,pageSize:size,from:range.from,to:range.to},context?.signal),enabled:!invalidRange,meta:{live:["payments"],poll:30000}});
   // Editar una fecha a mano parte del rango visible y pasa a «Personalizado».
   const custom=(next:Partial<DateRange>)=>{setFrom(next.from??range.from);setTo(next.to??range.to);setPeriod("custom");setPage(1)};
   const detail=useQuery({queryKey:["sale-detail",detailId],queryFn:()=>getSaleDetail(detailId!),enabled:Boolean(detailId)});
   const money=useMoney();
-  const cashAccess=useQuery({queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],queryFn:getPOSCollectionAccess,enabled:canRefund&&Boolean(detailId),refetchInterval:30000});
+  const cashAccess=useQuery({queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],queryFn:getPOSCollectionAccess,enabled:canRefund&&Boolean(detailId),meta:{live:["cash"],poll:30000}});
   const refundShift=cashAccess.data?.canChooseShift?cashAccess.data.assignedShift:cashAccess.data?.shift;
   const refund=useMutation({
     mutationFn:({paymentId,draft}:{paymentId:string;draft:RefundDraft})=>refundPayment(paymentId,draft),

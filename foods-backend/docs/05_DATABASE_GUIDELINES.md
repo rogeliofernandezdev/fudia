@@ -107,6 +107,66 @@ caliente sobre PostgreSQL 16 desechable con un local de un año (200 mil pedidos
   productos con la misma cantidad disponible; el editor de menús refresca así solo
   las opciones elegidas en vez de descargar toda la carta cada 10 s.
 
+Revisión de rendimiento (2026-11-20), medida con `EXPLAIN (ANALYZE, BUFFERS)` en
+PostgreSQL 16 desechable con un local de un año (200 mil pedidos, 600 mil líneas,
+400 mil selecciones de menú, 1,2 M movimientos de Kárdex, 1,4 M filas de
+auditoría) y diez empresas de relleno:
+
+- Migración 000137 (`IF NOT EXISTS`; en producción con tablas grandes, crearlos
+  antes con `CONCURRENTLY`):
+  - `orders_location_created_idx (organization_id, location_id, created_at DESC, id DESC)`:
+    ningún índice de pedidos servía un rango u orden por fecha sin filtrar estado.
+    Página de POS/Ventas 60 ms → 0,1 ms; total del día 5 ms → 1,5 ms. El total sin
+    filtro de fechas sigue recorriendo el historial del local (~60 ms).
+  - `audit_log_concierge_order_idx` (parcial, `concierge.order.created`): el pedido
+    QR consultaba la auditoría con el pedido bloqueado, 60 ms → 0,1 ms.
+  - `stock_movements_location_created_idx` y `stock_movements_item_created_idx`:
+    Kárdex 110 ms y 43 ms → < 0,1 ms. El filtro por artículo compara `uuid`, no
+    texto.
+  - `delivery_dispatches_due_idx` (parcial): el barrido de delivery dejaba de
+    recorrer todo el historial de despachos (15 ms → 1 ms por barrido).
+  - `customers_org_updated_idx`: listado de clientes 14 ms → < 0,1 ms.
+- Comparar ids recibidos como texto con `col=$n::uuid` usando
+  `database.UUIDArg` (vacío → NULL para filtros opcionales, formato inválido → un
+  uuid que no existe), nunca `col::text=$n`: convertir la columna impide el índice.
+  El seguimiento del pedido del chat web (cada 5 s) dejó de recorrer los pedidos
+  del local (39 ms → 0,07 ms).
+- Cupo diario de opciones de menú al crear pedidos (`ExternalOptionUsage`): los
+  límites del día local salen de un CTE de una fila para que el planificador
+  recorra solo los pedidos de hoy (27 ms → 2,4 ms, también con plan genérico). Las
+  subconsultas correlacionadas (`OrderCombos`, carta pública) ya usan el índice
+  nuevo porque reciben la zona horaria como parámetro externo.
+- Las búsquedas de devoluciones y rondas de cocina filtran también por local
+  (`pr.location_id=p.location_id`, `k.location_id=o.location_id`) para usar sus
+  índices `(organization_id, location_id, …)`.
+- Consumo de inventario por lotes: porciones del día, artículos de inventario,
+  saldos (`LockBalances`) e insumos de todas las recetas se leen y bloquean en una
+  consulta por grupo, en orden de id; porciones, saldos y Kárdex se guardan juntos
+  con `ApplyStockWrites` (un `pgx.Batch`). Antes eran unas cuatro idas y vueltas
+  por insumo con los saldos bloqueados. Los mensajes y el orden de validación no
+  cambian.
+- Lecturas compuestas en un `pgx.Batch`: dashboard (≈17 consultas → 1 ida y
+  vuelta, dentro de su transacción de solo lectura con `SET LOCAL
+  statement_timeout`), listado de Pedidos (5 → 1) y Cocina (`KitchenQueues`, 3 → 1).
+- Turnos de caja: ingresos, egresos y movimientos salen de un `LEFT JOIN LATERAL`
+  (`cashShiftFrom`) en vez de cinco subconsultas por turno.
+- Disponibilidad de menús (`BlockedCombos`) y opciones de grupos (carta pública y
+  editor de menús) en una consulta por página o menú, no una por menú o grupo.
+- Al preparar un pedido, un menú repetido en varias líneas se lee una sola vez.
+- El barrido de delivery no corre dos veces a la vez (ticker y cada `Claim`).
+
+## Avisos en vivo (`pg_notify`)
+
+La migración 000138 agrega `notify_live_change()` como trigger `AFTER … FOR EACH
+ROW` en pedidos, platos y rondas de cocina, cobros, devoluciones, caja, avisos del
+personal, pagos detectados de Fudia Pay, disponibilidad, saldos, productos,
+despachos, mesas y reservas. Emite `pg_notify('foods_live', 'empresa:local:tema')`;
+PostgreSQL lo entrega al confirmar y descarta los repetidos de la misma
+transacción, así que el costo es una llamada por fila escrita y un aviso por tema y
+transacción. Los platos toman el local de su pedido; los productos avisan a toda la
+empresa (local vacío). `TestLiveChangesReachOnlyTheirLocationAfterCommit` comprueba
+que el aviso llega solo tras el commit, una vez y solo al local correcto.
+
 ## Cobrado neto del pedido (`orders.paid_amount`)
 
 Es un derivado de los documentos, nunca un dato que se escriba a mano. Los

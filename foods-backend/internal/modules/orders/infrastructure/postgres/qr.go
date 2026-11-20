@@ -79,7 +79,7 @@ func (r *Orders) StaleTableAccount(ctx context.Context, s scope, tableID string,
 		FROM (SELECT o.id::text AS id,o.created_at AS created_at,
 		       GREATEST(o.created_at,COALESCE((
 		         SELECT max(k.created_at) FROM order_kitchen_rounds k
-		         WHERE k.order_id=o.id AND k.organization_id=o.organization_id
+		         WHERE k.order_id=o.id AND k.organization_id=o.organization_id AND k.location_id=o.location_id
 		       ),o.created_at)) AS last_activity
 		FROM orders o
 		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.table_id=$3

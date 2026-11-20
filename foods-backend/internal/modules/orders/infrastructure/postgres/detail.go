@@ -36,7 +36,7 @@ const serviceItemsSQL = `SELECT id::text,order_item_id::text,COALESCE(product_id
 
 const orderNetPaidSQL = `
 	SELECT COALESCE(sum(
-	  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+	  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)
 	),0)::float8
 	FROM payments p
 	WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3`

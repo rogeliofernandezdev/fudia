@@ -178,6 +178,14 @@ type TicketContent struct {
 	TargetMinutes *int
 }
 
+// KitchenQueues son las tres colas que Cocina lee juntas: pedidos sin rondas,
+// rondas y platos con preparación por área.
+type KitchenQueues struct {
+	Legacy  []Order
+	Rounds  []KitchenTicket
+	Service []KitchenTicket
+}
+
 type KitchenTicket struct {
 	Destination   string      `json:"destination"`
 	ID            string      `json:"id"`

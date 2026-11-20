@@ -19,7 +19,7 @@ export type OrdersQuery={
   pageSize:number;
 };
 
-export function listOrders(query:OrdersQuery){
+export function listOrders(query:OrdersQuery,signal?:AbortSignal){
   const params=new URLSearchParams({
     q:query.q,
     channel:query.channel,
@@ -27,7 +27,7 @@ export function listOrders(query:OrdersQuery){
     page:String(query.page),
     pageSize:String(query.pageSize),
   });
-  return apiFetch<OrdersResponse>(`orders?${params.toString()}`);
+  return apiFetch<OrdersResponse>(`orders?${params.toString()}`,{signal});
 }
 
 export function getOrder(id:string){

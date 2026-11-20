@@ -31,7 +31,7 @@ export function ReservationsPage(){
   const[q,setQ]=useState("");const[status,setStatus]=useState("");const[page,setPage]=useState(1);const[size,setSize]=useState(10);
   const[draft,setDraft]=useState<ReservationDraft|null>(null);
   const[statusTarget,setStatusTarget]=useState<{item:Reservation;status:ReservationStatus}|null>(null);
-  const list=useQuery({queryKey:["reservations",q,status,page,size],queryFn:()=>listReservations({q,status,page,pageSize:size}),refetchInterval:30000});
+  const list=useQuery({queryKey:["reservations",q,status,page,size],queryFn:()=>listReservations({q,status,page,pageSize:size}),meta:{live:["reservations"],poll:30000}});
   const tables=useQuery({queryKey:["reservation-tables"],queryFn:()=>listTables({q:"",status:"active",page:1,pageSize:100})});
   const save=useMutation({mutationFn:saveReservation,onSuccess:()=>{setDraft(null);void qc.invalidateQueries({queryKey:["reservations"]});notify({tone:"success",title:"Reserva guardada",message:"La reserva quedó disponible para el equipo del local."})},onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message})});
   const change=useMutation({mutationFn:({id,status}:{id:string;status:ReservationStatus})=>setReservationStatus(id,status),onSuccess:()=>{setStatusTarget(null);void qc.invalidateQueries({queryKey:["reservations"]});notify({tone:"success",title:"Reserva actualizada",message:"El estado se guardó correctamente."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});

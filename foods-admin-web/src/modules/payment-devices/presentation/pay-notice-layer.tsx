@@ -31,7 +31,7 @@ function PayNoticeFeed({scopeKey}:{scopeKey:string[]}){
   const feed=useQuery({
     queryKey:["pay-notice-feed",...scopeKey],
     queryFn:()=>listPayNotifications({status:"detected",provider:""}),
-    refetchInterval:10000,
+    meta:{live:["pay"],poll:10000},
     refetchOnWindowFocus:false,
     retry:1,
     gcTime:0,

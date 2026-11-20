@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"context"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
@@ -71,7 +72,7 @@ func (r *Orders) ConciergeOrderActive(ctx context.Context, s scope, conversation
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT o.status<>'cancelado' AND (o.status<>'entregado' OR (o.channel='salon' AND o.completed_at IS NULL))
 		FROM orders o
-		WHERE o.id::text=$3 AND o.organization_id=$1 AND o.location_id=$2
+		WHERE o.id=$3::uuid AND o.organization_id=$1 AND o.location_id=$2
 		  AND (
 		    EXISTS(
 		      SELECT 1 FROM concierge_order_requests q
@@ -84,7 +85,7 @@ func (r *Orders) ConciergeOrderActive(ctx context.Context, s scope, conversation
 		        AND d.order_id=o.id AND d.conversation_id=$4
 		    )
 		  )
-	`, s.OrganizationID, s.LocationID, orderID, conversationID).Scan(&active)
+	`, s.OrganizationID, s.LocationID, database.UUIDArg(orderID), conversationID).Scan(&active)
 	return active, orderError(err)
 }
 

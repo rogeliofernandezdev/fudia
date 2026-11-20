@@ -65,7 +65,7 @@ export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palett
 }
 
 export async function loadFudiaReportLogo(){
- const response=await fetch("/assets/images/logo.png",{cache:"force-cache"});
+ const response=await fetch("/assets/images/logo-mark.png",{cache:"force-cache"});
  if(!response.ok)throw new Error("No pudimos cargar el logo de Fudia. Reintenta la vista previa.");
  return new Uint8Array(await response.arrayBuffer());
 }

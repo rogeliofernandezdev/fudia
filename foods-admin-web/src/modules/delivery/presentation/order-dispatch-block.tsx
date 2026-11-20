@@ -16,7 +16,7 @@ export function OrderDispatchBlock({order,money}:{order:DispatchOrder;money:(val
   const {location}=useSession();
   const queryKey=["delivery-dispatch",order.id,order.status];
   const closed=Boolean(order.completedAt)||order.status==="entregado"||order.status==="cancelado";
-  const dispatch=useQuery({queryKey,queryFn:()=>getDeliveryDispatch(order.id),retry:false,refetchInterval:query=>closed||isPermissionError(query.state.error)?false:10_000});
+  const dispatch=useQuery({queryKey,queryFn:()=>getDeliveryDispatch(order.id),retry:false,meta:{live:["delivery","orders"],poll:query=>closed||isPermissionError(query.state.error)?false:10_000}});
   const data=dispatch.data;
   const meta=data?dispatchStatusMeta[data.status]:null;
   const assigned=data?.status==="accepted"||data?.status==="picked_up"||data?.status==="delivered";

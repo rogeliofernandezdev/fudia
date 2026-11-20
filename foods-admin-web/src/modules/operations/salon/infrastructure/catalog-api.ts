@@ -4,12 +4,12 @@ import type {ComboDetail,ComboList,ProductModifierConfig} from "../domain/catalo
 export function listOrderCategories(){
  return apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100");
 }
-export async function listSalonProducts(input:{categoryId:string;q:string;page:number;pageSize:number;productIds?:string[]}){
+export async function listSalonProducts(input:{categoryId:string;q:string;page:number;pageSize:number;productIds?:string[]},signal?:AbortSignal){
  const params=new URLSearchParams({page:String(input.page),pageSize:String(input.pageSize),excludeCombos:"true"});
  if(input.categoryId)params.set("categoryId",input.categoryId);
  if(input.q.trim())params.set("q",input.q.trim());
  if(input.productIds?.length)params.set("productIds",input.productIds.join(","));
- const data=await apiFetch<{items:Array<{productId:string;name:string;description:string;allergens:string[];price:string;categoryId:string|null;imageUrl:string|null;status:"available"|"low"|"sold_out"|"unavailable";remaining:number|null;hasModifiers?:boolean}>;total:number}>(`product-availability?${params.toString()}`);
+ const data=await apiFetch<{items:Array<{productId:string;name:string;description:string;allergens:string[];price:string;categoryId:string|null;imageUrl:string|null;status:"available"|"low"|"sold_out"|"unavailable";remaining:number|null;hasModifiers?:boolean}>;total:number}>(`product-availability?${params.toString()}`,{signal});
  return{
   total:data.total,
   items:data.items.map(item=>({
@@ -37,10 +37,10 @@ export async function listSelectedProductAvailability(productIds:string[]){
  const pages=await Promise.all(batches.map(ids=>listSalonProducts({categoryId:"",q:"",page:1,pageSize:100,productIds:ids})));
  return {items:pages.flatMap(page=>page.items)};
 }
-export function listOrderCombos(input:{q:string;page:number;pageSize:number}){
+export function listOrderCombos(input:{q:string;page:number;pageSize:number},signal?:AbortSignal){
  const params=new URLSearchParams({page:String(input.page),pageSize:String(input.pageSize)});
  if(input.q.trim())params.set("q",input.q.trim());
- return apiFetch<ComboList>(`order-combos?${params.toString()}`);
+ return apiFetch<ComboList>(`order-combos?${params.toString()}`,{signal});
 }
 export function getOrderCombo(id:string){
  return apiFetch<ComboDetail>(`order-combos/${id}`);

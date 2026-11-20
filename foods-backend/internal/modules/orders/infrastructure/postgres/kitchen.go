@@ -8,8 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *Orders) LegacyKitchenOrders(ctx context.Context, s scope, channel, destination string) ([]domain.Order, error) {
-	rows, err := r.db(ctx).Query(ctx, `
+const legacyKitchenSQL = `
 		SELECT `+orderColumns+`
 		FROM orders
 		WHERE organization_id=$1
@@ -27,10 +26,9 @@ func (r *Orders) LegacyKitchenOrders(ctx context.Context, s scope, channel, dest
 		ORDER BY
 		  CASE status WHEN 'preparando' THEN 0 WHEN 'confirmado' THEN 1 ELSE 2 END,
 		  updated_at ASC,created_at ASC
-		LIMIT 150`, s.OrganizationID, s.LocationID, channel, destination)
-	if err != nil {
-		return nil, err
-	}
+		LIMIT 150`
+
+func scanLegacyKitchen(rows pgx.Rows) ([]domain.Order, error) {
 	defer rows.Close()
 	out := []domain.Order{}
 	for rows.Next() {
@@ -42,8 +40,8 @@ func (r *Orders) LegacyKitchenOrders(ctx context.Context, s scope, channel, dest
 	}
 	return out, rows.Err()
 }
-func (r *Orders) KitchenRounds(ctx context.Context, s scope, channel, destination string) ([]domain.KitchenTicket, error) {
-	rows, err := r.db(ctx).Query(ctx, `
+
+const kitchenRoundsSQL = `
 		SELECT kr.id::text,kr.sequence,kr.status,
 		       o.id::text,o.code,o.channel,o.customer_name,
 		       COALESCE((SELECT t.name FROM tables t WHERE t.id=o.table_id),''),
@@ -62,23 +60,22 @@ func (r *Orders) KitchenRounds(ctx context.Context, s scope, channel, destinatio
 		  CASE kr.status WHEN 'preparando' THEN 0 WHEN 'confirmado' THEN 1 ELSE 2 END,
 		  kr.updated_at ASC,kr.created_at ASC
 		LIMIT 150
-	`, s.OrganizationID, s.LocationID, channel, destination)
-	if err != nil {
-		return nil, err
-	}
+	`
+
+func scanKitchenRounds(rows pgx.Rows) ([]domain.KitchenTicket, error) {
 	defer rows.Close()
 	out := []domain.KitchenTicket{}
 	for rows.Next() {
 		var v domain.KitchenTicket
-		if err = rows.Scan(&v.ID, &v.RoundNumber, &v.Status, &v.OrderID, &v.Code, &v.Channel, &v.CustomerName, &v.TableName, &v.Notes, &v.CreatedAt, &v.UpdatedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.RoundNumber, &v.Status, &v.OrderID, &v.Code, &v.Channel, &v.CustomerName, &v.TableName, &v.Notes, &v.CreatedAt, &v.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, v)
 	}
 	return out, rows.Err()
 }
-func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destination string) ([]domain.KitchenTicket, error) {
-	rows, err := r.db(ctx).Query(ctx, `SELECT COALESCE(i.kitchen_round_id,o.id)::text,COALESCE(kr.sequence,0),
+
+const serviceTicketsSQL = `SELECT COALESCE(i.kitchen_round_id,o.id)::text,COALESCE(kr.sequence,0),
  si.destination,si.status,o.id::text,o.code,o.channel,o.customer_name,COALESCE(t.name,''),o.notes,
  to_char(si.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(si.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
  si.id::text,COALESCE(si.product_id::text,''),si.name,si.qty::text,
@@ -92,10 +89,9 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
  WHERE o.organization_id=$1 AND o.location_id=$2 AND o.completed_at IS NULL AND o.status<>'cancelado'
  AND si.destination IN ('kitchen','bar') AND si.status IN ('confirmado','preparando','listo')
  AND ($3='' OR o.channel=$3 OR ($3 IN ('recojo','mostrador') AND o.channel IN ('recojo','mostrador')) OR ($3='salon' AND o.channel='whatsapp')) AND ($4='' OR si.destination=$4)
- ORDER BY si.created_at,si.id`, s.OrganizationID, s.LocationID, channel, destination)
-	if err != nil {
-		return nil, err
-	}
+ ORDER BY si.created_at,si.id`
+
+func scanServiceTickets(rows pgx.Rows) ([]domain.KitchenTicket, error) {
 	defer rows.Close()
 	tickets := []domain.KitchenTicket{}
 	indices := map[string]int{}
@@ -105,11 +101,11 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
 		var itemStatus string
 		var minutes int
 		var rawModifiers []byte
-		if err = rows.Scan(&t.ID, &t.RoundNumber, &t.Destination, &itemStatus, &t.OrderID, &t.Code, &t.Channel, &t.CustomerName, &t.TableName, &t.Notes, &t.CreatedAt, &t.UpdatedAt, &item.ID, &item.ProductID, &item.Name, &item.Qty, &item.Note, &rawModifiers, &minutes); err != nil {
+		if err := rows.Scan(&t.ID, &t.RoundNumber, &t.Destination, &itemStatus, &t.OrderID, &t.Code, &t.Channel, &t.CustomerName, &t.TableName, &t.Notes, &t.CreatedAt, &t.UpdatedAt, &item.ID, &item.ProductID, &item.Name, &item.Qty, &item.Note, &rawModifiers, &minutes); err != nil {
 			return nil, err
 		}
 		// Las opciones del plato (término, acompañamiento…) llegan como lista propia, no dentro de la nota.
-		if err = json.Unmarshal(rawModifiers, &item.Modifiers); err != nil {
+		if err := json.Unmarshal(rawModifiers, &item.Modifiers); err != nil {
 			return nil, err
 		}
 		if t.Destination == "bar" {
@@ -140,6 +136,48 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
 		}
 	}
 	return tickets, rows.Err()
+}
+
+
+func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destination string) ([]domain.KitchenTicket, error) {
+	rows, err := r.db(ctx).Query(ctx, serviceTicketsSQL, s.OrganizationID, s.LocationID, channel, destination)
+	if err != nil {
+		return nil, err
+	}
+	return scanServiceTickets(rows)
+}
+
+// KitchenQueues lee en un pgx.Batch (una ida y vuelta, misma instantánea) las
+// comandas sin rondas, las rondas y la preparación por área que Cocina refresca
+// cada 10 s; antes eran tres consultas seguidas.
+func (r *Orders) KitchenQueues(ctx context.Context, s scope, channel, destination string) (domain.KitchenQueues, error) {
+	var out domain.KitchenQueues
+	batch := &pgx.Batch{}
+	batch.Queue(legacyKitchenSQL, s.OrganizationID, s.LocationID, channel, destination)
+	batch.Queue(kitchenRoundsSQL, s.OrganizationID, s.LocationID, channel, destination)
+	batch.Queue(serviceTicketsSQL, s.OrganizationID, s.LocationID, channel, destination)
+	results := r.db(ctx).SendBatch(ctx, batch)
+	defer results.Close()
+	rows, err := results.Query()
+	if err != nil {
+		return out, err
+	}
+	if out.Legacy, err = scanLegacyKitchen(rows); err != nil {
+		return out, err
+	}
+	if rows, err = results.Query(); err != nil {
+		return out, err
+	}
+	if out.Rounds, err = scanKitchenRounds(rows); err != nil {
+		return out, err
+	}
+	if rows, err = results.Query(); err != nil {
+		return out, err
+	}
+	if out.Service, err = scanServiceTickets(rows); err != nil {
+		return out, err
+	}
+	return out, results.Close()
 }
 
 const targetMinutesSQL = `

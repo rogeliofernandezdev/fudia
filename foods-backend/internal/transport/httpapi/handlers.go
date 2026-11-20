@@ -7,6 +7,10 @@ import (
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	// Live transmite por SSE los temas que cambian en el local (GET /v1/admin/events).
+	Live interface {
+		Serve(http.ResponseWriter, *http.Request)
+	}
 	RestaurantProfile interface {
 		RestaurantProfile(http.ResponseWriter, *http.Request)
 		SaveRestaurantProfile(http.ResponseWriter, *http.Request)

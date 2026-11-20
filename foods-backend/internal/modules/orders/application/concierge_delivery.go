@@ -19,6 +19,11 @@ type ConciergeDeliveryInput = contracts.ConciergeDeliveryInput
 type ConciergeOrderState = contracts.ConciergeOrderState
 
 // ConciergeDeliveryReplay devuelve el pedido ya creado para requestId, si existe.
+
+// orderIDPattern se compila una vez: validar con regexp.MatchString compilaba la
+// expresión en cada pedido de Concierge.
+var orderIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$`)
+
 func (a *Orders) ConciergeDeliveryReplay(ctx context.Context, s scope, requestID string) (domain.Order, bool, error) {
 	id, err := a.repo.ConciergeDeliveryRequestOrder(ctx, s, strings.TrimSpace(requestID))
 	if errors.Is(err, ErrNotFound) {
@@ -217,7 +222,7 @@ func normalizeConciergeDelivery(in *ConciergeDeliveryInput) string {
 		return message
 	}
 	if in.OrderID != "" {
-		if matched, _ := regexp.MatchString(`^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$`, in.OrderID); !matched {
+		if !orderIDPattern.MatchString(in.OrderID) {
 			return "El pedido de origen no es válido."
 		}
 		quoted, err := strconv.ParseFloat(in.ExpectedOrderTotal, 64)

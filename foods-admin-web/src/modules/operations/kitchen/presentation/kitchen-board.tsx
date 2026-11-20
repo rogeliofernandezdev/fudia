@@ -88,7 +88,8 @@ export function KitchenBoard(){
   const tickets=useQuery({
     queryKey:["kitchen-tickets",channel,destination],
     queryFn:()=>listKitchenTickets(channel,destination),
-    refetchInterval:10000,
+    // Con el canal en vivo se refresca al cambiar una comanda; el intervalo queda de respaldo.
+    meta:{live:["kitchen","orders"],poll:10000},
     // Una pantalla de cocina visible sigue refrescando; una pestaña oculta o minimizada
     // no (nadie la ve) y se actualiza al recuperar el foco.
     refetchIntervalInBackground:false,

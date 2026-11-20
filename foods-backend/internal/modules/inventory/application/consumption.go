@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"math"
@@ -10,6 +9,31 @@ import (
 	"strconv"
 )
 
+// StockWrites agrupa lo que el consumo de un pedido guarda al final, en una sola
+// ida y vuelta y en este orden: porciones vendidas, saldos y movimientos de Kárdex.
+type StockWrites struct {
+	Portions  []PortionWrite
+	Balances  []BalanceWrite
+	Movements []Movement
+}
+
+type PortionWrite struct {
+	ProductID    string
+	BusinessDate string
+	SoldQuantity int
+}
+
+type BalanceWrite struct {
+	ItemID      string
+	Quantity    float64
+	AverageCost float64
+}
+
+// ApplyOrderQuantityDelta descuenta o devuelve porciones y stock de los productos
+// del pedido. Bloquea primero los productos, luego todas sus porciones del día,
+// sus artículos de inventario y sus saldos, cada grupo en una consulta ordenada
+// por id; valida producto por producto en orden de id, con los mismos mensajes que
+// el ciclo anterior, y guarda todo junto al final.
 func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID string, delta map[string]float64, movementType string) error {
 	if len(delta) == 0 {
 		return nil
@@ -29,6 +53,38 @@ func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID st
 		return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar la cantidad del producto.")
 	}
 
+	var portionIDs, inventoryIDs []string
+	for _, productID := range productIDs {
+		product, ok := locked[productID]
+		if !ok {
+			continue
+		}
+		switch product.Control {
+		case "portions":
+			portionIDs = append(portionIDs, productID)
+		case "inventory":
+			inventoryIDs = append(inventoryIDs, productID)
+		}
+	}
+	portions, err := a.repo.LockPortionsFor(ctx, s, portionIDs, businessDate)
+	if err != nil {
+		return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar las porciones disponibles.")
+	}
+	items, err := a.repo.LockProductInventories(ctx, s, inventoryIDs)
+	if err != nil {
+		return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar el inventario del producto.")
+	}
+	itemIDs := make([]string, 0, len(items))
+	for _, itemID := range items {
+		itemIDs = append(itemIDs, itemID)
+	}
+	sort.Strings(itemIDs)
+	balances, err := a.repo.LockBalances(ctx, s, itemIDs)
+	if err != nil {
+		return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos bloquear el saldo del producto.")
+	}
+
+	writes := StockWrites{}
 	for _, productID := range productIDs {
 		change := delta[productID]
 		product, ok := locked[productID]
@@ -44,62 +100,36 @@ func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID st
 			if math.Abs(change-math.Round(change)) > 0.000001 {
 				return stockFailure(apperror.Invalid, "invalid_portion_quantity", name+" solo se vende por porciones enteras.")
 			}
-			var portionQuantity *int
-			var soldQuantity int
-			var manualStatus string
-			err := func() error {
-				var err error
-				portionQuantity, soldQuantity, manualStatus, err = a.repo.LockPortions(ctx, s, productID, businessDate)
-				return err
-			}()
-			if errors.Is(err, ErrNotFound) {
+			portion, found := portions[productID]
+			if !found {
 				return stockFailure(apperror.Conflict, "portions_unavailable", name+" no tiene porciones cargadas para este día.")
 			}
-			if err != nil {
-				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar las porciones disponibles.")
-			}
 			step := int(math.Round(change))
-			nextSold := soldQuantity + step
-			if step > 0 && manualStatus == "sold_out" {
+			nextSold := portion.SoldQuantity + step
+			if step > 0 && portion.ManualStatus == "sold_out" {
 				return stockFailure(apperror.Conflict, "insufficient_portions", name+" está agotado por hoy.")
 			}
-			if step > 0 && (portionQuantity == nil || nextSold > *portionQuantity) {
+			if step > 0 && (portion.PortionQuantity == nil || nextSold > *portion.PortionQuantity) {
 				left := 0
-				if portionQuantity != nil && *portionQuantity > soldQuantity {
-					left = *portionQuantity - soldQuantity
+				if portion.PortionQuantity != nil && *portion.PortionQuantity > portion.SoldQuantity {
+					left = *portion.PortionQuantity - portion.SoldQuantity
 				}
 				return stockFailure(apperror.Conflict, "insufficient_portions", "La cantidad excede las existencias: solo quedan "+strconv.Itoa(left)+" porciones de "+name+".")
 			}
 			if nextSold < 0 {
 				return stockFailure(apperror.Unavailable, "quantity_inconsistent", "No pudimos reconciliar las porciones del pedido.")
 			}
-			if _, err := a.repo.UpdateSoldPortions(ctx, s, productID, businessDate, nextSold); err != nil {
-				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos actualizar las porciones disponibles.")
-			}
+			writes.Portions = append(writes.Portions, PortionWrite{ProductID: productID, BusinessDate: businessDate, SoldQuantity: nextSold})
 		case "inventory":
-			var inventoryItemID string
-			err := func() error {
-				var err error
-				inventoryItemID, err = a.repo.LockProductInventory(ctx, s, productID)
-				return err
-			}()
-			if errors.Is(err, ErrNotFound) {
+			inventoryItemID, found := items[productID]
+			if !found {
 				return stockFailure(apperror.Conflict, "inventory_not_linked", name+" todavía no tiene inventario registrado.")
 			}
-			if err != nil {
-				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar el inventario del producto.")
-			}
-			if _, err := a.repo.EnsureEntryBalance(ctx, s, inventoryItemID); err != nil {
-				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos preparar el saldo del producto.")
-			}
-			var balance, averageCost float64
-			if err := func() error {
-				var err error
-				balance, averageCost, err = a.repo.LockEntryBalance(ctx, s, inventoryItemID)
-				return err
-			}(); err != nil {
+			current, found := balances[inventoryItemID]
+			if !found {
 				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos bloquear el saldo del producto.")
 			}
+			balance, averageCost := current.Quantity, current.AverageUnitCost
 			balanceDelta := -change
 			nextBalance := balance + balanceDelta
 			if nextBalance < -0.000001 {
@@ -109,18 +139,17 @@ func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID st
 			if nextBalance < 0 {
 				nextBalance = 0
 			}
-			nextAverage := averageCost
-			if _, err := a.repo.SaveBalance(ctx, s, inventoryItemID, nextBalance, nextAverage); err != nil {
-				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos actualizar el stock del producto.")
-			}
+			writes.Balances = append(writes.Balances, BalanceWrite{ItemID: inventoryItemID, Quantity: nextBalance, AverageCost: averageCost})
 			if math.Abs(balanceDelta) > 0.000001 {
-				if err := a.movement(ctx, s, &productID, inventoryItemID, movementType, balanceDelta, nextBalance, averageCost, "order", orderID, orderMovementNote(movementType)); err != nil {
-					return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos registrar el movimiento de Kárdex.")
-				}
+				productRef := productID
+				writes.Movements = append(writes.Movements, valuedMovement(&productRef, inventoryItemID, movementType, balanceDelta, nextBalance, averageCost, averageCost, "order", orderID, orderMovementNote(movementType)))
 			}
 		default:
 			return stockFailure(apperror.Unavailable, "quantity_control_invalid", "El producto tiene un control de cantidad inválido.")
 		}
+	}
+	if err := a.repo.ApplyStockWrites(ctx, s, writes); err != nil {
+		return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos actualizar el stock del producto.")
 	}
 	return nil
 }
@@ -155,17 +184,24 @@ func (a *Stock) DesiredRecipeUsage(ctx context.Context, s scope, products map[st
 	if err != nil {
 		return nil, err
 	}
+	recipeIDs := make([]string, 0, len(active))
+	for _, id := range ids {
+		if recipe, ok := active[id]; ok {
+			recipeIDs = append(recipeIDs, recipe.ID)
+		}
+	}
+	// Los insumos de todas las recetas en una consulta (antes, una por producto).
+	ingredients, err := a.repo.RecipeIngredientsFor(ctx, s, recipeIDs)
+	if err != nil {
+		return nil, err
+	}
 	for _, id := range ids {
 		recipe, ok := active[id]
 		if !ok {
 			continue
 		}
 		yield := recipe.Yield
-		ingredients, err := a.repo.RecipeIngredients(ctx, s, recipe.ID)
-		if err != nil {
-			return nil, err
-		}
-		for _, x := range ingredients {
+		for _, x := range ingredients[recipe.ID] {
 			need := products[id] / yield * x.Quantity * (1 + x.WastePercent/100)
 			out[x.ItemID] += need
 		}
@@ -178,41 +214,47 @@ func (a *Stock) DesiredRecipeUsage(ctx context.Context, s scope, products map[st
 func (a *Stock) NetRecipeUsage(ctx context.Context, s scope, orderID string) (map[string]float64, error) {
 	return a.repo.NetRecipeUsage(ctx, s, orderID)
 }
+
+// ApplyRecipeUsageDelta consume o devuelve los insumos de receta del pedido:
+// bloquea todos sus saldos en una consulta ordenada por id, valida insumo por
+// insumo en ese orden y guarda saldos y Kárdex en una sola ida y vuelta.
 func (a *Stock) ApplyRecipeUsageDelta(ctx context.Context, s scope, orderID string, delta map[string]float64) error {
 	ids := make([]string, 0, len(delta))
 	for id := range delta {
-		ids = append(ids, id)
+		if domain.RoundStockQuantity(delta[id]) != 0 {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	sort.Strings(ids)
+	balances, err := a.repo.LockBalances(ctx, s, ids)
+	if err != nil {
+		return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos validar el stock de receta.")
+	}
+	writes := StockWrites{}
 	for _, itemID := range ids {
 		change := domain.RoundStockQuantity(delta[itemID])
-		if change == 0 {
-			continue
-		}
-		bal, err := a.repo.LockBalance(ctx, s, itemID)
-		if errors.Is(err, ErrNotFound) {
+		bal, ok := balances[itemID]
+		if !ok {
 			return stockFailure(apperror.Conflict, "recipe_item_unavailable", "Un insumo de receta ya no está disponible.")
-		}
-		if err != nil {
-			return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos validar el stock de receta.")
 		}
 		if change > bal.Quantity+1e-9 {
 			return stockFailure(apperror.Conflict, "insufficient_recipe_stock", "No hay stock suficiente de "+bal.Name+" para preparar el pedido.")
 		}
 		after := domain.RoundStockQuantity(bal.Quantity - change)
-		avg := bal.AverageUnitCost
-		if _, err = a.repo.SaveBalance(ctx, s, itemID, after, avg); err != nil {
-			return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos actualizar el stock de receta.")
-		}
+		writes.Balances = append(writes.Balances, BalanceWrite{ItemID: itemID, Quantity: after, AverageCost: bal.AverageUnitCost})
 		movement := "recipe_consumption"
 		note := "Consumo automático por receta"
 		if change < 0 {
 			movement = "recipe_reversal"
 			note = "Reversa de consumo por receta"
 		}
-		if err = a.movement(ctx, s, bal.ProductID, itemID, movement, -change, after, bal.AverageUnitCost, "order", orderID, note); err != nil {
-			return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos registrar el Kárdex de receta.")
-		}
+		writes.Movements = append(writes.Movements, valuedMovement(bal.ProductID, itemID, movement, -change, after, bal.AverageUnitCost, bal.AverageUnitCost, "order", orderID, note))
+	}
+	if err := a.repo.ApplyStockWrites(ctx, s, writes); err != nil {
+		return stockFailure(apperror.Unavailable, "recipe_inventory_unavailable", "No pudimos registrar el Kárdex de receta.")
 	}
 	return nil
 }

@@ -2288,6 +2288,25 @@ paths:
         "204": { description: Solicitud marcada como atendida }
         "404": { description: Solicitud inexistente o ya atendida }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/events:
+    get:
+      operationId: streamLiveChanges
+      summary: Canal en vivo (Server-Sent Events) con los temas que cambian en el local activo
+      description: >-
+        Flujo text/event-stream que queda abierto. Al conectar envía `retry: 5000` y el evento `ready`;
+        luego, cada vez que se confirma una escritura del local, el evento `change` con
+        `{"topics":[...]}` (orders, kitchen, payments, cash, notices, pay, availability, catalog,
+        delivery, salon, reservations), agrupando en un solo evento los avisos que llegan juntos.
+        Envía un comentario `: ping` cada 25 s y cierra el flujo a los 15 minutos o al apagar la API;
+        el cliente reconecta. No lleva datos del negocio: la pantalla vuelve a leer por su endpoint,
+        con sus permisos. Responde 503 `live_unavailable` cuando la API no está escuchando a la base;
+        el cliente sigue con su consulta periódica.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Flujo de eventos del local, content: { text/event-stream: { schema: { type: string } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { description: Actualizaciones en vivo no disponibles; usar la consulta periódica, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /v1/admin/notices:
     get:
       operationId: listStaffNotices

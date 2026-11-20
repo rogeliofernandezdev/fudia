@@ -9,8 +9,10 @@ export function useOrganizationSubscription(){
   queryKey:["organization-subscription",organization?.id,user?.id],
   queryFn:getOrganizationSubscription,
   enabled:Boolean(user&&organization&&can("subscription.read")),
-  staleTime:0,
-  refetchOnWindowFocus:"always",
-  refetchInterval:30000,
+  // El plan cambia muy rara vez y el backend aplica sus límites: basta con revisarlo
+ // cada minuto y al volver a la pestaña si el dato tiene más de un minuto.
+  staleTime:60000,
+  refetchOnWindowFocus:true,
+  refetchInterval:60000,
  });
 }

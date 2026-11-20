@@ -12,10 +12,13 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
  if(hasBody)headers.set("Content-Type","application/json");
  try{
   // Longer than the API's 30s processing budget and 35s response deadline.
-  const response=await fetch(target,{method:request.method,headers,body:hasBody?await request.text():undefined,cache:"no-store",signal:AbortSignal.timeout(40000)});
+  // Si el navegador abandona la petición (cambio de filtro, pantalla cerrada), se
+  // cancela también la llamada al API en vez de dejarla correr hasta el final.
+  const response=await fetch(target,{method:request.method,headers,body:hasBody?await request.text():undefined,cache:"no-store",signal:request.signal?AbortSignal.any([request.signal,AbortSignal.timeout(40000)]):AbortSignal.timeout(40000)});
   if(response.status===204)return new NextResponse(null,{status:204});
-  // Bytes, not text: fiscal XML/CDR downloads are binary (zip).
-  const next=new NextResponse(await response.arrayBuffer(),{status:response.status,headers:{"Content-Type":response.headers.get("content-type")??"application/json"}});
+  // El cuerpo se transmite tal como llega (también binarios: XML/CDR fiscales en
+  // zip): esperar el arrayBuffer completo sumaba latencia y memoria por petición.
+  const next=new NextResponse(response.body,{status:response.status,headers:{"Content-Type":response.headers.get("content-type")??"application/json"}});
   const disposition=response.headers.get("content-disposition");if(disposition)next.headers.set("Content-Disposition",disposition);
   const requestId=response.headers.get("X-Request-ID");if(requestId)next.headers.set("X-Request-ID",requestId);
   if(response.status===401)next.headers.set("set-cookie","foods_session=; Path=/; HttpOnly; Max-Age=0");

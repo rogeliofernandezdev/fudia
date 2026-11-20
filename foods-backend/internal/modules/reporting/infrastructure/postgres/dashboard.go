@@ -28,7 +28,7 @@ const netPaidSQL = `
 	COALESCE((
 	  SELECT sum(
 	    p.amount
-	    - COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+	    - COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id AND pr.location_id=p.location_id),0)
 	  )
 	  FROM payments p
 	  WHERE p.order_id=o.id AND p.organization_id=o.organization_id AND p.location_id=o.location_id
@@ -98,12 +98,8 @@ type dashboardBreakdown = domain.DashboardBreakdown
 type dashboardCategorySale = domain.DashboardCategorySale
 type dashboardInsights = domain.DashboardInsights
 
-func loadDashboardOperations(ctx context.Context, tx database.Executor, s scope, canSeeExpected bool) (dashboardOperations, string, error) {
-	var result dashboardOperations
-	var businessDate string
-	var oldestName *string
-	var oldestMinutes *int
-	err := tx.QueryRow(ctx, `
+func queueDashboardOperations(batch *pgx.Batch, s scope, canSeeExpected bool) {
+	batch.Queue(`
 		WITH loc AS (
 		  SELECT timezone,(now() AT TIME ZONE timezone)::date AS day
 		  FROM locations WHERE organization_id=$1 AND id=$2 AND active
@@ -174,7 +170,15 @@ func loadDashboardOperations(ctx context.Context, tx database.Executor, s scope,
 		  (SELECT round(avg(extract(epoch FROM now()-since))/60)::int FROM occupied),
 		  (SELECT name FROM occupied ORDER BY since,name LIMIT 1),
 		  (SELECT floor(extract(epoch FROM now()-since)/60)::int FROM occupied ORDER BY since,name LIMIT 1)
-		FROM loc`, s.OrganizationID, s.LocationID, canSeeExpected).Scan(
+		FROM loc`, s.OrganizationID, s.LocationID, canSeeExpected)
+}
+
+func readDashboardOperations(results pgx.BatchResults) (dashboardOperations, string, error) {
+	var result dashboardOperations
+	var businessDate string
+	var oldestName *string
+	var oldestMinutes *int
+	err := results.QueryRow().Scan(
 		&businessDate, &result.PendingBalance, &result.UnpaidOrders, &result.PartialOrders,
 		&result.TablesTotal, &result.TablesOccupied, &result.KitchenConfirmed, &result.KitchenPreparing,
 		&result.ReadyOrders, &result.DeliveryPending, &result.DeliveryInTransit,
@@ -186,48 +190,51 @@ func loadDashboardOperations(ctx context.Context, tx database.Executor, s scope,
 	}
 	return result, businessDate, err
 }
-func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, period dashboardPeriod, channelLabels map[string]string) (dashboardInsights, error) {
-	out := dashboardInsights{
-		Period:               dashboardPeriodView{Key: period.Key, Days: period.Days},
-		Trend:                dashboardTrend{Granularity: "day", Points: []dashboardTrendPoint{}},
-		SalesByChannel:       []dashboardBreakdown{},
-		SalesByPaymentMethod: []dashboardBreakdown{},
-		SalesByCategory:      []dashboardCategorySale{},
-	}
+// Consultas de tendencias y desgloses, en el orden en que readDashboardInsights las lee.
+const (
+	channelBreakdownSQL = `
+		SELECT CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END AS channel,
+		       CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END,
+		       sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
+		FROM movements m CROSS JOIN loc
+		WHERE m.local_at::date>loc.today-$4::int
+		GROUP BY 1,2
+		HAVING sum(m.amount)<>0
+		ORDER BY sum(m.amount) DESC,1
+	`
+	methodBreakdownSQL = `
+		SELECT m.method,COALESCE(pm.name,m.method),sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
+		FROM movements m
+		CROSS JOIN loc
+		LEFT JOIN payment_methods pm ON pm.organization_id=$1 AND pm.code=m.method
+		WHERE m.local_at::date>loc.today-$4::int
+		GROUP BY m.method,pm.name
+		HAVING sum(m.amount)<>0
+		ORDER BY sum(m.amount) DESC,m.method
+	`
+)
+
+func queueDashboardInsights(batch *pgx.Batch, s scope, period dashboardPeriod) {
 	previousStart, previousEnd := period.PreviousOffsets()
 	lookback := previousStart
-
-	if err := tx.QueryRow(ctx, `
+	batch.Queue(`
 		SELECT to_char(local_now::date-($3::int-1),'YYYY-MM-DD'),to_char(local_now::date,'YYYY-MM-DD'),
 		       to_char(local_now::date-$4::int,'YYYY-MM-DD'),to_char(local_now::date-$5::int,'YYYY-MM-DD'),
 		       CASE WHEN $3::int=1 THEN lpad(extract(hour FROM local_now)::int::text,2,'0') ELSE to_char(local_now::date,'YYYY-MM-DD') END
 		FROM (SELECT now() AT TIME ZONE timezone AS local_now FROM locations WHERE id=$2 AND organization_id=$1) loc
-	`, s.OrganizationID, s.LocationID, period.Days, previousStart, previousEnd).Scan(
-		&out.Period.From, &out.Period.To, &out.Previous.From, &out.Previous.To, &out.Trend.Now,
-	); err != nil {
-		return out, err
-	}
-
-	if err := tx.QueryRow(ctx, dashboardMovementsSQL+`
+	`, s.OrganizationID, s.LocationID, period.Days, previousStart, previousEnd)
+	batch.Queue(dashboardMovementsSQL+`
 		SELECT COALESCE(sum(m.amount),0)::text
 		FROM movements m CROSS JOIN loc
 		WHERE m.local_at::date BETWEEN loc.today-$4::int AND loc.today-$5::int
 		  AND m.local_at<(now() AT TIME ZONE loc.timezone)-make_interval(days=>$5::int)
-	`, s.OrganizationID, s.LocationID, lookback, previousStart, previousEnd).Scan(&out.Previous.SalesNet); err != nil {
-		return out, err
-	}
-	if err := tx.QueryRow(ctx, `
+	`, s.OrganizationID, s.LocationID, lookback, previousStart, previousEnd)
+	batch.Queue(`
 		SELECT count(*)::int,CASE WHEN count(*)>0 THEN (sum(total)/count(*))::text ELSE '0' END
 		FROM (`+paidOrdersSQL("$3::int", "$4::int")+`) paid
-	`, s.OrganizationID, s.LocationID, previousStart, previousEnd).Scan(&out.Previous.PaidOrders, &out.Previous.AverageTicket); err != nil {
-		return out, err
-	}
-
-	var rows pgx.Rows
-	var err error
+	`, s.OrganizationID, s.LocationID, previousStart, previousEnd)
 	if period.Days == 1 {
-		out.Trend.Granularity = "hour"
-		rows, err = tx.Query(ctx, dashboardMovementsSQL+`
+		batch.Queue(dashboardMovementsSQL+`
 			SELECT lpad(extract(hour FROM m.local_at)::int::text,2,'0'),
 			       COALESCE(sum(m.amount) FILTER (WHERE m.local_at::date=loc.today),0)::text,
 			       COALESCE(sum(m.amount) FILTER (WHERE m.local_at::date=loc.today-7),0)::text,
@@ -238,7 +245,7 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 			ORDER BY 1
 		`, s.OrganizationID, s.LocationID, lookback)
 	} else {
-		rows, err = tx.Query(ctx, dashboardMovementsSQL+`,
+		batch.Queue(dashboardMovementsSQL+`,
 			days AS (
 			  SELECT day::date AS day
 			  FROM loc,generate_series(loc.today-($4::int-1),loc.today,interval '1 day') AS series(day)
@@ -258,6 +265,59 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 			ORDER BY days.day
 		`, s.OrganizationID, s.LocationID, lookback, period.Days)
 	}
+	batch.Queue(dashboardMovementsSQL+channelBreakdownSQL, s.OrganizationID, s.LocationID, lookback, period.Days)
+	// Pedidos y promedio por canal con la misma definición que «Pedidos» y «Promedio»: su suma es el total.
+	batch.Queue(`
+		SELECT CASE WHEN o.channel='mostrador' THEN 'recojo' ELSE o.channel END,count(*)::int,(sum(paid.total)/count(*))::text
+		FROM (`+paidOrdersSQL("$3::int", "$4::int")+`) paid
+		JOIN orders o ON o.id=paid.id AND o.organization_id=$1
+		GROUP BY 1
+	`, s.OrganizationID, s.LocationID, period.Days-1, 0)
+	batch.Queue(dashboardMovementsSQL+methodBreakdownSQL, s.OrganizationID, s.LocationID, lookback, period.Days)
+	// Mismo orden que el catálogo operativo de ventas (sort_order, name) que usa Cobros para asignar tonos.
+	batch.Queue(`
+		SELECT code,affects_cash,(row_number() OVER (PARTITION BY affects_cash ORDER BY sort_order,name))::int-1
+		FROM payment_methods
+		WHERE organization_id=$1 AND active AND sales_enabled
+	`, s.OrganizationID)
+	// Misma definición que los productos vendidos: pedidos pagados por completo con un cobro en el periodo.
+	// Redondear solo el agregado de salida: la multiplicación conserva su precisión hasta sumar.
+	batch.Queue(`
+		SELECT COALESCE(mc.name,'Sin categoría'),sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
+		FROM order_items oi
+		JOIN (`+paidOrdersSQL("$3::int", "$4::int")+`) paid ON paid.id=oi.order_id
+		LEFT JOIN products pr ON pr.id=oi.product_id AND pr.organization_id=oi.organization_id
+		LEFT JOIN menu_categories mc ON mc.id=pr.category_id AND mc.organization_id=pr.organization_id
+		WHERE oi.organization_id=$1
+		GROUP BY COALESCE(mc.name,'Sin categoría')
+		ORDER BY sum(oi.qty*oi.unit_price) DESC,1
+	`, s.OrganizationID, s.LocationID, period.Days-1, 0)
+}
+
+func readDashboardInsights(results pgx.BatchResults, period dashboardPeriod, channelLabels map[string]string) (dashboardInsights, error) {
+	out := dashboardInsights{
+		Period:               dashboardPeriodView{Key: period.Key, Days: period.Days},
+		Trend:                dashboardTrend{Granularity: "day", Points: []dashboardTrendPoint{}},
+		SalesByChannel:       []dashboardBreakdown{},
+		SalesByPaymentMethod: []dashboardBreakdown{},
+		SalesByCategory:      []dashboardCategorySale{},
+	}
+	if err := results.QueryRow().Scan(
+		&out.Period.From, &out.Period.To, &out.Previous.From, &out.Previous.To, &out.Trend.Now,
+	); err != nil {
+		return out, err
+	}
+	if err := results.QueryRow().Scan(&out.Previous.SalesNet); err != nil {
+		return out, err
+	}
+	if err := results.QueryRow().Scan(&out.Previous.PaidOrders, &out.Previous.AverageTicket); err != nil {
+		return out, err
+	}
+
+	if period.Days == 1 {
+		out.Trend.Granularity = "hour"
+	}
+	rows, err := results.Query()
 	if err != nil {
 		return out, err
 	}
@@ -274,9 +334,9 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 		return out, err
 	}
 
-	breakdown := func(query string, labels map[string]string) ([]dashboardBreakdown, error) {
+	breakdown := func(labels map[string]string) ([]dashboardBreakdown, error) {
 		items := []dashboardBreakdown{}
-		rows, err := tx.Query(ctx, dashboardMovementsSQL+query, s.OrganizationID, s.LocationID, lookback, period.Days)
+		rows, err := results.Query()
 		if err != nil {
 			return items, err
 		}
@@ -293,25 +353,10 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 		}
 		return items, rows.Err()
 	}
-	if out.SalesByChannel, err = breakdown(`
-		SELECT CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END AS channel,
-		       CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END,
-		       sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
-		FROM movements m CROSS JOIN loc
-		WHERE m.local_at::date>loc.today-$4::int
-		GROUP BY 1,2
-		HAVING sum(m.amount)<>0
-		ORDER BY sum(m.amount) DESC,1
-	`, channelLabels); err != nil {
+	if out.SalesByChannel, err = breakdown(channelLabels); err != nil {
 		return out, err
 	}
-	// Pedidos y promedio por canal con la misma definición que «Pedidos» y «Promedio»: su suma es el total.
-	channelRows, err := tx.Query(ctx, `
-		SELECT CASE WHEN o.channel='mostrador' THEN 'recojo' ELSE o.channel END,count(*)::int,(sum(paid.total)/count(*))::text
-		FROM (`+paidOrdersSQL("$3::int", "$4::int")+`) paid
-		JOIN orders o ON o.id=paid.id AND o.organization_id=$1
-		GROUP BY 1
-	`, s.OrganizationID, s.LocationID, period.Days-1, 0)
+	channelRows, err := results.Query()
 	if err != nil {
 		return out, err
 	}
@@ -343,24 +388,10 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 		}
 		item.Orders, item.AverageTicket = &orders, &average
 	}
-	if out.SalesByPaymentMethod, err = breakdown(`
-		SELECT m.method,COALESCE(pm.name,m.method),sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
-		FROM movements m
-		CROSS JOIN loc
-		LEFT JOIN payment_methods pm ON pm.organization_id=$1 AND pm.code=m.method
-		WHERE m.local_at::date>loc.today-$4::int
-		GROUP BY m.method,pm.name
-		HAVING sum(m.amount)<>0
-		ORDER BY sum(m.amount) DESC,m.method
-	`, nil); err != nil {
+	if out.SalesByPaymentMethod, err = breakdown(nil); err != nil {
 		return out, err
 	}
-	// Mismo orden que el catálogo operativo de ventas (sort_order, name) que usa Cobros para asignar tonos.
-	methodRows, err := tx.Query(ctx, `
-		SELECT code,affects_cash,(row_number() OVER (PARTITION BY affects_cash ORDER BY sort_order,name))::int-1
-		FROM payment_methods
-		WHERE organization_id=$1 AND active AND sales_enabled
-	`, s.OrganizationID)
+	methodRows, err := results.Query()
 	if err != nil {
 		return out, err
 	}
@@ -394,18 +425,7 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 		}
 	}
 
-	// Misma definición que los productos vendidos: pedidos pagados por completo con un cobro en el periodo.
-	// Redondear solo el agregado de salida: la multiplicación conserva su precisión hasta sumar.
-	rows, err = tx.Query(ctx, `
-		SELECT COALESCE(mc.name,'Sin categoría'),sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
-		FROM order_items oi
-		JOIN (`+paidOrdersSQL("$3::int", "$4::int")+`) paid ON paid.id=oi.order_id
-		LEFT JOIN products pr ON pr.id=oi.product_id AND pr.organization_id=oi.organization_id
-		LEFT JOIN menu_categories mc ON mc.id=pr.category_id AND mc.organization_id=pr.organization_id
-		WHERE oi.organization_id=$1
-		GROUP BY COALESCE(mc.name,'Sin categoría')
-		ORDER BY sum(oi.qty*oi.unit_price) DESC,1
-	`, s.OrganizationID, s.LocationID, period.Days-1, 0)
+	rows, err = results.Query()
 	if err != nil {
 		return out, err
 	}
@@ -422,15 +442,13 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 }
 func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.DashboardPeriod, canSeeExpected bool, labels map[string]string) (domain.Dashboard, error) {
 	tx := database.ExecutorFor(ctx, r.pool)
+	// Todas las consultas van en un pgx.Batch: con la base remota cada una costaba
+	// una ida y vuelta (unas 17 por carga, cada 30 s por dashboard abierto). Siguen
+	// dentro de la transacción de solo lectura, así que leen la misma instantánea.
+	batch := &pgx.Batch{}
 	// El resumen comparte el pool con la operación: una consulta degradada se corta en vez de retener la conexión.
-	if _, err := tx.Exec(ctx, `SET LOCAL statement_timeout = '5s'`); err != nil {
-		return domain.Dashboard{}, &application.ReportError{Stage: application.Summary, Cause: err}
-	}
-	var err error
-	var salesNet, averageTicket string
-	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
-
-	err = tx.QueryRow(ctx, `
+	batch.Queue(`SET LOCAL statement_timeout = '5s'`)
+	batch.Queue(`
 		WITH today_payments AS (
 		  SELECT p.order_id,p.amount
 		  FROM payments p
@@ -478,15 +496,8 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		   WHERE organization_id=$1 AND location_id=$2
 		     AND status IN ('confirmado','preparando'))
 		FROM sales CROSS JOIN paid
-	`, s.OrganizationID, s.LocationID, period.Days).Scan(
-		&salesNet, &paidOrders, &averageTicket, &openOrders, &critical, &purchases, &reservationsToday, &kitchenPending,
-	)
-	if err != nil {
-		return domain.Dashboard{}, &application.ReportError{Stage: application.Summary, Cause: err}
-	}
-
-	hourly := []map[string]any{}
-	rows, err := tx.Query(ctx, `
+	`, s.OrganizationID, s.LocationID, period.Days)
+	batch.Queue(`
 		SELECT hour,COALESCE(sum(value),0)::text
 		FROM (
 		  SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int AS hour,p.amount AS value
@@ -501,6 +512,32 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		) movements
 		GROUP BY hour ORDER BY hour
 	`, s.OrganizationID, s.LocationID)
+	batch.Queue(`
+		SELECT oi.name,sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
+		FROM order_items oi
+		JOIN (`+paidOrdersSQL("$3::int-1", "0")+`) paid ON paid.id=oi.order_id
+		WHERE oi.organization_id=$1
+		GROUP BY oi.name ORDER BY sum(oi.qty*oi.unit_price) DESC,sum(oi.qty) DESC,oi.name LIMIT 5
+	`, s.OrganizationID, s.LocationID, period.Days)
+	queueDashboardOperations(batch, s, canSeeExpected)
+	queueDashboardInsights(batch, s, period)
+
+	results := tx.SendBatch(ctx, batch)
+	defer results.Close()
+	if _, err := results.Exec(); err != nil {
+		return domain.Dashboard{}, &application.ReportError{Stage: application.Summary, Cause: err}
+	}
+	var salesNet, averageTicket string
+	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
+	err := results.QueryRow().Scan(
+		&salesNet, &paidOrders, &averageTicket, &openOrders, &critical, &purchases, &reservationsToday, &kitchenPending,
+	)
+	if err != nil {
+		return domain.Dashboard{}, &application.ReportError{Stage: application.Summary, Cause: err}
+	}
+
+	hourly := []map[string]any{}
+	rows, err := results.Query()
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Hourly, Cause: err}
 	}
@@ -521,13 +558,7 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 	}
 
 	topProducts := []map[string]any{}
-	productRows, err := tx.Query(ctx, `
-		SELECT oi.name,sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
-		FROM order_items oi
-		JOIN (`+paidOrdersSQL("$3::int-1", "0")+`) paid ON paid.id=oi.order_id
-		WHERE oi.organization_id=$1
-		GROUP BY oi.name ORDER BY sum(oi.qty*oi.unit_price) DESC,sum(oi.qty) DESC,oi.name LIMIT 5
-	`, s.OrganizationID, s.LocationID, period.Days)
+	productRows, err := results.Query()
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Products, Cause: err}
 	}
@@ -545,11 +576,11 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Products, Cause: err}
 	}
-	operations, businessDate, err := loadDashboardOperations(ctx, tx, s, canSeeExpected)
+	operations, businessDate, err := readDashboardOperations(results)
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Operations, Cause: err}
 	}
-	insights, err := loadDashboardInsights(ctx, tx, s, period, labels)
+	insights, err := readDashboardInsights(results, period, labels)
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Insights, Cause: err}
 	}

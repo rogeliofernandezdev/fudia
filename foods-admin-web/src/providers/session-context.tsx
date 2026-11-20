@@ -1,7 +1,6 @@
 "use client";
-import {createContext,useContext} from "react";
+import {createContext,useContext,useEffect,useMemo} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {useEffect} from "react";
 import {loadSessionContext} from "@/shared/session/session-api";
 import {expireBrowserSession} from "@/shared/session/expire-session";
 
@@ -17,9 +16,15 @@ export function SessionProvider({children}:{children:React.ReactNode}){
   const query=useQuery({queryKey:["session-context"],queryFn:loadSessionContext,staleTime:300000,refetchInterval:30000,refetchOnWindowFocus:"always",retry:(failures,error)=>!isUnauthorizedError(error)&&failures<1});
   const isUnauthorized=query.isError&&isUnauthorizedError(query.error);
   useEffect(()=>{if(isUnauthorized)expireBrowserSession()},[isUnauthorized]);
-  const permissions=query.data?.permissions??[];
-  const menuAccess=query.data?.menuAccess??[];
-  const value:SessionContext={user:query.data?.user??null,organization:query.data?.organization??null,location:query.data?.location??null,modules:query.data?.modules??null,menuAccess,permissions,setupRequired:query.data?.setupRequired??false,cashCollection:Boolean(query.data?.cashCollection),canAccess:(access)=>(access==="pos"&&Boolean(query.data?.cashCollection))||menuAccess.includes("*")||menuAccess.includes(access),can:(permission)=>permissions.includes("*")||permissions.includes(permission),isLoading:query.isLoading,isError:query.isError,isUnauthorized};
+  const {data,isLoading,isError}=query;
+  // Un valor estable evita volver a renderizar a todos los consumidores de
+  // useSession() cada vez que el proveedor se renderiza.
+  const value=useMemo<SessionContext>(()=>{
+    const permissions=data?.permissions??[];
+    const menuAccess=data?.menuAccess??[];
+    const cashCollection=Boolean(data?.cashCollection);
+    return {user:data?.user??null,organization:data?.organization??null,location:data?.location??null,modules:data?.modules??null,menuAccess,permissions,setupRequired:data?.setupRequired??false,cashCollection,canAccess:(access)=>(access==="pos"&&cashCollection)||menuAccess.includes("*")||menuAccess.includes(access),can:(permission)=>permissions.includes("*")||permissions.includes(permission),isLoading,isError,isUnauthorized};
+  },[data,isLoading,isError,isUnauthorized]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

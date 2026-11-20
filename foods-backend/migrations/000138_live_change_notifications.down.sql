@@ -1,0 +1,16 @@
+DROP TRIGGER IF EXISTS reservations_live ON reservations;
+DROP TRIGGER IF EXISTS tables_live ON tables;
+DROP TRIGGER IF EXISTS delivery_dispatches_live ON delivery_dispatches;
+DROP TRIGGER IF EXISTS products_live ON products;
+DROP TRIGGER IF EXISTS stock_balances_live ON stock_balances;
+DROP TRIGGER IF EXISTS product_availability_live ON product_availability;
+DROP TRIGGER IF EXISTS pay_notifications_live ON pay_notifications;
+DROP TRIGGER IF EXISTS staff_notices_live ON staff_notices;
+DROP TRIGGER IF EXISTS cash_movements_live ON cash_movements;
+DROP TRIGGER IF EXISTS cash_shifts_live ON cash_shifts;
+DROP TRIGGER IF EXISTS payment_refunds_live ON payment_refunds;
+DROP TRIGGER IF EXISTS payments_live ON payments;
+DROP TRIGGER IF EXISTS order_kitchen_rounds_live ON order_kitchen_rounds;
+DROP TRIGGER IF EXISTS order_service_items_live ON order_service_items;
+DROP TRIGGER IF EXISTS orders_live ON orders;
+DROP FUNCTION IF EXISTS notify_live_change();

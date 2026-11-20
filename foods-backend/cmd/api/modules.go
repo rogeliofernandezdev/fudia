@@ -46,6 +46,7 @@ import (
 	subscriptionpg "github.com/foods-platform/foods-backend/internal/modules/subscriptions/infrastructure/postgres"
 	subscriptionhttp "github.com/foods-platform/foods-backend/internal/modules/subscriptions/transport/http"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
+	"github.com/foods-platform/foods-backend/internal/platform/realtime"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	httpapi "github.com/foods-platform/foods-backend/internal/transport/httpapi"
 
@@ -90,7 +91,7 @@ func (h orderHandoff) RestoreDeliveryFee(ctx context.Context, s requestscope.Sco
 
 // newAPI compone el API y devuelve el despachador de Delivery Fudia, cuyo
 // barrido periódico avanza la cascada de centrales.
-func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *deliveryMaintenance) {
+func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Events) (*httpapi.API, *deliveryMaintenance) {
 	// Composition is the only layer that knows concrete PostgreSQL adapters.
 	// A single unit of work and shared stateless adapters preserve transactions
 	// across Orders, Inventory, Billing and tenant onboarding.
@@ -143,6 +144,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) (*httpapi.API, *del
 	concierge.WithDirectory(conciergepg.New(db), platform, work)
 	concierge.WithDeliveryTracking(dispatcher)
 	return httpapi.NewWithHandlers(httpapi.Handlers{
+		Live: live,
 		Delivery: deliveryhttp.New(deliveryapp.NewPartners(deliveryRepo, work), dispatcher).
 			WithOperators(operators, os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
