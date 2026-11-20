@@ -99,6 +99,19 @@ type ComboOptionUsageKey struct {
 	GroupName      string
 	ProductID      string
 }
+
+// ComboOptionQuota es el cupo diario de una opción de menú (nil = sin tope),
+// leído con la opción bloqueada.
+type ComboOptionQuota struct {
+	Quota *int
+	Name  string
+}
+
+// ComboOptionUsage es lo ya pedido hoy de una opción: en este pedido (Existing)
+// y en los demás pedidos no cancelados del local (External).
+type ComboOptionUsage struct {
+	Existing, External float64
+}
 type PreparedOrderItem struct {
 	ProductID  *string
 	Name       string

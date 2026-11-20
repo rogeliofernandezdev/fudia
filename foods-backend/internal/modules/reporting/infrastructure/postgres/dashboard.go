@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"github.com/foods-platform/foods-backend/internal/modules/reporting/application"
 	"github.com/foods-platform/foods-backend/internal/modules/reporting/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
@@ -64,6 +66,7 @@ func localNowMinusDaysSQL(days string) string {
 }
 
 // paidOrdersSQL devuelve los pedidos no cancelados cuyos cobros, netos de devoluciones, cubren el total
+// (orders.paid_amount, que los triggers de cobros y devoluciones mantienen igual a esa suma)
 // y cuyo último cobro cae entre el inicio del día local (hoy - start) y el mismo instante de hace shift
 // días. Cada pedido cuenta una sola vez, en el periodo en que se terminó de pagar, aunque haya recibido
 // pagos parciales en días anteriores. Una devolución reabre el saldo y retira el pedido del conteo.
@@ -77,7 +80,7 @@ func paidOrdersSQL(start, shift string) string {
 	  WHERE p.order_id=o.id AND p.organization_id=o.organization_id AND p.location_id=o.location_id
 	) pay ON true
 	WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
-	  AND (` + netPaidSQL + `) >= o.total
+	  AND o.paid_amount >= o.total
 	  AND pay.last_paid_at>=` + localDayStartSQL(start) + `
 	  AND pay.last_paid_at<` + localNowMinusDaysSQL(shift) + `
 	  AND o.id IN (
@@ -190,30 +193,49 @@ func readDashboardOperations(results pgx.BatchResults) (dashboardOperations, str
 	}
 	return result, businessDate, err
 }
-// Consultas de tendencias y desgloses, en el orden en que readDashboardInsights las lee.
+// Desgloses sobre los cobros netos del periodo; $4 es la cantidad de días.
 const (
 	channelBreakdownSQL = `
-		SELECT CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END AS channel,
-		       CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END,
-		       sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
+		SELECT CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END AS value,
+		       sum(m.amount)::text AS total,count(*) FILTER (WHERE m.amount>0)::int AS count,sum(m.amount) AS amount
 		FROM movements m CROSS JOIN loc
 		WHERE m.local_at::date>loc.today-$4::int
-		GROUP BY 1,2
-		HAVING sum(m.amount)<>0
-		ORDER BY sum(m.amount) DESC,1
-	`
+		GROUP BY 1
+		HAVING sum(m.amount)<>0`
 	methodBreakdownSQL = `
-		SELECT m.method,COALESCE(pm.name,m.method),sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
+		SELECT m.method AS value,COALESCE(pm.name,m.method) AS label,sum(m.amount)::text AS total,
+		       count(*) FILTER (WHERE m.amount>0)::int AS count,sum(m.amount) AS amount
 		FROM movements m
 		CROSS JOIN loc
 		LEFT JOIN payment_methods pm ON pm.organization_id=$1 AND pm.code=m.method
 		WHERE m.local_at::date>loc.today-$4::int
 		GROUP BY m.method,pm.name
-		HAVING sum(m.amount)<>0
-		ORDER BY sum(m.amount) DESC,m.method
-	`
+		HAVING sum(m.amount)<>0`
+	hourlyTrendSQL = `
+		SELECT lpad(extract(hour FROM m.local_at)::int::text,2,'0') AS key,
+		       COALESCE(sum(m.amount) FILTER (WHERE m.local_at::date=loc.today),0)::text AS current,
+		       COALESCE(sum(m.amount) FILTER (WHERE m.local_at::date=loc.today-7),0)::text AS previous,
+		       count(DISTINCT m.order_id) FILTER (WHERE m.amount>0 AND m.local_at::date=loc.today)::int AS orders
+		FROM movements m CROSS JOIN loc
+		WHERE m.local_at::date IN (loc.today,loc.today-7)
+		GROUP BY 1`
+	dailyTrendSQL = `
+		SELECT to_char(days.day,'YYYY-MM-DD') AS key,
+		       COALESCE(current_day.total,0)::text AS current,
+		       COALESCE(previous_day.total,0)::text AS previous,
+		       COALESCE(current_day.orders,0)::int AS orders
+		FROM (
+		  SELECT day::date AS day
+		  FROM loc,generate_series(loc.today-($4::int-1),loc.today,interval '1 day') AS series(day)
+		) days
+		LEFT JOIN daily current_day ON current_day.day=days.day
+		LEFT JOIN daily previous_day ON previous_day.day=days.day-$4::int`
 )
 
+// queueDashboardInsights encola las lecturas de tendencias y desgloses en el
+// orden en que readDashboardInsights las lee. Los cobros del periodo y del
+// periodo anterior (movements) se calculan una sola vez para la comparación, la
+// tendencia y los desgloses por canal y medio de pago (antes, cuatro veces).
 func queueDashboardInsights(batch *pgx.Batch, s scope, period dashboardPeriod) {
 	previousStart, previousEnd := period.PreviousOffsets()
 	lookback := previousStart
@@ -223,78 +245,45 @@ func queueDashboardInsights(batch *pgx.Batch, s scope, period dashboardPeriod) {
 		       CASE WHEN $3::int=1 THEN lpad(extract(hour FROM local_now)::int::text,2,'0') ELSE to_char(local_now::date,'YYYY-MM-DD') END
 		FROM (SELECT now() AT TIME ZONE timezone AS local_now FROM locations WHERE id=$2 AND organization_id=$1) loc
 	`, s.OrganizationID, s.LocationID, period.Days, previousStart, previousEnd)
-	batch.Queue(dashboardMovementsSQL+`
-		SELECT COALESCE(sum(m.amount),0)::text
-		FROM movements m CROSS JOIN loc
-		WHERE m.local_at::date BETWEEN loc.today-$4::int AND loc.today-$5::int
-		  AND m.local_at<(now() AT TIME ZONE loc.timezone)-make_interval(days=>$5::int)
-	`, s.OrganizationID, s.LocationID, lookback, previousStart, previousEnd)
+	trend := dailyTrendSQL
+	if period.Days == 1 {
+		trend = hourlyTrendSQL
+	}
+	batch.Queue(dashboardMovementsSQL+`,
+		daily AS (
+		  SELECT m.local_at::date AS day,sum(m.amount) AS total,count(DISTINCT m.order_id) FILTER (WHERE m.amount>0) AS orders
+		  FROM movements m
+		  GROUP BY 1
+		)
+		SELECT
+		  (SELECT COALESCE(sum(m.amount),0)::text
+		   FROM movements m CROSS JOIN loc
+		   WHERE m.local_at::date BETWEEN loc.today-$5::int AND loc.today-$6::int
+		     AND m.local_at<(now() AT TIME ZONE loc.timezone)-make_interval(days=>$6::int)),
+		  COALESCE((SELECT json_agg(json_build_object('key',t.key,'current',t.current,'previous',t.previous,'orders',t.orders) ORDER BY t.key) FROM (`+trend+`) t),'[]'),
+		  COALESCE((SELECT json_agg(json_build_object('value',c.value,'label',c.value,'total',c.total,'count',c.count) ORDER BY c.amount DESC,c.value) FROM (`+channelBreakdownSQL+`) c),'[]'),
+		  COALESCE((SELECT json_agg(json_build_object('value',b.value,'label',b.label,'total',b.total,'count',b.count) ORDER BY b.amount DESC,b.value) FROM (`+methodBreakdownSQL+`) b),'[]')
+	`, s.OrganizationID, s.LocationID, lookback, period.Days, previousStart, previousEnd)
 	batch.Queue(`
 		SELECT count(*)::int,CASE WHEN count(*)>0 THEN (sum(total)/count(*))::text ELSE '0' END
 		FROM (`+paidOrdersSQL("$3::int", "$4::int")+`) paid
 	`, s.OrganizationID, s.LocationID, previousStart, previousEnd)
-	if period.Days == 1 {
-		batch.Queue(dashboardMovementsSQL+`
-			SELECT lpad(extract(hour FROM m.local_at)::int::text,2,'0'),
-			       COALESCE(sum(m.amount) FILTER (WHERE m.local_at::date=loc.today),0)::text,
-			       COALESCE(sum(m.amount) FILTER (WHERE m.local_at::date=loc.today-7),0)::text,
-			       count(DISTINCT m.order_id) FILTER (WHERE m.amount>0 AND m.local_at::date=loc.today)::int
-			FROM movements m CROSS JOIN loc
-			WHERE m.local_at::date IN (loc.today,loc.today-7)
-			GROUP BY 1
-			ORDER BY 1
-		`, s.OrganizationID, s.LocationID, lookback)
-	} else {
-		batch.Queue(dashboardMovementsSQL+`,
-			days AS (
-			  SELECT day::date AS day
-			  FROM loc,generate_series(loc.today-($4::int-1),loc.today,interval '1 day') AS series(day)
-			),
-			daily AS (
-			  SELECT m.local_at::date AS day,sum(m.amount) AS total,count(DISTINCT m.order_id) FILTER (WHERE m.amount>0) AS orders
-			  FROM movements m
-			  GROUP BY 1
-			)
-			SELECT to_char(days.day,'YYYY-MM-DD'),
-			       COALESCE(current_day.total,0)::text,
-			       COALESCE(previous_day.total,0)::text,
-			       COALESCE(current_day.orders,0)::int
-			FROM days
-			LEFT JOIN daily current_day ON current_day.day=days.day
-			LEFT JOIN daily previous_day ON previous_day.day=days.day-$4::int
-			ORDER BY days.day
-		`, s.OrganizationID, s.LocationID, lookback, period.Days)
-	}
-	batch.Queue(dashboardMovementsSQL+channelBreakdownSQL, s.OrganizationID, s.LocationID, lookback, period.Days)
-	// Pedidos y promedio por canal con la misma definición que «Pedidos» y «Promedio»: su suma es el total.
-	batch.Queue(`
-		SELECT CASE WHEN o.channel='mostrador' THEN 'recojo' ELSE o.channel END,count(*)::int,(sum(paid.total)/count(*))::text
-		FROM (`+paidOrdersSQL("$3::int", "$4::int")+`) paid
-		JOIN orders o ON o.id=paid.id AND o.organization_id=$1
-		GROUP BY 1
-	`, s.OrganizationID, s.LocationID, period.Days-1, 0)
-	batch.Queue(dashboardMovementsSQL+methodBreakdownSQL, s.OrganizationID, s.LocationID, lookback, period.Days)
 	// Mismo orden que el catálogo operativo de ventas (sort_order, name) que usa Cobros para asignar tonos.
 	batch.Queue(`
 		SELECT code,affects_cash,(row_number() OVER (PARTITION BY affects_cash ORDER BY sort_order,name))::int-1
 		FROM payment_methods
 		WHERE organization_id=$1 AND active AND sales_enabled
 	`, s.OrganizationID)
-	// Misma definición que los productos vendidos: pedidos pagados por completo con un cobro en el periodo.
-	// Redondear solo el agregado de salida: la multiplicación conserva su precisión hasta sumar.
-	batch.Queue(`
-		SELECT COALESCE(mc.name,'Sin categoría'),sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
-		FROM order_items oi
-		JOIN (`+paidOrdersSQL("$3::int", "$4::int")+`) paid ON paid.id=oi.order_id
-		LEFT JOIN products pr ON pr.id=oi.product_id AND pr.organization_id=oi.organization_id
-		LEFT JOIN menu_categories mc ON mc.id=pr.category_id AND mc.organization_id=pr.organization_id
-		WHERE oi.organization_id=$1
-		GROUP BY COALESCE(mc.name,'Sin categoría')
-		ORDER BY sum(oi.qty*oi.unit_price) DESC,1
-	`, s.OrganizationID, s.LocationID, period.Days-1, 0)
 }
 
-func readDashboardInsights(results pgx.BatchResults, period dashboardPeriod, channelLabels map[string]string) (dashboardInsights, error) {
+// paidChannel son los pedidos pagados y el promedio de un canal (JSON del resumen).
+type paidChannel struct {
+	Channel string `json:"channel"`
+	Orders  int    `json:"orders"`
+	Average string `json:"average"`
+}
+
+func readDashboardInsights(results pgx.BatchResults, period dashboardPeriod, channelLabels map[string]string, paidChannels []paidChannel, categories []dashboardCategorySale) (dashboardInsights, error) {
 	out := dashboardInsights{
 		Period:               dashboardPeriodView{Key: period.Key, Days: period.Days},
 		Trend:                dashboardTrend{Granularity: "day", Points: []dashboardTrendPoint{}},
@@ -307,89 +296,35 @@ func readDashboardInsights(results pgx.BatchResults, period dashboardPeriod, cha
 	); err != nil {
 		return out, err
 	}
-	if err := results.QueryRow().Scan(&out.Previous.SalesNet); err != nil {
+	var rawTrend, rawChannels, rawMethods []byte
+	if err := results.QueryRow().Scan(&out.Previous.SalesNet, &rawTrend, &rawChannels, &rawMethods); err != nil {
 		return out, err
 	}
 	if err := results.QueryRow().Scan(&out.Previous.PaidOrders, &out.Previous.AverageTicket); err != nil {
 		return out, err
 	}
-
 	if period.Days == 1 {
 		out.Trend.Granularity = "hour"
 	}
-	rows, err := results.Query()
-	if err != nil {
+	if err := errors.Join(json.Unmarshal(rawTrend, &out.Trend.Points), json.Unmarshal(rawChannels, &out.SalesByChannel), json.Unmarshal(rawMethods, &out.SalesByPaymentMethod)); err != nil {
 		return out, err
 	}
-	for rows.Next() {
-		var point dashboardTrendPoint
-		if err = rows.Scan(&point.Key, &point.Current, &point.Previous, &point.Orders); err != nil {
-			rows.Close()
-			return out, err
+	for index := range out.SalesByChannel {
+		if label := channelLabels[out.SalesByChannel[index].Value]; label != "" {
+			out.SalesByChannel[index].Label = label
 		}
-		out.Trend.Points = append(out.Trend.Points, point)
 	}
-	rows.Close()
-	if err = rows.Err(); err != nil {
-		return out, err
-	}
-
-	breakdown := func(labels map[string]string) ([]dashboardBreakdown, error) {
-		items := []dashboardBreakdown{}
-		rows, err := results.Query()
-		if err != nil {
-			return items, err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var item dashboardBreakdown
-			if err = rows.Scan(&item.Value, &item.Label, &item.Total, &item.Count); err != nil {
-				return items, err
-			}
-			if labels != nil && labels[item.Value] != "" {
-				item.Label = labels[item.Value]
-			}
-			items = append(items, item)
-		}
-		return items, rows.Err()
-	}
-	if out.SalesByChannel, err = breakdown(channelLabels); err != nil {
-		return out, err
-	}
-	channelRows, err := results.Query()
-	if err != nil {
-		return out, err
-	}
-	channelOrders := map[string]struct {
-		orders  int
-		average string
-	}{}
-	for channelRows.Next() {
-		var channel, average string
-		var orders int
-		if err = channelRows.Scan(&channel, &orders, &average); err != nil {
-			channelRows.Close()
-			return out, err
-		}
-		channelOrders[channel] = struct {
-			orders  int
-			average string
-		}{orders, average}
-	}
-	channelRows.Close()
-	if err = channelRows.Err(); err != nil {
-		return out, err
+	channelOrders := map[string]paidChannel{}
+	for _, channel := range paidChannels {
+		channelOrders[channel.Channel] = channel
 	}
 	for index := range out.SalesByChannel {
 		item := &out.SalesByChannel[index]
 		orders, average := 0, "0"
 		if found, ok := channelOrders[item.Value]; ok {
-			orders, average = found.orders, found.average
+			orders, average = found.Orders, found.Average
 		}
 		item.Orders, item.AverageTicket = &orders, &average
-	}
-	if out.SalesByPaymentMethod, err = breakdown(nil); err != nil {
-		return out, err
 	}
 	methodRows, err := results.Query()
 	if err != nil {
@@ -424,21 +359,8 @@ func readDashboardInsights(results pgx.BatchResults, period dashboardPeriod, cha
 			}
 		}
 	}
-
-	rows, err = results.Query()
-	if err != nil {
-		return out, err
-	}
-	for rows.Next() {
-		var item dashboardCategorySale
-		if err = rows.Scan(&item.Name, &item.Qty, &item.Revenue); err != nil {
-			rows.Close()
-			return out, err
-		}
-		out.SalesByCategory = append(out.SalesByCategory, item)
-	}
-	rows.Close()
-	return out, rows.Err()
+	out.SalesByCategory = append(out.SalesByCategory, categories...)
+	return out, nil
 }
 func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.DashboardPeriod, canSeeExpected bool, labels map[string]string) (domain.Dashboard, error) {
 	tx := database.ExecutorFor(ctx, r.pool)
@@ -466,9 +388,18 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		    COALESCE((SELECT sum(amount) FROM today_payments),0)
 		    - COALESCE((SELECT sum(amount) FROM today_refunds),0) AS net
 		),
+		-- Pedidos pagados del periodo: se calculan una vez y los usan el promedio,
+		-- lo más vendido, los pedidos por canal y las categorías (antes, cuatro veces).
+		paid_orders AS MATERIALIZED (`+paidOrdersSQL("$3::int-1", "0")+`),
 		paid AS (
 		  SELECT count(*)::int AS orders,COALESCE(sum(paid_orders.total),0) AS total
-		  FROM (`+paidOrdersSQL("$3::int-1", "0")+`) paid_orders
+		  FROM paid_orders
+		),
+		paid_items AS MATERIALIZED (
+		  SELECT oi.name,oi.qty,oi.unit_price,oi.product_id,oi.organization_id
+		  FROM order_items oi
+		  JOIN paid_orders po ON po.id=oi.order_id
+		  WHERE oi.organization_id=$1
 		)
 		SELECT
 		  sales.net::text,
@@ -494,7 +425,41 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		     AND r.starts_at>=`+localDayStartSQL("0")+` AND r.starts_at<`+localDayStartSQL("-1")+`),
 		  (SELECT count(*) FROM orders
 		   WHERE organization_id=$1 AND location_id=$2
-		     AND status IN ('confirmado','preparando'))
+		     AND status IN ('confirmado','preparando')),
+		  COALESCE((
+		    SELECT json_agg(json_build_object('name',top.name,'qty',top.qty,'revenue',top.revenue) ORDER BY top.position)
+		    FROM (
+		      SELECT name,sum(qty)::text AS qty,round(sum(qty*unit_price),2)::text AS revenue,
+		             row_number() OVER (ORDER BY sum(qty*unit_price) DESC,sum(qty) DESC,name) AS position
+		      FROM paid_items
+		      GROUP BY name
+		      ORDER BY position
+		      LIMIT 5
+		    ) top
+		  ),'[]'),
+		  -- Pedidos y promedio por canal con la misma definición que «Pedidos» y «Promedio»: su suma es el total.
+		  COALESCE((
+		    SELECT json_agg(json_build_object('channel',c.channel,'orders',c.orders,'average',c.average))
+		    FROM (
+		      SELECT CASE WHEN o.channel='mostrador' THEN 'recojo' ELSE o.channel END AS channel,
+		             count(*)::int AS orders,(sum(po.total)/count(*))::text AS average
+		      FROM paid_orders po
+		      JOIN orders o ON o.id=po.id AND o.organization_id=$1
+		      GROUP BY 1
+		    ) c
+		  ),'[]'),
+		  -- Redondear solo el agregado de salida: la multiplicación conserva su precisión hasta sumar.
+		  COALESCE((
+		    SELECT json_agg(json_build_object('name',c.name,'qty',c.qty,'revenue',c.revenue) ORDER BY c.amount DESC,c.name)
+		    FROM (
+		      SELECT COALESCE(mc.name,'Sin categoría') AS name,sum(pi.qty)::text AS qty,
+		             round(sum(pi.qty*pi.unit_price),2)::text AS revenue,sum(pi.qty*pi.unit_price) AS amount
+		      FROM paid_items pi
+		      LEFT JOIN products pr ON pr.id=pi.product_id AND pr.organization_id=pi.organization_id
+		      LEFT JOIN menu_categories mc ON mc.id=pr.category_id AND mc.organization_id=pr.organization_id
+		      GROUP BY COALESCE(mc.name,'Sin categoría')
+		    ) c
+		  ),'[]')
 		FROM sales CROSS JOIN paid
 	`, s.OrganizationID, s.LocationID, period.Days)
 	batch.Queue(`
@@ -512,13 +477,6 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		) movements
 		GROUP BY hour ORDER BY hour
 	`, s.OrganizationID, s.LocationID)
-	batch.Queue(`
-		SELECT oi.name,sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
-		FROM order_items oi
-		JOIN (`+paidOrdersSQL("$3::int-1", "0")+`) paid ON paid.id=oi.order_id
-		WHERE oi.organization_id=$1
-		GROUP BY oi.name ORDER BY sum(oi.qty*oi.unit_price) DESC,sum(oi.qty) DESC,oi.name LIMIT 5
-	`, s.OrganizationID, s.LocationID, period.Days)
 	queueDashboardOperations(batch, s, canSeeExpected)
 	queueDashboardInsights(batch, s, period)
 
@@ -529,11 +487,27 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 	}
 	var salesNet, averageTicket string
 	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
+	var rawTop, rawChannels, rawCategories []byte
 	err := results.QueryRow().Scan(
 		&salesNet, &paidOrders, &averageTicket, &openOrders, &critical, &purchases, &reservationsToday, &kitchenPending,
+		&rawTop, &rawChannels, &rawCategories,
 	)
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Summary, Cause: err}
+	}
+	var top []struct{ Name, Qty, Revenue string }
+	var paidChannels []paidChannel
+	var categories []struct{ Name, Qty, Revenue string }
+	if err = errors.Join(json.Unmarshal(rawTop, &top), json.Unmarshal(rawChannels, &paidChannels), json.Unmarshal(rawCategories, &categories)); err != nil {
+		return domain.Dashboard{}, &application.ReportError{Stage: application.Products, Cause: err}
+	}
+	topProducts := make([]map[string]any, 0, len(top))
+	for _, item := range top {
+		topProducts = append(topProducts, map[string]any{"name": item.Name, "qty": item.Qty, "revenue": item.Revenue})
+	}
+	categorySales := make([]dashboardCategorySale, 0, len(categories))
+	for _, item := range categories {
+		categorySales = append(categorySales, dashboardCategorySale{Name: item.Name, Qty: item.Qty, Revenue: item.Revenue})
 	}
 
 	hourly := []map[string]any{}
@@ -557,30 +531,11 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Hourly, Cause: err}
 	}
 
-	topProducts := []map[string]any{}
-	productRows, err := results.Query()
-	if err != nil {
-		return domain.Dashboard{}, &application.ReportError{Stage: application.Products, Cause: err}
-	}
-	for productRows.Next() {
-		var name, qty, revenue string
-		if err = productRows.Scan(&name, &qty, &revenue); err != nil {
-			break
-		}
-		topProducts = append(topProducts, map[string]any{"name": name, "qty": qty, "revenue": revenue})
-	}
-	if err == nil {
-		err = productRows.Err()
-	}
-	productRows.Close()
-	if err != nil {
-		return domain.Dashboard{}, &application.ReportError{Stage: application.Products, Cause: err}
-	}
 	operations, businessDate, err := readDashboardOperations(results)
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Operations, Cause: err}
 	}
-	insights, err := readDashboardInsights(results, period, labels)
+	insights, err := readDashboardInsights(results, period, labels, paidChannels, categorySales)
 	if err != nil {
 		return domain.Dashboard{}, &application.ReportError{Stage: application.Insights, Cause: err}
 	}

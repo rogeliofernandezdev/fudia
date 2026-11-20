@@ -5,7 +5,8 @@ import {useRouter} from "next/navigation";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,ErrorState,FormField,Icon,IconTile,InlineNotice,Input,PageHeader,Skeleton,Status,Tag} from "@/design-system";
 import {useFeedback} from "@/providers";
-import {canRelease,courierLink,courierNameValue,failCountdown,formatCountdown,groupOrders,needsPickupDecision,outcomeFeedback,pickupAlertMeta,readyForPickup,remainingSeconds,stageMeta,waitLabel} from "../domain/panel";
+import {useTickingClock} from "./use-ticking-clock";
+import {canRelease,courierLink,courierNameValue,failCountdown,formatCountdown,needsPickupDecision,outcomeFeedback,pickupAlertMeta,readyForPickup,remainingSeconds,stageMeta,waitLabel} from "../domain/panel";
 import type {FailedDelivery,PanelAction,PanelOrder} from "../domain/types";
 import {assignCourier,loadPartnerPanel,loadPartnerSession,logoutPartner,needsLogin,needsPasswordChange,sendPanelAction} from "../infrastructure/panel-api";
 import {requestAlertPermission,useOfferAlert} from "./use-offer-alert";
@@ -81,7 +82,14 @@ function CourierBlock({order,busy,assigning,names,onAssign,onChange}:{order:Pane
   </div>;
 }
 
-function OrderCard({order,remaining,wait,failIn,busy,assigning,names,onAct,onAssign,onConfirm}:{order:PanelOrder;remaining:number;wait:number;failIn:number|null;busy:boolean;assigning:boolean;names:string[];onAct:(action:PanelAction)=>void;onAssign:(name:string)=>void;onConfirm:(kind:Confirming["kind"])=>void}){
+function OrderCard({order,receivedAt,busy,assigning,names,onAct,onAssign,onConfirm}:{order:PanelOrder;receivedAt:number;busy:boolean;assigning:boolean;names:string[];onAct:(action:PanelAction)=>void;onAssign:(name:string)=>void;onConfirm:(kind:Confirming["kind"])=>void}){
+  // Los relojes (oferta, espera de recogida y entrega fallida) avanzan entre consultas
+  // dentro de la tarjeta: solo ella se vuelve a renderizar cada segundo.
+  const clock=useTickingClock(order.stage==="offer"||order.pickupWaitSeconds>0||Boolean(order.issueReportedAt&&order.failAvailableInSeconds>0),receivedAt);
+  const elapsed=Math.max(0,Math.floor((clock-receivedAt)/1000));
+  const remaining=remainingSeconds(order,receivedAt,clock);
+  const wait=order.pickupWaitSeconds>0?order.pickupWaitSeconds+elapsed:0;
+  const failIn=failCountdown(order,receivedAt,clock);
   const meta=stageMeta[order.stage];
   const active=order.stage==="accepted"||order.stage==="picked_up";
   const alert=order.stage==="accepted"&&order.pickupAlert?pickupAlertMeta[order.pickupAlert]:null;
@@ -176,20 +184,9 @@ export function PartnerPanel(){
   const [alerts,setAlerts]=useStoredFlag("fudia-panel-alerts");
   const [confirming,setConfirming]=useState<Confirming|null>(null);
   const [nextCourier,setNextCourier]=useState("");
-  const [now,setNow]=useState(0);
   const orders=panel.data?.orders??[];
-  const groups=groupOrders(orders);
   const failed=panel.data?.failedDeliveries??[];
   useOfferAlert(panel.data?.orders,alerts);
-  // Los relojes (oferta, espera de recogida y entrega fallida) avanzan entre consultas.
-  const ticking=groups.offers.length>0||groups.active.some(order=>order.pickupWaitSeconds>0||(order.issueReportedAt&&order.failAvailableInSeconds>0));
-  useEffect(()=>{
-    if(!ticking)return;
-    const timer=window.setInterval(()=>setNow(Date.now()),1000);
-    return ()=>window.clearInterval(timer);
-  },[ticking]);
-  const clock=now||panel.dataUpdatedAt;
-  const elapsed=Math.max(0,Math.floor((clock-panel.dataUpdatedAt)/1000));
   const done=(outcome:Parameters<typeof outcomeFeedback>[0],order:PanelOrder,action?:PanelAction)=>{
     setConfirming(null);
     setNextCourier("");
@@ -215,9 +212,7 @@ export function PartnerPanel(){
   const busy=act.isPending||assign.isPending||panel.isError;
   const names=[...new Set(orders.map(order=>order.courierName.trim()).filter(Boolean))];
   const card=(order:PanelOrder)=><OrderCard key={order.token} order={order} names={names} busy={busy} assigning={assign.isPending}
-    remaining={remainingSeconds(order,panel.dataUpdatedAt,clock)}
-    wait={order.pickupWaitSeconds>0?order.pickupWaitSeconds+elapsed:0}
-    failIn={failCountdown(order,panel.dataUpdatedAt,clock)}
+    receivedAt={panel.dataUpdatedAt}
     onAct={action=>act.mutate({order,action})}
     onAssign={name=>assign.mutate({order,name})}
     onConfirm={kind=>{setNextCourier("");setConfirming({order,kind})}}/>;
@@ -244,7 +239,7 @@ export function PartnerPanel(){
     <div className="partner-panel-body">
       {!data.active&&<p className="partner-panel-banner" role="status"><Icon name="info" size={18}/>Tu cuenta está pausada: no recibirás pedidos nuevos. Puedes terminar los que ya tienes.</p>}
       {panel.isError&&<p className="partner-panel-banner is-danger" role="alert"><Icon name="alert" size={18}/>Sin conexión con Fudia. Los pedidos pueden estar desactualizados; reintentando…</p>}
-      <DispatchWorkspace orders={orders} receivedAt={panel.dataUpdatedAt} clock={clock} renderOrder={card}/>
+      <DispatchWorkspace orders={orders} receivedAt={panel.dataUpdatedAt} renderOrder={card}/>
       {failed.length>0&&<section className="panel partner-panel-section" aria-labelledby="partner-panel-failed">
         <header><h2 id="partner-panel-failed">Entregas fallidas</h2><span className="partner-panel-count">{failed.length}</span></header>
         <div className="partner-panel-cards">{failed.map(item=><FailedCard key={`${item.orderCode}-${item.registeredAt}`} item={item}/>)}</div>

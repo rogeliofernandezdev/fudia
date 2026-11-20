@@ -61,6 +61,7 @@ func main() {
 	mux := api.Routes()
 	go sweepDeliveryDispatch(ctx, logger, maintenance)
 	go sweepPayPairing(ctx, logger, paydetectapp.NewMaintenance(paydetectpg.New(db)))
+	go watchPoolSaturation(ctx, logger, db)
 	mux.HandleFunc("GET /health", health)
 	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)

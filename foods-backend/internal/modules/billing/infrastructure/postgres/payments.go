@@ -262,6 +262,12 @@ func (r *Payments) BatchSaleMovement(ctx context.Context, s scope, shiftID strin
 			`, s.OrganizationID, s.LocationID, shiftID, id, p.Amount, "Cobro "+orderCode, p.Reference, s.UserID)
 	return tag.RowsAffected(), billingError(err)
 }
+// posLocationTimezoneSQL lee la zona horaria del local en una subconsulta escalar.
+// Unir locations en el FROM impedía recorrer orders en el orden de
+// orders_location_created_idx: Ventas sin rango ordenaba todo el historial pagado
+// para servir una página profunda (70-85 ms → 1,5-7 ms con un año de pedidos).
+const posLocationTimezoneSQL = `(SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)`
+
 func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilter) (application.POSPage, error) {
 	out := application.POSPage{Page: f.Page, PageSize: f.Size}
 	page, size, q, from, to, status := f.Page, f.Size, f.Query, f.From, f.To, f.Status
@@ -283,7 +289,6 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 
 	baseFrom := `
 		FROM orders o
-		JOIN locations loc ON loc.id=o.location_id AND loc.organization_id=o.organization_id
 		LEFT JOIN tables t
 		  ON t.id=o.table_id
 		 AND t.organization_id=o.organization_id
@@ -293,8 +298,8 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 		AND ($3='' OR o.code ILIKE '%'||$3||'%' OR o.customer_name ILIKE '%'||$3||'%'
 		  OR COALESCE(t.name,'') ILIKE '%'||$3||'%')
-		AND ($4='' OR o.created_at >= (NULLIF($4,'')::date::timestamp AT TIME ZONE loc.timezone))
-		AND ($5='' OR o.created_at < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE loc.timezone))
+		AND ($4='' OR o.created_at >= (NULLIF($4,'')::date::timestamp AT TIME ZONE `+posLocationTimezoneSQL+`))
+		AND ($5='' OR o.created_at < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE `+posLocationTimezoneSQL+`))
 		AND ($6='' OR (o.completed_at IS NULL AND o.paid_amount < o.total)
 		 OR EXISTS(SELECT 1 FROM payments cp WHERE cp.order_id=o.id AND cp.organization_id=$1 AND cp.location_id=$2 AND cp.shift_id=NULLIF($6,'')::uuid))
 		AND ($6='' OR (o.channel='salon' AND o.table_id IS NOT NULL AND o.waiter_id=$7))

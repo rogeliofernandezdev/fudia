@@ -204,7 +204,10 @@ type OrderRepository interface {
 	ProductForOrder(ctx context.Context, s scope, productID *string) (string, float64, bool, error)
 	ExistingComboItem(ctx context.Context, s scope, in domain.OrderItemInput, existingOrderID string) (string, float64, string, string, error)
 	ComboForOrder(ctx context.Context, s scope, productID *string) (string, float64, bool, error)
-	ExistingOptionUsage(ctx context.Context, s scope, existingOrderID string, key domain.ComboOptionUsageKey) (float64, error)
-	LockOptionQuota(ctx context.Context, s scope, key domain.ComboOptionUsageKey) (*int, string, error)
-	ExternalOptionUsage(ctx context.Context, s scope, key domain.ComboOptionUsageKey, existingOrderID string) (float64, error)
+	// LockOptionQuotas bloquea en una consulta, en orden de id, las opciones de
+	// menú del pedido; las que ya no existen no aparecen en el resultado.
+	LockOptionQuotas(ctx context.Context, s scope, keys []domain.ComboOptionUsageKey) (map[domain.ComboOptionUsageKey]domain.ComboOptionQuota, error)
+	// OptionUsages lee en una consulta lo pedido hoy de cada opción, dentro y
+	// fuera del pedido existingOrderID (vacío al crear).
+	OptionUsages(ctx context.Context, s scope, existingOrderID string, keys []domain.ComboOptionUsageKey) (map[domain.ComboOptionUsageKey]domain.ComboOptionUsage, error)
 }

@@ -219,62 +219,101 @@ func (r *Orders) ComboForOrder(ctx context.Context, s scope, productID *string) 
 			WHERE p.id=$1 AND p.organization_id=$2`, *productID, s.OrganizationID, s.LocationID).Scan(&comboName, &basePrice, &comboAvailable)
 	return comboName, basePrice, comboAvailable, orderError(err)
 }
-func (r *Orders) ExistingOptionUsage(ctx context.Context, s scope, existingOrderID string, key domain.ComboOptionUsageKey) (float64, error) {
-	var existingUsage float64
-	err := r.db(ctx).QueryRow(ctx, `
-				SELECT COALESCE(sum(oi.qty),0)::float8
-				FROM order_item_combo_selections ssel
-				JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
-				WHERE ssel.organization_id=$1
-				  AND oi.order_id=$2
-				  AND oi.product_id=$3
-				  AND lower(ssel.group_name)=lower($4)
-				  AND ssel.option_product_id=$5`,
-		s.OrganizationID, existingOrderID, key.ComboProductID, key.GroupName, key.ProductID).Scan(&existingUsage)
-	return existingUsage, orderError(err)
+// optionKeys reparte las claves de opción en arreglos paralelos para unnest.
+func optionKeys(keys []domain.ComboOptionUsageKey) ([]any, []string, []any) {
+	combos, groups, products := make([]any, len(keys)), make([]string, len(keys)), make([]any, len(keys))
+	for i, key := range keys {
+		combos[i], groups[i], products[i] = database.UUIDArg(key.ComboProductID), key.GroupName, database.UUIDArg(key.ProductID)
+	}
+	return combos, groups, products
 }
-func (r *Orders) LockOptionQuota(ctx context.Context, s scope, key domain.ComboOptionUsageKey) (*int, string, error) {
-	var quota *int
-	var optionName string
-	err := r.db(ctx).QueryRow(ctx, `
-			SELECT o.default_quota,p.name
-			FROM menu_combo_options o
-			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
+
+func (r *Orders) LockOptionQuotas(ctx context.Context, s scope, keys []domain.ComboOptionUsageKey) (map[domain.ComboOptionUsageKey]domain.ComboOptionQuota, error) {
+	out := map[domain.ComboOptionUsageKey]domain.ComboOptionQuota{}
+	if len(keys) == 0 {
+		return out, nil
+	}
+	combos, groups, products := optionKeys(keys)
+	rows, err := r.db(ctx).Query(ctx, `
+			SELECT k.idx::int,o.default_quota,p.name
+			FROM unnest($1::uuid[],$2::text[],$3::uuid[]) WITH ORDINALITY AS k(combo_product_id,group_name,option_product_id,idx)
+			JOIN menu_combo_groups g ON g.combo_product_id=k.combo_product_id AND lower(g.name)=lower(k.group_name) AND g.organization_id=$4
+			JOIN menu_combo_options o ON o.group_id=g.id AND o.organization_id=g.organization_id AND o.option_product_id=k.option_product_id
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
-			WHERE g.combo_product_id=$1
-			  AND lower(g.name)=lower($2)
-			  AND o.option_product_id=$3
-			  AND o.organization_id=$4
-			FOR UPDATE OF o`,
-		key.ComboProductID, key.GroupName, key.ProductID, s.OrganizationID).Scan(&quota, &optionName)
-	return quota, optionName, orderError(err)
+			ORDER BY o.id
+			FOR UPDATE OF o`, combos, groups, products, s.OrganizationID)
+	if err != nil {
+		return nil, orderError(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var index int
+		var v domain.ComboOptionQuota
+		if err = rows.Scan(&index, &v.Quota, &v.Name); err != nil {
+			return nil, err
+		}
+		key := keys[index-1]
+		if _, seen := out[key]; !seen {
+			out[key] = v
+		}
+	}
+	return out, rows.Err()
 }
-func (r *Orders) ExternalOptionUsage(ctx context.Context, s scope, key domain.ComboOptionUsageKey, existingOrderID string) (float64, error) {
-	var externalUsage float64
-	err := r.db(ctx).QueryRow(ctx, `
+
+func (r *Orders) OptionUsages(ctx context.Context, s scope, existingOrderID string, keys []domain.ComboOptionUsageKey) (map[domain.ComboOptionUsageKey]domain.ComboOptionUsage, error) {
+	out := map[domain.ComboOptionUsageKey]domain.ComboOptionUsage{}
+	if len(keys) == 0 {
+		return out, nil
+	}
+	combos, groups, products := optionKeys(keys)
+	rows, err := r.db(ctx).Query(ctx, `
 			WITH d AS (
 			  SELECT date_trunc('day',now() AT TIME ZONE l.timezone) AT TIME ZONE l.timezone AS day_start
-			  FROM locations l WHERE l.id=$5 AND l.organization_id=$1
+			  FROM locations l WHERE l.id=$5 AND l.organization_id=$4
 			)
-			SELECT COALESCE(sum(oi.qty),0)::float8
-			FROM order_item_combo_selections ssel
-			JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
-			JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
-			WHERE ssel.organization_id=$1
-			  AND oi.product_id=$2
-			  AND lower(ssel.group_name)=lower($3)
-			  AND ssel.option_product_id=$4
-			  AND ord.organization_id=$1
-			  AND ord.location_id=$5
-			  AND ord.status<>'cancelado'
-			  -- Los límites del día local salen de una subconsulta de una fila para
-			  -- que el planificador recorra solo los pedidos de hoy con
-			  -- orders_location_created_idx. Calculados en el JOIN con locations
-			  -- quedaban como filtro y la consulta leía las selecciones históricas de
-			  -- la opción mientras la opción está bloqueada (FOR UPDATE).
-			  AND ord.created_at >= (SELECT day_start FROM d)
-			  AND ord.created_at < (SELECT day_start + interval '1 day' FROM d)
-			  AND ($6::uuid IS NULL OR ord.id<>$6::uuid)`,
-		s.OrganizationID, key.ComboProductID, key.GroupName, key.ProductID, s.LocationID, database.UUIDArg(existingOrderID)).Scan(&externalUsage)
-	return externalUsage, orderError(err)
+			SELECT k.idx::int,
+			       -- Ya en este pedido (al editarlo).
+			       CASE WHEN $6::uuid IS NULL THEN 0 ELSE COALESCE((
+			         SELECT sum(oi.qty)
+			         FROM order_item_combo_selections ssel
+			         JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+			         WHERE ssel.organization_id=$4 AND oi.order_id=$6::uuid
+			           AND oi.product_id=k.combo_product_id
+			           AND lower(ssel.group_name)=lower(k.group_name)
+			           AND ssel.option_product_id=k.option_product_id
+			       ),0) END::float8,
+			       -- Hoy en los demás pedidos no cancelados del local. Los límites del día
+			       -- salen de un CTE de una fila para recorrer solo los pedidos de hoy con
+			       -- orders_location_created_idx.
+			       COALESCE((
+			         SELECT sum(oi.qty)
+			         FROM order_item_combo_selections ssel
+			         JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+			         JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
+			         WHERE ssel.organization_id=$4
+			           AND oi.product_id=k.combo_product_id
+			           AND lower(ssel.group_name)=lower(k.group_name)
+			           AND ssel.option_product_id=k.option_product_id
+			           AND ord.organization_id=$4
+			           AND ord.location_id=$5
+			           AND ord.status<>'cancelado'
+			           AND ord.created_at >= (SELECT day_start FROM d)
+			           AND ord.created_at < (SELECT day_start + interval '1 day' FROM d)
+			           AND ($6::uuid IS NULL OR ord.id<>$6::uuid)
+			       ),0)::float8
+			FROM unnest($1::uuid[],$2::text[],$3::uuid[]) WITH ORDINALITY AS k(combo_product_id,group_name,option_product_id,idx)`,
+		combos, groups, products, s.OrganizationID, s.LocationID, database.UUIDArg(existingOrderID))
+	if err != nil {
+		return nil, orderError(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var index int
+		var v domain.ComboOptionUsage
+		if err = rows.Scan(&index, &v.Existing, &v.External); err != nil {
+			return nil, err
+		}
+		out[keys[index-1]] = v
+	}
+	return out, rows.Err()
 }

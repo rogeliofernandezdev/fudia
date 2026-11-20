@@ -261,3 +261,12 @@ test("seguimiento en el chat: atajo «Seguir pedido» solo con pedido registrado
  assert.match(map,/prefers-reduced-motion: reduce/,"el repartidor no se anima con movimiento reducido");
  assert.match(map,/directions\/v5\/mapbox\/driving/);
 });
+
+test("panel de reparto: cada contador tiene su propio reloj y el panel no se re-renderiza cada segundo",()=>{
+ const panel=read("src/modules/delivery-panel/presentation/partner-panel.tsx");
+ const workspace=read("src/modules/delivery-panel/presentation/dispatch-workspace.tsx");
+ assert.doesNotMatch(panel,/setInterval/,"el panel ya no tiene un reloj global");
+ assert.match(panel,/const clock=useTickingClock\(order\.stage==="offer"\|\|order\.pickupWaitSeconds>0/,"la tarjeta solo avanza mientras tiene un contador");
+ assert.match(workspace,/<OfferCountdown order=\{order\} receivedAt=\{receivedAt\}\/>/,"la fila de la lista cuenta su oferta");
+ assert.match(read("src/modules/delivery-panel/presentation/use-ticking-clock.ts"),/return Math\.max\(now,since\)/);
+});

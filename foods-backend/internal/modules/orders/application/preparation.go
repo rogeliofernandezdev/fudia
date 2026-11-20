@@ -280,46 +280,35 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 		}
 		return usageKeys[i].ProductID < usageKeys[j].ProductID
 	})
+	if len(usageKeys) == 0 {
+		return prepared, subtotal, nil
+	}
+	// Cupos por lotes: primero se bloquean todas las opciones (una consulta, en
+	// orden de id) y después se lee lo ya pedido hoy de todas (otra consulta), así
+	// la lectura ve lo confirmado por el pedido que tenía el bloqueo. Antes eran
+	// dos o tres consultas por opción dentro de la transacción. Las validaciones
+	// siguen el orden de usageKeys con los mismos mensajes.
+	quotas, err := a.repo.LockOptionQuotas(ctx, s, usageKeys)
+	if err != nil {
+		return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el cupo del menú.")
+	}
+	usages, err := a.repo.OptionUsages(ctx, s, existingOrderID, usageKeys)
+	if err != nil {
+		return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el cupo existente del menú.")
+	}
 	for _, key := range usageKeys {
-		var existingUsage float64
-		if existingOrderID != "" {
-			err := func() error {
-				var err error
-				existingUsage, err = a.repo.ExistingOptionUsage(ctx, s, existingOrderID, key)
-				return err
-			}()
-			if err != nil {
-				return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el cupo existente del menú.")
-			}
-		}
-
-		var quota *int
-		var optionName string
-		err := func() error { var err error; quota, optionName, err = a.repo.LockOptionQuota(ctx, s, key); return err }()
-		if errors.Is(err, ErrNotFound) {
+		existingUsage := usages[key].Existing
+		option, found := quotas[key]
+		if !found {
 			if existingOrderID != "" && plannedOptionUsage[key] <= existingUsage {
 				continue
 			}
 			return nil, 0, orderFailure(apperror.Conflict, "combo_option_unavailable", "Una opción del menú ya no está disponible.")
 		}
-		if err != nil {
-			return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el cupo del menú.")
-		}
-		if quota == nil {
+		if option.Quota == nil {
 			continue
 		}
-
-		var externalUsage float64
-		err = func() error {
-			var err error
-			externalUsage, err = a.repo.ExternalOptionUsage(ctx, s, key, existingOrderID)
-			return err
-		}()
-		if err != nil {
-			return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el cupo del menú.")
-		}
-
-		allowedForOrder := float64(*quota) - externalUsage
+		allowedForOrder := float64(*option.Quota) - usages[key].External
 		if allowedForOrder < 0 {
 			allowedForOrder = 0
 		}
@@ -327,7 +316,7 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 			allowedForOrder = existingUsage
 		}
 		if plannedOptionUsage[key] > allowedForOrder {
-			return nil, 0, orderFailure(apperror.Conflict, "combo_option_quota_exceeded", optionName+" ya alcanzó el tope de hoy en este menú.")
+			return nil, 0, orderFailure(apperror.Conflict, "combo_option_quota_exceeded", option.Name+" ya alcanzó el tope de hoy en este menú.")
 		}
 	}
 	return prepared, subtotal, nil

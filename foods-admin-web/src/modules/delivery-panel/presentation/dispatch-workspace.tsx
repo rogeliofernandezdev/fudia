@@ -5,9 +5,16 @@ import {Button,EmptyState,Icon,IconTile,SearchField,Status,Tabs} from "@/design-
 import {courierWorkload,DISPATCH_BATCH_SIZE,dispatchOrders,dispatchWindow,needsAssignment,needsAttention,type DispatchFilter} from "../domain/dispatch";
 import {formatCountdown,remainingSeconds,stageMeta,waitLabel} from "../domain/panel";
 import type {PanelOrder} from "../domain/types";
+import {useTickingClock} from "./use-ticking-clock";
 import "./dispatch-workspace.css";
 
-export function DispatchWorkspace({orders,receivedAt,clock,renderOrder}:{orders:PanelOrder[];receivedAt:number;clock:number;renderOrder:(order:PanelOrder)=>ReactNode}){
+/** Cuenta regresiva de una oferta en la lista: su propio reloj, sin re-renderizar la lista. */
+function OfferCountdown({order,receivedAt}:{order:PanelOrder;receivedAt:number}){
+  const clock=useTickingClock(true,receivedAt);
+  return <>{formatCountdown(remainingSeconds(order,receivedAt,clock))}</>;
+}
+
+export function DispatchWorkspace({orders,receivedAt,renderOrder}:{orders:PanelOrder[];receivedAt:number;renderOrder:(order:PanelOrder)=>ReactNode}){
   const [filter,setFilter]=useState<DispatchFilter>("all");
   const [search,setSearch]=useState("");
   const [attentionOnly,setAttentionOnly]=useState(false);
@@ -97,7 +104,7 @@ export function DispatchWorkspace({orders,receivedAt,clock,renderOrder}:{orders:
               <span className="dispatch-order-route"><Icon name="store" size={14}/><span>{order.locationName}</span></span>
               <span className="dispatch-order-route"><Icon name="mapPin" size={14}/><span>{order.address||"Dirección por confirmar"}</span></span>
               <span className="dispatch-order-footer"><span><Icon name={order.courierName?"motorbike":"user"} size={16}/>{order.courierName|| (order.stage==="offer"?"Acepta para asignar":"Sin motorizado")}</span>
-                {order.stage==="offer"?<span className="dispatch-order-deadline"><Icon name="clock" size={14}/>{formatCountdown(remainingSeconds(order,receivedAt,clock))}</span>:<Icon name="chevron" size={16}/>}</span>
+                {order.stage==="offer"?<span className="dispatch-order-deadline"><Icon name="clock" size={14}/><OfferCountdown order={order} receivedAt={receivedAt}/></span>:<Icon name="chevron" size={16}/>}</span>
               {alert&&<span className="dispatch-order-alert"><Icon name="alert" size={14}/>{order.issueReportedAt?"Reportó un problema en la entrega":`Recogida pendiente · ${waitLabel(order.pickupWaitSeconds)}`}</span>}
             </button></li>;
           })}</ul>

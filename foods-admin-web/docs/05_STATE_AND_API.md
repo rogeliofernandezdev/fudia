@@ -538,7 +538,10 @@ TanStack Query consulta cada 5 s (30 s tras un error), también en segundo plano
 `["delivery-partner-panel"]`, `["delivery-partner-session"]` (nombre del
 operador, 60 s; el acceso la deja en caché con la respuesta del login o del
 cambio de contraseña, sin pedirla otra vez, y tras un error se reintenta cada
-30 s) y `["delivery-courier",token]`.
+30 s) y `["delivery-courier",token]`. Los contadores (oferta, espera de recogida y
+entrega fallida) avanzan cada segundo con `useTickingClock` dentro de la tarjeta o
+fila que los muestra, solo mientras tienen un contador activo: el panel completo
+ya no se vuelve a renderizar cada segundo.
 Cada acción invalida su consulta y muestra el resultado (`outcome`) con
 `outcomeFeedback`; el navegador no calcula estados ni montos.
 

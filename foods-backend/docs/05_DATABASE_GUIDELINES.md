@@ -153,6 +153,31 @@ auditoría) y diez empresas de relleno:
 - Disponibilidad de menús (`BlockedCombos`) y opciones de grupos (carta pública y
   editor de menús) en una consulta por página o menú, no una por menú o grupo.
 - Al preparar un pedido, un menú repetido en varias líneas se lee una sola vez.
+- Cupos diarios de opciones de menú al crear o editar un pedido: todas las
+  opciones se bloquean en una consulta en orden de id (`LockOptionQuotas`) y lo ya
+  pedido hoy, dentro y fuera del pedido, se lee después en otra (`OptionUsages`),
+  así la lectura ve lo confirmado por el pedido que tenía el bloqueo. Antes eran dos
+  o tres consultas por opción. `TestComboOptionDailyQuotaAcrossOrdersAndEdits`
+  cubre otros pedidos del día, edición y mensajes.
+- Ventas/POS leen la zona horaria del local con una subconsulta escalar en vez de
+  unir `locations`: el JOIN impedía recorrer los pedidos en el orden del índice y
+  una página profunda de Ventas sin rango ordenaba todo el historial pagado
+  (70-85 ms → 1,5-7 ms). El total de Ventas sin rango de fechas sigue sumando todo
+  el historial pagado (~45 ms con un año); solo un resumen precalculado lo
+  evitaría. POS siempre filtra «por cobrar» con `orders_pos_unpaid_idx` (0,1 ms).
+- Paginación por offset medida en páginas profundas: Pedidos página 500 1,8 ms,
+  Kárdex página 2 500 7,7 ms, Ventas página 500 ≤ 7 ms. No hace falta cursor todavía.
+- Dashboard: los pedidos pagados del periodo se calculan una vez (CTE
+  `MATERIALIZED`) para el promedio, lo más vendido, los pedidos por canal y las
+  categorías, y los cobros del periodo y del anterior (`movements`) una vez para la
+  comparación, la tendencia y los desgloses por canal y medio de pago; cada grupo
+  sale como JSON de una sola sentencia. «Pedido pagado» usa `orders.paid_amount`.
+  Carga completa con un año de datos: 1 día 139 → 56 ms, 7 días 337 → 110 ms,
+  30 días 1 027 → 404 ms.
+- El API registra `db_pool_saturated` (esperas, adquisiciones y conexiones en uso)
+  cuando en el último minuto alguna petición esperó por una conexión libre. Es la
+  medición previa a subir `DATABASE_MAX_CONNS`: sin esperas, más conexiones no
+  aceleran nada.
 - El barrido de delivery no corre dos veces a la vez (ticker y cada `Claim`).
 
 ## Avisos en vivo (`pg_notify`)
@@ -182,8 +207,9 @@ ellos). La migración carga los pedidos con cobros de una vez dentro de su
 transacción (≈30 s con 460 mil pedidos en local); en producción con más volumen,
 programarla fuera de la hora punta. `TestOrderPaidAmountFollowsPaymentsAndRefunds`
 recorre cobro, devolución, corrección y borrado, compara la columna con los
-documentos y verifica cada filtro de POS. Los demás cálculos de cobrado (detalle de
-pedido, Salón, dashboard, cierre automático) siguen leyendo los documentos.
+documentos y verifica cada filtro de POS. Desde 2026-11-20 el dashboard también la usa
+para decidir qué pedidos están pagados; los demás cálculos de cobrado (detalle de
+pedido, Salón, montos del dashboard, cierre automático) siguen leyendo los documentos.
 
 Las migraciones corren dentro de una transacción, por lo que `CREATE INDEX` bloquea
 escrituras en la tabla mientras se construye; en tablas grandes de producción, crear
