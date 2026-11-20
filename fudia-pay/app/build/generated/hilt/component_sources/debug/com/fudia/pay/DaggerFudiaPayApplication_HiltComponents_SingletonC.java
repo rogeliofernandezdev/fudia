@@ -24,6 +24,7 @@ import com.fudia.pay.features.pairing.PairingViewModel;
 import com.fudia.pay.features.pairing.PairingViewModel_HiltModules;
 import com.fudia.pay.features.payments.PayDatabase;
 import com.fudia.pay.features.payments.PendingEventDao;
+import com.fudia.pay.features.sync.PaymentSyncer;
 import com.fudia.pay.features.sync.SyncScheduler;
 import com.fudia.pay.features.sync.SyncWorker;
 import com.fudia.pay.features.sync.SyncWorker_AssistedFactory;
@@ -423,15 +424,15 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
-
       static String com_fudia_pay_SessionViewModel = "com.fudia.pay.SessionViewModel";
 
-      @KeepFieldType
-      PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
+      static String com_fudia_pay_features_pairing_PairingViewModel = "com.fudia.pay.features.pairing.PairingViewModel";
 
       @KeepFieldType
       SessionViewModel com_fudia_pay_SessionViewModel2;
+
+      @KeepFieldType
+      PairingViewModel com_fudia_pay_features_pairing_PairingViewModel2;
     }
   }
 
@@ -605,6 +606,7 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
       PayNotificationListener_MembersInjector.injectCredentials(instance, singletonCImpl.deviceCredentialsProvider.get());
       PayNotificationListener_MembersInjector.injectDao(instance, singletonCImpl.pendingEventDao());
       PayNotificationListener_MembersInjector.injectScheduler(instance, syncScheduler());
+      PayNotificationListener_MembersInjector.injectSyncer(instance, singletonCImpl.paymentSyncerProvider.get());
       PayNotificationListener_MembersInjector.injectListenerStatus(instance, singletonCImpl.listenerStatusProvider.get());
       return instance;
     }
@@ -621,9 +623,11 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     private Provider<FudiaPayApi> provideApiProvider;
 
-    private Provider<ListenerStatus> listenerStatusProvider;
+    private Provider<PaymentSyncer> paymentSyncerProvider;
 
     private Provider<SyncWorker_AssistedFactory> syncWorker_AssistedFactoryProvider;
+
+    private Provider<ListenerStatus> listenerStatusProvider;
 
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
@@ -646,11 +650,12 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
 
     @SuppressWarnings("unchecked")
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
-      this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<PayDatabase>(singletonCImpl, 1));
-      this.deviceCredentialsProvider = DoubleCheck.provider(new SwitchingProvider<DeviceCredentials>(singletonCImpl, 3));
-      this.provideApiProvider = DoubleCheck.provider(new SwitchingProvider<FudiaPayApi>(singletonCImpl, 2));
-      this.listenerStatusProvider = DoubleCheck.provider(new SwitchingProvider<ListenerStatus>(singletonCImpl, 4));
+      this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<PayDatabase>(singletonCImpl, 2));
+      this.deviceCredentialsProvider = DoubleCheck.provider(new SwitchingProvider<DeviceCredentials>(singletonCImpl, 4));
+      this.provideApiProvider = DoubleCheck.provider(new SwitchingProvider<FudiaPayApi>(singletonCImpl, 3));
+      this.paymentSyncerProvider = DoubleCheck.provider(new SwitchingProvider<PaymentSyncer>(singletonCImpl, 1));
       this.syncWorker_AssistedFactoryProvider = SingleCheck.provider(new SwitchingProvider<SyncWorker_AssistedFactory>(singletonCImpl, 0));
+      this.listenerStatusProvider = DoubleCheck.provider(new SwitchingProvider<ListenerStatus>(singletonCImpl, 5));
     }
 
     @Override
@@ -696,20 +701,23 @@ public final class DaggerFudiaPayApplication_HiltComponents_SingletonC {
           return (T) new SyncWorker_AssistedFactory() {
             @Override
             public SyncWorker create(Context context, WorkerParameters params) {
-              return new SyncWorker(context, params, singletonCImpl.pendingEventDao(), singletonCImpl.provideApiProvider.get(), singletonCImpl.listenerStatusProvider.get());
+              return new SyncWorker(context, params, singletonCImpl.paymentSyncerProvider.get());
             }
           };
 
-          case 1: // com.fudia.pay.features.payments.PayDatabase 
+          case 1: // com.fudia.pay.features.sync.PaymentSyncer 
+          return (T) new PaymentSyncer(singletonCImpl.pendingEventDao(), singletonCImpl.provideApiProvider.get());
+
+          case 2: // com.fudia.pay.features.payments.PayDatabase 
           return (T) DatabaseModule_ProvideDatabaseFactory.provideDatabase(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 2: // com.fudia.pay.core.network.FudiaPayApi 
+          case 3: // com.fudia.pay.core.network.FudiaPayApi 
           return (T) NetworkModule_ProvideApiFactory.provideApi(singletonCImpl.deviceCredentialsProvider.get());
 
-          case 3: // com.fudia.pay.core.security.DeviceCredentials 
+          case 4: // com.fudia.pay.core.security.DeviceCredentials 
           return (T) new DeviceCredentials(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 4: // com.fudia.pay.features.notifications.ListenerStatus 
+          case 5: // com.fudia.pay.features.notifications.ListenerStatus 
           return (T) new ListenerStatus(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           default: throw new AssertionError(id);

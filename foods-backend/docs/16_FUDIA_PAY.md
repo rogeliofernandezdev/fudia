@@ -52,8 +52,9 @@ registra con el flujo de pagos existente de `billing`.
 
 ### 4. Resistencia
 
-Sin internet: la cola persiste y WorkManager reintenta con backoff + barrido
-periódico. Reinicio del teléfono: la cola sobrevive. Notificación repetida:
+Envío: el servicio de escucha envía cada pago apenas lo encola, sin abrir la
+app (WorkManager en segundo plano lo aplazaría hasta abrirla). Sin internet:
+la cola persiste y WorkManager reintenta con backoff + barrido periódico. Reinicio del teléfono: la cola sobrevive. Notificación repetida:
 misma clave → `duplicate`. Dispositivo revocado: 401 inmediato. Sin permiso o
 cuenta pausada: no llegan notificaciones y la app lo muestra con sinceridad.
 

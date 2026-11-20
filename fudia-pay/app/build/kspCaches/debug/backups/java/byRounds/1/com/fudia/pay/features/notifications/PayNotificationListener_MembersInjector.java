@@ -2,6 +2,7 @@ package com.fudia.pay.features.notifications;
 
 import com.fudia.pay.core.security.DeviceCredentials;
 import com.fudia.pay.features.payments.PendingEventDao;
+import com.fudia.pay.features.sync.PaymentSyncer;
 import com.fudia.pay.features.sync.SyncScheduler;
 import dagger.MembersInjector;
 import dagger.internal.DaggerGenerated;
@@ -31,21 +32,25 @@ public final class PayNotificationListener_MembersInjector implements MembersInj
 
   private final Provider<SyncScheduler> schedulerProvider;
 
+  private final Provider<PaymentSyncer> syncerProvider;
+
   private final Provider<ListenerStatus> listenerStatusProvider;
 
   public PayNotificationListener_MembersInjector(Provider<DeviceCredentials> credentialsProvider,
       Provider<PendingEventDao> daoProvider, Provider<SyncScheduler> schedulerProvider,
-      Provider<ListenerStatus> listenerStatusProvider) {
+      Provider<PaymentSyncer> syncerProvider, Provider<ListenerStatus> listenerStatusProvider) {
     this.credentialsProvider = credentialsProvider;
     this.daoProvider = daoProvider;
     this.schedulerProvider = schedulerProvider;
+    this.syncerProvider = syncerProvider;
     this.listenerStatusProvider = listenerStatusProvider;
   }
 
   public static MembersInjector<PayNotificationListener> create(
       Provider<DeviceCredentials> credentialsProvider, Provider<PendingEventDao> daoProvider,
-      Provider<SyncScheduler> schedulerProvider, Provider<ListenerStatus> listenerStatusProvider) {
-    return new PayNotificationListener_MembersInjector(credentialsProvider, daoProvider, schedulerProvider, listenerStatusProvider);
+      Provider<SyncScheduler> schedulerProvider, Provider<PaymentSyncer> syncerProvider,
+      Provider<ListenerStatus> listenerStatusProvider) {
+    return new PayNotificationListener_MembersInjector(credentialsProvider, daoProvider, schedulerProvider, syncerProvider, listenerStatusProvider);
   }
 
   @Override
@@ -53,6 +58,7 @@ public final class PayNotificationListener_MembersInjector implements MembersInj
     injectCredentials(instance, credentialsProvider.get());
     injectDao(instance, daoProvider.get());
     injectScheduler(instance, schedulerProvider.get());
+    injectSyncer(instance, syncerProvider.get());
     injectListenerStatus(instance, listenerStatusProvider.get());
   }
 
@@ -70,6 +76,11 @@ public final class PayNotificationListener_MembersInjector implements MembersInj
   @InjectedFieldSignature("com.fudia.pay.features.notifications.PayNotificationListener.scheduler")
   public static void injectScheduler(PayNotificationListener instance, SyncScheduler scheduler) {
     instance.scheduler = scheduler;
+  }
+
+  @InjectedFieldSignature("com.fudia.pay.features.notifications.PayNotificationListener.syncer")
+  public static void injectSyncer(PayNotificationListener instance, PaymentSyncer syncer) {
+    instance.syncer = syncer;
   }
 
   @InjectedFieldSignature("com.fudia.pay.features.notifications.PayNotificationListener.listenerStatus")

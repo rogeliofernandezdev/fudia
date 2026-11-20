@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.fudia.pay.ListenerHealthTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-19T04:16:36.611Z" hostname="CLRLAP102-1L-F" time="0.033">
+<testsuite name="com.fudia.pay.ListenerHealthTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-19T20:24:28.463Z" hostname="CLRLAP102-1L-F" time="0.027">
   <properties/>
-  <testcase name="el barrido pide reenlace solo con permiso activo y servicio sin señal en el proceso" classname="com.fudia.pay.ListenerHealthTest" time="0.005"/>
-  <testcase name="el texto de antiguedad usa minutos, horas y dias" classname="com.fudia.pay.ListenerHealthTest" time="0.025"/>
+  <testcase name="el barrido pide reenlace solo con permiso activo y servicio sin señal en el proceso" classname="com.fudia.pay.ListenerHealthTest" time="0.006"/>
+  <testcase name="el texto de antiguedad usa minutos, horas y dias" classname="com.fudia.pay.ListenerHealthTest" time="0.016"/>
   <testcase name="sin conexiones registradas el texto lo admite" classname="com.fudia.pay.ListenerHealthTest" time="0.002"/>
-  <testcase name="la conexion mas reciente define el estado" classname="com.fudia.pay.ListenerHealthTest" time="0.001"/>
+  <testcase name="la conexion mas reciente define el estado" classname="com.fudia.pay.ListenerHealthTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>

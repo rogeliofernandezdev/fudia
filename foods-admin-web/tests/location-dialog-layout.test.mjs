@@ -24,5 +24,7 @@ test("una sola grilla de 3 columnas que pasa a 1 columna en móvil",()=>{
  assert.match(css,/\.location-dialog \.geographic-fields-grid\{gap:var\(--space-4\)\}/,"los selectores de zona caen sobre las columnas de la grilla");
  assert.match(css,/@media \(width<=600px\)\{[\s\S]*?\.form-grid\.location-form-grid\{grid-template-columns:minmax\(0,1fr\)\}/);
  assert.match(css,/\.location-dialog \.tip-settings-form:not\(:has\(>:nth-child\(3\)\)\)>:first-child\{grid-column:1\/-1\}/,"propinas desactivadas no dejan hueco");
- assert.match(css,/\.location-dialog \.delivery-link-actions\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);/,"las tres acciones del QR ocupan una columna cada una, debajo del QR");
+ assert.match(css,/\.location-dialog \.delivery-link-content\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:start;/,"el QR y sus acciones caen sobre las columnas de la grilla, alineados arriba");
+ assert.match(css,/\.location-dialog \.delivery-link-actions\{grid-template-columns:minmax\(0,1fr\)\}/,"las tres acciones se apilan junto al QR, del ancho de su columna");
+ assert.match(css,/@media \(width<=600px\)\{[\s\S]*?\.location-dialog \.delivery-link-content\{grid-template-columns:minmax\(0,1fr\)\}/,"en móvil el QR y las acciones se apilan");
 });

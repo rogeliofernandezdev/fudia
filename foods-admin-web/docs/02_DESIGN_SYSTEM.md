@@ -3636,13 +3636,15 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
     atención y ayuda a todo el ancho.
   - **Delivery** en orden de lectura, como un campo: etiqueta «QR para hacer
     pedidos» (6 px sobre el contenido, igual que etiqueta y control), QR de
-    200 px alineado a la izquierda sin margen propio y debajo una fila con
-    «Descargar QR» · «Copiar enlace» · «Regenerar QR», cada una del ancho de una
-    columna (rechazado: botones flotando centrados junto al QR y «Regenerar»
-    solo en un 2 + 1).
+    200 px en la primera columna, alineado a la izquierda sin margen propio, y
+    en la segunda columna, alineadas arriba con el QR, «Descargar QR» ·
+    «Copiar enlace» · «Regenerar QR» apiladas, cada una del ancho de la columna
+    (2026-11-19: la fila de acciones debajo del QR dejaba vacío el costado;
+    sigue rechazado: botones flotando centrados junto al QR y «Regenerar» solo
+    en un 2 + 1).
   Entre 601 y 760 px la grilla pasa a 2 columnas (con 3 el horario se cortaba):
-  Datos en 2×3 y Porcentaje junto a Funcionamiento; las tres acciones del QR
-  siguen en una fila. A ≤600 px todo va en una columna en el orden del DOM, el
+  Datos en 2×3 y Porcentaje junto a Funcionamiento; el QR y sus acciones
+  siguen lado a lado, una columna cada uno. A ≤600 px todo va en una columna en el orden del DOM, el
   QR se centra y las acciones se apilan. El skeleton de carga usa el mismo `size-lg`.
 - **Locales › Editar local › Dispositivos de pago** (2026-11-19; antes era
   una sección de Mi restaurante que no decía a qué local pertenecía cada

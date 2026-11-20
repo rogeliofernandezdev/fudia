@@ -16,8 +16,10 @@ transacción bancaria: es una alerta detectada que el cajero confirma.
 3. El operador activa **el acceso a notificaciones** desde la configuración de
    Android (permiso explícito del sistema).
 4. Cada notificación de Yape o Plin se procesa con un parser por proveedor,
-   entra a una cola local persistente y se sincroniza con WorkManager y
-   reintentos con backoff.
+   entra a una cola local persistente y **se envía al instante desde el propio
+   servicio de escucha**, sin abrir la app. WorkManager queda de respaldo
+   (sin red o backend caído) con reintentos con backoff y un barrido cada
+   15 minutos; al reenlazarse el servicio también vacía lo pendiente.
 5. El backend deduplica por dispositivo y clave de evento, expone los pagos
    detectados en Caja y el cajero los confirma con el flujo de pagos existente.
 
@@ -55,6 +57,9 @@ puede estar concedido con el servicio muerto. Por eso:
 - Tras **actualizar el APK, abre Fudia Pay una vez**: MagicOS no reconecta el
   `NotificationListenerService` solo y el sistema no reenvía notificaciones
   anteriores al reenlace.
+- El envío no depende de WorkManager: en segundo plano Android y MagicOS
+  aplazan sus trabajos hasta que se abre la app, por eso el listener (que el
+  sistema mantiene enlazado con prioridad alta) envía cada pago él mismo.
 - El servicio se **reenlaza solo** cuando Android lo desconecta
   (`onListenerDisconnected` → `requestRebind`), sin abrir la app.
 - La pantalla de inicio muestra la **salud real** (conectado/desconectado y
@@ -72,7 +77,7 @@ app/src/main/java/com/fudia/pay/
     pairing       bienvenida, escaneo del QR y activación del dispositivo
     notifications NotificationListenerService y parsers por proveedor
     payments      eventos detectados y su cola local (Room)
-    sync          sincronización con WorkManager y reintentos
+    sync          envío de la cola (PaymentSyncer) y respaldo con WorkManager
     settings      inicio, historial y configuración
 ```
 

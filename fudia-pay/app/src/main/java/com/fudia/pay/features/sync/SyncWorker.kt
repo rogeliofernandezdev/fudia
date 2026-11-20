@@ -16,16 +16,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.fudia.pay.BuildConfig
-import com.fudia.pay.core.network.FudiaPayApi
-import com.fudia.pay.core.network.PaymentEvent
-import com.fudia.pay.core.network.ReportRequest
-import com.fudia.pay.features.notifications.ListenerHealth
-import com.fudia.pay.features.notifications.ListenerStatus
 import com.fudia.pay.features.notifications.PayNotificationListener
-import com.fudia.pay.features.payments.PendingEventDao
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,9 +34,6 @@ internal fun isoUtc(millis: Long): String =
         timeZone = TimeZone.getTimeZone("UTC")
     }.format(Date(millis))
 
-/** Sincronización: envía los eventos pendientes en lotes de 20; lo registrado
- * y lo duplicado se retiran de la cola (la idempotencia del backend los
- * conserva) y un fallo deja la cola para el reintento con backoff. */
 /** La decisión de auto-reparación: con el permiso concedido y el servicio
  *  sin señal en este proceso, el barrido pide el reenlace. La señal
  *  (connectionEpoch) es en memoria: si el sistema mató el proceso, el
@@ -56,41 +46,12 @@ internal fun shouldRequestRebind(listenerEnabled: Boolean, boundInProcess: Boole
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val dao: PendingEventDao,
-    private val api: FudiaPayApi,
-    private val listenerStatus: ListenerStatus,
+    private val syncer: PaymentSyncer,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
         rebindListenerIfDead()
-        if (!apiPaired()) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "sincronización: credencial inválida o backend inaccesible")
-            return Result.retry()
-        }
-        val batch = dao.all().take(20)
-        if (batch.isEmpty()) return Result.success()
-        if (BuildConfig.DEBUG) Log.d(TAG, "sincronización: enviando ${batch.size} eventos")
-        return try {
-            val response = api.report(ReportRequest(events = batch.map { event ->
-                PaymentEvent(
-                    provider = event.provider,
-                    eventKey = event.providerEventKey,
-                    senderName = event.senderName,
-                    amount = event.amount,
-                    occurredAt = isoUtc(event.occurredAtMillis),
-                    operationNumber = event.operationNumber,
-                )
-            }))
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "sincronización: ${response.events.size} confirmados (${response.registered} registrados, ${response.duplicates} duplicados)")
-            }
-            response.events.forEach { outcome -> dao.delete(outcome.eventKey) }
-            if (dao.all().isNotEmpty()) Result.retry() else Result.success()
-        } catch (error: Exception) {
-            if (BuildConfig.DEBUG) Log.w(TAG, "sincronización: fallo, reintento con backoff", error)
-            batch.forEach { event -> dao.markAttempt(event.providerEventKey) }
-            Result.retry()
-        }
+        return if (syncer.flush()) Result.success() else Result.retry()
     }
 
     /** Auto-reparación del listener: si el permiso está concedido pero el
@@ -104,24 +65,24 @@ class SyncWorker @AssistedInject constructor(
         NotificationListenerService.requestRebind(ComponentName(applicationContext, PayNotificationListener::class.java))
     }
 
-    private suspend fun apiPaired(): Boolean = runCatching {
-        api.session().device.id.isNotBlank()
-    }.getOrDefault(false)
-
     private companion object {
         const val TAG = "FudiaPay"
     }
 }
 
-/** Encola el trabajo: inmediato al detectar un pago y periódico de respaldo
+/** Respaldo del envío directo del listener: un trabajo inmediato cuando el
+ * envío directo falla (o al pulsar «Sincronizar ahora») y uno periódico
  * (recuperación tras conectividad o reinicio), con backoff exponencial. */
 class SyncScheduler @Inject constructor(@dagger.hilt.android.qualifiers.ApplicationContext private val context: Context) {
     private val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
     fun enqueueNow() {
+        // REPLACE y no APPEND: encadenar el envío nuevo detrás de un trabajo
+        // en backoff lo dejaba esperando minutos u horas. La cola en Room
+        // conserva los eventos y el backend deduplica si un envío se corta.
         WorkManager.getInstance(context).enqueueUniqueWork(
             SYNC_WORK,
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            ExistingWorkPolicy.REPLACE,
             OneTimeWorkRequestBuilder<SyncWorker>()
                 .setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.SECONDS)

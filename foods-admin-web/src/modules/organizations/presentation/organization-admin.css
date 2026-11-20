@@ -44,8 +44,8 @@
    Horario · Fecha); Ubicación con departamento, provincia y distrito sobre las
    mismas columnas y el mapa a todo el ancho; Propinas con Funcionamiento en 2
    columnas y Porcentaje en 1 (desactivadas, Funcionamiento ocupa la fila);
-   Delivery en orden de lectura: etiqueta, QR alineado a la izquierda y una
-   fila con las tres acciones, una por columna. */
+   Delivery sobre las mismas columnas: QR en la primera y, a su lado y
+   alineadas arriba, las tres acciones apiladas en la segunda. */
 .form-grid.location-form-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .location-dialog .geographic-fields-grid{gap:var(--space-4)}
 .location-dialog .tip-settings-form{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--space-4)}
@@ -53,20 +53,21 @@
 .location-dialog .tip-settings-form:not(:has(>:nth-child(3)))>:first-child{grid-column:1/-1}
 .location-dialog .tip-settings-form>:is(.tip-checkbox,.tip-channels,.tip-help){grid-column:1/-1}
 .location-dialog .delivery-link{gap:var(--space-1-5)}
-.location-dialog .delivery-link-content{grid-template-columns:minmax(0,1fr);align-items:start}
+.location-dialog .delivery-link-content{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start;gap:var(--space-4)}
 .location-dialog .delivery-link-preview{justify-content:flex-start;padding-block:0}
-.location-dialog .delivery-link-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2-5) var(--space-4)}
+.location-dialog .delivery-link-actions{grid-template-columns:minmax(0,1fr)}
 /* Tableta: 2 columnas (con 3 el horario se corta); Datos queda en 2×3. */
 @media (600px<width<=760px){
  .form-grid.location-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
  .location-dialog .tip-settings-form{grid-template-columns:repeat(2,minmax(0,1fr))}
  .location-dialog .tip-settings-form>:first-child{grid-column:auto}
+ .location-dialog .delivery-link-content{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (width<=600px){
  .crud-modal.location-dialog>div.location-dialog-tabs{padding-inline:var(--space-4)}
  .form-grid.location-form-grid{grid-template-columns:minmax(0,1fr)}
  .location-dialog .tip-settings-form{grid-template-columns:minmax(0,1fr)}
  .location-dialog .tip-settings-form>:first-child{grid-column:auto}
+ .location-dialog .delivery-link-content{grid-template-columns:minmax(0,1fr)}
  .location-dialog .delivery-link-preview{justify-content:center}
- .location-dialog .delivery-link-actions{grid-template-columns:minmax(0,1fr)}
 }
