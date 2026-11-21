@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -58,6 +59,7 @@ import com.fudia.pay.core.security.DeviceCredentials
 import com.fudia.pay.features.pairing.PairingViewModel
 import com.fudia.pay.features.notifications.ListenerHealth
 import com.fudia.pay.features.notifications.ListenerStatus
+import com.fudia.pay.features.notifications.ListeningService
 import com.fudia.pay.features.settings.HomeScreen
 import com.fudia.pay.features.sync.SyncScheduler
 import com.journeyapps.barcodescanner.DecoratedBarcodeView
@@ -112,9 +114,10 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         var session by mutableStateOf(credentials.paired)
+        if (credentials.paired) startListening()
         setContent {
             FudiaTheme {
-                if (!session) WelcomeFlow(onPaired = { session = true; scheduler.schedulePeriodic() })
+                if (!session) WelcomeFlow(onPaired = { session = true; scheduler.schedulePeriodic(); startListening() })
                 else {
                     val sessionViewModel: SessionViewModel = hiltViewModel()
                     val health by listenerStatus.health.collectAsState(initial = ListenerHealth(0, 0))
@@ -123,12 +126,26 @@ class MainActivity : ComponentActivity() {
                         listenerHealth = health,
                         dao = dao,
                         scheduler = scheduler,
-                        onUnlink = { sessionViewModel.unlink { session = false } },
+                        onUnlink = { sessionViewModel.unlink { ListeningService.stop(this); session = false } },
                     )
                     sessionViewModel.refreshSession()
                 }
             }
         }
+    }
+
+    private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        // Con o sin permiso, el servicio fijo corre; el permiso solo hace
+        // visible su aviso «Detectando pagos».
+        ListeningService.start(this)
+    }
+
+    /** Servicio fijo que impide que HONOR congele la app (ver ListeningService). */
+    private fun startListening() {
+        val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        else ListeningService.start(this)
     }
 }
 

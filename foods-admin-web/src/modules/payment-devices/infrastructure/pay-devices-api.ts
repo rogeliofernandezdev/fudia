@@ -30,8 +30,9 @@ export function listPayNotifications(filter:{status:string;provider:string}){
 }
 
 /** Una página de pagos detectados con el total de los filtros (la lista crece con el historial). */
-export function listPayNotificationPage(filter:{status:string;provider:string;page:number;size:number}){
-  const params=new URLSearchParams({status:filter.status,provider:filter.provider,page:String(filter.page),size:String(filter.size)});
+/** `q` busca en el servidor por remitente o monto (las billeteras no envían número de operación). */
+export function listPayNotificationPage(filter:{status:string;provider:string;q:string;page:number;size:number}){
+  const params=new URLSearchParams({status:filter.status,provider:filter.provider,q:filter.q,page:String(filter.page),size:String(filter.size)});
   return apiFetch<{items:PayNotification[];total:number}>(`pay-notifications?${params.toString()}`);
 }
 
@@ -54,8 +55,10 @@ export function paySalesMethods(){
 
 /** Búsqueda de pedidos del local; paymentStatus acota a los que pueden
  * recibir cobro (pendiente o parcial). */
-export function searchPayOrders(q:string,paymentStatus=""){
-  const params=new URLSearchParams({q,paymentStatus,page:"1",pageSize:"12"});
+/** Solo pedidos por cobrar y listos para cobrar (`ready`, la misma regla del cobro):
+ * ni los pagados ni los que el cobro rechazaría ocupan los 12 lugares de la búsqueda. */
+export function searchPayOrders(q:string,paymentStatus="unpaid"){
+  const params=new URLSearchParams({q,paymentStatus,ready:"true",page:"1",pageSize:"12"});
   return apiFetch<{items:PayOrderRef[]}>(`pos/orders?${params.toString()}`);
 }
 

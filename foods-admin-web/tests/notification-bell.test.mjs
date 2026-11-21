@@ -79,6 +79,28 @@ test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
  assert.match(css,/@media \(prefers-reduced-motion:reduce\)\{[^}]*\.notification-toast\{animation:none/);
 });
 
+test("avisos: lista continua, cabecera azul marino y pago como movimiento",()=>{
+ assert.deepEqual({...rules.noticePaymentSummary({kind:"pay_detected",title:"Pago recibido por Yape",detail:"S/ 1.00 · Rosa Quispe"})},{provider:"yape",wallet:"Yape",amount:"S/ 1.00",title:"Rosa Quispe"},"quien pagó es el título y el monto va aparte");
+ assert.deepEqual({...rules.noticePaymentSummary({kind:"pay_detected",title:"Pago recibido por Plin",detail:"S/ 5.50"})},{provider:"plin",wallet:"Plin",amount:"S/ 5.50",title:"Pago recibido"},"sin remitente el título es «Pago recibido»");
+ assert.equal(rules.noticePaymentSummary({kind:"order_ready",title:"Mesa 4 · listo para entregar",detail:"Cocina"}),null);
+ const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
+ assert.doesNotMatch(bell,/notification-head-icon/,"la cabecera no lleva icono antes del título");
+ assert.match(bell,/<span className="notification-new">\{unread===1\?"1 nuevo":`\$\{unreadLabel\(unread\)\} nuevos`\}<\/span>/,"la cabecera dice cuántos avisos son nuevos");
+ assert.match(bell,/<strong className="notification-amount">\{payment\.amount\}<\/strong>/,"el monto del pago va a la derecha");
+ assert.match(bell,/\{origin&&`\$\{origin\} · `\}<time dateTime=\{item\.createdAt\}>/,"«Yape · hace 5 min» bajo el título");
+ const css=read("src/modules/notifications/presentation/notification-bell.css");
+ assert.match(css,/\.notification-head\{[^}]*background:var\(--navigation-900\)\}/,"cabecera azul marino como los modales");
+ assert.match(css,/\.notification-item\[data-read=false\] \.notification-amount\{color:var\(--primary-600\)\}/,"monto azul mientras no se lee");
+ assert.match(css,/\.notification-list li\+li\{border-top:var\(--stroke-1\) solid var\(--line\)\}/,"avisos separados por línea fina, no tarjetas sueltas");
+ assert.match(css,/\.notification-list\{[^}]*scrollbar-width:thin/,"barra de desplazamiento fina");
+ assert.match(bell,/<PayProviderTag provider=\{payment\.provider\} appearance="circle" decorative\/>/,"Avisos usa el círculo de billetera, no el logotipo");
+ const pay=read("src/modules/payment-devices/presentation/payment-devices.css");
+ assert.match(pay,/\.pay-wallet-mark\{[^}]*border-radius:var\(--radius-pill\)[^}]*color:var\(--surface\)/,"billetera como círculo lleno con su nombre en blanco");
+ assert.match(pay,/\.pay-wallet-mark\[data-provider=yape\]\{background:var\(--wallet-yape\)\}/);
+ assert.match(pay,/\.pay-wallet-mark\[data-provider=plin\]\{background:var\(--wallet-plin\)\}/);
+ assert.match(read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx"),/<td><PayProviderTag provider=\{item\.provider\} appearance="circle"\/><\/td>/,"la tabla de Pagos detectados usa el mismo círculo");
+});
+
 test("avisos: antigüedad corta y contador acotado",()=>{
  const now=Date.parse("2026-11-02T15:00:00Z");
  assert.equal(rules.noticeAge("2026-11-02T14:59:40Z",now),"Ahora");
@@ -130,6 +152,7 @@ test("campana: área táctil de 44 px y contador rojo solo en la campana",()=>{
  assert.equal(decls(".notification-trigger").height,"var(--size-44)");
  assert.equal(decls(".notification-count").background,"var(--danger-600)");
  assert.equal(decls(".notification-count").color,"var(--surface)");
- let danger=0;rules.walkDecls(decl=>{if(decl.value.includes("danger"))danger++});
- assert.equal(danger,1,"el rojo se reserva al contador sin leer");
+ assert.equal(decls(".notification-new").background,"var(--danger-600)","«N nuevos» repite el rojo del contador (aprobado 2026-11-21)");
+ const danger=[];rules.walkDecls(decl=>{if(decl.value.includes("danger"))danger.push(decl.parent.selector)});
+ assert.deepEqual(danger,[".notification-count",".notification-new"],"el rojo se reserva a los avisos sin leer");
 });

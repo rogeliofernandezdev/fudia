@@ -1,6 +1,7 @@
 package com.fudia.pay
 
 import com.fudia.pay.features.notifications.ListenerHealth
+import com.fudia.pay.features.notifications.shouldForceRebind
 import com.fudia.pay.features.settings.livenessText
 import com.fudia.pay.features.settings.sinceLabel
 import com.fudia.pay.features.sync.shouldRequestRebind
@@ -45,5 +46,31 @@ class ListenerHealthTest {
         assertFalse(shouldRequestRebind(listenerEnabled = true, boundInProcess = true))
         // Sin permiso, la app no puede hacer nada: no llamar al sistema.
         assertFalse(shouldRequestRebind(listenerEnabled = false, boundInProcess = false))
+    }
+
+    private val minute = 60_000L
+    private val now = 1_000 * minute
+
+    @Test
+    fun `listener zombi enlazado sin entregas fuerza el reenlace completo`() {
+        // Conectado hace una hora, ninguna entrega y la bandeja vacía a sus ojos.
+        assertTrue(shouldForceRebind(visibleCount = 0, lastDeliveryAtMillis = 0, connectedAtMillis = now - 60 * minute, lastForcedAtMillis = 0, now = now))
+    }
+
+    @Test
+    fun `si ve notificaciones activas el sistema le entrega y no se toca`() {
+        assertFalse(shouldForceRebind(visibleCount = 3, lastDeliveryAtMillis = 0, connectedAtMillis = now - 60 * minute, lastForcedAtMillis = 0, now = now))
+    }
+
+    @Test
+    fun `una entrega o conexion reciente evita la reparacion`() {
+        assertFalse(shouldForceRebind(0, lastDeliveryAtMillis = now - 2 * minute, connectedAtMillis = now - 60 * minute, lastForcedAtMillis = 0, now = now))
+        assertFalse(shouldForceRebind(0, lastDeliveryAtMillis = 0, connectedAtMillis = now - 2 * minute, lastForcedAtMillis = 0, now = now))
+    }
+
+    @Test
+    fun `la reparacion forzada respeta su intervalo minimo`() {
+        assertFalse(shouldForceRebind(0, 0, now - 60 * minute, lastForcedAtMillis = now - 10 * minute, now = now))
+        assertTrue(shouldForceRebind(0, 0, now - 60 * minute, lastForcedAtMillis = now - 31 * minute, now = now))
     }
 }

@@ -28,6 +28,10 @@ import javax.inject.Inject
  *
  * El pago se guarda en la cola (Room) y se envía al instante desde este mismo
  * servicio; WorkManager queda de respaldo si no hay red o el backend falla.
+ *
+ * Android puede dejar el servicio enlazado sin entregarle nada (listener
+ * zombi, ver [shouldForceRebind]): el barrido lo detecta con [verifyDelivery]
+ * y, al reconectar, los pagos que siguen en la bandeja se recuperan.
  */
 @AndroidEntryPoint
 class PayNotificationListener : NotificationListenerService() {
@@ -48,16 +52,51 @@ class PayNotificationListener : NotificationListenerService() {
          *  null y el barrido repara sin abrir la app. */
         @Volatile
         var connectionEpoch: Long? = null
+
+        /** Instancia enlazada en este proceso, para que el barrido del worker
+         *  verifique la entrega real (ver [verifyDelivery]). */
+        @Volatile
+        var instance: PayNotificationListener? = null
+            private set
+
+        /** Última notificación entregada por el sistema, de cualquier app:
+         *  prueba de que Android sigue entregando al listener. */
+        @Volatile
+        private var lastDeliveryAtMillis: Long = 0L
+
+        @Volatile
+        private var lastForcedRebindAtMillis: Long = 0L
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
         connectionEpoch = System.currentTimeMillis()
+        instance = this
         scope.launch { listenerStatus.markConnected() }
         if (BuildConfig.DEBUG) Log.d(TAG, "servicio de escucha conectado")
+        if (!credentials.paired) return
+        // Mantiene el proceso fuera del congelador de HONOR (ver ListeningService).
+        ListeningService.start(applicationContext)
+        // Pagos que siguen en la bandeja y no se entregaron (listener zombi,
+        // reconexión, proceso muerto): se procesan ahora. La clave idempotente
+        // evita duplicados en la cola y en el backend.
+        val pending = try { activeNotifications?.toList().orEmpty() } catch (e: RuntimeException) { emptyList() }
+        pending.filter { KnownApps.providerOf(it.packageName) != null }.forEach(::handle)
         // Lo que quedó en cola (sin red, proceso muerto) sale al reenlazar,
         // sin esperar a que el usuario abra la app.
-        if (credentials.paired) scope.launch { if (dao.all().isNotEmpty()) sendNow() }
+        scope.launch { if (dao.all().isNotEmpty()) sendNow() }
+    }
+
+    /** Comprueba que Android siga entregando notificaciones a este servicio
+     *  y, si parece un listener zombi, fuerza la reconstrucción del enlace.
+     *  La llama el barrido periódico del worker. */
+    fun verifyDelivery() {
+        val visible = try { activeNotifications?.size } catch (e: RuntimeException) { null } ?: return
+        val now = System.currentTimeMillis()
+        if (!shouldForceRebind(visible, lastDeliveryAtMillis, connectionEpoch ?: 0L, lastForcedRebindAtMillis, now)) return
+        lastForcedRebindAtMillis = now
+        if (BuildConfig.DEBUG) Log.d(TAG, "sin entregas del sistema: forzando reenlace completo")
+        ListenerRepair.forceFullRebind(applicationContext)
     }
 
     override fun onListenerDisconnected() {
@@ -66,12 +105,14 @@ class PayNotificationListener : NotificationListenerService() {
         // app, y queda registrado en la salud que muestra la pantalla.
         if (BuildConfig.DEBUG) Log.d(TAG, "desconectado por el sistema: solicitando reenlace")
         connectionEpoch = null
+        if (instance === this) instance = null
         scope.launch { listenerStatus.markDisconnected() }
         requestRebind(ComponentName(this, PayNotificationListener::class.java))
     }
 
     override fun onDestroy() {
         connectionEpoch = null
+        if (instance === this) instance = null
         scope.cancel()
         super.onDestroy()
     }
@@ -84,7 +125,12 @@ class PayNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        lastDeliveryAtMillis = System.currentTimeMillis()
         if (BuildConfig.DEBUG) Log.d(TAG, "notificación de ${sbn.packageName}")
+        handle(sbn)
+    }
+
+    private fun handle(sbn: StatusBarNotification) {
         if (!credentials.paired) {
             if (BuildConfig.DEBUG) Log.d(TAG, "sin vinculación: ignorada")
             return

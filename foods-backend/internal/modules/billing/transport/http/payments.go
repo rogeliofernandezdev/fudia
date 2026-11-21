@@ -65,7 +65,7 @@ func (h *Payments) CreatePaymentBatch(w http.ResponseWriter, r *http.Request) {
 func (h *Payments) ListPOSOrders(w http.ResponseWriter, r *http.Request) {
 	page, size := shared.PageParams(r)
 	q := r.URL.Query()
-	out, err := h.service.List(r.Context(), billingScope(r), application.POSFilter{Query: q.Get("q"), From: q.Get("from"), To: q.Get("to"), Status: q.Get("paymentStatus"), Page: page, Size: size})
+	out, err := h.service.List(r.Context(), billingScope(r), application.POSFilter{Query: q.Get("q"), From: q.Get("from"), To: q.Get("to"), Status: q.Get("paymentStatus"), Ready: q.Get("ready") == "true", Page: page, Size: size})
 	billingResponse(w, 200, out, err)
 }
 func (h *Payments) GetPOSOrder(w http.ResponseWriter, r *http.Request) {

@@ -143,7 +143,9 @@ Reglas:
   campana en la referencia). Píldora `danger-600` con cifra blanca (máximo
   «99+») y borde de 2 px `surface`, solo mientras haya avisos sin leer. No se
   reutiliza en menús, pestañas ni estados; dentro del popover el aviso sin leer
-  se marca con un punto `primary-600` y título en negrita.
+  se marca con un punto `primary-600` y título en negrita. Única extensión
+  (2026-11-21): la píldora «N nuevos» de la cabecera del popover usa el mismo
+  `danger-600` con texto blanco.
 - Transparencias por paso (`ink-950-alpha-8`, `primary-600-alpha-24`…), no
   porcentajes sueltos.
 
@@ -1946,6 +1948,28 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   con el tono de su tipo (`noticeTone`: listo `brand`, cuenta pedida `peach`,
   llamado `sky`, pedidos nuevos `primary`); uno leído va sin fondo, con título
   medio `ink-700` e icono `neutral`.
+- Lista de avisos (2026-11-20, monto protagonista 2026-11-21): una sola lista
+  continua de borde a borde, avisos separados por una línea fina `line` (sin
+  tarjetas sueltas ni grupos «Nuevos/Anteriores»); el fondo `primary-50` del
+  sin leer ocupa toda la fila. Cabecera `navigation-900` como los modales:
+  título «Avisos» blanco, píldora «N nuevos» (`danger-600`, solo con avisos sin
+  leer), «Marcar como leídos» como acción de texto blanca y la X blanca; hover
+  `surface-alpha-16` solo en «Marcar como leídos» (la X no cambia al
+  señalarla, como la de los modales), foco con contorno blanco; sin icono antes
+  del título.
+  Cada fila: icono o logo (40 px) | título y «origen · hace N» | monto y punto
+  sin leer. Los avisos de pago se leen como un movimiento: título = quien pagó
+  (o «Pago recibido» sin remitente), debajo «Yape · hace 5 min» (una línea cada
+  uno, con elipsis) y a la derecha el monto 16 px negrita con cifras tabulares,
+  `primary-600` sin leer y `ink-700` leído (`noticePaymentSummary`). La billetera
+  no usa logotipo: es un círculo lleno de 40 px con su nombre en minúsculas,
+  blanco, cursiva y negrita («yape», «plin»), como en el boceto aprobado
+  (2026-11-21). Colores `--wallet-yape` (#742284) y `--wallet-plin` (#00b8c8);
+  el círculo es decorativo y la billetera se nombra en texto debajo del título. Los demás avisos muestran su título y «detalle ·
+  hace N». El monto usa el símbolo de la moneda del catálogo («S/»), nunca el
+  código ISO («PEN»). Filas de 64 px mínimo; en móvil «Marcar como leídos» mide
+  44 px de alto. Barra de desplazamiento fina como en los modales; el foco del
+  teclado de la fila es un contorno interior de 2 px `primary-600`.
 - Aviso emergente (2026-11-04, posición y pulido 2026-11-14): solo cuando llega
   un aviso nuevo con la campana cerrada, **arriba a la derecha**, 12 px bajo la
   barra superior y junto a la campana que lo originó (380 px; en móvil a todo el
@@ -3535,13 +3559,38 @@ limpian las comillas al mostrarse; las palabras del cliente se conservan.
 
 ### Pagos detectados de Yape y Plin en Caja (2026-11-15)
 
-En la tabla, Yape y Plin usan el mismo marco de icono de 32 px, sin repetir el
-nombre. Ambos logos se igualan por su ancho visible, no por el tamaño del
+En la tabla, Yape y Plin no usan logotipo (2026-11-21): cada uno es un círculo
+lleno de 40 px con su nombre en blanco, minúsculas, cursiva y negrita («yape»
+sobre `--wallet-yape` #742284, «plin» sobre `--wallet-plin` #00b8c8), el mismo
+de la campana (`PayProviderTag appearance="circle"`, clase `.pay-wallet-mark`).
+En la tabla el nombre del círculo es el texto de la celda; en la campana es
+decorativo porque la fila ya nombra la billetera. El detalle del pago y el aviso
+emergente conservan los logos originales. Donde se usan logos, ambos se igualan por su ancho visible, no por el tamaño del
 archivo (ajuste solicitado por el usuario, 2026-11-19): Plin es un disco que
 llena su lienzo y Yape un logotipo que ocupa la mitad del ancho del suyo, así
 que en el marco de 32 px Plin se dibuja a 24 px y Yape a 48 px (24 px visibles),
 y en el marco de 56 px Plin a 44 px y Yape a 88 px (44 px visibles). Cada
 proveedor y tamaño tiene su regla explícita en `payment-devices.css`.
+Acciones de la fila (2026-11-21): «Ver detalle» (ojo) conserva el botón de
+fila suave y «Asociar a un pedido» usa la variante `solid` (azul `primary-600`,
+icono blanco) porque es la tarea pendiente; «Descartar» sigue rojo.
+En móvil (≤700 px, opción B aprobada el 2026-11-21) sigue siendo tabla, sin
+tarjetas: la billetera queda fija a la izquierda y Acciones fija a la derecha
+(`DataTable stickyActions`), así «Ver» y «Asociar» se ven siempre. Celdas con
+relleno de 8 px, el título «Proveedor» solo para lectores de pantalla (el
+círculo ya nombra la billetera), remitente de 14 px en hasta dos líneas (máx.
+96 px) y Acciones sin el ancho mínimo de 116 px, de modo que a 390 px el monto
+queda a la vista sin deslizar; Recepción y Estado aparecen al deslizar. El monto va
+en negrita `ink-950` y «Recepción» muestra la fecha arriba y la hora debajo
+como segunda línea estándar de la tabla (`td small`), en el huso del local.
+Buscador (2026-11-21): primero en la barra, «Buscar remitente o monto» (280 px;
+en móvil, su propia fila a todo el ancho sobre los dos filtros). Busca en el
+servidor mientras se escribe, con 300 ms de espera tras la última tecla, y
+vuelve a la página 1. El remitente se compara sin tildes ni mayúsculas
+(«fernandez» encuentra «Fernández»); una cifra busca por el inicio del monto
+(«25» → 25.00, 25.50, 250.00; acepta «25,50» y «S/ 25»). No busca por número
+de operación: Yape no lo envía. Sin resultados: «No hay pagos con estos
+filtros» y «Prueba con otro remitente o monto, o quita los filtros.».
 El filtro ofrece «Todos los estados», «Detectado» y «Descartado»; no ofrece
 «Asociado» ni «Confirmado» (ajuste solicitado por el usuario, 2026-11-18).
 
@@ -3551,8 +3600,8 @@ el tiempo no marca el pago como descartado ni cobra nada; la consulta sigue en
 Caja y la campana. La carga inicial del historial no dispara avisos flotantes.
 La campana admite `pay_detected` y abre directamente «Pagos detectados» de
 Caja (`/cash?tab=pagos`), sin un segundo aviso emergente del mismo pago.
-Las filas de pago de la campana muestran el logo original de Yape o Plin en
-un marco de 32 px centrado en el espacio de icono de 40 px. Se reconoce solo
+Las filas de pago de la campana muestran el círculo de billetera de 40 px
+(ver «Lista de avisos»). Se reconoce solo
 el título canónico del aviso de pago; los demás avisos conservan su icono.
 El teléfono de origen permanece visible en los datos superiores del pago,
 junto al remitente, sin desplegable. No se repite en la tabla ni en el aviso
@@ -3573,20 +3622,33 @@ sin repetir el nombre junto al logotipo (solicitud del usuario). El marco de
 archivo original. El texto alternativo identifica al proveedor para lectores
 de pantalla. La matriz de estados de Fudia conserva sus tonos y variantes. La
 procedencia de los archivos está en `public/brands/README.md`.
-La columna «Recepción» muestra la fecha. Las acciones tienen destinos distintos:
+La columna «Recepción» muestra la fecha y, debajo, la hora. Las acciones tienen destinos distintos:
 el ojo abre «Detalle del pago», con remitente, teléfono de origen, fecha y número
 de operación; el enlace abre «Asociar pago a pedido», con un resumen compacto
-de logo, monto, estado, remitente y teléfono, seguido de la selección y revisión
-del pedido. La consulta es de solo lectura y no lleva pie ni botón «Asociar a
+de billetera, monto, estado, remitente y hora de recepción, seguido de la
+selección y revisión del pedido. La consulta es de solo lectura y no lleva pie ni botón «Asociar a
 pedido»: esa acción ya existe en la fila (enlace) y en el aviso flotante, que
 abre directo la asociación (ajuste solicitado por el usuario, 2026-11-19).
-Ambas vistas abren con una tarjeta suave (`cloud-50`, `radius-card`) con logo,
-monto y estado, y los datos en `DetailFacts` de dos columnas (consulta:
-Remitente · Número de operación, Teléfono de origen · Fecha y hora). En la
-asociación, «Elige el pedido» lista filas completas pulsables (≥ 56 px) con
-código, canal y cliente, total a la derecha y chevron, sin un botón «Revisar»
-por fila; el pedido cuyo total coincide con el pago muestra `Tag` «Monto
-exacto». La revisión destaca el saldo pendiente en una franja propia antes de
+Ambas vistas abren con una tarjeta suave (`cloud-50`, `radius-card`) con la
+billetera (en la asociación, el círculo «yape»/«plin» de la tabla), monto y
+estado, y los datos en `DetailFacts` de dos columnas (consulta: Remitente ·
+Número de operación, Teléfono de origen · Fecha y hora; asociación: Remitente ·
+Recibido, sin el modelo del teléfono, que no ayuda a elegir el pedido).
+Asociación (boceto A, 2026-11-21): «Elige el pedido» con búsqueda «Buscar
+mesa, cliente o pedido» en el servidor (código, cliente y nombre de mesa),
+solo pedidos por cobrar y listos para cobrar (`paymentStatus=unpaid`,
+`ready=true`: la misma regla que valida el cobro — salón con la cuenta
+cerrada, mostrador siempre, los demás canales listos, en camino o entregados),
+así nunca se elige un pedido que se rechace al confirmar, y 300 ms de espera tras la
+última tecla, sin una consulta por letra. Las filas forman una lista continua
+con líneas finas (≥ 64 px, hover `primary-50`, sin tarjetas sueltas): icono del
+canal en `IconTile` con la familia de Pedidos (salón `utensils` índigo,
+delivery `truck` verde, recojo/mostrador naranja, WhatsApp violeta) | título que
+el cajero reconoce — el nombre de la mesa («Mesa 2») o el cliente — y debajo
+«canal · código · hace N min» | lo que falta cobrar en negrita con «Por cobrar»
+o «de S/ total» si ya tiene pagos parciales | chevron. Se ordena por cercanía
+del saldo (no del total) al pago y el pedido cuyo saldo coincide muestra `Tag`
+«Monto exacto»; no hay texto de ayuda que lo repita. La revisión destaca el saldo pendiente en una franja propia antes de
 «Asociar pago». La asociación usa `ModalBody` desplazable y
 `ModalFooter` fijo solo en la revisión del pedido.
 Los pagos ya asociados o descartados son de lectura. Las consultas de

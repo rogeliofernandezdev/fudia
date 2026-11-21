@@ -587,6 +587,17 @@ icono tiene un solo significado en toda la aplicación (ver
   lápiz azul, activar/desactivar = interruptor binario, cancelar = equis circular roja
   y quitar fila = equis roja. Las
   pantallas no pueden elegir localmente otro icono o color para estas acciones.
+- Variante `solid` de `IconButton` (2026-11-21, `table-actions.css`): fondo
+  `primary-600`, icono blanco y hover `primary-700`. Marca la tarea pendiente de
+  la fila cuando convive con «Ver», para que no se confundan; como máximo una por
+  fila y sigue siendo solo icono con tooltip. Primer uso: «Asociar a un pedido»
+  en Pagos detectados.
+- `DataTable stickyActions` (2026-11-21): en ≤700 px fija la última columna
+  (Acciones) a la derecha, con fondo `surface` y la misma línea `line` que la
+  primera columna fija a la izquierda; el resto se desliza entre ambas. Úsala
+  cuando la tarea de la fila quedaría fuera de pantalla. Sigue siendo tabla: no
+  se convierte en tarjetas (las `management-cards` siguen ocultas). Primer uso:
+  Pagos detectados.
 
 Los interruptores de configuración `switch-row` usan `primary-600` al seleccionar
 y `line-strong` al apagar, con perilla blanca. No representan un estado confirmado

@@ -19,6 +19,7 @@ import (
 	billingcontracts "github.com/foods-platform/foods-backend/internal/modules/billing/contracts"
 	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
+	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/paydetect/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -535,7 +536,7 @@ func (a *Detector) announce(ctx context.Context, session domain.DeviceSession, e
 			continue
 		}
 		provider := strings.ToUpper(event.Provider[:1]) + event.Provider[1:]
-		_ = a.notices.Publish(ctx, s, noticecontracts.PayDetected(provider, session.Currency, domain.FormatAmount(event.Amount), event.SenderName, event.EventKey))
+		_ = a.notices.Publish(ctx, s, noticecontracts.PayDetected(provider, currencySymbol(session.Currency), domain.FormatAmount(event.Amount), event.SenderName, event.EventKey))
 	}
 }
 
@@ -565,4 +566,13 @@ func NewMaintenance(repo MaintenanceRepository) *Maintenance { return &Maintenan
 // Sweep deletes pairing codes expired past the retention period.
 func (a *Maintenance) Sweep(ctx context.Context, now time.Time) (int64, error) {
 	return a.repo.SweepExpiredCodes(ctx, now)
+}
+
+// currencySymbol muestra el monto como lo ve el personal en el resto del
+// sistema («S/ 1.00»), no con el código ISO que reporta el dispositivo («PEN»).
+func currencySymbol(code string) string {
+	if option, ok := orgcontracts.CurrencyByCode(code); ok && option.Symbol != "" {
+		return option.Symbol
+	}
+	return code
 }

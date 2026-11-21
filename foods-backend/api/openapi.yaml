@@ -1982,6 +1982,7 @@ paths:
       parameters:
         - { in: query, name: q, schema: { type: string } }
         - { in: query, name: paymentStatus, schema: { type: string, enum: [unpaid, pending, partial, paid, all], default: unpaid } }
+        - { in: query, name: ready, description: "Con true deja solo los pedidos que el cobro aceptaría ahora (salón con la cuenta cerrada, mostrador siempre, los demás canales listos, en camino o entregados; nunca finalizados). Lo usa Asociar pago de Fudia Pay.", schema: { type: boolean, default: false } }
         - { in: query, name: from, description: Fecha inicial inclusiva del registro del pedido en la zona horaria del local. Se admite sin to., schema: { type: string, format: date } }
         - { in: query, name: to, description: Fecha final inclusiva del registro del pedido en la zona horaria del local. Se admite sin from y no puede ser anterior a from., schema: { type: string, format: date } }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
@@ -2127,6 +2128,7 @@ paths:
       parameters:
         - { in: query, name: status, schema: { type: string, enum: [detected, associated, confirmed, dismissed] } }
         - { in: query, name: provider, schema: { type: string, enum: [yape, plin] } }
+        - { in: query, name: q, description: "Busca por remitente (contiene, sin distinguir tildes ni mayúsculas) o por monto (empieza con la cifra escrita, por ejemplo 25 o 25,50). Máximo 80 caracteres.", schema: { type: string, maxLength: 80 } }
         - { in: query, name: page, schema: { type: integer, minimum: 1 } }
         - { in: query, name: size, schema: { type: integer, minimum: 10, maximum: 100, default: 20 } }
       responses:

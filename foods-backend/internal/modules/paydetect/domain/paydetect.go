@@ -206,7 +206,11 @@ type Activation struct {
 type NotificationFilter struct {
 	Status   string
 	Provider string
-	Limit    int
+	// Query busca por remitente (contiene, sin distinguir tildes ni
+	// mayúsculas) o por monto (empieza con lo escrito). Las billeteras no
+	// envían número de operación de forma fiable, así que no se busca por él.
+	Query string
+	Limit int
 	// Offset salta las filas de las páginas anteriores (página 1: 0).
 	Offset int
 }

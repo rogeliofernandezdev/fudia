@@ -268,6 +268,12 @@ func (r *Payments) BatchSaleMovement(ctx context.Context, s scope, shiftID strin
 // para servir una página profunda (70-85 ms → 1,5-7 ms con un año de pedidos).
 const posLocationTimezoneSQL = `(SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)`
 
+// posPaymentReadySQL es la misma regla que domain.PaymentReady en SQL: pedido
+// sin finalizar; salón con la cuenta cerrada; mostrador siempre; los demás
+// canales en «listo», «en_camino» o «entregado». Si cambia una, cambia la otra
+// (payment_readiness_test.go las compara).
+const posPaymentReadySQL = ` AND o.completed_at IS NULL AND (o.channel='mostrador' OR (o.channel='salon' AND o.bill_closed_at IS NOT NULL) OR (o.channel NOT IN ('salon','mostrador') AND o.status IN ('listo','en_camino','entregado')))`
+
 func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilter) (application.POSPage, error) {
 	out := application.POSPage{Page: f.Page, PageSize: f.Size}
 	page, size, q, from, to, status := f.Page, f.Size, f.Query, f.From, f.To, f.Status
@@ -285,6 +291,9 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		filter = " AND o.paid_amount > 0.00001 AND o.paid_amount < o.total"
 	case "paid":
 		filter = " AND o.paid_amount >= o.total"
+	}
+	if f.Ready {
+		filter += posPaymentReadySQL
 	}
 
 	baseFrom := `

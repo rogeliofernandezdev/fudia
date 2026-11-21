@@ -69,13 +69,29 @@ test("Fudia Pay: aviso flotante global y modal de detalle con asociación revisa
   assert.doesNotMatch(detail,/Asociar a pedido/,"la consulta no repite la acción de asociar: ya existe el botón de enlace");
   assert.doesNotMatch(detail,/setMode\(/,"la intención la decide quien abre el modal");
   assert.doesNotMatch(detail,/<Select/,"el logo ya identifica el medio de pago: sin selector bloqueado");
-  assert.match(detail,/className="pay-order-option" aria-label=\{`Revisar el pedido \$\{code\}`\}/,"cada fila completa es el área táctil para revisar el pedido");
+  assert.match(detail,/className="pay-order-option" aria-label=\{`Revisar \$\{title\}/,"cada fila completa es el área táctil para revisar el pedido");
   assert.match(detail,/Monto exacto/,"marca los pedidos cuyo monto coincide con el pago");
   const css=read("src/modules/payment-devices/presentation/payment-devices.css");
   assert.match(css,/\.pay-notice-layer\{position:fixed/);
   assert.match(css,/\.pay-provider-tag\.plin\.is-small \.pay-provider-logo\{width:var\(--size-24\)/,"Plin llena su lienzo: se reduce para igualar el ancho visible de Yape");
   assert.match(css,/\.pay-provider-tag\.yape\.is-small \.pay-provider-logo\{width:var\(--size-48\)/,"Yape se amplía para compensar sus márgenes blancos");
   assert.match(css,/z-index:var\(--z-tooltip\)/,"la capa queda por encima de los modales sin cerrarlos");
+});
+
+test("Asociar pago: pedidos por mesa o cliente, saldo pendiente y búsqueda en el servidor sin consultas por letra",()=>{
+  const detail=read("src/modules/payment-devices/presentation/pay-notification-detail.tsx");
+  assert.match(detail,/const query=useDebouncedValue\(q\.trim\(\)\)/,"espera a que termine de escribir");
+  assert.match(detail,/queryKey:\["pay-pending-orders",notification\.id,query\]/);
+  const api=read("src/modules/payment-devices/infrastructure/pay-devices-api.ts");
+  assert.match(api,/export function searchPayOrders\(q:string,paymentStatus="unpaid"\)/,"solo pedidos por cobrar");
+  assert.match(api,/new URLSearchParams\(\{q,paymentStatus,ready:"true",page:"1",pageSize:"12"\}\)/,"solo los que el cobro aceptaría: nada que falle al confirmar");
+  assert.match(detail,/const due=\(item:PayOrderRef\)=>Number\(item\.remainingAmount\?\?item\.total\?\?0\)/,"compara con el saldo, no con el total");
+  assert.match(detail,/table=channel==="salon"\?item\.tableName:""/,"la mesa se muestra con su nombre («Mesa 2»), no solo «Mesa»");
+  assert.match(detail,/<PayProviderTag provider=\{notification\.provider\} appearance="circle"\/>/,"el resumen usa el círculo de billetera");
+  assert.match(detail,/\{label:"Recibido",value:<time/,"al asociar se muestra cuándo llegó el pago");
+  assert.doesNotMatch(detail,/Los pedidos con el mismo monto aparecen primero/,"la etiqueta «Monto exacto» ya lo dice");
+  const css=read("src/modules/payment-devices/presentation/payment-devices.css");
+  assert.match(css,/\.pay-order-options li\+li\{border-top:var\(--stroke-1\) solid var\(--line\)\}/,"lista continua con líneas finas");
 });
 
 test("Fudia Pay: Caja revisa los pagos detectados y cada local vincula sus dispositivos",()=>{
@@ -117,12 +133,48 @@ test("Fudia Pay: las pestañas usan DataTable del sistema y los pagos paginan en
     assert.match(view,/<div className="table-actions">/);
   }
   const payments=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
-  assert.match(payments,/listPayNotificationPage\(\{status,provider,page,size\}\)/);
+  assert.match(payments,/listPayNotificationPage\(\{status,provider,q,page,size\}\)/);
   assert.match(payments,/<Pagination page=\{page\} size=\{size\} total=\{notifications\.data\?\.total\?\?0\}/);
   assert.match(payments,/setStatus\(event\.target\.value\);setPage\(1\)/,"cambiar un filtro vuelve a la primera página");
   assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/page:String\(filter\.page\),size:String\(filter\.size\)/);
   const css=read("src/modules/payment-devices/presentation/payment-devices.css");
   assert.doesNotMatch(css,/\.pay-devices-table th|\.pay-devices-table td\{/,"las filas y cabeceras las pone data-table.css");
+});
+
+test("Pagos detectados: Asociar en azul sólido, monto en negrita y recepción en dos líneas",()=>{
+  const payments=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
+  assert.match(payments,/<IconButton icon="link" className="solid" label=/,"Asociar se distingue de Ver con el azul sólido");
+  assert.match(payments,/<IconButton icon="eye" label=/,"Ver conserva el botón de fila suave");
+  assert.match(payments,/\{dateTime\(item\.occurredAt,"date"\)\}<small>\{dateTime\(item\.occurredAt,"time"\)\}<\/small>/,"fecha arriba y hora debajo");
+  const css=read("src/modules/payment-devices/presentation/payment-devices.css");
+  assert.match(css,/\.pay-notifications-table td\.pay-amount\{color:var\(--ink-950\);font-weight:var\(--weight-bold\)\}/);
+  const actions=read("src/design-system/styles/table-actions.css");
+  assert.match(actions,/\.ds-icon-button\.solid\{color:var\(--surface\);background:var\(--primary-600\);border-color:var\(--primary-600\)\}/,"la variante sólida vive en el sistema, no en el módulo");
+  assert.doesNotMatch(css,/\.solid/,"el módulo no recolorea el botón");
+});
+
+test("Pagos detectados: buscador por remitente o monto en el servidor, mientras escribe",()=>{
+  const payments=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
+  assert.match(payments,/const q=useDebouncedValue\(search\.trim\(\)\)/,"una consulta cuando deja de escribir, no una por letra");
+  assert.match(payments,/queryKey:\["pay-notifications",status,provider,q,page,size\]/);
+  assert.match(payments,/placeholder="Buscar remitente o monto"/,"sin número de operación: las billeteras no lo envían");
+  assert.match(payments,/setSearch\(event\.target\.value\);setPage\(1\)/,"buscar vuelve a la primera página");
+  assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/q:filter\.q,page:String\(filter\.page\)/,"la búsqueda va al servidor");
+  const css=read("src/modules/payment-devices/presentation/payment-devices.css");
+  assert.match(css,/\.pay-notifications-search\{grid-column:1\/-1;width:100%\}/,"en móvil el buscador ocupa su propia fila");
+});
+
+test("Pagos detectados en móvil: Acciones fija a la derecha y monto visible sin deslizar",()=>{
+  const payments=read("src/modules/payment-devices/presentation/pay-notifications-panel.tsx");
+  assert.match(payments,/<DataTable label="Pagos detectados" containerClassName="hover-scroll pay-notifications-table" stickyActions>/);
+  assert.match(payments,/<span className="pay-col-provider-label">\{column\}<\/span>/,"el título Proveedor sigue para lectores de pantalla");
+  const table=read("src/design-system/data-table.tsx");
+  assert.match(table,/stickyActions&&"data-table--sticky-actions"/,"la variante vive en DataTable, no en el módulo");
+  const ds=read("src/design-system/styles/data-table.css");
+  assert.match(ds,/\.data-table--sticky-actions :is\(th,td\):last-child\{position:sticky;inset-inline-end:0/,"Acciones fija a la derecha en ≤700 px");
+  assert.match(ds,/\.data-table--sticky-actions tbody td:last-child\{background:var\(--surface\)\}/);
+  const css=read("src/modules/payment-devices/presentation/payment-devices.css");
+  assert.match(css,/\.pay-notification-sender strong\{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2/,"el remitente usa hasta dos líneas en móvil");
 });
 
 test("Fudia Pay: dispositivos del local sin edición, con filtro de estado, paginación y plataforma",()=>{

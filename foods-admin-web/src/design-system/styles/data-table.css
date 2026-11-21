@@ -69,9 +69,13 @@ tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon
   .data-table td:first-child b{display:inline-block;vertical-align:middle;max-width:var(--size-120);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .data-table td:first-child small{max-width:var(--size-150);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .data-table th:last-child,.data-table td:last-child{min-width:var(--size-116)}
+  /* `stickyActions` (2026-11-21): Acciones fija a la derecha con la misma línea que la columna fija de la izquierda. */
+  .data-table--sticky-actions :is(th,td):last-child{position:sticky;inset-inline-end:0;z-index:var(--z-raised);border-inline-start:var(--stroke-1) solid var(--line)}
+  .data-table--sticky-actions thead th:last-child{z-index:calc(var(--z-raised) + 1);background:var(--navigation-900)}
+  .data-table--sticky-actions tbody td:last-child{background:var(--surface)}
   .data-table-hint{display:flex;align-items:center;gap:var(--space-2);margin:0;padding:var(--space-2) var(--space-3);background:var(--primary-50);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
   .data-table-hint>span:first-child{flex:none;color:var(--primary-700);font-size:var(--font-size-md);font-weight:var(--weight-bold)}
 }
 @media (width<=700px) and (hover:hover) and (pointer:fine){
-  .data-table tbody tr:hover td:first-child{background:var(--primary-25)}
+  .data-table tbody tr:hover td:first-child,.data-table--sticky-actions tbody tr:hover td:last-child{background:var(--primary-25)}
 }

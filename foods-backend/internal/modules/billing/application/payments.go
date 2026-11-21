@@ -20,7 +20,11 @@ type scope = requestscope.Scope
 type POSFilter struct {
 	Query, From, To, Status string
 	CollectionShiftID       string
-	Page, Size              int
+	// Ready deja solo los pedidos que el cobro aceptaría ahora
+	// (domain.PaymentReady): asociar un pago detectado nunca ofrece un pedido
+	// que luego se rechace por cuenta abierta o pedido no listo.
+	Ready      bool
+	Page, Size int
 }
 type POSPage struct {
 	Items []domain.PosOrderSummary `json:"items"`

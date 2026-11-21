@@ -208,6 +208,7 @@ func (h *Handler) Notifications(w http.ResponseWriter, r *http.Request) {
 	filter := domain.NotificationFilter{
 		Status:   strings.TrimSpace(query.Get("status")),
 		Provider: strings.TrimSpace(query.Get("provider")),
+		Query:    domain.NotificationQuery(query.Get("q")),
 		Limit:    50,
 	}
 	// page y size paginan la lista de Caja (size de 10 a 100); sin ellos se

@@ -45,5 +45,6 @@ export type PayNotification={
 };
 
 /** Referencia estrecha de pedido para asociar o confirmar un pago detectado. */
-export type PayOrderRef={id:string;code:string;channel?:string;customerName?:string;total?:string;paymentStatus?:string};
+/** Pedido candidato para asociar: el backend ya envía mesa, saldo y creación para reconocerlo sin abrirlo. */
+export type PayOrderRef={id:string;code:string;channel?:string;customerName?:string;tableName?:string;total?:string;remainingAmount?:string;paymentStatus?:string;createdAt?:string};
 export type PayPaymentRef={id:string;amount:string;method:string;createdAt:string};

@@ -16,6 +16,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.fudia.pay.BuildConfig
+import com.fudia.pay.features.notifications.ListeningService
 import com.fudia.pay.features.notifications.PayNotificationListener
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -51,6 +52,10 @@ class SyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         rebindListenerIfDead()
+        // Enlazado no basta: el sistema puede dejar de entregarle avisos.
+        PayNotificationListener.instance?.verifyDelivery()
+        // Si Android detuvo el servicio fijo, se vuelve a pedir.
+        ListeningService.start(applicationContext)
         return if (syncer.flush()) Result.success() else Result.retry()
     }
 

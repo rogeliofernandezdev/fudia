@@ -30,7 +30,9 @@ las revise y confirme. Sin ventas, inventario, carta, administración ni cobros.
 8. Nada se presenta como transacción bancaria verificada: es una notificación
    detectada que Caja confirma de forma manual. Los estados son `detected`,
    `associated` y `confirmed`; los define el backend.
-9. Sin WebSocket permanente ni servicios foreground sin justificación. La app
+9. Sin WebSocket permanente ni servicios foreground sin justificación (única
+   excepción aprobada: `ListeningService`, que impide que el congelador de
+   HONOR detenga el listener; ver README). La app
    admite que Android no entregue notificaciones y lo muestra con sinceridad.
 10. Los logs nunca contienen tokens, credenciales ni contenido de notificaciones.
 11. Interfaz en español claro y nombres técnicos en inglés. Pantallas mínimas:

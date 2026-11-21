@@ -62,6 +62,37 @@ puede estar concedido con el servicio muerto. Por eso:
   sistema mantiene enlazado con prioridad alta) envía cada pago él mismo.
 - El servicio se **reenlaza solo** cuando Android lo desconecta
   (`onListenerDisconnected` → `requestRebind`), sin abrir la app.
+- **Congelador de HONOR** (2026-11-20, causa de «después de un rato deja de
+  enviar»): `HnFreezerController` congela el proceso (`cgroup.freeze = 1`)
+  aunque la app esté exenta de batería y en el bucket EXEMPTED. Android le
+  entrega la notificación, pero no se ejecuta hasta que alguien abre la app:
+  un Plin enviado a las 20:21 llegó a Caja a las 20:27, al abrirla. Por eso la
+  app corre un **servicio en primer plano** (`ListeningService`) con el aviso
+  fijo «Detectando pagos». El tipo importa: PowerGenie (`PG_ash`,
+  `dumpsys powergenius -a`) ignoró `specialUse` («FgService:» vacío, estado
+  `hibernation` pese a estar en «nunca optimizar») y sí reconoce
+  `connectedDevice` («FgService:|connectedDevice», estado `running`). Se
+  declaran `remoteMessaging|connectedDevice|specialUse`; `dataSync` no sirve
+  porque Android 15 lo corta a las 6 h diarias. Arranca al abrir la app,
+  al conectar el listener, en cada barrido del worker y al reiniciar o
+  actualizar (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`); se detiene al
+  desvincular. En Android 13+ se pide el permiso de notificaciones solo para
+  que el aviso sea visible. Diagnóstico:
+  `adb shell cat /sys/fs/cgroup/apps/uid_<uid>/pid_<pid>/cgroup.freeze`.
+- **Listener zombi** (visto el 2026-11-20 en HONOR DNP-NX9, MagicOS/Android
+  15): Android mantiene el servicio enlazado («Live notification listeners»)
+  pero vacía su lista interna de habilitados («All notification listeners (0)
+  enabled for current profiles») y deja de entregarle avisos, sin ningún
+  callback; la app se ve «conectada» y no llega nada. El barrido del worker
+  llama a `verifyDelivery()`: si el listener no ve notificaciones activas y
+  lleva 10 min sin entregas ni reconexiones, desactiva y reactiva su propio
+  componente (`setComponentEnabledSetting`, `DONT_KILL_APP`), lo que provoca
+  `PACKAGE_CHANGED` y Android reconstruye la lista completa (lo mismo que
+  reinstalar el APK). Como máximo una vez cada 30 min; al arrancar, la app
+  restaura el componente si quedó desactivado. Al reconectar, el listener
+  procesa los pagos de Yape/Plin que siguen en la bandeja (clave idempotente).
+  Diagnóstico: `adb shell dumpsys notification | grep -A2 "listeners ("`; en
+  HONOR los `Log.d` se filtran: `adb shell setprop log.tag.FudiaPay D`.
 - La pantalla de inicio muestra la **salud real** (conectado/desconectado y
   hace cuánto, según lo que reporta el propio servicio) y ofrece excluir la
   app de la **optimización de batería**; en ajustes de marca conviene además

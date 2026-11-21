@@ -8,10 +8,13 @@ type DataTableProps = Omit<ComponentPropsWithoutRef<"table">,"children"> & {
   label: string;
   containerClassName?: string;
   scrollbarPosition?: "bottom" | "top";
+  /** En ≤700 px fija la última columna (Acciones) a la derecha, como la primera a la izquierda:
+   * la tarea de la fila sigue a la vista mientras el resto se desliza. */
+  stickyActions?: boolean;
 };
 
 /** A native table with accessible horizontal scrolling and no mobile card substitution. */
-export function DataTable({label,containerClassName="",scrollbarPosition="bottom",children,className="",...tableProps}:DataTableProps){
+export function DataTable({label,containerClassName="",scrollbarPosition="bottom",stickyActions=false,children,className="",...tableProps}:DataTableProps){
   const viewportRef=useRef<HTMLDivElement>(null);
   const topScrollbarRef=useRef<HTMLDivElement>(null);
   const scrollbarContentRef=useRef<HTMLDivElement>(null);
@@ -66,7 +69,7 @@ export function DataTable({label,containerClassName="",scrollbarPosition="bottom
         </div>
       )}
       <div id={viewportId} ref={viewportRef} className={viewportClassName} role="region" aria-label={label} aria-describedby={hasOverflow?hintId:undefined} tabIndex={0}>
-        <table {...tableProps} className={["data-table",className].filter(Boolean).join(" ")}>{children}</table>
+        <table {...tableProps} className={["data-table",stickyActions&&"data-table--sticky-actions",className].filter(Boolean).join(" ")}>{children}</table>
       </div>
     </div>
   );

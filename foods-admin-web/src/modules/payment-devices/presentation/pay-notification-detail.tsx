@@ -2,9 +2,10 @@
 
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,SearchField,Skeleton,Status,Tag} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,IconTile,Modal,ModalBody,ModalFooter,SearchField,Skeleton,Status,Tag,type IconName,type IconTileTone} from "@/design-system";
 import {DetailFacts} from "@/design-system/detail-view";
 import {useFeedback,useMoney,useSession} from "@/providers";
+import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
 import type {PayNotification,PayOrderRef} from "../domain/types";
@@ -16,6 +17,18 @@ type PayNotificationMode="detail"|"associate";
 type Props={notification:PayNotification|null;mode?:PayNotificationMode;onClose:()=>void;onDone:()=>void};
 
 const channelLabel=(channel:string)=>({salon:"Mesa",delivery:"Delivery",mostrador:"Venta rápida",recojo:"Recojo",whatsapp:"WhatsApp"}[channel]??channel);
+/** Mismos iconos y familias de color que los canales de Pedidos (índigo salón, verde delivery, naranja recojo/mostrador, violeta WhatsApp). */
+const channelTiles:Record<string,{icon:IconName;tone:IconTileTone}>={salon:{icon:"utensils",tone:"indigo"},delivery:{icon:"truck",tone:"brand"},recojo:{icon:"box",tone:"peach"},mostrador:{icon:"store",tone:"peach"},whatsapp:{icon:"share",tone:"digital"}};
+/** Antigüedad corta del pedido: «hace 15 min», «hace 2 h», «hace 3 d». PostgreSQL
+ * puede enviar el desfase solo en horas («-05»), que el navegador no interpreta. */
+function orderAge(createdAt?:string,now=Date.now()){
+  if(!createdAt)return "";
+  const minutes=Math.floor((now-new Date(createdAt.trim().replace(/([+-]\d{2})$/,"$1:00")).getTime())/60000);
+  if(!Number.isFinite(minutes))return "";
+  const age=minutes<1?"ahora":minutes<60?`hace ${minutes} min`:minutes<1440?`hace ${Math.floor(minutes/60)} h`:`hace ${Math.floor(minutes/1440)} d`;
+  // Espacios no separables: en 390 px la antigüedad baja entera, sin dejar «d» sola.
+  return age.replace(/ /g," ");
+}
 
 /** Dos intenciones con destinos distintos: «detail» es una consulta de solo
  * lectura (sin acciones: asociar tiene su propio botón en la tabla y en el
@@ -34,6 +47,8 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
   const {open}=usePayCollection();
   const [view,setView]=useState<"suggestion"|"orders"|"detail">(open?"suggestion":"orders");
   const [q,setQ]=useState("");
+  // Espera a que termine de escribir: una consulta por búsqueda, no por letra.
+  const query=useDebouncedValue(q.trim());
   const [selected,setSelected]=useState<PayOrderRef|null>(null);
   const associationHeading=useRef<HTMLHeadingElement>(null);
   const associating=notification.status==="detected"&&mode==="associate";
@@ -47,14 +62,16 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
   const effectiveMethod=detectedMethod?.code??"";
   const methodReady=Boolean(detectedMethod)&&!methods.isError;
   const pending=useQuery({
-    queryKey:["pay-pending-orders",notification.id,q],
-    queryFn:()=>searchPayOrders(q),
+    queryKey:["pay-pending-orders",notification.id,query],
+    queryFn:()=>searchPayOrders(query),
     enabled:associating&&methodReady&&(view==="orders"||view==="suggestion"&&!open),
   });
   const amount=Number(notification.amount);
+  // Lo que falta cobrar decide: un pedido con pagos parciales se compara por su saldo, no por su total.
+  const due=(item:PayOrderRef)=>Number(item.remainingAmount??item.total??0);
   const suggestions=(pending.data?.items??[])
-    .filter(item=>item.paymentStatus!=="paid")
-    .sort((a,b)=>Math.abs(Number(a.total??0)-amount)-Math.abs(Number(b.total??0)-amount))
+    .filter(item=>item.paymentStatus!=="paid"&&due(item)>0)
+    .sort((a,b)=>Math.abs(due(a)-amount)-Math.abs(due(b)-amount))
     .slice(0,8);
 
   const detail=useQuery({
@@ -81,18 +98,18 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
     onError:(error:Error)=>notify({tone:"danger",title:"No se pudo asociar",message:error.message}),
   });
   const meta=payStatusMeta[notification.status];
-  const exact=(total?:string|null)=>total!==undefined&&total!==null&&Number(total)===amount;
+  const exact=(value?:string|null)=>value!==undefined&&value!==null&&Number(value)===amount;
 
   return <Modal title={associating?"Asociar pago a pedido":"Detalle del pago"} className="pay-detail-modal" busy={associate.isPending} onClose={onClose}>
     <ModalBody className="pay-detail-body">
       <section className="pay-detail-summary" aria-label="Resumen del pago">
-        <PayProviderTag provider={notification.provider}/>
+        <PayProviderTag provider={notification.provider} appearance="circle"/>
         <dl className="pay-detail-amount"><dt>Monto recibido</dt><dd>{money(notification.amount)}</dd></dl>
         <Status tone={meta.tone} icon={notification.status==="associated"?"circleCheck":undefined}>{meta.label}</Status>
       </section>
       <DetailFacts label="Datos del pago" items={associating?[
         {label:"Remitente",value:notification.senderName||"Sin remitente"},
-        {label:"Teléfono de origen",value:notification.deviceName||"No informado"},
+        {label:"Recibido",value:<time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time>},
       ]:[
         {label:"Remitente",value:notification.senderName||"Sin remitente"},
         {label:"Número de operación",value:notification.operationNumber||"No informado"},
@@ -103,9 +120,8 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
       {associating?<section aria-label="Asociar pago a pedido" className="pay-associate">
         <div className="pay-associate-heading">
           <h3 ref={associationHeading} tabIndex={-1}>{view==="detail"?"Revisa el pedido":"Elige el pedido"}</h3>
-          <p className="form-help">{view==="detail"?"La asociación registra el cobro real en este pedido."
-            :view==="suggestion"&&open?"Estás cobrando este pedido; la asociación nunca es automática."
-            :"Los pedidos con el mismo monto aparecen primero."}</p>
+          {view!=="orders"&&<p className="form-help">{view==="detail"?"La asociación registra el cobro real en este pedido."
+            :"Estás cobrando este pedido; la asociación nunca es automática."}</p>}
         </div>
 
         {methods.isLoading?<OrderLoading label="Preparando la asociación"/>
@@ -114,20 +130,27 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
         :<>
           {view==="suggestion"&&open&&<>
             <ul className="pay-order-options">
-              <li><OrderOption code={open.code} meta={`Saldo pendiente: ${money(open.pending)}`} exact={Number(open.pending)===amount} onClick={()=>choose({id:open.id,code:open.code})}/></li>
+              <li><OrderOption title={open.code} meta="Pedido en cobro" amount={money(open.pending)} note="Por cobrar" exact={exact(open.pending)} onClick={()=>choose({id:open.id,code:open.code})}/></li>
             </ul>
             <Button kind="secondary" icon="search" onClick={()=>setView("orders")}>Buscar otro pedido</Button>
           </>}
 
           {view!=="detail"&&(view==="orders"||!open)&&<>
-            <SearchField value={q} onChange={event=>setQ(event.target.value)} placeholder="Buscar por pedido, mesa o cliente…" label="Buscar pedidos pendientes de cobro"/>
+            <SearchField value={q} onChange={event=>setQ(event.target.value)} placeholder="Buscar mesa, cliente o pedido" label="Buscar pedidos pendientes de cobro"/>
             {pending.isLoading?<OrderLoading label="Buscando pedidos pendientes"/>
             :pending.isError?<ErrorState className="pay-detail-state" title="No pudimos cargar los pedidos" text={pending.error.message} onRetry={()=>void pending.refetch()}/>
             :suggestions.length?<ul className="pay-order-options">
-              {suggestions.map(item=><li key={item.id}>
-                <OrderOption code={item.code} meta={[channelLabel(item.channel??""),item.customerName].filter(Boolean).join(" · ")} total={item.total?money(item.total):undefined} exact={exact(item.total)} onClick={()=>choose(item)}/>
-              </li>)}
-            </ul>:<EmptyState className="pay-detail-state" icon="receipt" title={q.trim()?"No encontramos pedidos":"Sin pedidos pendientes de cobro"} text={q.trim()?"Prueba con otro pedido, mesa o cliente.":"El pago seguirá disponible para asociarlo cuando haya un pedido por cobrar."}/>}
+              {suggestions.map(item=>{
+                // Se reconoce por la mesa («Mesa 2») o el cliente; el código del pedido y la antigüedad acompañan.
+                const channel=item.channel??"",table=channel==="salon"?item.tableName:"";
+                const title=table||item.customerName||channelLabel(channel)||item.code;
+                const meta=[table?"":channelLabel(channel),item.code,orderAge(item.createdAt)].filter(part=>part&&part!==title).join(" · ");
+                const partial=item.total!==undefined&&due(item)<Number(item.total);
+                return <li key={item.id}>
+                  <OrderOption tile={channelTiles[channel]} title={title} meta={meta} amount={money(String(due(item)))} note={partial?`de ${money(item.total!)}`:"Por cobrar"} exact={exact(String(due(item)))} onClick={()=>choose(item)}/>
+                </li>;
+              })}
+            </ul>:<EmptyState className="pay-detail-state" icon="receipt" title={q.trim()?"No encontramos pedidos":"Sin pedidos pendientes de cobro"} text={q.trim()?"Prueba con otra mesa, cliente o pedido.":"El pago seguirá disponible para asociarlo cuando haya un pedido por cobrar."}/>}
           </>}
 
           {view==="detail"&&selected&&<div className="pay-detail-selection">
@@ -159,16 +182,18 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
   </Modal>;
 }
 
-/** Fila completa pulsable: el pedido se revisa antes de confirmar, sin un
- * botón «Revisar» repetido en cada fila. */
-function OrderOption({code,meta,total,exact,onClick}:{code:string;meta?:string;total?:string;exact:boolean;onClick:()=>void}){
-  return <button type="button" className="pay-order-option" aria-label={`Revisar el pedido ${code}`} onClick={onClick}>
+/** Fila completa pulsable: canal | mesa o cliente con «código · antigüedad» |
+ * lo que falta cobrar. El pedido se revisa antes de confirmar, sin un botón
+ * «Revisar» repetido en cada fila. */
+function OrderOption({tile,title,meta,amount,note,exact,onClick}:{tile?:{icon:IconName;tone:IconTileTone};title:string;meta?:string;amount:string;note:string;exact:boolean;onClick:()=>void}){
+  return <button type="button" className="pay-order-option" aria-label={`Revisar ${title}${meta?`, ${meta}`:""}`} onClick={onClick}>
+    <IconTile name={tile?.icon??"receipt"} tone={tile?.tone??"primary"}/>
     <span className="pay-order-main">
-      <span className="pay-order-code"><strong>{code}</strong>{exact&&<Tag icon="check">Monto exacto</Tag>}</span>
+      <span className="pay-order-code"><strong>{title}</strong>{exact&&<Tag icon="check">Monto exacto</Tag>}</span>
       {meta&&<small>{meta}</small>}
     </span>
     <span className="pay-order-side">
-      {total&&<strong className="pay-order-total">{total}</strong>}
+      <span className="pay-order-due"><strong className="pay-order-total">{amount}</strong><small>{note}</small></span>
       <Icon name="chevron" size={16} className="pay-order-chevron"/>
     </span>
   </button>;

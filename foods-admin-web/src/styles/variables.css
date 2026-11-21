@@ -113,6 +113,10 @@
   --purple-200: #ddbfee;
   --purple-600: #681a92;
 
+  /* Billeteras (2026-11-21): círculo lleno con el nombre en blanco, sin logotipo, en Avisos y Pagos detectados (`.pay-wallet-mark`). */
+  --wallet-yape: #742284;
+  --wallet-plin: #00b8c8;
+
   /* Entrega completada: azul petróleo, distinto de Listo y de Pagada. */
   --teal-100: #e6f5f7;
   --teal-500: #0e9aab;

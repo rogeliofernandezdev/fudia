@@ -202,8 +202,10 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
   const registerItems=registers.data?.items??[];
   const historyItems=history.data?.items??[];
 
-  function dateTime(value:string){
-    return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
+  /** Fecha y hora del local; `part` devuelve solo la fecha o solo la hora para tablas de dos líneas. */
+  function dateTime(value:string,part?:"date"|"time"){
+    const options:Intl.DateTimeFormatOptions=part==="date"?{dateStyle:"medium"}:part==="time"?{timeStyle:"short"}:{dateStyle:"medium",timeStyle:"short"};
+    return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},options);
   }
 
   function businessDate(value:string){

@@ -57,6 +57,13 @@ app (WorkManager en segundo plano lo aplazaría hasta abrirla). Sin internet:
 la cola persiste y WorkManager reintenta con backoff + barrido periódico. Reinicio del teléfono: la cola sobrevive. Notificación repetida:
 misma clave → `duplicate`. Dispositivo revocado: 401 inmediato. Sin permiso o
 cuenta pausada: no llegan notificaciones y la app lo muestra con sinceridad.
+Congelador de HONOR (2026-11-20): congela el proceso minutos después de dejar
+la app y los pagos esperan hasta abrirla; la app mantiene un servicio en
+primer plano con el aviso fijo «Detectando pagos» para impedirlo.
+Listener enlazado que Android deja de alimentar (HONOR/MagicOS, 2026-11-20):
+el barrido lo detecta y fuerza la reconstrucción del enlace desactivando y
+reactivando su propio componente; al reconectar procesa los pagos que siguen
+en la bandeja. Detalle en el README de `fudia-pay`.
 
 ### 5. Revinculación
 
@@ -102,8 +109,19 @@ puede reconstruir el número de notificaciones históricas que no lo guardaron.
   segunda lógica de caja; un importe superior al saldo lo rechaza el propio
   flujo de cobros con sus reglas.
 - `orders/contracts.PayOrderLookup`: valida que el pedido exista en el alcance.
+- La lista de Caja (`GET …/pay-notifications`) acepta `q`: remitente que
+  contiene el texto (sin tildes ni mayúsculas, con `translate()`, sin extensión
+  `unaccent`) o monto que empieza con la cifra escrita
+  (`domain.NotificationAmountPrefix`). No se busca por número de operación:
+  Yape no lo envía, y el número solo se muestra cuando la notificación lo trae.
+- «Asociar pago» lista candidatos con `GET /v1/admin/pos/orders?paymentStatus=unpaid&ready=true`:
+  `ready` aplica en SQL la misma regla que `billing/domain.PaymentReady`
+  (`posPaymentReadySQL`, comparada en `payment_ready_sql_test.go`), así la lista
+  no ofrece pedidos que el cobro rechazaría por cuenta abierta o pedido no listo.
 - `notifications/contracts.Publisher`: deja el aviso en la campana
-  (`kind=pay_detected`, audiencia cajero) por cada pago registrado.
+  (`kind=pay_detected`, audiencia cajero) por cada pago registrado. El detalle
+  dice «S/ 1.00 · remitente»: el monto usa el símbolo de la moneda de
+  `organizations/contracts.CurrencyByCode`, nunca el código ISO («PEN»).
 
 ## Endpoints
 

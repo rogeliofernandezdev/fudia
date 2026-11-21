@@ -9,6 +9,20 @@ export function noticePaymentProvider(notice:Pick<StaffNotice,"kind"|"title">):P
  return provider==="yape"||provider==="plin"?provider:null;
 }
 
+/**
+ * Lectura del aviso de pago como movimiento: quien pagó es el título, el monto
+ * va aparte a la derecha y la billetera (`wallet`, tal como la escribe el título
+ * del backend) acompaña la antigüedad. El detalle canónico del backend es
+ * «monto · remitente»; sin remitente el título es «Pago recibido».
+ */
+export function noticePaymentSummary(notice:Pick<StaffNotice,"kind"|"title"|"detail">){
+ const provider=noticePaymentProvider(notice);
+ if(!provider)return null;
+ const[amount="",...sender]=notice.detail.split(" · ");
+ const wallet=/por (\S+)$/i.exec(notice.title.trim())?.[1]??"";
+ return {provider,wallet,amount,title:sender.join(" · ")||"Pago recibido"};
+}
+
 /** Pantallas donde se actúa sobre el aviso, en orden de preferencia; se usa la primera que el usuario puede abrir. */
 export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[]{
  switch(notice.kind){

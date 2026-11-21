@@ -219,6 +219,18 @@ func notificationWhere(s scope, filter domain.NotificationFilter) (string, []any
 		args = append(args, filter.Provider)
 		where += fmt.Sprintf(" AND n.provider=$%d", len(args))
 	}
+	if filter.Query != "" {
+		// Remitente sin tildes ni mayúsculas; el monto, si lo escrito es una
+		// cifra, por prefijo de su texto («25» → 25.00, 25.50, 250.00).
+		args = append(args, filter.Query)
+		name := len(args)
+		match := fmt.Sprintf("translate(lower(n.sender_name),'áéíóúüñ','aeiouun') LIKE '%%'||translate(lower($%d),'áéíóúüñ','aeiouun')||'%%'", name)
+		if amount := domain.NotificationAmountPrefix(filter.Query); amount != "" {
+			args = append(args, amount)
+			match += fmt.Sprintf(" OR n.amount::text LIKE $%d||'%%'", len(args))
+		}
+		where += " AND (" + match + ")"
+	}
 	return where, args
 }
 
