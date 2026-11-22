@@ -18,6 +18,15 @@
 .notification-head .notification-read-all:focus-visible,.notification-head .notification-close:focus-visible{outline:var(--stroke-2) solid var(--surface);outline-offset:calc(var(--stroke-2) * -1);box-shadow:none}
 /* La X no cambia al señalarla (como la X de los modales): solo responde a la presión. */
 @media (hover:hover) and (pointer:fine){.notification-head .notification-close:hover:not(:disabled){border-color:transparent;background:transparent;color:var(--surface)}.notification-head .notification-read-all:hover:not(:disabled){border-color:transparent;background:var(--surface-alpha-16);color:var(--surface)}}
+/* Interruptor «Avisos con sonido» al pie (2026-11-22): fila de 48 px sobre línea fina, pista como el panel de reparto. Los pagos de Yape y Plin suenan aparte. */
+.notification-sound{flex:none;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);min-height:var(--size-48);padding:var(--space-2) var(--space-4);border:0;border-top:var(--stroke-1) solid var(--line);background:var(--surface);color:var(--ink-950);font:inherit;text-align:left;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:var(--transition-surface)}
+.notification-sound b{font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
+.notification-sound>i{position:relative;flex:none;width:var(--size-40);height:var(--size-24);border-radius:var(--radius-pill);background:var(--line-strong);transition:var(--transition-surface)}
+.notification-sound>i::after{content:"";position:absolute;top:var(--space-0-5);left:var(--space-0-5);width:var(--size-20);height:var(--size-20);border-radius:50%;background:var(--surface);box-shadow:var(--elevation-1);transition:var(--transition-press)}
+.notification-sound[aria-pressed=true]>i{background:var(--primary-600)}
+.notification-sound[aria-pressed=true]>i::after{transform:translateX(var(--size-16))}
+.notification-sound:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--stroke-2) * -1)}
+@media (hover:hover) and (pointer:fine){.notification-sound:hover{background:var(--cloud-50)}}
 /* Lista continua de borde a borde con líneas finas: sin tarjetas sueltas por aviso. Barra de desplazamiento fina como en los modales. */
 .notification-list{list-style:none;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 /* Fila: icono o logo | título y «origen · hace N» | monto (pagos) y punto sin leer. */
@@ -69,4 +78,4 @@
  .notification-head .notification-read-all{height:var(--size-44)}
  .notification-toast{top:var(--size-70);left:var(--space-4);right:var(--space-4);width:auto}
 }
-@media (prefers-reduced-motion:reduce){.notification-popover,.notification-trigger,.notification-item,.notification-toast-main,.notification-toast[data-leaving=true],.notification-toast{animation:none;transition:none}.notification-toast-timer{display:none}}
+@media (prefers-reduced-motion:reduce){.notification-sound>i,.notification-sound>i::after,.notification-popover,.notification-trigger,.notification-item,.notification-toast-main,.notification-toast[data-leaving=true],.notification-toast{animation:none;transition:none}.notification-toast-timer{display:none}}

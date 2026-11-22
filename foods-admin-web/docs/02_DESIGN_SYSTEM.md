@@ -1982,9 +1982,22 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   (`--duration-fast`). Una barra fina `primary-500` muestra los 8 s restantes;
   el tiempo y la barra se detienen al señalarlo, enfocarlo o con la pestaña
   oculta, y continúan donde quedaron. Un aviso nuevo reemplaza al visible y
-  reinicia entrada y tiempo. Sin botón «Ver» ni sonido; el móvil vibra
+  reinicia entrada y tiempo. Sin botón «Ver»; el móvil vibra
   brevemente si el usuario ya interactuó. Con movimiento reducido no hay
   animación ni barra.
+- Sonido de avisos (2026-11-22): **un solo sonido** para lo que pide atención
+  (pedido de mesa por QR, delivery, recojo, pedido listo, pide la cuenta, llama
+  al mozo) y **el mismo dos veces** para lo que se agrava con el tiempo
+  (delivery sin repartidor, recojo atrasado). Es un «ding-dong» propio de dos
+  notas que bajan (sol–mi), distinto de la escalera de Yape y del brillo de
+  Plin, que siguen con su sonido propio. Callan el pedido de mostrador (lo creó
+  el cajero) y la cuenta abierta hace mucho (informativa). Avisos que llegan
+  juntos suenan una vez (gana la alerta); suena solo una pestaña por usuario y
+  local; cada aviso suena solo para los roles que lo reciben. Al pie del panel,
+  interruptor «Avisos con sonido» de 48 px sobre línea fina, con la misma
+  pista que el panel de reparto; se guarda por usuario en ese navegador y no
+  silencia los pagos. Va al pie y no en la cabecera porque en móvil la
+  cabecera marino ya ocupa su ancho.
 - El éxito de un registro se comunica mediante la alerta global después de que la
   API confirme la operación. Nunca se anticipa éxito ni se pierde el error remoto.
 

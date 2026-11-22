@@ -4,3 +4,4 @@ export {PayNoticeLayer} from "./presentation/pay-notice-layer";
 export {PayProviderTag} from "./presentation/pay-status-tag";
 export type {PayProvider} from "./domain/types";
 export {PayCollectionProvider,PayCollectionRegistration,usePayCollection} from "./presentation/pay-collection-context";
+export {usePayLeader} from "./presentation/use-pay-leader";

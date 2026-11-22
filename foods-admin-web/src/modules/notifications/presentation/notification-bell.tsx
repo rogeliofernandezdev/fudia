@@ -4,10 +4,14 @@ import {useEffect,useId,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useRouter} from "next/navigation";
 import {Button,EmptyState,ErrorState,Icon,IconButton,IconTile,Skeleton,type IconName} from "@/design-system";
-import {PayProviderTag} from "@/modules/payment-devices";
+import {PayProviderTag,usePayLeader} from "@/modules/payment-devices";
+import {useSession} from "@/providers/session-context";
+import {useStoredFlag} from "@/shared/hooks/use-stored-flag";
 import {useNotices} from "../application/use-notices";
 import {freshNotices,noticeAge,noticeHref,noticePaymentSummary,noticeTargets,noticeTone,unreadLabel} from "../domain/notice-rules";
+import {noticeSoundFor} from "../domain/notice-sound";
 import type {NoticeKind,StaffNotice} from "../domain/types";
+import {useNoticeSound} from "./use-notice-sound";
 
 /** Icono de cada aviso: el mismo dominio que la pantalla donde se atiende. */
 const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock",delivery_unassigned:"motorbike",delivery_pickup_delayed:"clock",pay_detected:"wallet"};
@@ -22,6 +26,15 @@ const toastExit=160;
  */
 export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boolean}){
  const{enabled,feed,read,readAll}=useNotices();
+ const{user,organization,location}=useSession();
+ const scope=[organization?.id,location?.id,user?.id].join(":");
+ // Sonido de la campana: suena en una sola pestaña por usuario y local, y cada
+ // usuario puede silenciarlo en este navegador (los pagos conservan el suyo).
+ const soundLeader=usePayLeader(`fudia-notice-sound:${scope}`);
+ const[muted,setMuted]=useStoredFlag(`fudia-notice-sound-muted:${user?.id??""}`);
+ const playSound=useNoticeSound();
+ const sound=useRef({soundLeader,muted,playSound});
+ useEffect(()=>{sound.current={soundLeader,muted,playSound}},[soundLeader,muted,playSound]);
  const router=useRouter();
  const[open,setOpen]=useState(false);
  const[announcement,setAnnouncement]=useState("");
@@ -50,6 +63,8 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
     setAnnouncement(`Nuevo aviso: ${fresh[0].title}`);
     // Los pagos tienen su aviso con logo y acceso al detalle en PayNoticeLayer.
     const popup=fresh.filter(item=>item.kind!=="pay_detected");
+    const tone=noticeSoundFor(fresh);
+    if(tone&&sound.current.soundLeader&&!sound.current.muted)sound.current.playSound(tone);
     if(!openRef.current&&popup.length){
      setToast({notice:popup[0],more:popup.length-1});setToastHovered(false);setToastLeaving(false);
      if(typeof navigator!=="undefined"&&navigator.userActivation?.hasBeenActive)navigator.vibrate?.([120,60,120]);
@@ -121,6 +136,8 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
      <span className="notification-item-copy"><b>{payment?.title??item.title}</b><small>{origin&&`${origin} · `}<time dateTime={item.createdAt}>{noticeAge(item.createdAt).toLowerCase()}</time></small></span>
      <span className="notification-item-end">{payment?.amount&&<strong className="notification-amount">{payment.amount}</strong>}{!item.read&&<i className="notification-unread" aria-label="Sin leer"/>}</span>
     </button></li>})}</ul>}
+   {/* Al pie y no en la cabecera: en móvil la cabecera ya ocupa su ancho. Mismo interruptor que el panel de reparto. */}
+   <button type="button" className="notification-sound" aria-pressed={!muted} onClick={()=>setMuted(!muted)}><b>Avisos con sonido</b><i aria-hidden="true"/></button>
   </section>}
   {/* Portal: la barra superior crea su propio contexto y atraparía el `position:fixed` del aviso. */}
   {/* La `key` reinicia entrada y barra de tiempo cuando un aviso nuevo reemplaza al visible. */}

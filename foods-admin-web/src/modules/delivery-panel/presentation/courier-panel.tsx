@@ -8,7 +8,7 @@ import {courierSteps,dialablePhone,outcomeFeedback,stageMeta} from "../domain/pa
 import type {CourierAction} from "../domain/types";
 import {loadCourierView,sendCourierAction} from "../infrastructure/panel-api";
 import {useCourierLocation,type LocationStatus} from "./use-courier-location";
-import {useStoredFlag} from "./use-stored-flag";
+import {useStoredFlag} from "@/shared/hooks/use-stored-flag";
 import {OrderDetails} from "./order-details";
 import "./partner-panel.css";
 import "./dispatch-workspace.css";

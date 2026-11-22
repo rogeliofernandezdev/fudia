@@ -156,3 +156,25 @@ test("campana: área táctil de 44 px y contador rojo solo en la campana",()=>{
  const danger=[];rules.walkDecls(decl=>{if(decl.value.includes("danger"))danger.push(decl.parent.selector)});
  assert.deepEqual(danger,[".notification-count",".notification-new"],"el rojo se reserva a los avisos sin leer");
 });
+
+test("avisos: un solo sonido general, la alerta de delivery suena doble y los pagos conservan el suyo",()=>{
+ const sound=compile("src/modules/notifications/domain/notice-sound.ts");
+ for(const kind of ["table_order","delivery_order","pickup_order","order_ready","bill_requested","assistance_requested"])assert.equal(sound.noticeSound(kind),"general",kind);
+ for(const kind of ["delivery_unassigned","delivery_pickup_delayed"])assert.equal(sound.noticeSound(kind),"alert",kind);
+ for(const kind of ["counter_order","stale_account","pay_detected"])assert.equal(sound.noticeSound(kind),null,`${kind} no suena en la campana`);
+ assert.equal(sound.noticeSoundFor([{kind:"table_order"},{kind:"delivery_unassigned"}]),"alert","juntos suenan una vez y gana la alerta");
+ assert.equal(sound.noticeSoundFor([{kind:"counter_order"},{kind:"pay_detected"}]),null);
+ const general=sound.noticeSoundSchedule("general"),alert=sound.noticeSoundSchedule("alert");
+ assert.equal(alert.length,general.length*2,"la alerta repite el mismo sonido");
+ assert.deepEqual(alert.slice(general.length).map(tone=>tone.frequency),general.map(tone=>tone.frequency));
+ assert.ok(alert[general.length].offset>=general.at(-1).offset+general.at(-1).duration,"la segunda vez empieza al terminar la primera");
+ const pay=compile("src/modules/payment-devices/domain/pay-alert.ts").payAlertTones;
+ const melody=tones=>tones.map(tone=>tone.frequency).join(",");
+ for(const provider of ["yape","plin"])assert.notEqual(melody(general),melody(pay[provider]),`distinto de ${provider}`);
+ assert.ok(general[1].frequency<general[0].frequency,"baja (ding-dong), al revés de la escalera de Yape");
+ const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
+ assert.match(bell,/usePayLeader\(`fudia-notice-sound:/,"suena en una sola pestaña");
+ assert.match(bell,/useStoredFlag\(`fudia-notice-sound-muted:/,"cada usuario puede silenciarlo");
+ assert.match(bell,/className="notification-sound" aria-pressed=\{!muted\}/);
+ assert.match(bell,/if\(tone&&sound\.current\.soundLeader&&!sound\.current\.muted\)/);
+});

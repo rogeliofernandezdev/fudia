@@ -10,7 +10,7 @@ import {canRelease,courierLink,courierNameValue,failCountdown,formatCountdown,ne
 import type {FailedDelivery,PanelAction,PanelOrder} from "../domain/types";
 import {assignCourier,loadPartnerPanel,loadPartnerSession,logoutPartner,needsLogin,needsPasswordChange,sendPanelAction} from "../infrastructure/panel-api";
 import {requestAlertPermission,useOfferAlert} from "./use-offer-alert";
-import {useStoredFlag} from "./use-stored-flag";
+import {useStoredFlag} from "@/shared/hooks/use-stored-flag";
 import {OrderDetails,hour} from "./order-details";
 import {DispatchWorkspace} from "./dispatch-workspace";
 import "./partner-panel.css";
