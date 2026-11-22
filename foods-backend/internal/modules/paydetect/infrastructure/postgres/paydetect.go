@@ -31,6 +31,7 @@ var (
 	_ application.AdminRepository       = (*Pay)(nil)
 	_ application.DeviceRepository      = (*Pay)(nil)
 	_ application.MaintenanceRepository = (*Pay)(nil)
+	_ application.WakeRepository        = (*Pay)(nil)
 )
 
 const deviceColumns = `d.id::text, d.name, d.platform, d.model, d.token_suffix, d.active, d.last_seen_at, d.created_at, d.revoked_at`
@@ -196,7 +197,7 @@ func (r *Pay) ListDevices(ctx context.Context, s scope, filter domain.DeviceFilt
 // that moment, even with the token in hand.
 func (r *Pay) RevokeDevice(ctx context.Context, s scope, deviceID string) (domain.Device, error) {
 	device, err := scanDevice(r.db(ctx).QueryRow(ctx, `
-		UPDATE pay_devices SET active=false, revoked_at=COALESCE(revoked_at, now()), updated_at=now()
+		UPDATE pay_devices SET active=false, revoked_at=COALESCE(revoked_at, now()), push_token=NULL, updated_at=now()
 		WHERE id=$2 AND organization_id=$1 AND location_id=$3
 		RETURNING `+deviceReturning,
 		s.OrganizationID, deviceID, s.LocationID))
@@ -449,6 +450,53 @@ func (r *Pay) DeviceByTokenHash(ctx context.Context, tokenHash []byte) (domain.D
 	}
 	session.RevokedAt = revoked
 	return session, nil
+}
+
+// SavePushToken guarda el token de push del dispositivo; vacío lo borra. Un
+// dispositivo revocado no lo recupera.
+func (r *Pay) SavePushToken(ctx context.Context, deviceID, token string, now time.Time) error {
+	_, err := r.db(ctx).Exec(ctx, `
+		UPDATE pay_devices SET push_token=NULLIF($2, ''), push_token_updated_at=$3, last_seen_at=$3
+		WHERE id=$1 AND active`, deviceID, token, now)
+	return err
+}
+
+// ClaimWakeTargets reserva, en una sola sentencia, los dispositivos activos
+// del local con token que no recibieron un aviso en el intervalo: dos
+// pestañas o instancias simultáneas no duplican el push.
+func (r *Pay) ClaimWakeTargets(ctx context.Context, s scope, now time.Time, interval time.Duration) ([]domain.WakeTarget, error) {
+	rows, err := r.db(ctx).Query(ctx, `
+		UPDATE pay_devices SET woken_at=$3
+		WHERE organization_id=$1 AND location_id=$2 AND active AND push_token IS NOT NULL
+		  AND (woken_at IS NULL OR woken_at <= $3::timestamptz - make_interval(secs => $4::float8))
+		RETURNING id::text, push_token`,
+		s.OrganizationID, s.LocationID, now, interval.Seconds())
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.WakeTarget, error) {
+		var target domain.WakeTarget
+		err := row.Scan(&target.DeviceID, &target.Token)
+		return target, err
+	})
+}
+
+// CountPushDevices cuenta los dispositivos activos del local con token de push
+// (índice parcial pay_devices_push_location_idx).
+func (r *Pay) CountPushDevices(ctx context.Context, s scope) (int, error) {
+	var total int
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT count(*) FROM pay_devices
+		WHERE organization_id=$1 AND location_id=$2 AND active AND push_token IS NOT NULL`,
+		s.OrganizationID, s.LocationID).Scan(&total)
+	return total, err
+}
+
+// ClearPushToken olvida un token que el servicio de push ya no reconoce,
+// salvo que la app ya lo haya reemplazado por otro.
+func (r *Pay) ClearPushToken(ctx context.Context, deviceID, token string) error {
+	_, err := r.db(ctx).Exec(ctx, `UPDATE pay_devices SET push_token=NULL WHERE id=$1 AND push_token=$2`, deviceID, token)
+	return err
 }
 
 // TouchDevice records the last contact of the device.

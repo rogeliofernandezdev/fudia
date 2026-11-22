@@ -18,6 +18,17 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Push de Firebase Cloud Messaging que despierta la app cuando el
+        // fabricante la congela (HONOR/MagicOS). Se configura al compilar con
+        // -PfcmProjectId, -PfcmAppId, -PfcmApiKey y -PfcmSenderId (consola de
+        // Firebase › app Android com.fudia.pay); sin ellos la app funciona solo
+        // con su alarma de respaldo. No se versiona google-services.json.
+        fun fcm(name: String) = "\"${project.findProperty(name) ?: ""}\""
+        buildConfigField("String", "FCM_PROJECT_ID", fcm("fcmProjectId"))
+        buildConfigField("String", "FCM_APP_ID", fcm("fcmAppId"))
+        buildConfigField("String", "FCM_API_KEY", fcm("fcmApiKey"))
+        buildConfigField("String", "FCM_SENDER_ID", fcm("fcmSenderId"))
     }
 
     // El backend por variante: la URL se inyecta al compilar con
@@ -84,6 +95,10 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+
+    // Solo mensajería (push de datos); sin Analytics ni google-services.
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-messaging")
 
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")

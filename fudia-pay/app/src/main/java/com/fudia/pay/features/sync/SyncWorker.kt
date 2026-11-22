@@ -1,9 +1,6 @@
 package com.fudia.pay.features.sync
 
-import android.content.ComponentName
 import android.content.Context
-import android.service.notification.NotificationListenerService
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -15,9 +12,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.fudia.pay.BuildConfig
-import com.fudia.pay.features.notifications.ListeningService
-import com.fudia.pay.features.notifications.PayNotificationListener
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.text.SimpleDateFormat
@@ -47,31 +41,17 @@ internal fun shouldRequestRebind(listenerEnabled: Boolean, boundInProcess: Boole
 class SyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val syncer: PaymentSyncer,
+    private val sweep: ListenerSweep,
+    private val pushTokens: PushTokens,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        rebindListenerIfDead()
-        // Enlazado no basta: el sistema puede dejar de entregarle avisos.
-        PayNotificationListener.instance?.verifyDelivery()
-        // Si Android detuvo el servicio fijo, se vuelve a pedir.
-        ListeningService.start(applicationContext)
-        return if (syncer.flush()) Result.success() else Result.retry()
-    }
-
-    /** Auto-reparación del listener: si el permiso está concedido pero el
-     *  servicio no está enlazado en este proceso (tras un proceso muerto), el
-     *  barrido del worker pide el reenlace sin abrir la app. */
-    private fun rebindListenerIfDead() {
-        val enabled = androidx.core.app.NotificationManagerCompat.getEnabledListenerPackages(applicationContext)
-            .contains(applicationContext.packageName)
-        if (!shouldRequestRebind(enabled, PayNotificationListener.connectionEpoch != null)) return
-        if (BuildConfig.DEBUG) Log.d(TAG, "listener sin enlazar con permiso activo: solicitando reenlace")
-        NotificationListenerService.requestRebind(ComponentName(applicationContext, PayNotificationListener::class.java))
-    }
-
-    private companion object {
-        const val TAG = "FudiaPay"
+        val drained = sweep.run()
+        // El token de push se reintenta hasta que el backend lo acepta, y la
+        // alarma de respaldo se rearma si el sistema la descartó.
+        pushTokens.sync()
+        WakeAlarm.schedule(applicationContext)
+        return if (drained) Result.success() else Result.retry()
     }
 }
 

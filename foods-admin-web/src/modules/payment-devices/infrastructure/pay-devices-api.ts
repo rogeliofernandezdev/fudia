@@ -24,6 +24,12 @@ export function revokePayDevice(locationId:string,id:string){
   return apiFetch<PayDevice>(`${locationDevices(locationId)}/${encodeURIComponent(id)}/revoke`,{method:"POST"});
 }
 
+/** Pide al backend despertar (push silencioso) los teléfonos del local de la
+ * sesión; `devices` dice cuántos pueden recibirlo. */
+export function wakePayDevices(){
+  return apiFetch<{devices:number;sent:number}>("pay-devices/wake",{method:"POST"});
+}
+
 export function listPayNotifications(filter:{status:string;provider:string}){
   const params=new URLSearchParams({status:filter.status,provider:filter.provider});
   return apiFetch<{items:PayNotification[];total:number}>(`pay-notifications?${params.toString()}`);

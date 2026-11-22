@@ -12,18 +12,9 @@
          optimización de batería en teléfonos que matan el listener (HONOR y
          similares). La app nunca lo hace a escondidas. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- Servicio fijo que evita que HONOR/MagicOS congele el proceso del
-         listener (ver ListeningService) y su notificación visible; se
-         restablece al reiniciar el teléfono. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- PowerGenie de HONOR ignora los servicios specialUse y congela la app;
-         reconoce tipos como remoteMessaging/connectedDevice (este último exige
-         CHANGE_NETWORK_STATE, permiso normal sin diálogo). -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Push de Firebase Cloud Messaging (el SDK declara sus propios permisos
+         de red y recepción) y alarma de respaldo: despiertan la app cuando el
+         fabricante la congela (HONOR/MagicOS), sin servicio en primer plano. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
@@ -56,17 +47,21 @@
             </intent-filter>
         </service>
 
+        <!-- Push silencioso del backend: «procesa tu bandeja». -->
         <service
-            android:name=".features.notifications.ListeningService"
-            android:exported="false"
-            android:foregroundServiceType="remoteMessaging|connectedDevice|specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Mantener activa la detección de notificaciones de pagos recibidos (Yape/Plin) para reportarlas a la caja del restaurante; el fabricante congela el proceso en segundo plano." />
+            android:name=".features.sync.WakeMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
         </service>
 
         <receiver
-            android:name=".features.notifications.ListeningStartReceiver"
+            android:name=".features.sync.WakeAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".features.sync.WakeRestartReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

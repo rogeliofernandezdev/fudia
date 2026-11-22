@@ -97,6 +97,8 @@ type Handlers struct {
 		CreatePairing(http.ResponseWriter, *http.Request)
 		PairingStatus(http.ResponseWriter, *http.Request)
 		ScanPairing(http.ResponseWriter, *http.Request)
+		RegisterPush(http.ResponseWriter, *http.Request)
+		WakeDevices(http.ResponseWriter, *http.Request)
 		Devices(http.ResponseWriter, *http.Request)
 		RevokeDevice(http.ResponseWriter, *http.Request)
 		Pair(http.ResponseWriter, *http.Request)

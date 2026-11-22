@@ -150,7 +150,7 @@ export function serviceArgs(config, digest, exists, uid = "100", gid = "101") {
   if (config.target === "backend") {
     if (!/^\d+$/.test(uid) || !/^\d+$/.test(gid) || uid === "0") throw new Error("La imagen backend debe usar un usuario no-root.");
     args.push(...databaseArgs(config),
-      "--set-env-vars", `HTTP_ADDR=:8080,FOODS_COOKIE_SECURE=true,DATABASE_MAX_CONNS=${config.maxConnections},PRODUCT_IMAGE_STORAGE=gcs,PRODUCT_IMAGES_BUCKET=${config.bucket},PRODUCT_IMAGES_SIGNER=${config.identity}`,
+      "--set-env-vars", `HTTP_ADDR=:8080,FOODS_COOKIE_SECURE=true,DATABASE_MAX_CONNS=${config.maxConnections},PRODUCT_IMAGE_STORAGE=gcs,PRODUCT_IMAGES_BUCKET=${config.bucket},PRODUCT_IMAGES_SIGNER=${config.identity},FCM_PROJECT_ID=${config.project}`,
       "--remove-volume-mount", "/app/uploads/products", "--remove-volume", "product-images");
   } else {
     args.push("--set-env-vars", `FOODS_API_URL=${httpsURL(config.apiURL, "FOODS_API_URL")}${config.conciergeURL ? `,FUDIA_CONCIERGE_URL=${config.conciergeURL}` : ""}`);

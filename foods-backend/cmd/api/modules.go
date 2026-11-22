@@ -27,6 +27,7 @@ import (
 	orghttp "github.com/foods-platform/foods-backend/internal/modules/organizations/transport/http"
 	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
 	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
+	paydetectfcm "github.com/foods-platform/foods-backend/internal/modules/paydetect/providers/fcm"
 	paydetecthttp "github.com/foods-platform/foods-backend/internal/modules/paydetect/transport/http"
 	platformapp "github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
 	platformdiag "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/diagnostics"
@@ -63,7 +64,9 @@ import (
 	inventorypg "github.com/foods-platform/foods-backend/internal/modules/inventory/infrastructure/postgres"
 	inventoryhttp "github.com/foods-platform/foods-backend/internal/modules/inventory/transport/http"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"log/slog"
 	"os"
+	"strings"
 )
 
 // orderHandoff pasa a «en camino» el pedido que recogió una central de Delivery Fudia.
@@ -91,7 +94,7 @@ func (h orderHandoff) RestoreDeliveryFee(ctx context.Context, s requestscope.Sco
 
 // newAPI compone el API y devuelve el despachador de Delivery Fudia, cuyo
 // barrido periódico avanza la cascada de centrales.
-func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Events) (*httpapi.API, *deliveryMaintenance) {
+func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Events, payPush paydetectapp.Pusher) (*httpapi.API, *deliveryMaintenance) {
 	// Composition is the only layer that knows concrete PostgreSQL adapters.
 	// A single unit of work and shared stateless adapters preserve transactions
 	// across Orders, Inventory, Billing and tenant onboarding.
@@ -158,7 +161,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Event
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit).WithTableGuard(concierge).WithOrigins(conciergepg.NewUsage(db), platform)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),
-		PayDetect:              paydetecthttp.New(payDevices, payDetector, payNotifications),
+		PayDetect:              paydetecthttp.New(payDevices, payDetector, payNotifications).WithWaker(paydetectapp.NewWaker(payRepo, payPush)),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work).WithTips(tips)),
 		PaymentMethods:         billinghttp.NewMethods(methods),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), work, audit)),
@@ -176,6 +179,23 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Event
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	}), &deliveryMaintenance{dispatcher: dispatcher, operators: operators}
 }
+
+// configurePayPush prepara el push de Fudia Pay (FCM_PROJECT_ID: proyecto de
+// Firebase). Es de mejor esfuerzo: sin configuración o sin credenciales la API
+// arranca igual y los teléfonos dependen de su alarma de respaldo.
+func configurePayPush(ctx context.Context, logger *slog.Logger) paydetectapp.Pusher {
+	project := strings.TrimSpace(os.Getenv("FCM_PROJECT_ID"))
+	if project == "" {
+		return nil
+	}
+	client, err := paydetectfcm.New(ctx, project)
+	if err != nil {
+		logger.Warn("pay_push_unavailable", "error", err)
+		return nil
+	}
+	return client
+}
+
 func configureProductImages(ctx context.Context, db *pgxpool.Pool) (*menuapp.ProductImages, func(), error) {
 	provider := os.Getenv("PRODUCT_IMAGE_STORAGE")
 	if provider == "" || provider == "local" {

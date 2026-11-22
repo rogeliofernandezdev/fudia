@@ -57,7 +57,7 @@ func main() {
 	// PostgreSQL a las pantallas abiertas por SSE.
 	liveHub := realtime.NewHub()
 	go realtime.Listen(ctx, db, liveHub, logger)
-	api, maintenance := newAPI(db, images, realtime.Events{Hub: liveHub, Done: ctx.Done()})
+	api, maintenance := newAPI(db, images, realtime.Events{Hub: liveHub, Done: ctx.Done()}, configurePayPush(ctx, logger))
 	mux := api.Routes()
 	go sweepDeliveryDispatch(ctx, logger, maintenance)
 	go sweepPayPairing(ctx, logger, paydetectapp.NewMaintenance(paydetectpg.New(db)))

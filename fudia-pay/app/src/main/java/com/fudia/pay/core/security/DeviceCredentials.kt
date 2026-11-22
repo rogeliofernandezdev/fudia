@@ -33,6 +33,12 @@ class DeviceCredentials @Inject constructor(@ApplicationContext context: Context
         get() = prefs.getString(KEY_LOCATION, "") ?: ""
         set(value) = prefs.edit().putString(KEY_LOCATION, value).apply()
 
+    /** Último token de push que el backend aceptó; se borra al desvincular,
+     *  así una vinculación nueva vuelve a registrarlo. */
+    var uploadedPushToken: String
+        get() = prefs.getString(KEY_PUSH, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_PUSH, value).apply()
+
     val paired: Boolean get() = token.isNotBlank()
 
     fun clear() = prefs.edit().clear().apply()
@@ -41,5 +47,6 @@ class DeviceCredentials @Inject constructor(@ApplicationContext context: Context
         const val KEY_TOKEN = "device_token"
         const val KEY_ORG = "organization_name"
         const val KEY_LOCATION = "location_name"
+        const val KEY_PUSH = "uploaded_push_token"
     }
 }

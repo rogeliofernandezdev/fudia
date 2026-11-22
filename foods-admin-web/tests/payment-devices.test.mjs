@@ -189,3 +189,88 @@ test("Fudia Pay: dispositivos del local sin edición, con filtro de estado, pagi
   assert.match(panel,/const showState=status===""/,"la columna Estado solo en «Todos»: con filtro sería redundante");
   assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/status:filter\.status,page:String\(filter\.page\),size:String\(filter\.size\)/);
 });
+
+test("Fudia Pay: Caja despierta los teléfonos congelados por el fabricante con un push",()=>{
+  const wake=compile("src/modules/payment-devices/domain/pay-wake.ts");
+  assert.equal(wake.nextPayWakeDelay(1,false),30_000,"con Caja abierta el pago aparece en menos de 30 s");
+  assert.equal(wake.nextPayWakeDelay(2,true),10_000,"con el modal de cobro abierto, cada 10 s (el límite del backend)");
+  assert.equal(wake.nextPayWakeDelay(null,true),10_000,"sin respuesta se conserva el ritmo para no perder pagos");
+  assert.equal(wake.nextPayWakeDelay(0,true),300_000,"un local sin teléfonos con push no genera tráfico continuo");
+  const hook=read("src/modules/payment-devices/presentation/use-pay-device-wake.ts");
+  assert.match(hook,/void tick\(\);/,"avisa al montar y al abrir o cerrar el cobro");
+  assert.match(hook,/catch\{/,"un aviso fallido no interrumpe a Caja");
+  assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/apiFetch<\{devices:number;sent:number\}>\("pay-devices\/wake",\{method:"POST"\}\)/);
+  assert.match(read("src/modules/payment-devices/presentation/pay-notice-layer.tsx"),/usePayDeviceWake\(Boolean\(usePayCollection\(\)\.open\),leader\)/,"el aviso vive en la capa de pagos del cajero y acelera con el cobro abierto");
+});
+
+test("Fudia Pay: Yape y Plin suenan distinto y la pestaña parpadea mientras no tiene el foco",()=>{
+  const alert=compile("src/modules/payment-devices/domain/pay-alert.ts");
+  const melody=provider=>alert.payAlertTones[provider].map(tone=>tone.frequency).join(",");
+  assert.notEqual(melody("yape"),melody("plin"),"cada billetera tiene su propio sonido");
+  assert.equal(alert.payAlertTones.yape.length,3,"Yape: tres notas que suben");
+  assert.ok(alert.payAlertTones.yape.every((tone,index,all)=>!index||tone.frequency>all[index-1].frequency));
+  assert.equal(alert.payAlertTones.plin.length,2,"Plin: dos notas agudas");
+  assert.ok(Math.min(...alert.payAlertTones.plin.map(tone=>tone.frequency))>Math.max(...alert.payAlertTones.yape.map(tone=>tone.frequency)),"Plin suena más agudo que Yape");
+  assert.deepEqual([...alert.payAlertSequence(["yape","yape","plin","yape"])],["yape","plin"],"pagos juntos de la misma billetera suenan una vez");
+  assert.equal(alert.payAlertTitle(1,{provider:"Yape",amount:"S/ 25.00"}),"Yape · S/ 25.00 recibido");
+  assert.equal(alert.payAlertTitle(3,{provider:"Plin",amount:"S/ 5.00"}),"(3) Pagos recibidos");
+  const hook=read("src/modules/payment-devices/presentation/use-pay-alert.ts");
+  assert.match(hook,/addEventListener\("pointerdown",enableSound\)/,"el audio se habilita con el primer toque, como exige el navegador");
+  assert.match(hook,/setSoundBlocked\(context\.state!=="running"\)/,"sabe si el navegador bloqueó el sonido");
+  assert.match(hook,/if\(document\.hasFocus\(\)\)return;/,"con la pestaña a la vista solo suena: el aviso flotante ya se ve");
+  assert.match(hook,/addEventListener\("focus",onFocus\)/,"el parpadeo termina al volver a la pestaña");
+  assert.match(read("src/modules/payment-devices/presentation/pay-notice-layer.tsx"),/alert\(fresh\.map/,"solo los pagos nuevos suenan, no el historial inicial");
+  assert.match(read("src/modules/payment-devices/presentation/pay-notice-layer.tsx"),/\},\[feed\.data,qc\]\);/,"el aviso no se repite en cada render");
+});
+
+test("Fudia Pay: el push sigue a tiempo con la pestaña oculta y el sonido bloqueado se ofrece activar",()=>{
+  const timer=read("src/modules/payment-devices/presentation/background-timer.ts");
+  assert.match(timer,/new Worker\(url\)/,"la espera corre en un Web Worker: Chrome no lo frena con la pestaña oculta");
+  assert.match(timer,/window\.setTimeout/,"sin Worker conserva el temporizador de la página");
+  const wake=read("src/modules/payment-devices/presentation/use-pay-device-wake.ts");
+  assert.match(wake,/createBackgroundTimer\(\)/);
+  assert.match(wake,/timer\.dispose\(\)/,"el worker se cierra al salir");
+  const layer=read("src/modules/payment-devices/presentation/pay-notice-layer.tsx");
+  assert.match(layer,/const askSound=leader&&soundBlocked&&\(pushDevices\?\?0\)>0;/,"solo se ofrece en locales que usan Fudia Pay");
+  assert.match(layer,/<Button kind="secondary" icon="volume" className="pay-sound-gate" onClick=\{enableSound\}>Activar sonido de pagos<\/Button>/);
+  assert.match(read("src/modules/payment-devices/presentation/payment-devices.css"),/\.pay-sound-gate\{[^}]*min-height:var\(--size-44\)/,"área táctil de 44 px");
+});
+
+test("Fudia Pay: con varias pestañas abiertas solo una avisa, la enfocada la reclama y otra la releva al cerrarse",async()=>{
+  const exports={};
+  vm.runInNewContext(ts.transpileModule(read("src/modules/payment-devices/presentation/pay-leader.ts"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,{exports,require,AbortController,Promise});
+  // LockManager mínimo con las reglas de Web Locks: exclusivo, en fila, `steal` y `signal`.
+  const locks=(()=>{
+    let holder=null;const queue=[];
+    const grant=entry=>{holder=entry;Promise.resolve(entry.callback()).then(value=>{if(holder===entry){holder=null;entry.resolve(value);const next=queue.shift();if(next)grant(next)}})};
+    return {request:(_name,options,callback)=>new Promise((resolve,reject)=>{
+      const entry={callback,resolve,reject};
+      options.signal?.addEventListener("abort",()=>{const index=queue.indexOf(entry);if(index>=0){queue.splice(index,1);reject(new Error("AbortError"))}});
+      if(options.steal){if(holder){const previous=holder;holder=null;previous.reject(new Error("AbortError"))}grant(entry);return}
+      if(holder)queue.push(entry);else grant(entry);
+    })};
+  })();
+  const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
+  const state={};
+  const tab=name=>exports.holdPayLeadership(locks,"fudia-pay-alert:caja",leader=>{state[name]=leader});
+  const leaders=()=>Object.entries(state).filter(([,leader])=>leader).map(([name])=>name);
+  const a=tab("a"),b=tab("b"),c=tab("c");
+  await flush();
+  assert.deepEqual(leaders(),["a"],"la primera pestaña avisa y las demás esperan");
+  b.claim();await flush();
+  assert.deepEqual(leaders(),["b"],"la pestaña que el cajero enfoca toma el aviso");
+  b.claim();await flush();
+  assert.deepEqual(leaders(),["b"],"reclamar de nuevo no cambia nada");
+  b.dispose();state.b=false;await flush();
+  assert.equal(leaders().length,1,"al cerrar la líder, otra la releva sola");
+  const survivor=leaders()[0];
+  ({a,c})[survivor].dispose();state[survivor]=false;await flush();
+  assert.deepEqual(leaders(),[survivor==="a"?"c":"a"],"siempre queda una sola mientras haya pestañas");
+  let fallback=null;
+  exports.holdPayLeadership(undefined,"x",leader=>{fallback=leader});
+  assert.equal(fallback,true,"sin Web Locks cada pestaña avisa, como antes");
+  const layer=read("src/modules/payment-devices/presentation/pay-notice-layer.tsx");
+  assert.match(layer,/usePayDeviceWake\(Boolean\(usePayCollection\(\)\.open\),leader\)/,"solo la líder pide el push");
+  assert.match(layer,/if\(announces\)alert\(fresh/,"solo la líder suena y parpadea");
+  assert.match(layer,/const askSound=leader&&soundBlocked/);
+});

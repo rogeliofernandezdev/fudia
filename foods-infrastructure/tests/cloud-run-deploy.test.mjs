@@ -97,7 +97,7 @@ test("backend service keeps photos persistent and cookies secure without root or
   const args = serviceArgs(config, "image@sha256:digest", true, "123", "456");
   assert.ok(args.includes("--no-traffic"));
   assert.ok(args.includes("--no-invoker-iam-check")); // Existing app sessions authorize API; no IAM token BFF yet.
-  assert.ok(args.includes(`HTTP_ADDR=:8080,FOODS_COOKIE_SECURE=true,DATABASE_MAX_CONNS=12,PRODUCT_IMAGE_STORAGE=gcs,PRODUCT_IMAGES_BUCKET=${env.GCP_UPLOADS_BUCKET},PRODUCT_IMAGES_SIGNER=${env.GCP_BACKEND_SERVICE_ACCOUNT}`));
+  assert.ok(args.includes(`HTTP_ADDR=:8080,FOODS_COOKIE_SECURE=true,DATABASE_MAX_CONNS=12,PRODUCT_IMAGE_STORAGE=gcs,PRODUCT_IMAGES_BUCKET=${env.GCP_UPLOADS_BUCKET},PRODUCT_IMAGES_SIGNER=${env.GCP_BACKEND_SERVICE_ACCOUNT},FCM_PROJECT_ID=${env.GCP_PROJECT_ID}`));
   assert.ok(!args.includes("--add-volume"));
   assert.ok(args.includes("--remove-volume"));
   assert.ok(!args.includes("/app/foods-migrate"));

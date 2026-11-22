@@ -22,11 +22,18 @@ type Handler struct {
 	devices       *application.PayDevices
 	detector      *application.Detector
 	notifications *application.Notifications
+	waker         *application.Waker
 	now           func() time.Time
 }
 
 func New(devices *application.PayDevices, detector *application.Detector, notifications *application.Notifications) *Handler {
-	return &Handler{devices, detector, notifications, func() time.Time { return time.Now() }}
+	return &Handler{devices: devices, detector: detector, notifications: notifications, now: func() time.Time { return time.Now() }}
+}
+
+// WithWaker habilita el aviso que despierta los teléfonos del local.
+func (h *Handler) WithWaker(waker *application.Waker) *Handler {
+	h.waker = waker
+	return h
 }
 
 type deviceKey struct{}
@@ -195,6 +202,35 @@ func (h *Handler) Report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := h.detector.Report(r.Context(), deviceFrom(r.Context()), in.Events, h.now())
+	respond(w, http.StatusOK, result, err)
+}
+
+// RegisterPush guarda el token de push del dispositivo (vacío lo borra).
+func (h *Handler) RegisterPush(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"token"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := h.detector.RegisterPush(r.Context(), deviceFrom(r.Context()), in.Token, h.now()); err != nil {
+		shared.WriteError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// WakeDevices pide a los teléfonos de Fudia Pay del local de la sesión que
+// procesen su bandeja: Caja lo llama mientras está abierta y al cobrar con un
+// medio que no es efectivo. Devuelve cuántos dispositivos pueden recibir push
+// y a cuántos se envió; el límite por intervalo lo aplica el backend.
+func (h *Handler) WakeDevices(w http.ResponseWriter, r *http.Request) {
+	scope, ok := shared.Scope(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	result, err := h.waker.Wake(r.Context(), scope, h.now())
 	respond(w, http.StatusOK, result, err)
 }
 

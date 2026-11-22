@@ -75,6 +75,8 @@ type DeviceRepository interface {
 	ActivateDevice(ctx context.Context, code string, now time.Time, in domain.PairInput, tokenHash []byte, tokenSuffix string) (domain.Activation, error)
 	DeviceByTokenHash(ctx context.Context, tokenHash []byte) (domain.DeviceSession, error)
 	TouchDevice(ctx context.Context, deviceID string, now time.Time) error
+	// SavePushToken guarda el token de push del dispositivo; vacío lo borra.
+	SavePushToken(ctx context.Context, deviceID, token string, now time.Time) error
 	ReportEvents(ctx context.Context, session domain.DeviceSession, events []domain.Event, currency string) ([]domain.EventOutcome, error)
 }
 

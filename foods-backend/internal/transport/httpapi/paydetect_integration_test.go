@@ -10,7 +10,20 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	paydetectapp "github.com/foods-platform/foods-backend/internal/modules/paydetect/application"
+	paydetectdomain "github.com/foods-platform/foods-backend/internal/modules/paydetect/domain"
+	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
 )
+
+// recordingPusher registra los tokens despertados sin salir a Firebase.
+type recordingPusher struct{ tokens []string }
+
+func (p *recordingPusher) Wake(_ context.Context, token string) error {
+	p.tokens = append(p.tokens, token)
+	return nil
+}
 
 // Flujo completo de Fudia Pay contra PostgreSQL real: canje del código del QR,
 // reporte idempotente de notificaciones, revisión de Caja (asociar, confirmar,
@@ -62,6 +75,8 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 			handler.Pair(rec, req)
 		case path == "/v1/mobile/notifications":
 			handler.DeviceAuth(http.HandlerFunc(handler.Report)).ServeHTTP(rec, req)
+		case path == "/v1/mobile/push-token":
+			handler.DeviceAuth(http.HandlerFunc(handler.RegisterPush)).ServeHTTP(rec, req)
 		case path == "/v1/mobile/session":
 			handler.DeviceAuth(http.HandlerFunc(handler.DeviceSession)).ServeHTTP(rec, req)
 		case path == "/v1/admin/pay-devices" && method == "GET":
@@ -415,8 +430,42 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	if list := call("GET", "/v1/admin/pay-devices", "", foreign, ""); list.Code != 404 {
 		t.Fatalf("un local de otra empresa debe responder 404, fue %d", list.Code)
 	}
+	// Push: el teléfono registra su token y Caja lo despierta como máximo una
+	// vez por intervalo, solo en su local.
+	if bad := call("PUT", "/v1/mobile/push-token", "", scope{}, `{"token":"con espacio"}`); bad.Code != 400 {
+		t.Fatalf("token inválido: %d", bad.Code)
+	}
+	if saved := call("PUT", "/v1/mobile/push-token", "", scope{}, `{"token":"fcm-token-1"}`); saved.Code != 204 {
+		t.Fatalf("push token: %d %s", saved.Code, saved.Body.String())
+	}
+	pusher := &recordingPusher{}
+	waker := paydetectapp.NewWaker(paydetectpg.New(pool), pusher)
+	wakeAt := time.Now()
+	wake := func(subject scope, at time.Time) int {
+		t.Helper()
+		result, err := waker.Wake(context.Background(), subject, at)
+		if err != nil {
+			t.Fatalf("wake: %v", err)
+		}
+		return result.Sent
+	}
+	if sent := wake(s, wakeAt); sent != 1 || len(pusher.tokens) != 1 || pusher.tokens[0] != "fcm-token-1" {
+		t.Fatalf("primer aviso: %d %v", sent, pusher.tokens)
+	}
+	if sent := wake(s, wakeAt.Add(time.Second)); sent != 0 {
+		t.Fatalf("el intervalo debe limitar el aviso: %d", sent)
+	}
+	if sent := wake(other, wakeAt.Add(time.Minute)); sent != 0 {
+		t.Fatalf("otro restaurante no despierta este teléfono: %d", sent)
+	}
+	if sent := wake(s, wakeAt.Add(paydetectdomain.WakeInterval+time.Second)); sent != 1 {
+		t.Fatalf("pasado el intervalo vuelve a avisar: %d", sent)
+	}
 	if revoked := call("POST", "/v1/admin/pay-devices/revoke", devices.Items[0].ID, s, ""); revoked.Code != 200 {
 		t.Fatalf("revoke: %d", revoked.Code)
+	}
+	if sent := wake(s, wakeAt.Add(time.Hour)); sent != 0 {
+		t.Fatalf("un dispositivo revocado no recibe avisos: %d", sent)
 	}
 	if blocked := call("POST", "/v1/mobile/notifications", "", scope{}, `{"events":[{"provider":"yape","eventKey":"yape-op-dead12","amount":5,"occurredAt":"2026-11-15T13:00:00Z"}]}`); blocked.Code != 401 {
 		t.Fatalf("un dispositivo revocado debe recibir 401, fue %d", blocked.Code)

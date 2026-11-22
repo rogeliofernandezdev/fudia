@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 
 /** Contrato con foods-backend (docs/16_FUDIA_PAY.md). La empresa y el local
  * los resuelve el backend desde la vinculación; el dispositivo nunca los envía. */
@@ -48,6 +49,11 @@ data class EventOutcome(val eventKey: String, val status: String)
 @Serializable
 data class ReportResponse(val registered: Int, val duplicates: Int, val events: List<EventOutcome>)
 
+/** Token de Firebase Cloud Messaging con el que el backend despierta la app;
+ *  vacío lo borra. */
+@Serializable
+data class PushTokenRequest(val token: String)
+
 interface FudiaPayApi {
     /** 204 sin cuerpo; 4xx si el código ya se usó, venció o no es válido. */
     @POST("v1/mobile/pair/scan")
@@ -61,4 +67,8 @@ interface FudiaPayApi {
 
     @POST("v1/mobile/notifications")
     suspend fun report(@Body request: ReportRequest): ReportResponse
+
+    /** 204 sin cuerpo. */
+    @PUT("v1/mobile/push-token")
+    suspend fun registerPush(@Body request: PushTokenRequest): retrofit2.Response<Unit>
 }

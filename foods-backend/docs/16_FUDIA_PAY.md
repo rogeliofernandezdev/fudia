@@ -58,12 +58,40 @@ la cola persiste y WorkManager reintenta con backoff + barrido periódico. Reini
 misma clave → `duplicate`. Dispositivo revocado: 401 inmediato. Sin permiso o
 cuenta pausada: no llegan notificaciones y la app lo muestra con sinceridad.
 Congelador de HONOR (2026-11-20): congela el proceso minutos después de dejar
-la app y los pagos esperan hasta abrirla; la app mantiene un servicio en
-primer plano con el aviso fijo «Detectando pagos» para impedirlo.
+la app y los pagos esperan hasta que algo la descongela. El servicio en primer
+plano con el aviso «Detectando pagos» no lo impedía y se retiró el 2026-11-21:
+ahora la despierta un push silencioso (ver «Despertar los teléfonos») y una
+alarma de respaldo cada 5 min.
 Listener enlazado que Android deja de alimentar (HONOR/MagicOS, 2026-11-20):
 el barrido lo detecta y fuerza la reconstrucción del enlace desactivando y
 reactivando su propio componente; al reconectar procesa los pagos que siguen
 en la bandeja. Detalle en el README de `fudia-pay`.
+
+### Despertar los teléfonos (push, migración 000139)
+
+Algunos fabricantes (HONOR/MagicOS) congelan la app por tipo de app aunque
+tenga permisos y servicio en primer plano; solo la descongelan con un push de
+Google, como a WhatsApp. El push es silencioso (solo datos `type=wake`,
+prioridad alta, vence al minuto) y no lleva datos del local ni del pago.
+
+- El teléfono registra su token de Firebase Cloud Messaging en
+  `pay_devices.push_token` (`PUT /v1/mobile/push-token`); vacío lo borra y
+  revocar también. Un token que FCM ya no reconoce se borra solo.
+- Caja (`PayNoticeLayer`, cualquier pantalla del cajero) llama
+  `POST /v1/admin/pay-devices/wake` cada 30 s, y cada 10 s mientras hay un
+  modal de cobro abierto (y al abrirlo); la espera corre en un Web Worker para que siga a tiempo con la pestaña minimizada. El backend limita el push a uno cada
+  10 s por dispositivo con `pay_devices.woken_at` (una sola sentencia
+  `UPDATE … RETURNING`: pestañas e instancias no lo duplican). La respuesta
+  `{devices,sent}` con `devices=0` hace que Caja espacie sus pedidos a 5 min:
+  un local sin teléfonos con push no genera tráfico continuo.
+- Envío por la API HTTP v1 de FCM con las credenciales por defecto de Cloud
+  Run (`providers/fcm`). Configuración: `FCM_PROJECT_ID` (proyecto de
+  Firebase); la cuenta de servicio de la API necesita el rol «Firebase Cloud
+  Messaging API Admin» y la API `fcm.googleapis.com` habilitada. Sin
+  `FCM_PROJECT_ID` el endpoint responde `{devices:0,sent:0}` y los teléfonos
+  dependen de su alarma. Los push no tienen costo.
+- Teléfonos sin Google Play Services (Huawei): no reciben el push; su alarma
+  entrega el pago en hasta 5 min.
 
 ### 5. Revinculación
 
@@ -141,6 +169,7 @@ revocar.
 | `GET /v1/admin/pay-notifications?status=&provider=` | Pagos detectados |
 | `POST /v1/admin/pay-notifications/{id}/associate` | Asocia y registra el cobro (`{orderId, method, amount?}`); una sola vez (409) |
 | `POST /v1/admin/pay-notifications/{id}/dismiss` | Descarta con traza |
+| `POST /v1/admin/pay-devices/wake` | Push que despierta los teléfonos del local; `{devices,sent}` |
 
 Dispositivo (credencial `Bearer`, revocable):
 
@@ -150,6 +179,7 @@ Dispositivo (credencial `Bearer`, revocable):
 | `POST /v1/mobile/pair` | Canjea el código del QR; el token viaja **una sola vez** |
 | `GET /v1/mobile/session` | Restaurante, local y moneda resueltos por el backend |
 | `POST /v1/mobile/notifications` | Reporta lotes (≤20); responde `registered|duplicate` por evento |
+| `PUT /v1/mobile/push-token` | Token de push del teléfono (vacío lo borra); 204 |
 
 La empresa y el local **siempre** los resuelve el backend desde la vinculación;
 el dispositivo nunca los envía. Los reintentos con WorkManager y la cola local
@@ -173,6 +203,26 @@ para adjuntar o compartir una constancia real sigue pendiente de definición.
 
 - Aviso flotante global en cualquier pantalla del cajero (sondeo cada 10 s,
   tarjetas apilables por encima de los modales, clic → detalle).
+- Sonido propio por billetera (2026-11-21, `domain/pay-alert.ts`): Yape suena
+  con tres notas cálidas que suben y Plin con dos notas agudas cortas, para
+  saber cuál llegó sin mirar. Son tonos generados por Fudia (Web Audio), no los
+  de las apps. Varios pagos juntos de la misma billetera suenan una vez. El
+  navegador solo deja sonar tras el primer toque o tecla en la página. Si la
+  pestaña no tiene el foco, su título parpadea («Yape · S/ 25.00 recibido» o
+  «(3) Pagos recibidos») hasta que el cajero vuelve, como LinkedIn.
+  Ningún worker evita la regla del navegador: el audio se prepara al cargar y,
+  si el navegador lo deja suspendido, en locales con teléfonos con push aparece
+  «Activar sonido de pagos» (44 px) sobre los avisos hasta el primer toque.
+  En PCs de caja administradas se puede permitir el sonido del dominio
+  (Edge/Firefox: configuración del sitio; Chrome: política `AutoplayAllowlist`).
+- Varias pestañas abiertas (2026-11-21, `pay-leader.ts`): solo una por cajero
+  y local suena, parpadea y pide el push; las demás muestran las tarjetas en
+  silencio. Se coordinan con Web Locks: la pestaña que el cajero enfoca o toca
+  reclama el aviso (ahí ocurrió su último gesto y el navegador la deja sonar) y,
+  al cerrarse la líder, otra la releva sola. Sin Web Locks, cada pestaña avisa.
+- El temporizador del push de Caja corre en un Web Worker dedicado
+  (`background-timer.ts`): Chrome limita a uno por minuto los temporizadores
+  de una pestaña oculta, pero no los de un worker.
 - Modal de detalle: medio, remitente, monto, fecha, número de operación y
   estado; «Asociar pago a pedido» sugiere el pedido que el cajero está cobrando
   (contexto del POS), permite cambiarlo, revisar su detalle (saldo, pagos) y

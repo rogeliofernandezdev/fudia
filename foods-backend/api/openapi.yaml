@@ -2159,6 +2159,15 @@ paths:
         "200": { description: Notificación descartada, content: { application/json: { schema: { $ref: "#/components/schemas/PayNotification" } } } }
         "404": { description: Notificación no encontrada en el local activo }
         "409": { description: La notificación ya se procesó }
+  /v1/admin/pay-devices/wake:
+    post:
+      operationId: wakePayDevices
+      summary: Despierta los teléfonos de Fudia Pay del local de la sesión
+      description: "Requiere cash.manage. Envía un push silencioso (Firebase Cloud Messaging, solo datos, sin información del local) a los dispositivos activos con token, para que procesen las notificaciones de Yape y Plin que el fabricante retuvo al congelar la app. Caja lo llama mientras está abierta y al cobrar con un medio que no es efectivo. El backend limita el aviso a uno cada 10 s por dispositivo, compartido entre pestañas e instancias. Devuelve devices (dispositivos del local con push; 0 si el local no los usa o no hay push configurado) y sent (avisos enviados ahora): con devices=0 Caja espacia sus pedidos."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado del aviso, content: { application/json: { schema: { type: object, required: [devices, sent], properties: { devices: { type: integer, minimum: 0 }, sent: { type: integer, minimum: 0 } } } } } }
+        "403": { description: Sin permiso cash.manage }
   /v1/mobile/pair/scan:
     post:
       operationId: scanPayPairing
@@ -2199,6 +2208,17 @@ paths:
       responses:
         "200": { description: Resultado por evento, content: { application/json: { schema: { $ref: "#/components/schemas/PayReportResult" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial revocada o desconocida }
+  /v1/mobile/push-token:
+    put:
+      operationId: registerPayPushToken
+      summary: Registra el token de push del dispositivo
+      description: "Guarda el token de Firebase Cloud Messaging con el que el backend despierta la app; un token vacío lo borra. Revocar el dispositivo también lo borra."
+      security: [{ deviceToken: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string, maxLength: 4096, description: "Vacío para dejar de recibir avisos" } } } } } }
+      responses:
+        "204": { description: Token guardado }
+        "400": { description: "pay_push_token_invalid: el token no es válido" }
         "401": { description: Credencial revocada o desconocida }
   /v1/operations/payments/batch:
     post:

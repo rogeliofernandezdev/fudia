@@ -64,21 +64,34 @@ puede estar concedido con el servicio muerto. Por eso:
   (`onListenerDisconnected` → `requestRebind`), sin abrir la app.
 - **Congelador de HONOR** (2026-11-20, causa de «después de un rato deja de
   enviar»): `HnFreezerController` congela el proceso (`cgroup.freeze = 1`)
-  aunque la app esté exenta de batería y en el bucket EXEMPTED. Android le
-  entrega la notificación, pero no se ejecuta hasta que alguien abre la app:
-  un Plin enviado a las 20:21 llegó a Caja a las 20:27, al abrirla. Por eso la
-  app corre un **servicio en primer plano** (`ListeningService`) con el aviso
-  fijo «Detectando pagos». El tipo importa: PowerGenie (`PG_ash`,
-  `dumpsys powergenius -a`) ignoró `specialUse` («FgService:» vacío, estado
-  `hibernation` pese a estar en «nunca optimizar») y sí reconoce
-  `connectedDevice` («FgService:|connectedDevice», estado `running`). Se
-  declaran `remoteMessaging|connectedDevice|specialUse`; `dataSync` no sirve
-  porque Android 15 lo corta a las 6 h diarias. Arranca al abrir la app,
-  al conectar el listener, en cada barrido del worker y al reiniciar o
-  actualizar (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`); se detiene al
-  desvincular. En Android 13+ se pide el permiso de notificaciones solo para
-  que el aviso sea visible. Diagnóstico:
-  `adb shell cat /sys/fs/cgroup/apps/uid_<uid>/pid_<pid>/cgroup.freeze`.
+  aunque la app esté exenta de batería. Android le entrega la notificación,
+  pero no se ejecuta hasta que algo descongela la app: un Plin enviado a las
+  20:21 llegó a Caja a las 20:27, al abrirla. PowerGenie (`PG_ash`,
+  `dumpsys powergenius -a`) decide por **tipo de app**: a Fudia Pay la marca
+  `app_type_unknown` y la hiberna **aunque tenga un servicio en primer plano**
+  (2026-11-21: 37 min congelada con `FgService:|connectedDevice`). Solo la
+  descongelan abrir el panel de notificaciones (`panel_open_notification`),
+  datos de red (`net_packet`), su propia alarma (`bc_notify_…`, alineada por
+  HONOR a ventanas de 5 min) y un **push de Google**
+  (`bc_notify_com.google.android.c2dm.intent.RECEIVE`), igual que WhatsApp.
+  Por eso, desde el 2026-11-21:
+  - **Push silencioso (FCM):** el backend lo envía mientras Caja está abierta
+    (cada 30 s) y con el modal de cobro abierto (cada 10 s), con un límite de
+    uno cada 10 s por teléfono. `WakeMessagingService` espera 1,5 s a que
+    Android entregue lo retenido y repasa listener y cola. El token se
+    registra con `PUT /v1/mobile/push-token` al abrir la app, en cada barrido
+    y al renovarse; se borra al desvincular o al revocar en Caja.
+  - **Alarma de respaldo** (`WakeAlarm`, inexacta, cada 5 min, rearmada al
+    reiniciar o actualizar): cubre la noche, la falta de red para el push y
+    los teléfonos sin Google Play Services (Huawei).
+  - Se retiró el servicio en primer plano `ListeningService` y su aviso fijo
+    «Detectando pagos»: no impedía el congelamiento. La app borra su canal.
+  Firebase se configura al compilar (`-PfcmProjectId`, `-PfcmAppId`,
+  `-PfcmApiKey`, `-PfcmSenderId`, de la consola de Firebase › app Android
+  `com.fudia.pay`); sin ellos el APK funciona solo con la alarma. Diagnóstico:
+  `adb logcat -b all | grep -E "ash_trans: com.fudia.pay|HnFreezerController.*<uid>"`
+  muestra cada congelamiento y su motivo; una prueba solo vale con la pantalla
+  apagada más de 30 min, nunca justo después de instalar.
 - **Listener zombi** (visto el 2026-11-20 en HONOR DNP-NX9, MagicOS/Android
   15): Android mantiene el servicio enlazado («Live notification listeners»)
   pero vacía su lista interna de habilitados («All notification listeners (0)
@@ -108,7 +121,7 @@ app/src/main/java/com/fudia/pay/
     pairing       bienvenida, escaneo del QR y activación del dispositivo
     notifications NotificationListenerService y parsers por proveedor
     payments      eventos detectados y su cola local (Room)
-    sync          envío de la cola (PaymentSyncer) y respaldo con WorkManager
+    sync          envío de la cola (PaymentSyncer), WorkManager, push FCM y alarma de respaldo
     settings      inicio, historial y configuración
 ```
 

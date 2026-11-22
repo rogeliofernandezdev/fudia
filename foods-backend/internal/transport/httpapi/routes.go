@@ -75,12 +75,15 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("GET /v1/admin/pay-notifications", a.auth(a.requirePermission("cash.read", http.HandlerFunc(p.Notifications))))
 		m.Handle("POST /v1/admin/pay-notifications/{id}/associate", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.AssociateNotification))))
 		m.Handle("POST /v1/admin/pay-notifications/{id}/dismiss", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.DismissNotification))))
+		// Push que despierta los teléfonos del local (congelados por el fabricante).
+		m.Handle("POST /v1/admin/pay-devices/wake", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.WakeDevices))))
 		// El dispositivo de Fudia Pay entra con su credencial propia: el
 		// backend resuelve la empresa y el local desde la vinculación.
 		m.Handle("POST /v1/mobile/pair/scan", http.HandlerFunc(p.ScanPairing))
 		m.Handle("POST /v1/mobile/pair", http.HandlerFunc(p.Pair))
 		m.Handle("GET /v1/mobile/session", p.DeviceAuth(http.HandlerFunc(p.DeviceSession)))
 		m.Handle("POST /v1/mobile/notifications", p.DeviceAuth(http.HandlerFunc(p.Report)))
+		m.Handle("PUT /v1/mobile/push-token", p.DeviceAuth(http.HandlerFunc(p.RegisterPush)))
 	}
 	if a.handlers.Tips != nil {
 		m.Handle("GET /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.Tips.GetSettings))))

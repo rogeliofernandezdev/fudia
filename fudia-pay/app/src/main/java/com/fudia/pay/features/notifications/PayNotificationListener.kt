@@ -75,8 +75,6 @@ class PayNotificationListener : NotificationListenerService() {
         scope.launch { listenerStatus.markConnected() }
         if (BuildConfig.DEBUG) Log.d(TAG, "servicio de escucha conectado")
         if (!credentials.paired) return
-        // Mantiene el proceso fuera del congelador de HONOR (ver ListeningService).
-        ListeningService.start(applicationContext)
         // Pagos que siguen en la bandeja y no se entregaron (listener zombi,
         // reconexión, proceso muerto): se procesan ahora. La clave idempotente
         // evita duplicados en la cola y en el backend.

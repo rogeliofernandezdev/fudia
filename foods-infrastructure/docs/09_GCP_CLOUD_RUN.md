@@ -195,7 +195,7 @@ adicional y prueba de conexión. No usar `sslmode=disable` con una IP TCP remota
 | Identidad | Permisos y alcance |
 | --- | --- |
 | GitHub deploy | `roles/run.admin` y `roles/eventarc.admin` en proyecto; `roles/artifactregistry.writer` solo en repositorio; `roles/iam.serviceAccountUser` solo sobre las cinco cuentas de servicios/Job/Eventarc. `roles/vpcaccess.user` + `roles/compute.viewer` solo en opción privada |
-| Backend runtime | `roles/cloudsql.client` en proyecto SQL; `roles/secretmanager.secretAccessor` solo en DATABASE_URL y Concierge si aplica; `roles/storage.objectCreator` + `roles/storage.objectViewer` solo en bucket; signBlob sobre sí misma. Sin Delete/Update |
+| Backend runtime | `roles/cloudsql.client` en proyecto SQL; `roles/secretmanager.secretAccessor` solo en DATABASE_URL y Concierge si aplica; `roles/storage.objectCreator` + `roles/storage.objectViewer` solo en bucket; signBlob sobre sí misma; `roles/firebasecloudmessaging.admin` en proyecto para el push de Fudia Pay (`FCM_PROJECT_ID`, API `fcm.googleapis.com` habilitada; sin el rol los teléfonos quedan con su alarma de respaldo). Sin Delete/Update |
 | Migration runtime | `roles/cloudsql.client` en proyecto SQL; `roles/secretmanager.secretAccessor` solo en la URL de migración; sin bucket ni tokens de terceros |
 | Frontend runtime | `roles/secretmanager.secretAccessor` solo en MAPBOX_ACCESS_TOKEN si aplica; sin SQL ni bucket |
 | Processor runtime | `roles/cloudsql.client`, acceso a su secreto SQL y `roles/storage.objectUser` solo en bucket |

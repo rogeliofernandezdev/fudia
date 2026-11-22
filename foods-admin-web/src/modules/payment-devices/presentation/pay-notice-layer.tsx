@@ -2,13 +2,17 @@
 
 import {useCallback,useEffect,useRef,useState} from "react";
 import {useQuery,useQueryClient} from "@tanstack/react-query";
-import {IconButton} from "@/design-system";
+import {Button,IconButton} from "@/design-system";
 import {useMoney,useSession} from "@/providers";
 import {PayProviderTag} from "./pay-status-tag";
 import {payProviderLabel} from "../domain/pay-status";
 import type {PayNotification} from "../domain/types";
 import {listPayNotifications} from "../infrastructure/pay-devices-api";
 import {PayNotificationDetail} from "./pay-notification-detail";
+import {usePayCollection} from "./pay-collection-context";
+import {usePayDeviceWake} from "./use-pay-device-wake";
+import {usePayAlert} from "./use-pay-alert";
+import {usePayLeader} from "./use-pay-leader";
 
 const NOTICE_DURATION_MS=8000;
 
@@ -28,6 +32,19 @@ function PayNoticeFeed({scopeKey}:{scopeKey:string[]}){
   const [visible,setVisible]=useState<PayNotification[]>([]);
   const [detail,setDetail]=useState<PayNotification|null>(null);
   const seen=useRef<Set<string>|null>(null);
+  // Con varias pestañas abiertas, solo una suena, parpadea y pide el push.
+  const leader=usePayLeader(`fudia-pay-alert:${scopeKey.join(":")}`);
+  // Los teléfonos congelados por el fabricante procesan sus pagos al recibir el push.
+  const pushDevices=usePayDeviceWake(Boolean(usePayCollection().open),leader);
+  // Sonido propio de Yape o Plin y título de la pestaña que parpadea.
+  const {alertPayments,soundBlocked,enableSound}=usePayAlert();
+  // Solo si el local usa Fudia Pay: el navegador bloquea el sonido hasta un gesto.
+  const askSound=leader&&soundBlocked&&(pushDevices??0)>0;
+  const money=useMoney();
+  // El efecto de pagos nuevos solo depende del feed: el formato y el aviso se
+  // leen de una referencia para no repetirlo (ni sonar) en cada render.
+  const announce=useRef({alertPayments,money,leader});
+  useEffect(()=>{announce.current={alertPayments,money,leader}},[alertPayments,money,leader]);
   const feed=useQuery({
     queryKey:["pay-notice-feed",...scopeKey],
     queryFn:()=>listPayNotifications({status:"detected",provider:""}),
@@ -44,14 +61,19 @@ function PayNoticeFeed({scopeKey}:{scopeKey:string[]}){
     if(seen.current===null){seen.current=new Set(items.map(item=>item.id));return;}
     const fresh=items.filter(item=>!seen.current!.has(item.id));
     fresh.forEach(item=>seen.current!.add(item.id));
-    if(fresh.length)void qc.invalidateQueries({queryKey:["staff-notices"]});
+    if(fresh.length){
+      void qc.invalidateQueries({queryKey:["staff-notices"]});
+      const {alertPayments:alert,money:format,leader:announces}=announce.current;
+      if(announces)alert(fresh.map(item=>({provider:item.provider,providerLabel:payProviderLabel[item.provider],amount:format(item.amount)})));
+    }
     setVisible(current=>[...fresh,...current.filter(stale=>items.some(item=>item.id===stale.id))].slice(0,4));
   },[feed.data,qc]);
 
   const closeNotice=useCallback((id:string)=>setVisible(current=>current.filter(item=>item.id!==id)),[]);
   const openNotice=useCallback((item:PayNotification)=>{closeNotice(item.id);setDetail(item)},[closeNotice]);
   return <>
-    {visible.length>0&&<div className="pay-notice-layer" role="region" aria-label="Pagos detectados por Yape y Plin">
+    {(visible.length>0||askSound)&&<div className="pay-notice-layer" role="region" aria-label="Pagos detectados por Yape y Plin">
+      {askSound&&<Button kind="secondary" icon="volume" className="pay-sound-gate" onClick={enableSound}>Activar sonido de pagos</Button>}
       {visible.map(item=><PayNotice key={item.id} item={item} onOpen={openNotice} onClose={closeNotice}/>)}
     </div>}
     <PayNotificationDetail notification={detail} mode="associate" onClose={()=>setDetail(null)} onDone={()=>{setDetail(null);void feed.refetch();void qc.invalidateQueries({queryKey:["staff-notices"]})}}/>
