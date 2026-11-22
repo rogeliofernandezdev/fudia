@@ -8,7 +8,9 @@ nuevo (también admite `plin`). Verificar una sola tarjeta, X de 44 px,
 desaparición a los 8 segundos, pausas con hover/foco/pestaña oculta y que
 `window.payFixture.refresh()` no vuelva a mostrar un aviso ya cerrado.
 Cerrar la tarjeta no modifica el pago ni marca el aviso de la campana como
-leído. Abrirlo desde la campana navega a `/cash?tab=pagos`.
+leído. Abrirlo desde la campana abre «Asociar pago a pedido» sobre la pantalla
+actual (sin navegar); `?case=payment-error` muestra el error del pago y
+`?case=payment-loading` su skeleton.
 
 Comprobar `?case=missing-operation` («No informado»), `wrong-method` (un medio
 con nombre Yape pero código `cash` nunca se selecciona) y `renamed-method`

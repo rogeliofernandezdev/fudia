@@ -35,6 +35,11 @@ export function listPayNotifications(filter:{status:string;provider:string}){
   return apiFetch<{items:PayNotification[];total:number}>(`pay-notifications?${params.toString()}`);
 }
 
+/** Un pago detectado del local por su id: la campana lo abre desde su aviso. */
+export function getPayNotification(id:string){
+  return apiFetch<PayNotification>(`pay-notifications/${encodeURIComponent(id)}`);
+}
+
 /** Una página de pagos detectados con el total de los filtros (la lista crece con el historial). */
 /** `q` busca en el servidor por remitente o monto (las billeteras no envían número de operación). */
 export function listPayNotificationPage(filter:{status:string;provider:string;q:string;page:number;size:number}){

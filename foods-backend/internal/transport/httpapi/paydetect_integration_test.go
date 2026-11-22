@@ -83,6 +83,8 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 			handler.Devices(rec, req)
 		case path == "/v1/admin/pay-notifications":
 			handler.Notifications(rec, req)
+		case path == "/v1/admin/pay-notifications/one":
+			handler.Notification(rec, req)
 		default:
 			switch {
 			case path == "/v1/admin/pay-devices/revoke":
@@ -340,6 +342,36 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 		if notificationID == "" {
 			t.Fatal("Yape notification missing")
 		}
+	}
+	// La campana abre el pago del aviso: el aviso trae su id y Caja lo lee por id,
+	// solo dentro del local de la sesión.
+	{
+		request := httptest.NewRequest("GET", "/v1/admin/notices", nil)
+		request = request.WithContext(context.WithValue(request.Context(), scopeKey{}, s))
+		response := httptest.NewRecorder()
+		api.handlers.Notices.Feed(response, request)
+		var feed noticeFeed
+		if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &feed) != nil {
+			t.Fatalf("payment bell feed: %d %s", response.Code, response.Body.String())
+		}
+		linked := 0
+		for _, item := range feed.Items {
+			if item.Kind == "pay_detected" && item.PayNotificationID == notificationID {
+				linked++
+			}
+		}
+		if linked != 1 {
+			t.Fatalf("the Yape bell notice must point to its payment %s: %+v", notificationID, feed.Items)
+		}
+	}
+	if one := call("GET", "/v1/admin/pay-notifications/one", notificationID, s, ""); one.Code != 200 || !strings.Contains(one.Body.String(), `"status":"detected"`) {
+		t.Fatalf("get payment: %d %s", one.Code, one.Body.String())
+	}
+	if foreign := call("GET", "/v1/admin/pay-notifications/one", notificationID, other, ""); foreign.Code != 404 {
+		t.Fatalf("another restaurant must not read the payment: %d", foreign.Code)
+	}
+	if malformed := call("GET", "/v1/admin/pay-notifications/one", "no-es-uuid", s, ""); malformed.Code != 404 {
+		t.Fatalf("a malformed id must be 404: %d", malformed.Code)
 	}
 	// La lista de Caja pagina en el servidor: page y size, con el total de los filtros.
 	pageOf := func(query string) (int, int) {

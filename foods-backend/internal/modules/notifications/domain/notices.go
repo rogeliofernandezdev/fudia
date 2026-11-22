@@ -32,14 +32,17 @@ const (
 
 // Notice es un aviso tal como lo ve un usuario en la campana.
 type Notice struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Title     string `json:"title"`
-	Detail    string `json:"detail"`
-	OrderID   string `json:"orderId,omitempty"`
-	TableID   string `json:"tableId,omitempty"`
-	CreatedAt string `json:"createdAt"`
-	Read      bool   `json:"read"`
+	ID      string `json:"id"`
+	Kind    string `json:"kind"`
+	Title   string `json:"title"`
+	Detail  string `json:"detail"`
+	OrderID string `json:"orderId,omitempty"`
+	TableID string `json:"tableId,omitempty"`
+	// PayNotificationID: pago de Fudia Pay del aviso pay_detected; la campana
+	// abre con él la asociación del pago sin buscarlo en la lista de Caja.
+	PayNotificationID string `json:"payNotificationId,omitempty"`
+	CreatedAt         string `json:"createdAt"`
+	Read              bool   `json:"read"`
 }
 
 // Feed es la campana: los avisos recientes y cuántos siguen sin leer.

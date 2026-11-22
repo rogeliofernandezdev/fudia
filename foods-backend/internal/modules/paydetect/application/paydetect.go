@@ -451,6 +451,19 @@ func (a *Notifications) Page(ctx context.Context, s scope, filter domain.Notific
 	return domain.NotificationPage{Items: items, Total: total}, nil
 }
 
+// Get returns one detected payment of the location: the staff bell opens it to
+// associate it (or shows its detail once processed).
+func (a *Notifications) Get(ctx context.Context, s scope, id string) (domain.Notification, error) {
+	notification, err := a.repo.Notification(ctx, s, id)
+	if errors.Is(err, ErrNotificationNotFound) {
+		return domain.Notification{}, ErrNotificationNotFound
+	}
+	if err != nil {
+		return domain.Notification{}, payFailure(apperror.Unavailable, "pay_notifications_unavailable", "No pudimos leer el pago detectado.", err)
+	}
+	return notification, nil
+}
+
 // Associate links a detected payment to an order of the same local. The order
 // is validated through the contracts of the orders module; tenancy is not
 // trusted to the request.

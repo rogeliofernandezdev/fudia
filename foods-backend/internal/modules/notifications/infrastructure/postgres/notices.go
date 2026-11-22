@@ -71,6 +71,18 @@ func (r *Notices) Insert(ctx context.Context, s scope, in domain.Input) error {
 	return err
 }
 
+// payNotification resuelve el pago de Fudia Pay de un aviso pay_detected por su
+// clave de deduplicación («pay-detected:<evento>:<proveedor>»; el proveedor se
+// escribió con mayúscula o minúscula según la versión). Los avisos visibles son
+// de las últimas 24 horas y su pago se registró antes que el aviso, por lo que
+// la ventana de 25 horas acota la búsqueda al índice reciente del local.
+const payNotification = `CASE WHEN n.kind='pay_detected' THEN COALESCE((
+	SELECT p.id::text FROM pay_notifications p
+	WHERE p.organization_id=n.organization_id AND p.location_id=n.location_id
+	  AND p.created_at>now()-interval '25 hours'
+	  AND lower(n.dedupe_key)=lower(left('pay-detected:'||p.event_key||':'||p.provider,200))
+	ORDER BY p.created_at DESC LIMIT 1),'') ELSE '' END`
+
 // Feed lee el contador de no leídos y los avisos en una sola ida y vuelta: la
 // campana se refresca cada 15 s en cada sesión abierta.
 func (r *Notices) Feed(ctx context.Context, s scope, audiences []string, limit int) (domain.Feed, error) {
@@ -81,7 +93,7 @@ func (r *Notices) Feed(ctx context.Context, s scope, audiences []string, limit i
 		WHERE `+pending+` AND NOT EXISTS (SELECT 1 FROM staff_notice_reads nr WHERE nr.notice_id=n.id AND nr.user_id=$4)`,
 		s.OrganizationID, s.LocationID, audiences, s.UserID)
 	batch.Queue(`
-		SELECT n.id::text,n.kind,n.title,n.detail,COALESCE(n.order_id::text,''),COALESCE(n.table_id::text,''),n.created_at,
+		SELECT n.id::text,n.kind,n.title,n.detail,COALESCE(n.order_id::text,''),COALESCE(n.table_id::text,''),`+payNotification+`,n.created_at,
 		       EXISTS (SELECT 1 FROM staff_notice_reads nr WHERE nr.notice_id=n.id AND nr.user_id=$4)
 		FROM staff_notices n
 		WHERE `+pending+`
@@ -107,7 +119,7 @@ func readFeed(results pgx.BatchResults, out *domain.Feed) error {
 	for rows.Next() {
 		var item domain.Notice
 		var created time.Time
-		if err := rows.Scan(&item.ID, &item.Kind, &item.Title, &item.Detail, &item.OrderID, &item.TableID, &created, &item.Read); err != nil {
+		if err := rows.Scan(&item.ID, &item.Kind, &item.Title, &item.Detail, &item.OrderID, &item.TableID, &item.PayNotificationID, &created, &item.Read); err != nil {
 			return err
 		}
 		item.CreatedAt = created.UTC().Format(time.RFC3339)

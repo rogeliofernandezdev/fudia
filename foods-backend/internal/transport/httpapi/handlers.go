@@ -105,6 +105,7 @@ type Handlers struct {
 		Notifications(http.ResponseWriter, *http.Request)
 		AssociateNotification(http.ResponseWriter, *http.Request)
 		DismissNotification(http.ResponseWriter, *http.Request)
+		Notification(http.ResponseWriter, *http.Request)
 		DeviceAuth(http.Handler) http.Handler
 		DeviceSession(http.ResponseWriter, *http.Request)
 		Report(http.ResponseWriter, *http.Request)

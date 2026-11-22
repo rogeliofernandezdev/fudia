@@ -37,6 +37,25 @@ test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de prefer
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready"})],[routes.orders,routes.pos]);
 });
 
+test("avisos de pago: abren «Asociar pago a pedido» en el lugar con Caja permitida",()=>{
+ const id="0f6d6c1e-3c43-4a59-9f5d-5c2f3f1a7b20";
+ assert.equal(rules.noticePaymentId(routes.cash,{kind:"pay_detected",payNotificationId:id}),id);
+ assert.equal(rules.noticePaymentId(undefined,{kind:"pay_detected",payNotificationId:id}),null,"sin permiso de Caja no abre el pago");
+ assert.equal(rules.noticePaymentId(routes.cash,{kind:"pay_detected"}),null,"sin id sigue llevando a Caja › Pagos detectados");
+ assert.equal(rules.noticePaymentId(routes.orders,{kind:"order_ready",payNotificationId:id}),null);
+ const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
+ assert.match(bell,/const payment=noticePaymentId\(target,notice\);\s+if\(payment\)\{setPaymentId\(payment\);return\}/);
+ assert.match(bell,/createPortal\(<PayNotificationOpener id=\{paymentId\}/);
+ const opener=read("src/modules/payment-devices/presentation/pay-notification-opener.tsx");
+ assert.match(opener,/mode="associate"/,"un pago detectado va directo a asociarlo");
+ assert.match(opener,/payment\.isError\s*\?<ErrorState/,"error explícito al leer el pago");
+ assert.match(opener,/role="status" aria-label="Cargando el pago"/,"skeleton mientras carga");
+ assert.match(read("src/modules/payment-devices/infrastructure/pay-devices-api.ts"),/apiFetch<PayNotification>\(`pay-notifications\/\$\{encodeURIComponent\(id\)\}`\)/);
+ const openapi=readFileSync(new URL("../../foods-backend/api/openapi.yaml",import.meta.url),"utf8");
+ assert.match(openapi,/^ {2}\/v1\/admin\/pay-notifications\/\{id\}:\r?\n {4}parameters:[^\n]*\n {4}get:/m,"GET del pago en el contrato");
+ assert.ok(openapi.includes("payNotificationId: { type: string, format: uuid"),"el aviso expone su pago");
+});
+
 test("avisos: Salón y Pedidos abren el detalle del pedido; POS solo cobra la cuenta pedida",()=>{
  const ready={kind:"order_ready",orderId:"o-1",tableId:"t1"};
  assert.equal(rules.noticeHref(routes.diningRoom,ready),"/dining-room?orderId=o-1");

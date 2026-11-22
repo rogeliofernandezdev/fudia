@@ -73,6 +73,7 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("GET /v1/admin/locations/{locationId}/pay-devices", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(p.Devices))))
 		m.Handle("POST /v1/admin/locations/{locationId}/pay-devices/{deviceId}/revoke", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(p.RevokeDevice))))
 		m.Handle("GET /v1/admin/pay-notifications", a.auth(a.requirePermission("cash.read", http.HandlerFunc(p.Notifications))))
+		m.Handle("GET /v1/admin/pay-notifications/{id}", a.auth(a.requirePermission("cash.read", http.HandlerFunc(p.Notification))))
 		m.Handle("POST /v1/admin/pay-notifications/{id}/associate", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.AssociateNotification))))
 		m.Handle("POST /v1/admin/pay-notifications/{id}/dismiss", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(p.DismissNotification))))
 		// Push que despierta los teléfonos del local (congelados por el fabricante).

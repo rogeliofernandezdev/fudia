@@ -2135,6 +2135,17 @@ paths:
         "200": { description: Pagos detectados, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/PayNotification" } }, total: { type: integer } } } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pay-notifications/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPayNotification
+      summary: Lee un pago detectado del local activo
+      description: "Requiere cash.read. La campana lo abre desde el aviso pay_detected: si sigue detectado se asocia; si ya se procesó se muestra su detalle."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Pago detectado, content: { application/json: { schema: { $ref: "#/components/schemas/PayNotification" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Notificación no encontrada en el local activo }
   /v1/admin/pay-notifications/{id}/associate:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
@@ -3200,6 +3211,7 @@ components:
         detail: { type: string, maxLength: 240 }
         orderId: { type: string, format: uuid }
         tableId: { type: string, format: uuid }
+        payNotificationId: { type: string, format: uuid, description: "Solo en pay_detected: pago detectado que la campana abre para asociarlo (GET /v1/admin/pay-notifications/{id})." }
         createdAt: { type: string, format: date-time }
         read: { type: boolean, description: Lectura del usuario autenticado }
     StaffNoticeFeed:

@@ -52,6 +52,15 @@ export function noticeHref(target:string,notice:Pick<StaffNotice,"kind"|"orderId
  return notice.orderId&&opensDetail?`${target}?orderId=${encodeURIComponent(notice.orderId)}`:target;
 }
 
+/**
+ * Pago de Fudia Pay que abre el aviso en el lugar: con Caja permitida, la campana
+ * muestra «Asociar pago a pedido» sin navegar. Sin id (backend anterior) el aviso
+ * sigue llevando a Caja › Pagos detectados.
+ */
+export function noticePaymentId(target:string|undefined,notice:Pick<StaffNotice,"kind"|"payNotificationId">){
+ return notice.kind==="pay_detected"&&target===pageRoutes.cash&&notice.payNotificationId?notice.payNotificationId:null;
+}
+
 /** Tono del icono de cada aviso sin leer, alineado con la matriz de estados: listo = morado (Por entregar),
  *  cuenta pedida y cuenta anterior sin cerrar = naranja tenue (Por cobrar), llamado = celeste; pedidos nuevos usan el índigo de la marca. */
 export type NoticeTone="primary"|"purple"|"peach"|"sky";

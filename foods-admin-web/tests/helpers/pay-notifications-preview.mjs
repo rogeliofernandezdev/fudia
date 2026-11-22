@@ -32,7 +32,7 @@ function Preview(){const [shown,setShown]=useState(true),[ready,setReady]=useSta
 const client=new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0,refetchOnWindowFocus:false}}});
 let sequence=0;
 window.payFixture.refresh=()=>Promise.all(['pay-notice-feed','staff-notices'].map(key=>client.invalidateQueries({queryKey:[key]})));
-window.payFixture.receive=async(provider='yape')=>{const item={...notification,id:'incoming-'+(++sequence),provider};window.payFixture.items.unshift(item);window.payFixture.notices.unshift({id:'notice-'+item.id,kind:'pay_detected',title:'Pago recibido por '+(provider==='yape'?'Yape':'Plin'),detail:'S/ '+item.amount+' · '+item.senderName,createdAt:new Date().toISOString(),read:false});await window.payFixture.refresh();};
+window.payFixture.receive=async(provider='yape')=>{const item={...notification,id:'incoming-'+(++sequence),provider};window.payFixture.items.unshift(item);window.payFixture.notices.unshift({id:'notice-'+item.id,kind:'pay_detected',payNotificationId:item.id,title:'Pago recibido por '+(provider==='yape'?'Yape':'Plin'),detail:'S/ '+item.amount+' · '+item.senderName,createdAt:new Date().toISOString(),read:false});await window.payFixture.refresh();};
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={client}><Preview/></QueryClientProvider>);
 `},bundle:true,outfile:resolve(out,"bundle.js"),jsx:"automatic",alias:{"@":resolve(root,"src")},define:{"process.env.NODE_ENV":'"development"'},plugins:[{name:"fixture",setup(b){
  b.onResolve({filter:/^@\/providers(?:\/session-context)?$/},()=>({path:"providers",namespace:"fixture"}));
@@ -55,7 +55,9 @@ export {Skeleton,TableSkeleton} from './src/design-system/skeleton';
 export {Modal,ModalBody,ModalFooter} from './src/design-system/modal';
 export {FormDisclosure} from './src/design-system/form-controls';
 export {Icon} from './src/design-system/icons';export {IconTile} from './src/design-system/icon-tile';
-`:path==="pay-provider"?`export {PayProviderTag} from './src/modules/payment-devices/presentation/pay-status-tag';`
+`:path==="pay-provider"?`export {PayProviderTag} from './src/modules/payment-devices/presentation/pay-status-tag';
+export {usePayLeader} from './src/modules/payment-devices/presentation/use-pay-leader';
+export {PayNotificationOpener} from './src/modules/payment-devices/presentation/pay-notification-opener';`
 :path==="navigation"?`export const useRouter=()=>({push:route=>{window.payFixture.route=route}});`
 :path==="notices-api"?`
 export const getNotices=async()=>({items:[...window.payFixture.notices],unread:window.payFixture.notices.filter(item=>!item.read).length});
@@ -69,6 +71,7 @@ const wait=async kind=>{record(kind,[]);const scenario=window.payFixture.scenari
 export const payProviderOptions=['yape','plin'];
 export const payStatusOptions=['detected','dismissed'];
 export const wakePayDevices=async()=>{record('wake',[]);return {devices:window.payFixture.scenario==='no-push'?0:1,sent:1}};
+export const getPayNotification=async id=>{await wait('payment');const item=window.payFixture.items.find(entry=>entry.id===id);if(!item)throw new Error('No encontramos el pago detectado.');return item};
 export const listPayNotifications=async()=>{await wait('feed');return {items:[...window.payFixture.items],total:window.payFixture.items.length}};
 export const paySalesMethods=async()=>{await wait('methods');const scenario=window.payFixture.scenario;return {items:scenario==='methods-empty'?[]:scenario==='wrong-method'?[{code:'cash',name:'Yape'}]:scenario==='renamed-method'?[{code:'yape',name:'Cobro con billetera'}]:[{code:'cash',name:'Efectivo'},{code:'yape',name:'Yape'},{code:'plin',name:'Plin'}]}};
 export const searchPayOrders=async q=>{await wait('orders');return {items:['empty','orders-empty'].includes(window.payFixture.scenario)||q==='sin resultados'?[]:[{id:'fixture-order',code:'PED-0042',channel:'salon',customerName:'Ana Quispe',total:'10.50',paymentStatus:'pending'}]}};

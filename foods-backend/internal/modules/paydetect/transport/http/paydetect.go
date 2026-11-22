@@ -263,6 +263,16 @@ func (h *Handler) Notifications(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, result, err)
 }
 
+// Notification returns one detected payment of the location.
+func (h *Handler) Notification(w http.ResponseWriter, r *http.Request) {
+	scope, ok := shared.Scope(w, r)
+	if !ok {
+		return
+	}
+	notification, err := h.notifications.Get(r.Context(), scope, r.PathValue("id"))
+	respond(w, http.StatusOK, notification, err)
+}
+
 // AssociateNotification links a detected payment to an order of the same
 // local, validated through the contracts of the orders module.
 func (h *Handler) AssociateNotification(w http.ResponseWriter, r *http.Request) {

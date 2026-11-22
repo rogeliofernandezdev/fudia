@@ -281,8 +281,8 @@ func (r *Pay) Notification(ctx context.Context, s scope, id string) (domain.Noti
 		SELECT `+notificationColumns+`
 		FROM pay_notifications n
 		JOIN pay_devices d ON d.id=n.device_id
-		WHERE n.id=$1 AND n.organization_id=$2 AND n.location_id=$3
-	`, id, s.OrganizationID, s.LocationID))
+		WHERE n.id=$1::uuid AND n.organization_id=$2 AND n.location_id=$3
+	`, database.UUIDArg(id), s.OrganizationID, s.LocationID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Notification{}, application.ErrNotificationNotFound
 	}

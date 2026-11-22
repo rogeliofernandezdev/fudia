@@ -21,6 +21,8 @@ type noticeFeed struct {
 		OrderID string `json:"orderId"`
 		TableID string `json:"tableId"`
 		Read    bool   `json:"read"`
+		// PayNotificationID: pago de Fudia Pay de los avisos pay_detected.
+		PayNotificationID string `json:"payNotificationId"`
 	} `json:"items"`
 	Unread int `json:"unread"`
 }

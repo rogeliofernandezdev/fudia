@@ -4,11 +4,11 @@ import {useEffect,useId,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useRouter} from "next/navigation";
 import {Button,EmptyState,ErrorState,Icon,IconButton,IconTile,Skeleton,type IconName} from "@/design-system";
-import {PayProviderTag,usePayLeader} from "@/modules/payment-devices";
+import {PayNotificationOpener,PayProviderTag,usePayLeader} from "@/modules/payment-devices";
 import {useSession} from "@/providers/session-context";
 import {useStoredFlag} from "@/shared/hooks/use-stored-flag";
 import {useNotices} from "../application/use-notices";
-import {freshNotices,noticeAge,noticeHref,noticePaymentSummary,noticeTargets,noticeTone,unreadLabel} from "../domain/notice-rules";
+import {freshNotices,noticeAge,noticeHref,noticePaymentId,noticePaymentSummary,noticeTargets,noticeTone,unreadLabel} from "../domain/notice-rules";
 import {noticeSoundFor} from "../domain/notice-sound";
 import type {NoticeKind,StaffNotice} from "../domain/types";
 import {useNoticeSound} from "./use-notice-sound";
@@ -39,6 +39,8 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
  const[open,setOpen]=useState(false);
  const[announcement,setAnnouncement]=useState("");
  const[toast,setToast]=useState<{notice:StaffNotice;more:number}|null>(null);
+ // Pago de Fudia Pay abierto desde su aviso: se asocia aquí mismo, sin ir a Caja.
+ const[paymentId,setPaymentId]=useState<string|null>(null);
  const[toastHovered,setToastHovered]=useState(false);
  const[toastLeaving,setToastLeaving]=useState(false);
  const[pageHidden,setPageHidden]=useState(false);
@@ -107,6 +109,8 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
   setOpen(false);
   setToast(null);
   const target=noticeTargets(notice).find(canOpen);
+  const payment=noticePaymentId(target,notice);
+  if(payment){setPaymentId(payment);return}
   if(target)router.push(noticeHref(target,notice));
  }
  const items=feed.data?.items??[];
@@ -154,5 +158,7 @@ export function NotificationBell({canOpen=()=>true}:{canOpen?:(href:string)=>boo
    <IconButton icon="close" label="Descartar aviso" className="notification-toast-close" onClick={()=>setToastLeaving(true)}/>
    <span className="notification-toast-timer" aria-hidden="true" style={{animationDuration:`${toastDuration}ms`}}/>
   </section>,document.body)}
+  {/* Portal por el mismo motivo: el modal del pago debe cubrir toda la pantalla. Al cerrar vuelve el foco a la campana. */}
+  {paymentId&&createPortal(<PayNotificationOpener id={paymentId} onClose={()=>{setPaymentId(null);triggerRef.current?.focus()}}/>,document.body)}
  </div>;
 }

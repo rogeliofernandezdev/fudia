@@ -3611,8 +3611,12 @@ Los avisos nuevos de pago tienen X y se ocultan a los 8 segundos. El tiempo se
 pausa al señalar o enfocar la tarjeta, o con la pestaña oculta. Cerrar o agotar
 el tiempo no marca el pago como descartado ni cobra nada; la consulta sigue en
 Caja y la campana. La carga inicial del historial no dispara avisos flotantes.
-La campana admite `pay_detected` y abre directamente «Pagos detectados» de
-Caja (`/cash?tab=pagos`), sin un segundo aviso emergente del mismo pago.
+La campana admite `pay_detected`, sin un segundo aviso emergente del mismo
+pago. Tocar el aviso abre en el lugar el mismo modal «Asociar pago a pedido» del
+aviso flotante y de la tabla (2026-11-22): el aviso trae `payNotificationId` y el
+modal lee el pago por id, con skeleton y error explícito. Si el pago ya se asoció
+o se descartó, muestra su «Detalle del pago». Sin id (backend anterior) o sin
+acceso a Caja, el aviso sigue llevando a «Pagos detectados» (`/cash?tab=pagos`).
 Las filas de pago de la campana muestran el círculo de billetera de 40 px
 (ver «Lista de avisos»). Se reconoce solo
 el título canónico del aviso de pago; los demás avisos conservan su icono.
