@@ -73,6 +73,12 @@ Algunos fabricantes (HONOR/MagicOS) congelan la app por tipo de app aunque
 tenga permisos y servicio en primer plano; solo la descongelan con un push de
 Google, como a WhatsApp. El push es silencioso (solo datos `type=wake`,
 prioridad alta, vence al minuto) y no lleva datos del local ni del pago.
+**No lleva `collapse_key`** (2026-11-22): FCM limita los mensajes plegables a
+20 seguidos por teléfono y luego 1 cada 3 minutos, así que con la clave el
+teléfono congelado despertaba solo cada 3 min y el pago llegaba hasta 3 min
+tarde (medido: 98 y 122 s). Los no plegables admiten 240 por minuto por
+teléfono. Un envío fallido que no es token vencido queda en el log como
+`pay_wake_push_failed` (Caja no se entera).
 
 - El teléfono registra su token de Firebase Cloud Messaging en
   `pay_devices.push_token` (`PUT /v1/mobile/push-token`); vacío lo borra y

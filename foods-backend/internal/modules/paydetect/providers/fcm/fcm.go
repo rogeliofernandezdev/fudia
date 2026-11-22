@@ -47,15 +47,20 @@ func NewWithClient(client *http.Client, endpoint string) *Client {
 
 // wakeMessage es un mensaje solo de datos y prioridad alta: Android lo entrega
 // aunque el teléfono esté en reposo, la app no muestra nada y el mensaje vence
-// al minuto (un aviso viejo ya no sirve). collapse_key deja uno solo en espera.
+// al minuto (un aviso viejo ya no sirve, y así tampoco se acumulan).
+//
+// Sin collapse_key a propósito: FCM limita los mensajes plegables a 20 seguidos
+// por teléfono y luego 1 cada 3 minutos. Caja pide uno cada 10–30 s, así que con
+// la clave el teléfono congelado solo despertaba cada 3 min y el Yape llegaba
+// hasta 3 min tarde (medido 2026-11-22). El límite de los no plegables (240 por
+// minuto por teléfono) queda muy por encima de ese ritmo.
 func wakeMessage(token string) map[string]any {
 	return map[string]any{"message": map[string]any{
 		"token": token,
 		"data":  map[string]string{"type": "wake"},
 		"android": map[string]any{
-			"priority":     "HIGH",
-			"ttl":          "60s",
-			"collapse_key": "fudia-pay-wake",
+			"priority": "HIGH",
+			"ttl":      "60s",
 		},
 	}}
 }
@@ -84,7 +89,22 @@ func (c *Client) Wake(ctx context.Context, token string) error {
 	if tokenGone(res.StatusCode, raw) {
 		return application.ErrPushTokenGone
 	}
-	return fmt.Errorf("fcm: estado %d", res.StatusCode)
+	return fmt.Errorf("fcm: estado %d: %s", res.StatusCode, fcmErrorStatus(raw))
+}
+
+// fcmErrorStatus extrae el estado de error de FCM (QUOTA_EXCEEDED,
+// PERMISSION_DENIED…) para el log, sin copiar el cuerpo completo.
+func fcmErrorStatus(raw []byte) string {
+	var payload struct {
+		Error struct {
+			Status string `json:"status"`
+		} `json:"error"`
+	}
+	_ = json.Unmarshal(raw, &payload)
+	if payload.Error.Status == "" {
+		return "sin detalle"
+	}
+	return payload.Error.Status
 }
 
 // tokenGone reconoce los errores de FCM que significan «este token ya no sirve»:

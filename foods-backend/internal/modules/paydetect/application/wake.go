@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -84,6 +85,10 @@ func (w *Waker) Wake(ctx context.Context, s scope, now time.Time) (domain.WakeRe
 		case errors.Is(err, ErrPushTokenGone):
 			// El token ya no existe: la app registrará uno nuevo al abrir o en su barrido.
 			_ = w.repo.ClearPushToken(ctx, targets[i].DeviceID, targets[i].Token)
+		default:
+			// Caja no se entera (es de mejor esfuerzo), pero queda en el log: sin
+			// esto, una cuota o un permiso de FCM fallaban en silencio.
+			slog.Warn("pay_wake_push_failed", "device_id", targets[i].DeviceID, "error", err.Error())
 		}
 	}
 	return domain.WakeResult{Devices: devices, Sent: sent}, nil

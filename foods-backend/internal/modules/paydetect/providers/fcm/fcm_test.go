@@ -28,6 +28,9 @@ func TestWakeSendsSilentHighPriorityMessage(t *testing.T) {
 	if message["token"] != "token-1" || android["priority"] != "HIGH" || message["notification"] != nil {
 		t.Fatalf("mensaje inesperado: %+v", message)
 	}
+	if _, collapsible := android["collapse_key"]; collapsible {
+		t.Fatal("sin collapse_key: FCM limita los plegables a 1 cada 3 min por teléfono")
+	}
 	if data := message["data"].(map[string]any); len(data) != 1 || data["type"] != "wake" {
 		t.Fatalf("el push no debe llevar datos del local: %+v", data)
 	}
