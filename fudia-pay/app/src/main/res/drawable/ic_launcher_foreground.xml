@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Primer plano del icono adaptativo: el lienzo mide 108 dp y el lanzador
+     solo muestra el círculo central de 66 dp. El logo llena su PNG de borde a
+     borde, así que se encoge al 56 % (22 % por lado) para que el gorro de chef
+     no quede recortado en ninguna máscara (círculo, gota o cuadrado). -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/logo_mark"
+    android:inset="22%" />

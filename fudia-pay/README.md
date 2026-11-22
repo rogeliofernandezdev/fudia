@@ -106,10 +106,11 @@ puede estar concedido con el servicio muerto. Por eso:
   procesa los pagos de Yape/Plin que siguen en la bandeja (clave idempotente).
   Diagnóstico: `adb shell dumpsys notification | grep -A2 "listeners ("`; en
   HONOR los `Log.d` se filtran: `adb shell setprop log.tag.FudiaPay D`.
-- La pantalla de inicio muestra la **salud real** (conectado/desconectado y
-  hace cuánto, según lo que reporta el propio servicio) y ofrece excluir la
-  app de la **optimización de batería**; en ajustes de marca conviene además
-  activar «Iniciar automáticamente» y fijar la app en recientes.
+- La pantalla de inicio muestra la **salud real** de la detección (sin
+  permiso, «Conectando» si el servicio no está conectado, o «Activa») y pide
+  excluir la app de la **optimización de batería** solo cuando falta; en
+  ajustes de marca conviene además activar «Iniciar automáticamente» y fijar
+  la app en recientes.
 
 ## Estructura
 
@@ -132,7 +133,20 @@ colores en `core/design/Theme.kt` y una cabecera compartida
 (`core/design/FudiaHeader.kt`) igual en bienvenida e inicio, como la cabecera
 marino del panel web: fondo `navigation-900`, la marca en un cuadro blanco de
 44 dp, «Fudia Pay» en negrita blanca y «Pagos de Yape y Plin para tu caja» en
-`navigation-text`.
+`navigation-text` (inicio omite esa descripción).
+
+Inicio es una **lista de controles** en una tarjeta blanca: una fila por punto
+que importa, con icono Tabler en cuadro de color (36 dp), título a la izquierda
+y valor en negrita a la derecha, separadas por una línea fina. Filas:
+«Detección de pagos» (Activa en verde; Conectando en ámbar; «Activar» en azul
+si falta el permiso), «Batería · Permitir» solo cuando la app no está exenta,
+el restaurante con su local y «Pagos sin enviar» (0, o «Enviar N» cuando hay
+cola). Una fila con acción es táctil entera; sin textos de apoyo ni notas al
+pie. «Desvincular este teléfono» queda fijo al pie como botón de texto.
+
+El icono del lanzador es adaptativo: fondo blanco y el logo con 22 % de margen
+por lado (`drawable/ic_launcher_foreground.xml`), para que ninguna máscara lo
+recorte.
 
 La bienvenida muestra una sola acción por estado: «Vincular restaurante» (azul,
 48 dp) con la instrucción de Caja debajo; con el escáner abierto, solo el

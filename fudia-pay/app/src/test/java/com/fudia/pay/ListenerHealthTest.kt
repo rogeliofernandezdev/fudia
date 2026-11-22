@@ -2,8 +2,8 @@ package com.fudia.pay
 
 import com.fudia.pay.features.notifications.ListenerHealth
 import com.fudia.pay.features.notifications.shouldForceRebind
-import com.fudia.pay.features.settings.livenessText
-import com.fudia.pay.features.settings.sinceLabel
+import com.fudia.pay.features.settings.DetectionState
+import com.fudia.pay.features.settings.detectionState
 import com.fudia.pay.features.sync.shouldRequestRebind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -12,8 +12,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** La salud del servicio muestra la verdad del sistema: conectado o
- *  desconectado con hace cuánto, en español claro. */
+/** La salud del servicio muestra la verdad del sistema: sin permiso,
+ *  conectando o activa. */
 class ListenerHealthTest {
 
     @Test
@@ -24,18 +24,13 @@ class ListenerHealthTest {
     }
 
     @Test
-    fun `el texto de antiguedad usa minutos, horas y dias`() {
-        assertEquals("ahora mismo", sinceLabel(atMillis = 0, now = 59_999))
-        assertEquals("hace 1 minuto", sinceLabel(atMillis = 0, now = 60_000))
-        assertEquals("hace 5 minutos", sinceLabel(atMillis = 0, now = 5 * 60_000))
-        assertEquals("hace 2 h", sinceLabel(atMillis = 0, now = 120 * 60_000))
-        assertEquals("hace 3 d", sinceLabel(atMillis = 0, now = 3 * 1_440 * 60_000))
-    }
-
-    @Test
-    fun `sin conexiones registradas el texto lo admite`() {
-        val health = ListenerHealth(0, 0)
-        assertEquals("El servicio de escucha aún no se ha conectado.", livenessText(health, now = 1_000))
+    fun `inicio muestra la deteccion segun permiso y servicio`() {
+        val connected = ListenerHealth(connectedAtMillis = 10, disconnectedAtMillis = 0)
+        val disconnected = ListenerHealth(connectedAtMillis = 5, disconnectedAtMillis = 10)
+        assertEquals(DetectionState.Off, detectionState(granted = false, health = connected))
+        assertEquals(DetectionState.Connecting, detectionState(granted = true, health = ListenerHealth(0, 0)))
+        assertEquals(DetectionState.Connecting, detectionState(granted = true, health = disconnected))
+        assertEquals(DetectionState.Active, detectionState(granted = true, health = connected))
     }
 
     @Test

@@ -33,10 +33,10 @@ const val FUDIA_PAY_TAGLINE = "Pagos de Yape y Plin para tu caja"
  * Cabecera de la app con la misma gramática que la cabecera marino del panel
  * web (`dispatch-app-header`): fondo `navigation-900` bajo la barra de estado,
  * la marca en un cuadro blanco de 44 dp, el nombre en negrita blanca y la
- * descripción en `navigation-text`. La comparten bienvenida e inicio.
+ * descripción en `navigation-text` (opcional). La comparten bienvenida e inicio.
  */
 @Composable
-fun FudiaHeader(title: String = "Fudia Pay", description: String = FUDIA_PAY_TAGLINE) {
+fun FudiaHeader(title: String = "Fudia Pay", description: String? = FUDIA_PAY_TAGLINE) {
     Surface(color = FudiaNavy) {
         Row(
             modifier = Modifier
@@ -58,7 +58,10 @@ fun FudiaHeader(title: String = "Fudia Pay", description: String = FUDIA_PAY_TAG
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(description, color = FudiaNavigationText, style = MaterialTheme.typography.bodySmall)
+                // Inicio la omite: ahí la pantalla ya dice todo con sus filas.
+                if (description != null) {
+                    Text(description, color = FudiaNavigationText, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }
