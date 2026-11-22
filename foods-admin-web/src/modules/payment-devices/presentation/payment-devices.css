@@ -131,4 +131,27 @@
 .pay-balance{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-card);background:var(--cloud-50);color:var(--ink-950)}
 .pay-balance span{font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
 .pay-balance strong{font-size:var(--font-size-lg);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums}
-@media(max-width:600px){.pay-detail-summary{grid-template-columns:auto minmax(0,1fr);row-gap:var(--space-2)}.pay-detail-summary>.status{grid-column:2;justify-self:start}}
+/* Barra de cobertura (boceto A, 2026-11-22). Resumen de la asociación:
+   billetera | monto | remitente y hora alineados a la derecha. */
+.pay-detail-sender{display:grid;justify-items:end;gap:var(--space-0-5);min-width:0;margin:0;text-align:right}
+.pay-detail-sender strong{color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
+.pay-detail-sender time{color:var(--ink-500);font-size:var(--font-size-label)}
+/* Pedido elegido: icono del canal | mesa o cliente con «canal · código · antigüedad» | coincidencia con el remitente. */
+.pay-selected-order{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-3)}
+.pay-selected-order .pay-order-main strong{color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);overflow-wrap:anywhere}
+/* Cobertura: lo que quedará como cifra principal, barra en el color de la billetera y leyenda en tres columnas. */
+.pay-coverage{display:grid;gap:var(--space-3);padding:var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);color:var(--ink-950)}
+.pay-coverage-head{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)}
+.pay-coverage dl{margin:0}
+.pay-coverage dt{display:flex;align-items:center;gap:var(--space-1-5);color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.pay-coverage dd{margin:var(--space-0-5) 0 0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pay-coverage-left dd{font-size:var(--font-size-2xl);font-weight:var(--weight-heavy);line-height:var(--line-height-tight)}
+.pay-coverage-bar{display:flex;height:var(--size-10);overflow:hidden;border-radius:var(--radius-pill);background:var(--cloud-100)}
+.pay-coverage-bar>span{min-width:var(--size-10);border-radius:var(--radius-pill);transition:width var(--duration-base) var(--ease-out)}
+.pay-coverage-bar[data-provider=yape]>span,.pay-coverage-dot[data-provider=yape]{background:var(--wallet-yape)}
+.pay-coverage-bar[data-provider=plin]>span,.pay-coverage-dot[data-provider=plin]{background:var(--wallet-plin)}
+.pay-coverage-dot{flex:none;width:var(--size-8);height:var(--size-8);border-radius:var(--radius-pill)}
+.pay-coverage-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3)}
+.pay-coverage-legend dd{font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
+.pay-coverage-legend>div:last-child{display:grid;justify-items:end}
+@media(max-width:600px){.pay-detail-summary{grid-template-columns:auto minmax(0,1fr);row-gap:var(--space-2)}.pay-detail-summary>.status{grid-column:2;justify-self:start}.pay-detail-sender{grid-column:2;justify-items:start;text-align:left}.pay-selected-order{grid-template-columns:auto minmax(0,1fr)}.pay-selected-order>.status{grid-column:2;justify-self:start}}

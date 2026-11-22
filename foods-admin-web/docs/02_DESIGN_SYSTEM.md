@@ -3629,11 +3629,14 @@ de billetera, monto, estado, remitente y hora de recepción, seguido de la
 selección y revisión del pedido. La consulta es de solo lectura y no lleva pie ni botón «Asociar a
 pedido»: esa acción ya existe en la fila (enlace) y en el aviso flotante, que
 abre directo la asociación (ajuste solicitado por el usuario, 2026-11-19).
-Ambas vistas abren con una tarjeta suave (`cloud-50`, `radius-card`) con la
-billetera (en la asociación, el círculo «yape»/«plin» de la tabla), monto y
-estado, y los datos en `DetailFacts` de dos columnas (consulta: Remitente ·
-Número de operación, Teléfono de origen · Fecha y hora; asociación: Remitente ·
-Recibido, sin el modelo del teléfono, que no ayuda a elegir el pedido).
+Ambas vistas abren con una tarjeta suave (`cloud-50`, `radius-card`). La
+consulta muestra billetera, monto y estado, y debajo `DetailFacts` de dos
+columnas (Remitente · Número de operación, Teléfono de origen · Fecha y hora).
+La asociación (boceto A «Barra de cobertura», 2026-11-22) reúne todo en la
+tarjeta: círculo «yape»/«plin» de la tabla | «Monto recibido» | remitente
+(14 px, 600) y hora alineados a la derecha (en móvil bajan bajo el monto), sin
+`Status` «Detectado» (siempre lo es) ni `DetailFacts`, y sin el modelo del
+teléfono, que no ayuda a elegir el pedido.
 Asociación (boceto A, 2026-11-21): «Elige el pedido» con búsqueda «Buscar
 mesa, cliente o pedido» en el servidor (código, cliente y nombre de mesa),
 solo pedidos por cobrar y listos para cobrar (`paymentStatus=unpaid`,
@@ -3648,9 +3651,28 @@ el cajero reconoce — el nombre de la mesa («Mesa 2») o el cliente — y deba
 «canal · código · hace N min» | lo que falta cobrar en negrita con «Por cobrar»
 o «de S/ total» si ya tiene pagos parciales | chevron. Se ordena por cercanía
 del saldo (no del total) al pago y el pedido cuyo saldo coincide muestra `Tag`
-«Monto exacto»; no hay texto de ayuda que lo repita. La revisión destaca el saldo pendiente en una franja propia antes de
-«Asociar pago». La asociación usa `ModalBody` desplazable y
-`ModalFooter` fijo solo en la revisión del pedido.
+«Monto exacto»; no hay texto de ayuda que lo repita. Revisión del pedido
+(boceto A «Barra de cobertura», 2026-11-22): «Revisa el pedido» queda solo
+para lectores de pantalla; la fila del pedido lo dice. Fila
+`pay-selected-order`: `IconTile` del canal | mesa o cliente (16 px, 700) con
+«canal · código · antigüedad», la misma identidad de la lista | `Status` verde
+`userCheck` «Coincide con el remitente» cuando el remitente y el cliente son
+la misma persona (sin tildes ni mayúsculas; cada palabra del nombre más corto
+empieza la correspondiente del otro, mínimo dos palabras:
+`domain/sender-match.ts`). Debajo, la tarjeta `pay-coverage` (superficie
+blanca, línea `line`, `radius-card`): «Quedará pendiente» como cifra principal
+(`font-size-2xl`, 800) con el `Status` suave del resultado a la derecha
+(«Pago parcial» naranja si queda saldo, «Pago completo» verde con
+`circleCheck`; etiquetas de cuenta de Ventas/POS); una barra de 10 px
+(`cloud-100`) cuyo tramo en el color de la billetera (`--wallet-yape` /
+`--wallet-plin`) muestra la parte del saldo que cubre el pago; y una leyenda
+de tres columnas: Saldo | ● Este pago «− S/ aplicado» | Cubre «N %» a la
+derecha (1–99 % si queda saldo, 100 % si lo salda). Si el pago excede el
+saldo solo aplica el saldo y la nota explica la diferencia. Un pedido ya
+pagado muestra solo la franja «Saldo pendiente S/ 0.00» y su aviso. Cada paso abre desde arriba: la
+revisión no hereda el desplazamiento de la lista de pedidos. La asociación
+usa `ModalBody` desplazable y `ModalFooter` fijo solo en la revisión del
+pedido.
 Los pagos ya asociados o descartados son de lectura. Las consultas de
 medios, pedidos y saldo presentan skeleton, error con reintento y vacío propio;
 no se muestra un vacío antes de consultar. El medio corresponde al proveedor

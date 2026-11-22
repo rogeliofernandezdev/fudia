@@ -12,6 +12,7 @@ import type {PayNotification,PayOrderRef} from "../domain/types";
 import {PayProviderTag} from "./pay-status-tag";
 import {associatePayNotification,payOrderDetail,paySalesMethods,searchPayOrders} from "../infrastructure/pay-devices-api";
 import {usePayCollection} from "./pay-collection-context";
+import {senderMatchesCustomer} from "../domain/sender-match";
 
 type PayNotificationMode="detail"|"associate";
 type Props={notification:PayNotification|null;mode?:PayNotificationMode;onClose:()=>void;onDone:()=>void};
@@ -52,7 +53,13 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
   const [selected,setSelected]=useState<PayOrderRef|null>(null);
   const associationHeading=useRef<HTMLHeadingElement>(null);
   const associating=notification.status==="detected"&&mode==="associate";
-  useEffect(()=>{if(associating)associationHeading.current?.focus({preventScroll:true})},[associating,view]);
+  // Cada paso empieza arriba: el desplazamiento de la lista de pedidos no se
+  // hereda a la revisión (cortaba la tarjeta del pago bajo la cabecera).
+  useEffect(()=>{
+    if(!associating)return;
+    associationHeading.current?.closest(".modal-body")?.scrollTo({top:0});
+    associationHeading.current?.focus({preventScroll:true});
+  },[associating,view]);
   const dateTime=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
 
   const methods=useQuery({queryKey:["pay-sales-methods"],queryFn:paySalesMethods,enabled:associating});
@@ -102,26 +109,30 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
 
   return <Modal title={associating?"Asociar pago a pedido":"Detalle del pago"} className="pay-detail-modal" busy={associate.isPending} onClose={onClose}>
     <ModalBody className="pay-detail-body">
-      <section className="pay-detail-summary" aria-label="Resumen del pago">
+      {/* Al asociar (boceto A «Barra de cobertura», 2026-11-22) el resumen reúne
+          billetera, monto, remitente y hora en una sola tarjeta: el estado
+          siempre es «Detectado» y no se repite. */}
+      {associating?<section className="pay-detail-summary is-compact" aria-label="Resumen del pago">
+        <PayProviderTag provider={notification.provider} appearance="circle"/>
+        <dl className="pay-detail-amount"><dt>Monto recibido</dt><dd>{money(notification.amount)}</dd></dl>
+        <p className="pay-detail-sender"><strong>{notification.senderName||"Sin remitente"}</strong><time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time></p>
+      </section>:<section className="pay-detail-summary" aria-label="Resumen del pago">
         <PayProviderTag provider={notification.provider} appearance="circle"/>
         <dl className="pay-detail-amount"><dt>Monto recibido</dt><dd>{money(notification.amount)}</dd></dl>
         <Status tone={meta.tone} icon={notification.status==="associated"?"circleCheck":undefined}>{meta.label}</Status>
-      </section>
-      <DetailFacts label="Datos del pago" items={associating?[
-        {label:"Remitente",value:notification.senderName||"Sin remitente"},
-        {label:"Recibido",value:<time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time>},
-      ]:[
+      </section>}
+      {!associating&&<DetailFacts label="Datos del pago" items={[
         {label:"Remitente",value:notification.senderName||"Sin remitente"},
         {label:"Número de operación",value:notification.operationNumber||"No informado"},
         {label:"Teléfono de origen",value:notification.deviceName||"No informado"},
         {label:"Fecha y hora",value:<time dateTime={notification.occurredAt}>{dateTime(notification.occurredAt)}</time>},
-      ]}/>
+      ]}/>}
 
       {associating?<section aria-label="Asociar pago a pedido" className="pay-associate">
-        <div className="pay-associate-heading">
+        <div className={view==="detail"?"sr-only":"pay-associate-heading"}>
+          {/* En la revisión, la fila del pedido ya dice qué se revisa: el título queda para lectores de pantalla. */}
           <h3 ref={associationHeading} tabIndex={-1}>{view==="detail"?"Revisa el pedido":"Elige el pedido"}</h3>
-          {view!=="orders"&&<p className="form-help">{view==="detail"?"La asociación registra el cobro real en este pedido."
-            :"Estás cobrando este pedido; la asociación nunca es automática."}</p>}
+          {view==="suggestion"&&<p className="form-help">Estás cobrando este pedido; la asociación nunca es automática.</p>}
         </div>
 
         {methods.isLoading?<OrderLoading label="Preparando la asociación"/>
@@ -141,10 +152,7 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
             :pending.isError?<ErrorState className="pay-detail-state" title="No pudimos cargar los pedidos" text={pending.error.message} onRetry={()=>void pending.refetch()}/>
             :suggestions.length?<ul className="pay-order-options">
               {suggestions.map(item=>{
-                // Se reconoce por la mesa («Mesa 2») o el cliente; el código del pedido y la antigüedad acompañan.
-                const channel=item.channel??"",table=channel==="salon"?item.tableName:"";
-                const title=table||item.customerName||channelLabel(channel)||item.code;
-                const meta=[table?"":channelLabel(channel),item.code,orderAge(item.createdAt)].filter(part=>part&&part!==title).join(" · ");
+                const {channel,title,meta}=orderIdentity(item);
                 const partial=item.total!==undefined&&due(item)<Number(item.total);
                 return <li key={item.id}>
                   <OrderOption tile={channelTiles[channel]} title={title} meta={meta} amount={money(String(due(item)))} note={partial?`de ${money(item.total!)}`:"Por cobrar"} exact={exact(String(due(item)))} onClick={()=>choose(item)}/>
@@ -157,15 +165,11 @@ function DetailBody({notification,mode,onClose,onDone}:Omit<Props,"notification"
             {detail.isLoading?<OrderLoading label="Cargando el detalle del pedido"/>
             :detail.isError?<ErrorState className="pay-detail-state" title="No pudimos cargar el pedido" text={detail.error.message} onRetry={()=>void detail.refetch()}/>
             :detail.data&&<>
-              <DetailFacts label="Pedido seleccionado" items={[
-                {label:"Pedido",value:<><strong>{detail.data.order.code}</strong> · {channelLabel(detail.data.order.channel)}</>},
-                ...(detail.data.order.customerName?[{label:"Cliente",value:detail.data.order.customerName}]:[]),
-                {label:"Total del pedido",value:money(detail.data.order.total)},
-                {label:"Pagos registrados",value:money(detail.data.paidAmount)},
-              ]}/>
-              <div className="pay-balance" role="group" aria-label="Saldo del pedido">
+              <SelectedOrder order={{...selected,code:detail.data.order.code,channel:detail.data.order.channel,customerName:detail.data.order.customerName??selected.customerName}} senderName={notification.senderName}/>
+              {remaining!==null&&remaining>0?<PaymentCoverage provider={notification.provider} remaining={remaining} applied={Math.min(amount,remaining)} money={money}/>
+              :<div className="pay-balance" role="group" aria-label="Saldo del pedido">
                 <span>Saldo pendiente</span><strong>{money(detail.data.remainingAmount)}</strong>
-              </div>
+              </div>}
               {remaining===0&&<p className="form-help" role="status">Este pedido ya está pagado. Elige otro pedido para asociar el pago.</p>}
               {over&&remaining!==0&&<p className="form-help" role="status">El pago supera el saldo pendiente en {money(amount-remaining!)}. Se registrará solo el saldo y la diferencia quedará sin aplicar.</p>}
             </>}
@@ -197,6 +201,50 @@ function OrderOption({tile,title,meta,amount,note,exact,onClick}:{tile?:{icon:Ic
       <Icon name="chevron" size={16} className="pay-order-chevron"/>
     </span>
   </button>;
+}
+
+/** Se reconoce por la mesa («Mesa 2») o el cliente; canal, código del pedido y
+ * antigüedad acompañan. Igual en la lista y en la revisión. */
+function orderIdentity(item:PayOrderRef){
+  const channel=item.channel??"",table=channel==="salon"?item.tableName:"";
+  const title=table||item.customerName||channelLabel(channel)||item.code;
+  const meta=[table?"":channelLabel(channel),item.code,orderAge(item.createdAt)].filter(part=>part&&part!==title).join(" · ");
+  return {channel,title,meta};
+}
+
+/** Revisión del pedido elegido (boceto A, 2026-11-22): icono del canal,
+ * mesa o cliente como título y «canal · código · antigüedad»; si el remitente
+ * es el cliente, una etiqueta lo confirma. */
+function SelectedOrder({order,senderName}:{order:PayOrderRef;senderName?:string}){
+  const {channel,title,meta}=orderIdentity(order);
+  const tile=channelTiles[channel];
+  return <div className="pay-selected-order" role="group" aria-label="Pedido seleccionado">
+    <IconTile name={tile?.icon??"receipt"} tone={tile?.tone??"primary"}/>
+    <span className="pay-order-main"><strong>{title}</strong>{meta&&<small>{meta}</small>}</span>
+    {senderMatchesCustomer(senderName,order.customerName)&&<Status tone="green" icon="userCheck">Coincide con el remitente</Status>}
+  </div>;
+}
+
+/** Barra de cobertura (boceto A, 2026-11-22): lo que quedará pendiente como
+ * cifra principal y el estado resultante (etiqueta de cuenta de Ventas/POS:
+ * Pago parcial naranja, Pago completo verde); la barra muestra qué parte del
+ * saldo cubre este pago en el color de la billetera; debajo, Saldo, Este pago
+ * y Cubre. Si el pago excede el saldo solo aplica el saldo. */
+function PaymentCoverage({provider,remaining,applied,money}:{provider:PayNotification["provider"];remaining:number;applied:number;money:(value:number)=>string}){
+  const left=Math.max(0,Math.round((remaining-applied)*100)/100);
+  const covered=left===0?100:Math.min(99,Math.max(1,Math.round(applied/remaining*100)));
+  return <section className="pay-coverage" aria-label="Cobertura del pago">
+    <div className="pay-coverage-head">
+      <dl className="pay-coverage-left"><dt>Quedará pendiente</dt><dd>{money(left)}</dd></dl>
+      {left>0?<Status tone="orange">Pago parcial</Status>:<Status tone="green" icon="circleCheck">Pago completo</Status>}
+    </div>
+    <div className="pay-coverage-bar" data-provider={provider} role="img" aria-label={`Este pago cubre el ${covered} % del saldo`}><span style={{width:`${covered}%`}}/></div>
+    <dl className="pay-coverage-legend">
+      <div><dt>Saldo</dt><dd>{money(remaining)}</dd></div>
+      <div><dt><i className="pay-coverage-dot" data-provider={provider} aria-hidden="true"/>Este pago</dt><dd>−&nbsp;{money(applied)}</dd></div>
+      <div><dt>Cubre</dt><dd>{covered}&nbsp;%</dd></div>
+    </dl>
+  </section>;
 }
 
 function OrderLoading({label}:{label:string}){
