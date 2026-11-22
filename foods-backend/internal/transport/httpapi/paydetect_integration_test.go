@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,10 +18,16 @@ import (
 	paydetectpg "github.com/foods-platform/foods-backend/internal/modules/paydetect/infrastructure/postgres"
 )
 
-// recordingPusher registra los tokens despertados sin salir a Firebase.
-type recordingPusher struct{ tokens []string }
+// recordingPusher registra los tokens despertados sin salir a Firebase. El
+// Waker envía en paralelo: el registro va protegido.
+type recordingPusher struct {
+	mu     sync.Mutex
+	tokens []string
+}
 
 func (p *recordingPusher) Wake(_ context.Context, token string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.tokens = append(p.tokens, token)
 	return nil
 }
@@ -473,22 +480,23 @@ func TestPayDetectPairingReportAndCashReview(t *testing.T) {
 	pusher := &recordingPusher{}
 	waker := paydetectapp.NewWaker(paydetectpg.New(pool), pusher)
 	wakeAt := time.Now()
-	wake := func(subject scope, at time.Time) int {
+	devicesAt := func(subject scope, at time.Time) paydetectdomain.WakeResult {
 		t.Helper()
 		result, err := waker.Wake(context.Background(), subject, at)
 		if err != nil {
 			t.Fatalf("wake: %v", err)
 		}
-		return result.Sent
+		return result
 	}
+	wake := func(subject scope, at time.Time) int { t.Helper(); return devicesAt(subject, at).Sent }
 	if sent := wake(s, wakeAt); sent != 1 || len(pusher.tokens) != 1 || pusher.tokens[0] != "fcm-token-1" {
 		t.Fatalf("primer aviso: %d %v", sent, pusher.tokens)
 	}
-	if sent := wake(s, wakeAt.Add(time.Second)); sent != 0 {
-		t.Fatalf("el intervalo debe limitar el aviso: %d", sent)
+	if result := devicesAt(s, wakeAt.Add(time.Second)); result.Sent != 0 || result.Devices != 1 {
+		t.Fatalf("el intervalo limita el aviso pero el local sigue contando su teléfono: %+v", result)
 	}
-	if sent := wake(other, wakeAt.Add(time.Minute)); sent != 0 {
-		t.Fatalf("otro restaurante no despierta este teléfono: %d", sent)
+	if result := devicesAt(other, wakeAt.Add(time.Minute)); result.Sent != 0 || result.Devices != 0 {
+		t.Fatalf("otro restaurante no despierta ni cuenta este teléfono: %+v", result)
 	}
 	if sent := wake(s, wakeAt.Add(paydetectdomain.WakeInterval+time.Second)); sent != 1 {
 		t.Fatalf("pasado el intervalo vuelve a avisar: %d", sent)

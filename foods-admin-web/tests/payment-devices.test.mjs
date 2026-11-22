@@ -229,9 +229,17 @@ test("Fudia Pay: Yape y Plin suenan distinto y la pestaña parpadea mientras no 
   assert.deepEqual([...alert.payAlertSequence(["yape","yape","plin","yape"])],["yape","plin"],"pagos juntos de la misma billetera suenan una vez");
   assert.equal(alert.payAlertTitle(1,{provider:"Yape",amount:"S/ 25.00"}),"Yape · S/ 25.00 recibido");
   assert.equal(alert.payAlertTitle(3,{provider:"Plin",amount:"S/ 5.00"}),"(3) Pagos recibidos");
+  const schedule=alert.payAlertSchedule(["yape","plin","yape"]);
+  assert.equal(schedule.length,alert.payAlertTones.yape.length+alert.payAlertTones.plin.length,"cada billetera suena una vez");
+  assert.equal(schedule[alert.payAlertTones.yape.length].offset,alert.PAY_ALERT_GAP_S,"Plin suena después de Yape, con su pausa");
+  const audio=read("src/shared/audio/web-audio.ts");
+  assert.equal((audio.match(/new window\.AudioContext\(\)/g)||[]).length,1,"un solo AudioContext para toda la página");
+  assert.match(audio,/addEventListener\("pointerdown",unlockAudio/,"el audio se habilita con el primer toque, como exige el navegador");
+  assert.match(audio,/context\.state!=="running"/,"sabe si el navegador bloqueó el sonido");
+  for(const path of ["src/modules/payment-devices/presentation/use-pay-alert.ts","src/modules/notifications/presentation/use-notice-sound.ts","src/modules/delivery-panel/presentation/use-offer-alert.ts"])
+    assert.doesNotMatch(read(path),/AudioContext|createOscillator/,`${path} suena por shared/audio`);
   const hook=read("src/modules/payment-devices/presentation/use-pay-alert.ts");
-  assert.match(hook,/addEventListener\("pointerdown",enableSound\)/,"el audio se habilita con el primer toque, como exige el navegador");
-  assert.match(hook,/setSoundBlocked\(context\.state!=="running"\)/,"sabe si el navegador bloqueó el sonido");
+  assert.match(hook,/useAudioBlocked\(\)/);
   assert.match(hook,/if\(document\.hasFocus\(\)\)return;/,"con la pestaña a la vista solo suena: el aviso flotante ya se ve");
   assert.match(hook,/addEventListener\("focus",onFocus\)/,"el parpadeo termina al volver a la pestaña");
   assert.match(read("src/modules/payment-devices/presentation/pay-notice-layer.tsx"),/alert\(fresh\.map/,"solo los pagos nuevos suenan, no el historial inicial");

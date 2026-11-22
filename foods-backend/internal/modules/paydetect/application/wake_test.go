@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,12 +16,10 @@ type wakeRepo struct {
 	cleared  []string
 }
 
-func (r *wakeRepo) ClaimWakeTargets(_ context.Context, _ scope, _ time.Time, interval time.Duration) ([]domain.WakeTarget, error) {
+func (r *wakeRepo) ClaimWakeTargets(_ context.Context, _ scope, _ time.Time, interval time.Duration) (int, []domain.WakeTarget, error) {
 	r.interval = interval
-	return r.targets, nil
+	return len(r.targets), r.targets, nil
 }
-
-func (r *wakeRepo) CountPushDevices(context.Context, scope) (int, error) { return len(r.targets), nil }
 
 func (r *wakeRepo) ClearPushToken(_ context.Context, deviceID, _ string) error {
 	r.cleared = append(r.cleared, deviceID)
@@ -43,6 +42,40 @@ func TestWakeSendsToClaimedDevicesAndForgetsGoneTokens(t *testing.T) {
 	}
 	if len(repo.cleared) != 1 || repo.cleared[0] != "b" {
 		t.Fatalf("solo el token vencido se borra: %v", repo.cleared)
+	}
+}
+
+// slowPusher tarda en cada envío y cuenta cuántos llegaron a estar en curso a la vez.
+type slowPusher struct {
+	delay   time.Duration
+	mu      sync.Mutex
+	running int
+	peak    int
+}
+
+func (p *slowPusher) Wake(ctx context.Context, _ string) error {
+	p.mu.Lock()
+	p.running++
+	p.peak = max(p.peak, p.running)
+	p.mu.Unlock()
+	defer func() { p.mu.Lock(); p.running--; p.mu.Unlock() }()
+	select {
+	case <-time.After(p.delay):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func TestWakeSendsInParallel(t *testing.T) {
+	repo := &wakeRepo{targets: []domain.WakeTarget{{DeviceID: "a", Token: "1"}, {DeviceID: "b", Token: "2"}, {DeviceID: "c", Token: "3"}}}
+	pusher := &slowPusher{delay: 50 * time.Millisecond}
+	result, err := NewWaker(repo, pusher).Wake(context.Background(), scope{OrganizationID: "o", LocationID: "l"}, time.Now())
+	if err != nil || result.Sent != 3 {
+		t.Fatalf("result=%+v err=%v", result, err)
+	}
+	if pusher.peak != 3 {
+		t.Fatalf("los tres envíos deben ir a la vez; máximo simultáneo %d", pusher.peak)
 	}
 }
 

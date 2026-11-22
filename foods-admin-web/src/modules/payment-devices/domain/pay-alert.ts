@@ -1,7 +1,5 @@
+import type {Tone} from "@/shared/audio/tones";
 import type {PayProvider} from "./types";
-
-/** Una nota del aviso sonoro: frecuencia (Hz), inicio y duración (s). */
-export type PayTone={frequency:number;offset:number;duration:number;wave:"sine"|"triangle"};
 
 /**
  * Cada billetera tiene su propio sonido para que el cajero sepa cuál llegó sin
@@ -10,7 +8,7 @@ export type PayTone={frequency:number;offset:number;duration:number;wave:"sine"|
  * - Yape: tres notas cálidas que suben (do–mi–sol).
  * - Plin: dos notas agudas y brillantes, cortas, como un «plin».
  */
-export const payAlertTones:Record<PayProvider,PayTone[]>={
+export const payAlertTones:Record<PayProvider,Tone[]>={
   yape:[
     {frequency:523.25,offset:0,duration:.16,wave:"triangle"},
     {frequency:659.25,offset:.15,duration:.16,wave:"triangle"},
@@ -28,6 +26,12 @@ export const PAY_ALERT_GAP_S=.9;
 /** Billeteras a sonar, en orden de llegada y sin repetir: tres Yape juntos suenan una vez. */
 export function payAlertSequence(providers:PayProvider[]):PayProvider[]{
   return Array.from(new Set(providers));
+}
+
+/** Notas a tocar para los pagos que llegaron juntos: una billetera tras otra. */
+export function payAlertSchedule(providers:PayProvider[]):Tone[]{
+  return payAlertSequence(providers).flatMap((provider,index)=>
+    payAlertTones[provider].map(tone=>({...tone,offset:tone.offset+index*PAY_ALERT_GAP_S})));
 }
 
 /** Texto que alterna en la pestaña mientras el cajero no la está mirando. */

@@ -1,7 +1,5 @@
+import type {Tone} from "@/shared/audio/tones";
 import type {NoticeKind,StaffNotice} from "./types";
-
-/** Una nota del aviso sonoro: frecuencia (Hz), inicio y duración (s). */
-export type NoticeTone={frequency:number;offset:number;duration:number;wave:"sine"|"triangle"};
 
 /**
  * Sonido de la campana: uno solo para todo lo que pide atención («general») y
@@ -39,7 +37,7 @@ export function noticeSoundFor(notices:readonly Pick<StaffNotice,"kind">[]):Noti
  * «Ding-dong» propio de Fudia: dos notas suaves que bajan (sol–mi). No repite
  * la escalera que sube de Yape ni el brillo agudo de Plin.
  */
-export const noticeTones:NoticeTone[]=[
+export const noticeTones:Tone[]=[
   {frequency:783.99,offset:0,duration:.5,wave:"sine"},
   {frequency:659.25,offset:.28,duration:.7,wave:"sine"},
 ];
@@ -48,7 +46,7 @@ export const noticeTones:NoticeTone[]=[
 export const NOTICE_ALERT_REPEAT_S=1.1;
 
 /** Notas a tocar: el ding-dong una vez, o dos para la alerta. */
-export function noticeSoundSchedule(sound:NoticeSound):NoticeTone[]{
+export function noticeSoundSchedule(sound:NoticeSound):Tone[]{
   if(sound==="general")return noticeTones;
   return [...noticeTones,...noticeTones.map(tone=>({...tone,offset:tone.offset+NOTICE_ALERT_REPEAT_S}))];
 }

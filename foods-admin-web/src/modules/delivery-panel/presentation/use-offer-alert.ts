@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect,useRef} from "react";
+import {playTones,unlockAudio,type Tone} from "@/shared/audio";
 import {newOffers,urgentKeys} from "../domain/panel";
 import type {PanelOrder} from "../domain/types";
 
@@ -15,24 +16,12 @@ const TITLE="Panel de reparto";
 export function useOfferAlert(orders:PanelOrder[]|undefined,enabled:boolean){
   const seen=useRef<Set<string>>(new Set());
   const urgentSeen=useRef<Set<string>>(new Set());
-  const audio=useRef<AudioContext|null>(null);
   const offers=orders?.filter(order=>order.stage==="offer").length??0;
   const urgent=orders?urgentKeys(orders).length:0;
 
-  // El navegador solo deja sonar después de un gesto: el contexto se crea al
-  // activar los avisos y se reanuda con el siguiente toque tras recargar.
-  useEffect(()=>{
-    if(!enabled)return;
-    const resume=()=>{
-      const Context=window.AudioContext;
-      if(!Context)return;
-      audio.current??=new Context();
-      void audio.current.resume().catch(()=>undefined);
-    };
-    resume();
-    window.addEventListener("pointerdown",resume);
-    return ()=>window.removeEventListener("pointerdown",resume);
-  },[enabled]);
+  // El navegador solo deja sonar después de un gesto: el audio compartido se
+  // habilita al activar los avisos y se reanuda con el siguiente toque tras recargar.
+  useEffect(()=>{if(enabled)unlockAudio()},[enabled]);
 
   useEffect(()=>{
     document.title=urgent?`(${urgent}) Atención · ${TITLE}`:offers?`(${offers}) Pedido nuevo · ${TITLE}`:TITLE;
@@ -47,7 +36,7 @@ export function useOfferAlert(orders:PanelOrder[]|undefined,enabled:boolean){
     const freshUrgent=keys.filter(key=>!urgentSeen.current.has(key));
     urgentSeen.current=new Set(keys);
     if((!fresh.length&&!freshUrgent.length)||!enabled)return;
-    beep(audio.current);
+    playTones(OFFER_TONES);
     navigator.vibrate?.([220,120,220]);
     if(document.hidden&&"Notification" in window&&Notification.permission==="granted"){
       // En Android Chrome `new Notification` exige un service worker y lanza: el sonido ya avisó.
@@ -58,22 +47,10 @@ export function useOfferAlert(orders:PanelOrder[]|undefined,enabled:boolean){
 }
 
 /** Dos tonos cortos: se distinguen del resto de sonidos del teléfono sin ser estridentes. */
-function beep(context:AudioContext|null){
-  if(!context||context.state!=="running")return;
-  [0,.28].forEach((offset,index)=>{
-    const oscillator=context.createOscillator();
-    const gain=context.createGain();
-    const start=context.currentTime+offset;
-    oscillator.type="sine";
-    oscillator.frequency.value=index?1175:880;
-    gain.gain.setValueAtTime(.0001,start);
-    gain.gain.exponentialRampToValueAtTime(.35,start+.02);
-    gain.gain.exponentialRampToValueAtTime(.0001,start+.22);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start(start);
-    oscillator.stop(start+.24);
-  });
-}
+const OFFER_TONES:Tone[]=[
+  {frequency:880,offset:0,duration:.22,wave:"sine",peak:.35,attack:.02},
+  {frequency:1175,offset:.28,duration:.22,wave:"sine",peak:.35,attack:.02},
+];
 
 /** Pide el permiso de notificaciones al activar los avisos; negarlo no impide el sonido. */
 export function requestAlertPermission(){

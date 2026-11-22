@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/foods-platform/foods-backend/internal/modules/paydetect/domain"
@@ -23,9 +24,9 @@ type Pusher interface {
 // WakeRepository reserva los dispositivos a despertar respetando el intervalo
 // mínimo (de forma atómica en la base) y olvida los tokens vencidos.
 type WakeRepository interface {
-	ClaimWakeTargets(ctx context.Context, s scope, now time.Time, interval time.Duration) ([]domain.WakeTarget, error)
-	// CountPushDevices cuenta los dispositivos activos del local con token.
-	CountPushDevices(ctx context.Context, s scope) (int, error)
+	// ClaimWakeTargets devuelve cuántos dispositivos activos del local tienen
+	// token de push y reserva los que ya cumplieron el intervalo.
+	ClaimWakeTargets(ctx context.Context, s scope, now time.Time, interval time.Duration) (int, []domain.WakeTarget, error)
 	ClearPushToken(ctx context.Context, deviceID, token string) error
 }
 
@@ -57,28 +58,32 @@ func (w *Waker) Wake(ctx context.Context, s scope, now time.Time) (domain.WakeRe
 	unavailable := func(err error) (domain.WakeResult, error) {
 		return domain.WakeResult{}, payFailure(apperror.Unavailable, "pay_wake_unavailable", "No pudimos avisar a los dispositivos de pago.", err)
 	}
-	devices, err := w.repo.CountPushDevices(ctx, s)
+	devices, targets, err := w.repo.ClaimWakeTargets(ctx, s, now, domain.WakeInterval)
 	if err != nil {
 		return unavailable(err)
 	}
-	if devices == 0 {
-		return domain.WakeResult{}, nil
+	// Los envíos van en paralelo: con varios teléfonos, Caja espera a lo sumo
+	// un sendTimeout y no uno por teléfono.
+	results := make([]error, len(targets))
+	var wg sync.WaitGroup
+	for i, target := range targets {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sendCtx, cancel := context.WithTimeout(ctx, w.sendTimeout)
+			defer cancel()
+			results[i] = w.push.Wake(sendCtx, target.Token)
+		}()
 	}
-	targets, err := w.repo.ClaimWakeTargets(ctx, s, now, domain.WakeInterval)
-	if err != nil {
-		return unavailable(err)
-	}
+	wg.Wait()
 	sent := 0
-	for _, target := range targets {
-		sendCtx, cancel := context.WithTimeout(ctx, w.sendTimeout)
-		err := w.push.Wake(sendCtx, target.Token)
-		cancel()
+	for i, err := range results {
 		switch {
 		case err == nil:
 			sent++
 		case errors.Is(err, ErrPushTokenGone):
 			// El token ya no existe: la app registrará uno nuevo al abrir o en su barrido.
-			_ = w.repo.ClearPushToken(ctx, target.DeviceID, target.Token)
+			_ = w.repo.ClearPushToken(ctx, targets[i].DeviceID, targets[i].Token)
 		}
 	}
 	return domain.WakeResult{Devices: devices, Sent: sent}, nil

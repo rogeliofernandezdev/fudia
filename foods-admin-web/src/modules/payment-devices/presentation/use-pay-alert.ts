@@ -1,7 +1,8 @@
 "use client";
 
-import {useCallback,useEffect,useRef,useState} from "react";
-import {PAY_ALERT_GAP_S,PAY_TITLE_BLINK_MS,payAlertSequence,payAlertTitle,payAlertTones} from "../domain/pay-alert";
+import {useCallback,useEffect,useRef} from "react";
+import {playTones,unlockAudio,useAudioBlocked} from "@/shared/audio";
+import {PAY_TITLE_BLINK_MS,payAlertSchedule,payAlertTitle} from "../domain/pay-alert";
 import type {PayProvider} from "../domain/types";
 
 /**
@@ -9,45 +10,18 @@ import type {PayProvider} from "../domain/types";
  * Plin suenan distinto) y, mientras la pestaña no tiene el foco, su título
  * parpadea como en LinkedIn hasta que el cajero vuelve.
  *
- * El navegador solo deja sonar después de un gesto en la página (ningún worker
- * lo evita). El audio se prepara al cargar: si el navegador ya lo permite
- * (política del equipo o uso frecuente del sitio) queda activo; si no,
- * `soundBlocked` avisa para mostrar «Activar sonido de pagos», y cualquier
- * toque o tecla también lo habilita.
+ * Suena por el audio compartido de la página (shared/audio): si el navegador
+ * aún lo bloquea, `soundBlocked` avisa para mostrar «Activar sonido de pagos»,
+ * y cualquier toque o tecla también lo habilita.
  */
 export function usePayAlert(){
-  const audio=useRef<AudioContext|null>(null);
   const blink=useRef<{count:number;base:string;stop:(restore?:boolean)=>void}|null>(null);
-  const [soundBlocked,setSoundBlocked]=useState(false);
-
-  const enableSound=useCallback(()=>{
-    const context=audio.current;
-    if(context&&context.state!=="running")void context.resume().catch(()=>undefined);
-  },[]);
-
-  useEffect(()=>{
-    const Context=window.AudioContext;
-    if(!Context)return;
-    const context=new Context();
-    audio.current=context;
-    const sync=()=>setSoundBlocked(context.state!=="running");
-    context.addEventListener("statechange",sync);
-    sync();
-    window.addEventListener("pointerdown",enableSound);
-    window.addEventListener("keydown",enableSound);
-    return()=>{
-      context.removeEventListener("statechange",sync);
-      window.removeEventListener("pointerdown",enableSound);
-      window.removeEventListener("keydown",enableSound);
-      blink.current?.stop();
-      audio.current=null;
-      void context.close().catch(()=>undefined);
-    };
-  },[enableSound]);
+  const soundBlocked=useAudioBlocked();
+  useEffect(()=>()=>blink.current?.stop(),[]);
 
   const alertPayments=useCallback((items:{provider:PayProvider;providerLabel:string;amount:string}[])=>{
     if(!items.length)return;
-    play(audio.current,payAlertSequence(items.map(item=>item.provider)));
+    playTones(payAlertSchedule(items.map(item=>item.provider)));
     if(document.hasFocus())return;
     // Pagos que siguen llegando sin que el cajero vuelva suman al mismo parpadeo.
     const previous=blink.current;
@@ -69,24 +43,5 @@ export function usePayAlert(){
     blink.current={count,base,stop};
   },[]);
 
-  return {alertPayments,soundBlocked,enableSound};
-}
-
-function play(context:AudioContext|null,providers:PayProvider[]){
-  if(!context||context.state!=="running")return;
-  providers.forEach((provider,index)=>{
-    for(const tone of payAlertTones[provider]){
-      const start=context.currentTime+index*PAY_ALERT_GAP_S+tone.offset;
-      const oscillator=context.createOscillator();
-      const gain=context.createGain();
-      oscillator.type=tone.wave;
-      oscillator.frequency.value=tone.frequency;
-      gain.gain.setValueAtTime(.0001,start);
-      gain.gain.exponentialRampToValueAtTime(.3,start+.015);
-      gain.gain.exponentialRampToValueAtTime(.0001,start+tone.duration);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start(start);
-      oscillator.stop(start+tone.duration+.02);
-    }
-  });
+  return {alertPayments,soundBlocked,enableSound:unlockAudio};
 }

@@ -80,8 +80,12 @@ prioridad alta, vence al minuto) y no lleva datos del local ni del pago.
 - Caja (`PayNoticeLayer`, cualquier pantalla del cajero) llama
   `POST /v1/admin/pay-devices/wake` cada 30 s, y cada 10 s mientras hay un
   modal de cobro abierto (y al abrirlo); la espera corre en un Web Worker para que siga a tiempo con la pestaña minimizada. El backend limita el push a uno cada
-  10 s por dispositivo con `pay_devices.woken_at` (una sola sentencia
-  `UPDATE … RETURNING`: pestañas e instancias no lo duplican). La respuesta
+  10 s por dispositivo con `pay_devices.woken_at`. Contar los teléfonos del
+  local y reservar los que toca avisar es una sola sentencia
+  (`WITH … UPDATE … RETURNING` más el total): un viaje a la base por pedido, y
+  pestañas e instancias no duplican el push. Los envíos a FCM salen en
+  paralelo, cada uno con tope de 4 s, así que Caja espera a lo sumo 4 s
+  aunque el local tenga varios teléfonos. La respuesta
   `{devices,sent}` con `devices=0` hace que Caja espacie sus pedidos a 5 min:
   un local sin teléfonos con push no genera tráfico continuo.
 - Envío por la API HTTP v1 de FCM con las credenciales por defecto de Cloud
@@ -205,8 +209,8 @@ para adjuntar o compartir una constancia real sigue pendiente de definición.
   tarjetas apilables por encima de los modales, clic → detalle).
 - Sonido propio por billetera (2026-11-21, `domain/pay-alert.ts`): Yape suena
   con tres notas cálidas que suben y Plin con dos notas agudas cortas, para
-  saber cuál llegó sin mirar. Son tonos generados por Fudia (Web Audio), no los
-  de las apps. Varios pagos juntos de la misma billetera suenan una vez. El
+  saber cuál llegó sin mirar. Son tonos generados por Fudia (Web Audio, con el
+  motor compartido `src/shared/audio` de la web), no los de las apps. Varios pagos juntos de la misma billetera suenan una vez. El
   navegador solo deja sonar tras el primer toque o tecla en la página. Si la
   pestaña no tiene el foco, su título parpadea («Yape · S/ 25.00 recibido» o
   «(3) Pagos recibidos») hasta que el cajero vuelve, como LinkedIn.

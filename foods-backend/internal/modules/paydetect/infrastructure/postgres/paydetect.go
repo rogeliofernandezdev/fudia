@@ -461,35 +461,41 @@ func (r *Pay) SavePushToken(ctx context.Context, deviceID, token string, now tim
 	return err
 }
 
-// ClaimWakeTargets reserva, en una sola sentencia, los dispositivos activos
-// del local con token que no recibieron un aviso en el intervalo: dos
-// pestañas o instancias simultáneas no duplican el push.
-func (r *Pay) ClaimWakeTargets(ctx context.Context, s scope, now time.Time, interval time.Duration) ([]domain.WakeTarget, error) {
+// ClaimWakeTargets cuenta los dispositivos activos del local con token de push
+// (índice parcial pay_devices_push_location_idx) y reserva, en la misma
+// sentencia, los que no recibieron un aviso en el intervalo: dos pestañas o
+// instancias simultáneas no duplican el push. Caja lo llama cada 10–30 s, por
+// eso es un solo viaje a la base. Siempre devuelve al menos una fila: sin
+// dispositivos que reservar, la fila trae solo el total.
+func (r *Pay) ClaimWakeTargets(ctx context.Context, s scope, now time.Time, interval time.Duration) (int, []domain.WakeTarget, error) {
 	rows, err := r.db(ctx).Query(ctx, `
-		UPDATE pay_devices SET woken_at=$3
-		WHERE organization_id=$1 AND location_id=$2 AND active AND push_token IS NOT NULL
-		  AND (woken_at IS NULL OR woken_at <= $3::timestamptz - make_interval(secs => $4::float8))
-		RETURNING id::text, push_token`,
+		WITH claimed AS (
+			UPDATE pay_devices SET woken_at=$3
+			WHERE organization_id=$1 AND location_id=$2 AND active AND push_token IS NOT NULL
+			  AND (woken_at IS NULL OR woken_at <= $3::timestamptz - make_interval(secs => $4::float8))
+			RETURNING id::text AS id, push_token
+		)
+		SELECT (SELECT count(*)::int FROM pay_devices
+		        WHERE organization_id=$1 AND location_id=$2 AND active AND push_token IS NOT NULL),
+		       claimed.id, claimed.push_token
+		FROM (SELECT 1) AS one LEFT JOIN claimed ON true`,
 		s.OrganizationID, s.LocationID, now, interval.Seconds())
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.WakeTarget, error) {
-		var target domain.WakeTarget
-		err := row.Scan(&target.DeviceID, &target.Token)
-		return target, err
-	})
-}
-
-// CountPushDevices cuenta los dispositivos activos del local con token de push
-// (índice parcial pay_devices_push_location_idx).
-func (r *Pay) CountPushDevices(ctx context.Context, s scope) (int, error) {
-	var total int
-	err := r.db(ctx).QueryRow(ctx, `
-		SELECT count(*) FROM pay_devices
-		WHERE organization_id=$1 AND location_id=$2 AND active AND push_token IS NOT NULL`,
-		s.OrganizationID, s.LocationID).Scan(&total)
-	return total, err
+	defer rows.Close()
+	devices := 0
+	var targets []domain.WakeTarget
+	for rows.Next() {
+		var id, token *string
+		if err := rows.Scan(&devices, &id, &token); err != nil {
+			return 0, nil, err
+		}
+		if id != nil && token != nil {
+			targets = append(targets, domain.WakeTarget{DeviceID: *id, Token: *token})
+		}
+	}
+	return devices, targets, rows.Err()
 }
 
 // ClearPushToken olvida un token que el servicio de push ya no reconoce,

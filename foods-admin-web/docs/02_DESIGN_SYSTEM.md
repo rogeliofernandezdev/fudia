@@ -1998,6 +1998,11 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   pista que el panel de reparto; se guarda por usuario en ese navegador y no
   silencia los pagos. Va al pie y no en la cabecera porque en móvil la
   cabecera marino ya ocupa su ancho.
+- Motor de sonido único (2026-11-22): la campana, los pagos Yape/Plin y el
+  panel de reparto suenan por un solo `AudioContext` de la página
+  (`src/shared/audio`: `playTones`, `unlockAudio`, `useAudioBlocked`). Un toque
+  o tecla los habilita a la vez; cada dominio solo define sus notas (`Tone`) y
+  ninguna pantalla crea su propio contexto ni osciladores.
 - El éxito de un registro se comunica mediante la alerta global después de que la
   API confirme la operación. Nunca se anticipa éxito ni se pierde el error remoto.
 

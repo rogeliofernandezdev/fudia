@@ -15,9 +15,13 @@
 foods-admin-web/__*.png
 foods-admin-web/__*.cjs
 
+# Salidas locales de pruebas y capturas (logs, PNG, pdfjs descargado): nunca se versionan.
+tmp/
+# Carpeta creada por un `--out-dir` mal pasado a un script de capturas.
+**/--out-dir/
+
 # Generated from the pinned Mozilla distribution by pdfjs:prepare.
 foods-admin-web/public/pdfjs/
-tmp/pdfjs-6.4.299/
 
 # Temporary credentials created by google-github-actions/auth (OIDC).
 gha-creds-*.json
