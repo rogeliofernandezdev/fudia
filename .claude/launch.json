@@ -22,6 +22,15 @@
       "port": 8010
     },
     {
+      "name": "sales-preview",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "cd foods-admin-web && node tests/helpers/sales-page-preview.mjs"
+      ],
+      "port": 5196
+    },
+    {
       "name": "pay-notifications-preview",
       "runtimeExecutable": "cmd",
       "runtimeArgs": [

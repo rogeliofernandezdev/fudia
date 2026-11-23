@@ -56,6 +56,11 @@ func (h *Cash) CreateCashMovement(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.Movement(r.Context(), billingScope(r), r.PathValue("id"), in)
 	billingResponse(w, 201, out, err)
 }
+// ListCashExpenseCategories: categorías para el gasto del turno (vacía sin el módulo costos).
+func (h *Cash) ListCashExpenseCategories(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.ExpenseCategories(r.Context(), billingScope(r))
+	billingResponse(w, 200, map[string]any{"items": out}, err)
+}
 func (h *Cash) CloseCashShift(w http.ResponseWriter, r *http.Request) {
 	var in domain.CloseShiftInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {

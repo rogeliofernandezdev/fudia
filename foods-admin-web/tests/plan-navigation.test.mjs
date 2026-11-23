@@ -53,17 +53,19 @@ test("el administrador entra al Dashboard aunque la configuración siga pendient
  assert.equal(navigation.navigationGroups.flatMap(group=>group.items).some(item=>item.name==="Puesta en marcha"),false);
 });
 
-test("Emprende presenta venta, atención y Concierge sin abastecimiento ni control",()=>{
+test("Emprende presenta venta y atención sin abastecimiento ni control",()=>{
  const modules=keys(context);
- for(const key of ["productos","combos","whatsapp_bot"])assert.ok(modules.includes(key),key);
+ for(const key of ["productos","combos"])assert.ok(modules.includes(key),key);
+ assert.equal(modules.includes("whatsapp_bot"),false,"Fudia Concierge es un módulo del plan, no una pantalla");
  for(const key of ["inventario","compras","kardex","recetas","reservas","costos","facturacion"])assert.equal(modules.includes(key),false,key);
  assert.ok(navigation.visibleNavigation(context).every(group=>group.items.length>0));
 });
 
-test("Impulso suma abastecimiento, recetas, reservas, gastos y facturación a todo Emprende",()=>{
+test("Impulso suma abastecimiento, recetas, reservas y facturación a todo Emprende",()=>{
  const base=keys(context),modules=keys(impulso);
  for(const key of base)assert.ok(modules.includes(key),key);
- for(const key of ["inventario","compras","kardex","recetas","reservas","costos","facturacion"])assert.ok(modules.includes(key),key);
+ for(const key of ["inventario","compras","kardex","recetas","reservas","facturacion"])assert.ok(modules.includes(key),key);
+ assert.equal(modules.includes("costos"),false,"Costos y gastos es la pestaña «Gastos» de Caja, no una opción del menú");
 });
 
 test("Inventario y Compras de Impulso conservan acceso y acciones propios del rol",()=>{
@@ -96,4 +98,14 @@ test("roles y permisos remotos se vuelven a consultar al cambiar empresa o módu
  assert.ok(source.includes("loading=loading||catalog.isLoading"));
  assert.ok(source.includes("if(catalog.isError)return"));
  assert.ok(source.includes("catalog.refetch()"));
+});
+
+test("los gastos viven en la pestaña «Gastos» de Caja, solo con el módulo costos y permiso de ver gastos",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const cash=readFileSync(new URL("../src/modules/operations/cash/presentation/cash-page.tsx",import.meta.url),"utf8");
+ assert.match(cash,/const showExpenses=Boolean\(user\?\.platformAdmin\)\|\|\(Boolean\(modules\?\.costos\)&&can\("expenses\.read"\)\)/);
+ assert.match(cash,/\.\.\.\(showExpenses\?\[\{value:"gastos"/);
+ assert.match(cash,/tab==="gastos"\?<ExpensesPanel renderTabsBar=\{tabsBar\}\/>/);
+ const routes=readFileSync(new URL("../src/shared/routing/page-routes.ts",import.meta.url),"utf8");
+ assert.match(routes,/\{legacy:"\/expenses",canonical:"\/cash\?tab=gastos"\}/);
 });

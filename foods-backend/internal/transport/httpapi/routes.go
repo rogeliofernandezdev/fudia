@@ -262,6 +262,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/cash-shifts/{id}", a.auth(a.requirePermission("cash.read", http.HandlerFunc(a.getCashShift))))
 	m.Handle("GET /v1/admin/cash-shifts/{id}/report", a.auth(a.requirePermission("cash.read", http.HandlerFunc(a.getCashShiftReport))))
 	m.Handle("POST /v1/admin/cash-shifts/{id}/movements", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.createCashMovement))))
+	m.Handle("GET /v1/admin/cash-expense-categories", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.listCashExpenseCategories))))
 	m.Handle("POST /v1/admin/cash-shifts/{id}/close", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.closeCashShift))))
 	m.Handle("GET /v1/admin/cash-users/options", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.listCashUserOptions))))
 	m.Handle("GET /v1/admin/cash-shifts/{id}/users", a.auth(a.requirePermission("cash.read", http.HandlerFunc(a.listCashShiftUsers))))

@@ -4,6 +4,8 @@ import type {ServiceItem} from "@/modules/operations/orders";
 export type Sale={
   id:string;code:string;channel:string;status:string;customerName:string;tableName:string;
   total:string;paidAmount:string;remainingAmount:string;paymentStatus:"pending"|"partial"|"paid";paymentMethods:string[];createdAt:string;
+  /** Último cobro: fecha de la venta en el listado y en los filtros; null si el pedido no tuvo cobros (total cero). */
+  paidAt?:string|null;
 };
 /** `amountTotal`: cobrado neto de todo el filtro (no solo la página), con fechas en la zona del local. */
 export type SalesResponse={items:Sale[];total:number;page:number;pageSize:number;amountTotal?:string};

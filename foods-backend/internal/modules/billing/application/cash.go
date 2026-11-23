@@ -50,6 +50,11 @@ type CashRepository interface {
 	AssignOpeningUser(ctx context.Context, s scope, id string) (int64, error)
 	LockMovementShift(ctx context.Context, s scope, shiftID string) (string, error)
 	CreateMovement(ctx context.Context, s scope, shiftID string, in domain.CashMovementInput) (domain.CashMovementView, error)
+	CashExpensesEnabled(ctx context.Context, s scope) (bool, error)
+	CashExpenseCategories(ctx context.Context, s scope) ([]domain.ExpenseCategoryView, error)
+	CashExpenseCategoryActive(ctx context.Context, s scope, id string) (bool, error)
+	CashExpenseMethod(ctx context.Context, s scope) (string, error)
+	CreateCashExpense(ctx context.Context, s scope, shiftID, method string, in domain.CashMovementInput) (domain.CashMovementView, error)
 	LockClosingShift(ctx context.Context, s scope, shiftID string) (string, bool, float64, float64, float64, error)
 	SaveCountLine(ctx context.Context, s scope, shiftID string, line domain.CountLineInput) (int64, error)
 	CloseShift(ctx context.Context, s scope, shiftID string, in domain.CloseShiftInput, expected float64, counted float64, variance float64) (int64, error)
@@ -205,8 +210,40 @@ func (a *Cash) Movement(ctx context.Context, s scope, id string, in domain.CashM
 	}
 	in.Reason = strings.TrimSpace(in.Reason)
 	in.Note = strings.TrimSpace(in.Note)
+	in.CategoryID = strings.TrimSpace(in.CategoryID)
 	if in.Reason == "" || len(in.Reason) > 120 || len(in.Note) > 240 {
 		return result, paymentFailure(apperror.Invalid, "invalid_cash_movement", "Indica un motivo válido y una observación de hasta 240 caracteres.")
+	}
+	// Con el módulo `costos`, el egreso del turno es un gasto con categoría: un
+	// solo registro visible en el turno y en Caja › Gastos.
+	expenseMethod := ""
+	if in.MovementType == "expense" {
+		enabled, err := a.repo.CashExpensesEnabled(ctx, s)
+		if err != nil {
+			return result, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar los módulos de la empresa.")
+		}
+		if enabled {
+			if in.CategoryID == "" {
+				return result, paymentFailure(apperror.Invalid, "cash_expense_category_required", "Selecciona la categoría del gasto.")
+			}
+			active, err := a.repo.CashExpenseCategoryActive(ctx, s, in.CategoryID)
+			if errors.Is(err, ErrNotFound) {
+				return result, paymentFailure(apperror.Invalid, "expense_category_not_found", "La categoría seleccionada no existe.")
+			}
+			if err != nil {
+				return result, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar la categoría.")
+			}
+			if !active {
+				return result, paymentFailure(apperror.Conflict, "expense_category_inactive", "Selecciona una categoría activa.")
+			}
+			expenseMethod, err = a.repo.CashExpenseMethod(ctx, s)
+			if errors.Is(err, ErrNotFound) {
+				return result, paymentFailure(apperror.Conflict, "cash_expense_method_missing", "Activa un medio de pago en efectivo para gastos en Medios de pago.")
+			}
+			if err != nil {
+				return result, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar el medio de pago.")
+			}
+		}
 	}
 
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
@@ -249,6 +286,10 @@ func (a *Cash) Movement(ctx context.Context, s scope, id string, in domain.CashM
 	var item domain.CashMovementView
 	err = func() error {
 		var err error
+		if expenseMethod != "" {
+			item, err = a.repo.CreateCashExpense(tx.Context(), s, shiftID, expenseMethod, in)
+			return err
+		}
 		item, err = a.repo.CreateMovement(tx.Context(), s, shiftID, in)
 		return err
 	}()
@@ -261,6 +302,22 @@ func (a *Cash) Movement(ctx context.Context, s scope, id string, in domain.CashM
 	}
 	return item, nil
 
+}
+// ExpenseCategories: categorías activas para registrar un gasto desde el turno.
+// Sin el módulo `costos` la lista es vacía y el egreso conserva su motivo libre.
+func (a *Cash) ExpenseCategories(ctx context.Context, s scope) ([]domain.ExpenseCategoryView, error) {
+	enabled, err := a.repo.CashExpensesEnabled(ctx, s)
+	if err != nil {
+		return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar los módulos de la empresa.")
+	}
+	if !enabled {
+		return []domain.ExpenseCategoryView{}, nil
+	}
+	items, err := a.repo.CashExpenseCategories(ctx, s)
+	if err != nil {
+		return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cargar las categorías de gastos.")
+	}
+	return items, nil
 }
 func (a *Cash) Close(ctx context.Context, s scope, id string, in domain.CloseShiftInput) (domain.CashShiftView, error) {
 	var result domain.CashShiftView

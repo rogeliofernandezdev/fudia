@@ -6,8 +6,10 @@ import dynamic from "next/dynamic";
 import type {TipWorkspace} from "../../tips";
 import {CashReportContent} from "./cash-report-content";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,FormField,FormSection,Icon,Input,Skeleton,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline} from "@/design-system";
-import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
+import {Button,EmptyState,ErrorState,FormField,FormSection,Icon,Input,Select,Skeleton,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline} from "@/design-system";
+import {useQuery} from "@tanstack/react-query";
+import {listCashExpenseCategories} from "../infrastructure/cash-api";
+import {cashExpenseResolver,cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
 import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CashShiftReport,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
 // El reparto de propinas usa react-select: se descarga al cerrar un turno con propinas,
@@ -73,10 +75,16 @@ export function OpenCashShiftDialog({cashRegister,busy,close,save}:{cashRegister
   </Dialog></div>;
 }
 
-export function CashMovementDialog({type,busy,close,save}:{type:CashMovementType;busy:boolean;close:()=>void;save:(draft:CashMovementDraft)=>void}){
+export function CashMovementDialog({type,asExpense=false,busy,close,save}:{type:CashMovementType;asExpense?:boolean;busy:boolean;close:()=>void;save:(draft:CashMovementDraft)=>void}){
+  return type==="expense"&&asExpense
+    ?<CashExpenseDialog busy={busy} close={close} save={save}/>
+    :<CashManualMovementDialog type={type} busy={busy} close={close} save={save}/>;
+}
+
+function CashManualMovementDialog({type,busy,close,save}:{type:CashMovementType;busy:boolean;close:()=>void;save:(draft:CashMovementDraft)=>void}){
   const isIncome=type==="income";
   const{register,handleSubmit,formState:{errors}}=useForm<CashMovementDraft>({
-    defaultValues:{movementType:type,amount:"",reason:"",note:""},
+    defaultValues:{movementType:type,amount:"",reason:"",note:"",categoryId:""},
     resolver:cashMovementResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
@@ -220,6 +228,49 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBu
   </Dialog></div>;
 }
 
+/**
+ * Gasto del turno (módulo `costos`): el egreso de efectivo y el gasto son un solo
+ * registro, visible en el turno y en Caja › Gastos.
+ */
+function CashExpenseDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(draft:CashMovementDraft)=>void}){
+  const categories=useQuery({queryKey:["cash-expense-categories"],queryFn:listCashExpenseCategories,staleTime:30000});
+  const{register,handleSubmit,formState:{errors}}=useForm<CashMovementDraft>({
+    defaultValues:{movementType:"expense",amount:"",reason:"",note:"",categoryId:""},
+    resolver:cashExpenseResolver,
+    mode:"onSubmit",
+    reValidateMode:"onChange",
+  });
+  const items=categories.data?.items??[];
+  const ready=!categories.isLoading&&!categories.isError&&items.length>0;
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-expense-title" aria-busy={busy}>
+    <ModalHeader title="Registrar gasto" titleId="cash-expense-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <input type="hidden" {...register("movementType")}/>
+      <div className="cash-dialog-body">
+        <p className="cash-dialog-intro">Sale del efectivo del turno y queda en Caja › Gastos.</p>
+        {categories.isLoading?<div className="cash-expense-skeleton" role="status" aria-busy="true" aria-label="Cargando categorías"><Skeleton width="100%" height="var(--size-44)"/><Skeleton width="100%" height="var(--size-44)"/></div>
+        :categories.isError?<ErrorState title="No pudimos cargar las categorías" text={categories.error.message} onRetry={()=>void categories.refetch()} retrying={categories.isFetching}/>
+        :!items.length?<EmptyState icon="layers" title="Aún no hay categorías de gastos" text="Un administrador puede crearlas en Caja › Gastos › Categorías."/>
+        :<FormSection icon="minus" tone="peach" title="Datos del gasto" bare>
+          <FormField label="Monto" error={errors.amount?.message}>
+            <Input autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" {...register("amount")} placeholder="0.00"/>
+          </FormField>
+          <FormField label="Categoría" error={errors.categoryId?.message}>
+            <Select {...register("categoryId")}><option value="">Selecciona una categoría</option>{items.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</Select>
+          </FormField>
+          <FormField label="Descripción" error={errors.reason?.message}>
+            <Input maxLength={120} {...register("reason")} placeholder="Ej. Balón de gas, verduras, movilidad"/>
+          </FormField>
+          <FormField label="Observación" optional error={errors.note?.message}>
+            <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Referencia o detalle adicional"/>
+          </FormField>
+        </FormSection>}
+      </div>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!ready} loading={busy}>{busy?"Guardando…":"Registrar gasto"}</Button></ModalFooter>
+    </form>
+  </Dialog></div>;
+}
+
 function cashMovementSourceLabel(source:string){
   if(source==="cash_sale")return"Venta";
   if(source==="cash_refund")return"Devolución";
@@ -228,6 +279,8 @@ function cashMovementSourceLabel(source:string){
   if(source==="transfer_out")return"Transferencia salida";
   if(source==="deposit")return"Depósito";
   if(source==="adjustment")return"Ajuste";
+  if(source==="expense")return"Gasto";
+  if(source==="expense_void")return"Gasto anulado";
   return"Manual";
 }
 

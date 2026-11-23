@@ -21,6 +21,9 @@ type ExpensePage struct {
 	Page                 int                  `json:"page"`
 	PageSize             int                  `json:"pageSize"`
 	PaymentMethodOptions []map[string]string  `json:"paymentMethodOptions"`
+	// CashPaymentMethods son los medios que mueven efectivo: un gasto con ellos
+	// se registra en el turno de caja, no desde la pestaña Gastos.
+	CashPaymentMethods []string `json:"cashPaymentMethods"`
 }
 type ExpenseCategoryPage struct {
 	Items    []domain.ExpenseCategoryView `json:"items"`
@@ -33,7 +36,7 @@ type ExpenseRepository interface {
 	Get(context.Context, requestscope.Scope, string) (domain.ExpenseView, error)
 	CategoryActive(context.Context, string, string) (bool, error)
 	Create(context.Context, requestscope.Scope, domain.ExpenseInput) (string, error)
-	Status(context.Context, requestscope.Scope, string) (string, error)
+	Status(context.Context, requestscope.Scope, string) (string, string, error)
 	Void(context.Context, requestscope.Scope, string, string) (int64, error)
 	Categories(context.Context, string, MethodFilter) (ExpenseCategoryPage, error)
 	SaveCategory(context.Context, string, string, string, bool) (domain.ExpenseCategoryView, error)
@@ -42,6 +45,7 @@ type ExpenseRepository interface {
 type ExpenseMethods interface {
 	Find(context.Context, string, string, string) (domain.PaymentMethodView, error)
 	Options(context.Context, string, string) ([]map[string]string, error)
+	Operational(context.Context, string, string) ([]domain.PaymentMethodView, error)
 }
 type Expenses struct {
 	repo    ExpenseRepository
@@ -77,6 +81,16 @@ func (a *Expenses) List(ctx context.Context, s requestscope.Scope, f ExpenseFilt
 	if err != nil {
 		return out, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos cargar los medios de pago.")
 	}
+	methods, err := a.methods.Operational(ctx, s.OrganizationID, "expenses")
+	if err != nil {
+		return out, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos cargar los medios de pago.")
+	}
+	out.CashPaymentMethods = []string{}
+	for _, method := range methods {
+		if method.AffectsCash {
+			out.CashPaymentMethods = append(out.CashPaymentMethods, method.Code)
+		}
+	}
 	return out, nil
 }
 func (a *Expenses) Categories(ctx context.Context, org string, f MethodFilter) (ExpenseCategoryPage, error) {
@@ -106,10 +120,14 @@ func (a *Expenses) Create(ctx context.Context, s requestscope.Scope, in domain.E
 	if _, err := time.Parse("2006-01-02", in.BusinessDate); err != nil {
 		return result, methodFailure(apperror.Invalid, "invalid_expense", "La fecha del gasto no es válida.")
 	}
-	if _, err := a.methods.Find(ctx, s.OrganizationID, in.PaymentMethod, "expenses"); errors.Is(err, ErrNotFound) {
+	if method, err := a.methods.Find(ctx, s.OrganizationID, in.PaymentMethod, "expenses"); errors.Is(err, ErrNotFound) {
 		return result, methodFailure(apperror.Invalid, "invalid_payment_method", "Selecciona un medio de pago activo para gastos.")
 	} else if err != nil {
 		return result, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos validar el medio de pago.")
+	} else if method.AffectsCash {
+		// El efectivo sale de un turno: se registra como gasto desde ese turno
+		// para que el gasto y el egreso de caja sean un solo registro.
+		return result, methodFailure(apperror.Invalid, "cash_expense_requires_shift", "Los gastos en efectivo se registran desde el turno de caja.")
 	}
 	var categoryActive bool
 	err := func() error {
@@ -146,8 +164,8 @@ func (a *Expenses) Void(ctx context.Context, s requestscope.Scope, id, reason st
 		return result, methodFailure(apperror.Invalid, "invalid_expense_void", "El motivo debe tener entre 4 y 240 caracteres.")
 	}
 
-	var status string
-	err := func() error { v, e := a.repo.Status(ctx, s, id); status = v; return e }()
+	var status, shiftStatus string
+	err := func() error { v, shift, e := a.repo.Status(ctx, s, id); status, shiftStatus = v, shift; return e }()
 	if errors.Is(err, ErrNotFound) {
 		return result, methodFailure(apperror.NotFound, "expense_not_found", "El gasto no existe en este local.")
 	}
@@ -157,8 +175,15 @@ func (a *Expenses) Void(ctx context.Context, s requestscope.Scope, id, reason st
 	if status == "void" {
 		return result, methodFailure(apperror.Conflict, "expense_already_void", "El gasto ya está anulado.")
 	}
-	if _, err = a.repo.Void(ctx, s, id, reason); err != nil {
+	if shiftStatus != "" && shiftStatus != "open" {
+		return result, methodFailure(apperror.Conflict, "expense_cash_shift_closed", "Este gasto salió del efectivo de un turno ya cerrado; no se puede anular.")
+	}
+	voided, err := a.repo.Void(ctx, s, id, reason)
+	if err != nil {
 		return result, methodFailure(apperror.Unavailable, "expenses_unavailable", "No pudimos anular el gasto.")
+	}
+	if voided == 0 {
+		return result, methodFailure(apperror.Conflict, "expense_cash_shift_closed", "El turno de este gasto se cerró mientras lo anulabas; ya no se puede anular.")
 	}
 	_ = a.audit.Record(ctx, s, "voided", "expense", id)
 	item, err := a.repo.Get(ctx, s, id)

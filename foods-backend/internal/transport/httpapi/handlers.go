@@ -237,6 +237,7 @@ type CashHandler interface {
 	UpdateCashRegisterStatus(http.ResponseWriter, *http.Request)
 	OpenCashShift(http.ResponseWriter, *http.Request)
 	CreateCashMovement(http.ResponseWriter, *http.Request)
+	ListCashExpenseCategories(http.ResponseWriter, *http.Request)
 	CloseCashShift(http.ResponseWriter, *http.Request)
 	AssignCashShiftUser(http.ResponseWriter, *http.Request)
 	CreateCashOperation(http.ResponseWriter, *http.Request)

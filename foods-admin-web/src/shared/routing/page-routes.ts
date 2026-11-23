@@ -27,7 +27,6 @@ export const pageRoutes={
   offers:"/offers",
   staff:"/staff",
   locations:"/locations",
-  expenses:"/expenses",
   businessIntelligence:"/bi",
   appManager:"/app-manager",
   settings:"/settings",
@@ -41,7 +40,6 @@ export const pageRoutes={
   integrationsSettings:"/settings/integrations",
   operationsSettings:"/settings/operations",
   profileSettings:"/settings/profile",
-  concierge:"/whatsapp-bot",
   receipts:"/receipts",
   noAccess:"/no-access",
   publicConcierge:"/api/public/concierge/:qr",
@@ -77,7 +75,6 @@ export const legacyPageAliases=[
   {legacy:"/ofertas",canonical:pageRoutes.offers},
   {legacy:"/personal",canonical:pageRoutes.staff},
   {legacy:"/locales",canonical:pageRoutes.locations},
-  {legacy:"/costos",canonical:pageRoutes.expenses},
   {legacy:"/configuracion",canonical:pageRoutes.settings},
   {legacy:"/configuracion/empresa",canonical:pageRoutes.organizationSettings},
   {legacy:"/configuracion/fiscal",canonical:pageRoutes.taxSettings},
@@ -101,6 +98,11 @@ export const legacyPageRedirects=[
   {legacy:"/delivery-apps",canonical:"/delivery?tab=apps"},
   {legacy:"/couriers",canonical:"/delivery?tab=couriers"},
   {legacy:"/platform/delivery-partners",canonical:"/delivery?tab=providers"},
+  // Fudia Concierge dejó de ser pantalla: el canal lo administra la plataforma.
+  {legacy:"/whatsapp-bot",canonical:pageRoutes.settings},
+  // Costos y gastos es la pestaña «Gastos» de Caja desde el 2026-11-22.
+  {legacy:"/expenses",canonical:"/cash?tab=gastos"},
+  {legacy:"/costos",canonical:"/cash?tab=gastos"},
 ] as const;
 
 export function companySettingsPath(organizationId:string){

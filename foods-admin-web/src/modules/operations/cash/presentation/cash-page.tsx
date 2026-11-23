@@ -2,11 +2,12 @@
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
-import {useState} from "react";
+import {useState,type ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,IconTile,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,IconTile,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader,type TabItem} from "@/design-system";
 import {PayNotificationsPanel} from "@/modules/payment-devices";
+import {ExpensesPanel} from "@/modules/expenses";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -20,7 +21,7 @@ import {CashClosingDialog} from "./cash-closing-dialog";
 import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
-type CashTab="registers"|"history"|"pagos";
+export type CashTab="registers"|"history"|"pagos"|"gastos";
 const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cierre","Efectivo esperado","Efectivo contado","Resultado","Estado","Acciones"];
 
 function recordedAmount(value:string|null|undefined){
@@ -33,12 +34,16 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
   const router=useRouter();
   const qc=useQueryClient();
   const{notify}=useFeedback();
-  const{can,location,user,organization}=useSession();
+  const{can,location,user,organization,modules}=useSession();
   const settings=useSettings();
   const money=useMoney();
   const canManage=can("cash.manage");
   const canManageRegisters=can("cash.registers.manage");
-  const[tab,setTab]=useState<CashTab>(initialTab);
+  // Gastos es la pestaña del módulo `costos`: solo con el plan y el permiso de ver gastos.
+  const showExpenses=Boolean(user?.platformAdmin)||(Boolean(modules?.costos)&&can("expenses.read"));
+  // Con el módulo `costos`, el egreso del turno se registra como gasto (un solo registro).
+  const cashExpenses=Boolean(modules?.costos);
+  const[tab,setTab]=useState<CashTab>(initialTab==="gastos"&&!showExpenses?"registers":initialTab);
   const[q,setQ]=useState("");
   const[status,setStatus]=useState("");
   const[page,setPage]=useState(1);
@@ -143,9 +148,10 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
       refreshCash();
       notify({
         tone:"success",
-        title:variables.draft.movementType==="income"?"Ingreso registrado":"Egreso registrado",
+        title:variables.draft.movementType==="income"?"Ingreso registrado":variables.draft.categoryId?"Gasto registrado":"Egreso registrado",
         message:"El saldo esperado del turno quedó actualizado.",
       });
+      if(variables.draft.categoryId)void qc.invalidateQueries({queryKey:["expenses"]});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo registrar el movimiento",message:error.message}),
   });
@@ -225,15 +231,23 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
     ?<Button icon="plus" onClick={openNewRegister}>Registrar caja</Button>
     :undefined;
 
+  const tabItems:TabItem<CashTab>[]=[
+    {value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},
+    {value:"history",label:"Turnos",icon:"clock"},
+    {value:"pagos",label:"Pagos detectados",icon:"wallet"},
+    ...(showExpenses?[{value:"gastos" as const,label:"Gastos",icon:"receipt" as const}]:[]),
+  ];
+  const tabsBar=(action?:ReactNode)=><TabsBar action={action}>
+      <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={tabItems}/>
+    </TabsBar>;
+
   return <div className="cash-page">
     <PageHeader
       title="Caja y turnos"
       description="Controla las cajas del local, sus turnos y el efectivo esperado en tiempo real."
     />
 
-    <TabsBar action={headerAction}>
-      <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"},{value:"pagos",label:"Pagos detectados",icon:"wallet"}]}/>
-    </TabsBar>
+    {tab==="gastos"?<ExpensesPanel renderTabsBar={tabsBar}/>:<>{tabsBar(headerAction)}
 
     <section className="panel standardized-management cash-panel">
 
@@ -257,6 +271,7 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
           start={setShiftTarget}
           view={shift=>setDetailId(shift.id)}
           movement={(shift,type)=>setMovementTarget({shift,type})}
+          cashExpenses={cashExpenses}
           team={setTeamTarget}
           operation={setOperationTarget}
           close={shift=>{if(canCloseCashShift(shift,user?.id,canManage))setCloseTarget(shift)}}
@@ -305,11 +320,11 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
           {!history.isLoading&&!history.isError&&<Pagination page={page} size={size} total={history.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
         </section>
       }
-    </section>
+    </section></>}
 
     {registerDialog&&canManageRegisters&&<CashRegisterDialog initial={registerEditTarget} busy={saveRegister.isPending} close={()=>{setRegisterDialog(false);setRegisterEditTarget(null)}} save={draft=>{if(canManageRegisters)saveRegister.mutate({target:registerEditTarget,draft})}}/>}
     {shiftTarget&&<OpenCashShiftDialog cashRegister={shiftTarget} busy={startShift.isPending} close={()=>setShiftTarget(null)} save={draft=>startShift.mutate({cashRegisterId:shiftTarget.id,draft})}/>}
-    {movementTarget&&<CashMovementDialog type={movementTarget.type} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
+    {movementTarget&&<CashMovementDialog type={movementTarget.type} asExpense={cashExpenses} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
     {closeTarget&&canCloseCashShift(closeTarget,user?.id,canManage)&&<CashClosingDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={async draft=>{if(!canCloseCashShift(closeTarget,user?.id,canManage))return;try{await closeShiftMutation.mutateAsync({shiftId:closeTarget.id,draft});}catch{/* onError reports the API response. */}}}/>}
     {reportId&&<CashReportDialog shiftId={reportId} close={()=>setReportId(null)}/>}
     {teamTarget&&<CashTeamDialog
@@ -353,7 +368,7 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
   </div>;
 }
 
-function CashRegisters({items,loading,error,canManage,canManageRegisters,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;canManageRegisters:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
+function CashRegisters({items,loading,error,canManage,canManageRegisters,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close,cashExpenses}:{cashExpenses:boolean;items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;canManageRegisters:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
   if(loading)return <CashRegistersSkeleton/>;
   if(error)return <ErrorState title="No pudimos cargar las cajas" text={error} onRetry={retry}/>;
   if(!items.length)return <EmptyState
@@ -435,7 +450,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
             </div>
             {canManage&&<div className="cash-register-actions">
               <Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button>
-              <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button>
+              <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>{cashExpenses?"Gasto":"Egreso"}</Button>
               {canCloseCashShift(shift,currentUserId,canManage)&&<Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>}
             </div>}
           </footer>

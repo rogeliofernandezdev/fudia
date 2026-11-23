@@ -1,1 +1,1 @@
-export {ExpensesPage} from "./presentation/expenses-page";
+export {ExpensesPanel} from "./presentation/expenses-page";

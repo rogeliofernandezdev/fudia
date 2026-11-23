@@ -15,7 +15,7 @@ export type CashMovementType="income"|"expense";
 export type CashMovement={
   id:string;
   movementType:CashMovementType;
-  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment"|"cash_tip"|"tip_payout";
+  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment"|"cash_tip"|"tip_payout"|"expense"|"expense_void";
   sourceId:string|null;
   amount:string;
   reason:string;
@@ -85,7 +85,10 @@ export type CashMovementDraft={
   amount:string;
   reason:string;
   note:string;
+  /** Con el módulo `costos`, el egreso del turno es un gasto con categoría. */
+  categoryId:string;
 };
+export type CashExpenseCategory={id:string;name:string};
 
 export type CashCountLine={
   denomination:string;

@@ -2,10 +2,10 @@
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./expenses.css";
-import {useState} from "react";
+import {useState,type ReactNode} from "react";
 import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter,FormSection,ChoiceGroup,type IconName,DetailHero,DetailContact,DetailFacts} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter,FormSection,ChoiceGroup,type IconName,DetailHero,DetailContact,DetailFacts} from "@/design-system";
 import {useFeedback,useMoney,useSession,useSettings} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -17,9 +17,12 @@ function todayLocal(){const now=new Date();return new Date(now.getTime()-now.get
 const emptyDraft=(paymentMethod=""):ExpenseDraft=>({categoryId:"",description:"",amount:"",paymentMethod,businessDate:todayLocal(),reference:"",notes:""});
 const expenseColumns=["Fecha","Gasto","Categoría","Medio","Importe","Estado","Acciones"];
 const categoryColumns=["Categoría","Estado","Acciones"];
-const tabs:Array<{value:ExpenseTab;label:string;icon:"receipt"|"layers"}>=[{value:"expenses",label:"Gastos",icon:"receipt"},{value:"categories",label:"Categorías",icon:"layers"}];
 
-export function ExpensesPage(){
+/**
+ * Pestaña «Gastos» de Caja (módulo `costos`). Caja pinta su barra de pestañas con
+ * las acciones de esta vista; las categorías se administran desde la misma pestaña.
+ */
+export function ExpensesPanel({renderTabsBar}:{renderTabsBar:(action?:ReactNode)=>ReactNode}){
  const qc=useQueryClient();const{notify}=useFeedback();const{can,location}=useSession();const settings=useSettings();const money=useMoney();
  const canManage=can("expenses.manage");const canVoid=can("expenses.void");
  const[tab,setTab]=useState<ExpenseTab>("expenses");const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[status,setStatus]=useState("");const[categoryId,setCategoryId]=useState("");const[from,setFrom]=useState("");const[to,setTo]=useState("");const[page,setPage]=useState(1);const[size,setSize]=useState(10);
@@ -31,13 +34,14 @@ export function ExpensesPage(){
  const voidMutation=useMutation({mutationFn:(input:{id:string;reason:string})=>voidExpense(input.id,input.reason),onSuccess:item=>{setVoidTarget(null);setDetail(item);void qc.invalidateQueries({queryKey:["expenses"]});notify({tone:"success",title:"Gasto anulado",message:"El registro se conserva con el motivo de anulación."})},onError:error=>notify({tone:"danger",title:"No se pudo anular el gasto",message:error.message})});
  const saveCategory=useMutation({mutationFn:saveExpenseCategory,onSuccess:()=>{setCategoryDraft(null);void qc.invalidateQueries({queryKey:["expense-categories"]});notify({tone:"success",title:"Categoría guardada",message:"El catálogo de gastos quedó actualizado."})},onError:error=>notify({tone:"danger",title:"No se pudo guardar la categoría",message:error.message})});
  const categoryStatus=useMutation({mutationFn:(category:ExpenseCategory)=>setExpenseCategoryActive(category.id,!category.active),onSuccess:()=>{setCategoryTarget(null);void qc.invalidateQueries({queryKey:["expense-categories"]});notify({tone:"success",title:"Estado actualizado",message:"La categoría conserva su historial."})},onError:error=>notify({tone:"danger",title:"No se pudo actualizar la categoría",message:error.message})});
- const activeCategories=(categories.data?.items??[]).filter(item=>item.active);const paymentOptions=expenseList.data?.paymentMethodOptions??[];const items=expenseList.data?.items??[];const categoryItems=categoryList.data?.items??[];
+ const activeCategories=(categories.data?.items??[]).filter(item=>item.active);const paymentOptions=expenseList.data?.paymentMethodOptions??[];const cashMethods=expenseList.data?.cashPaymentMethods??[];const formPaymentOptions=paymentOptions.filter(option=>!cashMethods.includes(option.value));const items=expenseList.data?.items??[];const categoryItems=categoryList.data?.items??[];
  function changeTab(next:ExpenseTab){setTab(next);setQ("");setStatus("");setCategoryId("");setFrom("");setTo("");setPage(1)}
- const expenseFiltered=Boolean(q||categoryId||status||from||to);const categoryFiltered=Boolean(q||status);const newExpense=()=>setDraft(emptyDraft(paymentOptions[0]?.value??""));const newCategory=()=>setCategoryDraft({id:"",name:"",active:true});
- const headerAction=tab==="expenses"?(canManage?<Button icon="plus" onClick={newExpense}>Nuevo gasto</Button>:undefined):(canManage?<Button icon="plus" onClick={newCategory}>Nueva categoría</Button>:undefined);
+ const expenseFiltered=Boolean(q||categoryId||status||from||to);const categoryFiltered=Boolean(q||status);const newExpense=()=>setDraft(emptyDraft(formPaymentOptions[0]?.value??""));const newCategory=()=>setCategoryDraft({id:"",name:"",active:true});
+ const headerAction=tab==="expenses"
+  ?<><Button kind="secondary" icon="layers" onClick={()=>changeTab("categories")}>Categorías</Button>{canManage&&<Button icon="plus" onClick={newExpense}>Nuevo gasto</Button>}</>
+  :<><Button kind="secondary" icon="chevronLeft" onClick={()=>changeTab("expenses")}>Gastos</Button>{canManage&&<Button icon="plus" onClick={newCategory}>Nueva categoría</Button>}</>;
  return <>
-  <PageHeader title="Costos y gastos" description="Centraliza el control económico del local. Esta sección gestiona los gastos operativos y sus categorías." />
-  <TabsBar action={headerAction}><Tabs label="Costos y gastos" items={tabs} value={tab} onChange={changeTab}/></TabsBar>
+  {renderTabsBar(headerAction)}
   <section className="panel standardized-management expenses-panel">
    {tab==="expenses"?<>
     <div className="toolbar expenses-toolbar">
@@ -52,7 +56,7 @@ export function ExpensesPage(){
     </>}
     {!expenseList.isLoading&&!expenseList.isError&&<Pagination page={page} size={size} total={expenseList.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
    </>:<>
-    <div className="toolbar expenses-toolbar"><SearchField value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar categoría…" label="Buscar categorías"/><Select chip aria-label="Filtrar categorías por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></Select></div>
+    <div className="toolbar expenses-toolbar"><div className="toolbar-title"><b>Categorías de gastos</b></div><SearchField value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar categoría…" label="Buscar categorías"/><Select chip aria-label="Filtrar categorías por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></Select></div>
     {categoryList.isLoading?<TableSkeleton columns={categoryColumns} label="Cargando categorías"/>:categoryList.isError?<ErrorState title="No pudimos cargar las categorías" text={categoryList.error.message} onRetry={()=>void categoryList.refetch()} retrying={categoryList.isFetching}/>:!categoryItems.length?(categoryFiltered?<EmptyState icon="search" title="Sin coincidencias" text="Ajusta la búsqueda o el estado para ver otras categorías."/>:<EmptyState icon="stock" title="Aún no hay categorías" text={canManage?"Crea una categoría para clasificar los gastos operativos.":"No hay categorías disponibles."} action={canManage?<Button icon="plus" onClick={newCategory}>Nueva categoría</Button>:undefined}/>):<>
      <DataTable label="Categorías de gastos" containerClassName="hover-scroll expenses-category-table"><thead><tr>{categoryColumns.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{categoryItems.map((c,i)=><tr className={i%2?"alternate":""} key={c.id}><td><span className={"row-icon r"+(i%3)}><Icon name="stock" size={18}/></span><b>{c.name}</b></td><td><Status active={c.active}>{c.active?"Activa":"Inactiva"}</Status></td><td><div className="table-actions">{canManage&&<><RowActionButton action="edit" onClick={()=>setCategoryDraft(c)}/><RowActionButton action={c.active?"deactivate":"activate"} stateLabel={`Estado de ${c.name}`} onClick={()=>setCategoryTarget(c)}/></>}</div></td></tr>)}</tbody></DataTable>
      <div className="management-cards expenses-cards">{categoryItems.map(c=><article key={c.id}><header><span className="row-icon r0"><Icon name="stock"/></span><div><b>{c.name}</b></div><Status active={c.active}>{c.active?"Activa":"Inactiva"}</Status></header>{canManage&&<footer><RowActionButton action="edit" onClick={()=>setCategoryDraft(c)}/><RowActionButton action={c.active?"deactivate":"activate"} stateLabel={`Estado de ${c.name}`} onClick={()=>setCategoryTarget(c)}/></footer>}</article>)}</div>
@@ -60,7 +64,7 @@ export function ExpensesPage(){
     {!categoryList.isLoading&&!categoryList.isError&&<Pagination page={page} size={size} total={categoryList.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
    </>}
   </section>
-  {draft&&<ExpenseEditor draft={draft} categories={activeCategories} paymentOptions={paymentOptions} busy={create.isPending} currencySymbol={settings.currencySymbol} close={()=>setDraft(null)} save={value=>create.mutate(value)}/>}
+  {draft&&<ExpenseEditor draft={draft} categories={activeCategories} paymentOptions={formPaymentOptions} cashFromShift={cashMethods.length>0} busy={create.isPending} currencySymbol={settings.currencySymbol} close={()=>setDraft(null)} save={value=>create.mutate(value)}/>}
   {detail&&<ExpenseDetail expense={detail} paymentLabelText={paymentLabel(detail.paymentMethod,paymentOptions)} currency={money(detail.amount)} country={location?.country} timezone={location?.timezone} canVoid={canVoid} close={()=>setDetail(null)} requestVoid={()=>{setDetail(null);setVoidTarget(detail)}}/>}
   {voidTarget&&<VoidDialog expense={voidTarget} busy={voidMutation.isPending} close={()=>setVoidTarget(null)} confirm={reason=>voidMutation.mutate({id:voidTarget.id,reason})}/>}
   {categoryDraft&&<CategoryEditor category={categoryDraft} busy={saveCategory.isPending} close={()=>setCategoryDraft(null)} save={value=>saveCategory.mutate(value)}/>}
@@ -74,7 +78,7 @@ function paymentIcon(option:{value:string;label:string}):IconName{
  return /efectivo|cash/.test(text)?"cash":/tarjeta|card|pos/.test(text)?"payment":/transfer|banc|dep[oó]sito/.test(text)?"transfer":/yape|plin|billetera|wallet|digital/.test(text)?"phoneApp":"wallet";
 }
 
-function ExpenseEditor({draft,categories,paymentOptions,busy,currencySymbol,close,save}:{draft:ExpenseDraft;categories:ExpenseCategory[];paymentOptions:Array<{value:string;label:string}>;busy:boolean;currencySymbol:string;close:()=>void;save:(draft:ExpenseDraft)=>void}){
+function ExpenseEditor({draft,categories,paymentOptions,cashFromShift,busy,currencySymbol,close,save}:{draft:ExpenseDraft;categories:ExpenseCategory[];paymentOptions:Array<{value:string;label:string}>;cashFromShift:boolean;busy:boolean;currencySymbol:string;close:()=>void;save:(draft:ExpenseDraft)=>void}){
  const{register,handleSubmit,formState:{errors}}=useForm<ExpenseDraft>({defaultValues:draft,resolver:expenseResolver});
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-editor modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="expense-editor-title" aria-busy={busy}><ModalHeader title="Nuevo gasto" titleId="expense-editor-title" onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={handleSubmit(save)} noValidate><div className="form-sections">
   <FormSection icon="receipt" title="Datos del gasto">
@@ -87,6 +91,7 @@ function ExpenseEditor({draft,categories,paymentOptions,busy,currencySymbol,clos
   <FormSection icon="payment" tone="brand" title="Medio de pago">
    <ChoiceGroup label="Medio de pago" options={paymentOptions.map(option=>({...option,icon:paymentIcon(option)}))} {...register("paymentMethod")}/>
    {errors.paymentMethod?.message&&<small className="field-error span-2" role="alert">{errors.paymentMethod.message}</small>}
+   {cashFromShift&&<small className="field-help span-2">Los gastos en efectivo se registran desde el turno, en Caja › Cajas.</small>}
   </FormSection>
   <FormSection icon="note" tone="neutral" title="Información adicional">
    <FormField className="span-2" label="Notas" optional error={errors.notes?.message}><Textarea rows={3} {...register("notes")} placeholder="Información adicional para el control interno"/></FormField>
@@ -95,12 +100,12 @@ function ExpenseEditor({draft,categories,paymentOptions,busy,currencySymbol,clos
 }
 
 function ExpenseDetail({expense,paymentLabelText,currency,country,timezone,canVoid,close,requestVoid}:{expense:Expense;paymentLabelText:string;currency:string;country?:string|null;timezone?:string|null;canVoid:boolean;close:()=>void;requestVoid:()=>void}){
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="expense-detail-title"><ModalHeader title={expense.description} titleId="expense-detail-title" onClose={close} closeLabel="Cerrar"/><div className="expense-detail-body"><DetailHero title={currency} status={<Status tone={expense.status==="active"?"green":"gray"}>{expense.status==="active"?"Vigente":"Anulado"}</Status>} meta={<><Icon name="calendar" size={14}/>{formatRegionalCalendarDate(expense.businessDate,country,{dateStyle:"medium"})} · {expense.categoryName}</>}/><DetailContact icon="user" tone="primary" name={expense.createdByName} detail={`Registrado el ${formatRegionalDateTime(expense.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}`}/><DetailFacts label="Datos del gasto" items={[{label:"Categoría",value:expense.categoryName},{label:"Fecha del gasto",value:formatRegionalCalendarDate(expense.businessDate,country,{dateStyle:"medium"})},{label:"Medio de pago",value:paymentLabelText},{label:"Referencia",value:expense.reference||"Sin referencia"},{label:"Notas",value:expense.notes||"Sin notas",wide:true}]}/>{expense.status==="void"&&<section className="expense-void-audit"><Icon name="alert" size={18}/><div><small>Anulación</small><b>{expense.voidReason}</b><p>{expense.voidedByName}{expense.voidedAt?" · "+formatRegionalDateTime(expense.voidedAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"}):""}</p></div></section>}</div>{canVoid&&expense.status==="active"&&<ModalFooter><Button kind="danger" icon="close" onClick={requestVoid}>Anular gasto</Button></ModalFooter>}</Dialog></div>;
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="expense-detail-title"><ModalHeader title={expense.description} titleId="expense-detail-title" onClose={close} closeLabel="Cerrar"/><div className="expense-detail-body"><DetailHero title={currency} status={<Status tone={expense.status==="active"?"green":"gray"}>{expense.status==="active"?"Vigente":"Anulado"}</Status>} meta={<><Icon name="calendar" size={14}/>{formatRegionalCalendarDate(expense.businessDate,country,{dateStyle:"medium"})} · {expense.categoryName}</>}/><DetailContact icon="user" tone="primary" name={expense.createdByName} detail={`Registrado el ${formatRegionalDateTime(expense.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}`}/><DetailFacts label="Datos del gasto" items={[{label:"Categoría",value:expense.categoryName},{label:"Fecha del gasto",value:formatRegionalCalendarDate(expense.businessDate,country,{dateStyle:"medium"})},{label:"Medio de pago",value:expense.cashRegisterName?`${paymentLabelText} · ${expense.cashRegisterName}`:paymentLabelText},{label:"Referencia",value:expense.reference||"Sin referencia"},{label:"Notas",value:expense.notes||"Sin notas",wide:true}]}/>{expense.status==="void"&&<section className="expense-void-audit"><Icon name="alert" size={18}/><div><small>Anulación</small><b>{expense.voidReason}</b><p>{expense.voidedByName}{expense.voidedAt?" · "+formatRegionalDateTime(expense.voidedAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"}):""}</p></div></section>}</div>{canVoid&&expense.status==="active"&&(!expense.cashRegisterName||expense.cashShiftOpen)&&<ModalFooter><Button kind="danger" icon="close" onClick={requestVoid}>Anular gasto</Button></ModalFooter>}</Dialog></div>;
 }
 
 function VoidDialog({expense,busy,close,confirm}:{expense:Expense;busy:boolean;close:()=>void;confirm:(reason:string)=>void}){
  const[reason,setReason]=useState("");const valid=reason.trim().length>=4&&reason.trim().length<=240;
- return <ConfirmDialog open title="¿Anular este gasto?" subject={{label:"Gasto",name:expense.description}} description="Se conservará el registro y quedará marcado como anulado." tone="danger" confirmLabel="Anular gasto" pending={busy} confirmDisabled={!valid} onCancel={close} onConfirm={()=>confirm(reason.trim())}><FormField label="Motivo de anulación" help="Entre 4 y 240 caracteres."><Textarea rows={3} value={reason} maxLength={240} onChange={e=>setReason(e.target.value)} placeholder="Explica por qué se anula este registro"/></FormField></ConfirmDialog>;
+ return <ConfirmDialog open title="¿Anular este gasto?" subject={{label:"Gasto",name:expense.description}} description={expense.cashRegisterName?`Se conservará el registro y el importe volverá al efectivo del turno de ${expense.cashRegisterName}.`:"Se conservará el registro y quedará marcado como anulado."} tone="danger" confirmLabel="Anular gasto" pending={busy} confirmDisabled={!valid} onCancel={close} onConfirm={()=>confirm(reason.trim())}><FormField label="Motivo de anulación" help="Entre 4 y 240 caracteres."><Textarea rows={3} value={reason} maxLength={240} onChange={e=>setReason(e.target.value)} placeholder="Explica por qué se anula este registro"/></FormField></ConfirmDialog>;
 }
 
 function CategoryEditor({category,busy,close,save}:{category:ExpenseCategory|{id:"";name:string;active:true};busy:boolean;close:()=>void;save:(input:{id?:string;name:string})=>void}){

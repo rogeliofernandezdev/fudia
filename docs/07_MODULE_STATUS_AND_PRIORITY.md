@@ -57,7 +57,7 @@ No es facturación electrónica; la emisión fiscal permanece en P0. Cierre A4 i
 Concierge: delivery y recojo tras la mesa (2026-10-16). Al terminar la atención en
 mesa (o tras 3 h sin pedidos, o con la sesión expirada) el bot toma pedidos del
 mismo local para recojo o delivery propio; la tarifa se calcula por distancia en
-línea recta con rangos por local configurados en Admin › Fudia Concierge.
+línea recta con rangos por local configurados en Admin › Delivery › Tarifas de envío.
 Migración 000083. Pendiente: correr la integración en PostgreSQL efímero (CI) y
 los evals reales del router con Vertex.
 

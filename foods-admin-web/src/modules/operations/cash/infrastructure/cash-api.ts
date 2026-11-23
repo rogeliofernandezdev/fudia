@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {CashMovement,CashMovementDraft,CashOperation,CashOperationDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CashShiftReport,CashShiftUser,CashUserOption,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+import type {CashExpenseCategory,CashMovement,CashMovementDraft,CashOperation,CashOperationDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CashShiftReport,CashShiftUser,CashUserOption,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
 export function getCurrentCashShift(){
   return apiFetch<{shift:CashShift|null}>("cash-shifts/current");
@@ -61,8 +61,14 @@ export function createCashMovement(shiftId:string,draft:CashMovementDraft){
       amount:Number(draft.amount),
       reason:draft.reason.trim(),
       note:draft.note.trim(),
+      ...(draft.categoryId?{categoryId:draft.categoryId}:{}),
     }),
   });
+}
+
+/** Categorías activas para el gasto del turno; vacía sin el módulo `costos`. */
+export function listCashExpenseCategories(){
+  return apiFetch<{items:CashExpenseCategory[]}>("cash-expense-categories");
 }
 
 export function listCashUserOptions(){

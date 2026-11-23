@@ -165,6 +165,11 @@ auditoría) y diez empresas de relleno:
   (70-85 ms → 1,5-7 ms). El total de Ventas sin rango de fechas sigue sumando todo
   el historial pagado (~45 ms con un año); solo un resumen precalculado lo
   evitaría. POS siempre filtra «por cobrar» con `orders_pos_unpaid_idx` (0,1 ms).
+- Ventas fecha cada pedido por su último cobro (`max(payments.created_at)`,
+  lateral por `payments_order_idx`; sin cobros, `orders.created_at`). Con rango,
+  los cobros del rango (`payments_location_created_idx`) acotan los candidatos
+  antes de calcular ese último cobro. Ordenar por cobro sin rango obliga a
+  ordenar todo el historial pagado del local, como ya ocurre con su total.
 - Paginación por offset medida en páginas profundas: Pedidos página 500 1,8 ms,
   Kárdex página 2 500 7,7 ms, Ventas página 500 ≤ 7 ms. No hace falta cursor todavía.
 - Dashboard: los pedidos pagados del periodo se calculan una vez (CTE

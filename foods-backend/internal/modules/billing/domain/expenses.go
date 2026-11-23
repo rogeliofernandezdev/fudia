@@ -26,6 +26,11 @@ type ExpenseView struct {
 	VoidedByName  string  `json:"voidedByName"`
 	VoidedAt      *string `json:"voidedAt"`
 	VoidReason    string  `json:"voidReason"`
+	// CashRegisterName indica la caja de cuyo turno salió el efectivo; vacío si
+	// el gasto no pasó por la caja.
+	CashRegisterName string `json:"cashRegisterName"`
+	// CashShiftOpen: el turno de origen sigue abierto (anular devuelve el efectivo).
+	CashShiftOpen bool `json:"cashShiftOpen"`
 }
 type ExpenseInput struct {
 	CategoryID    string `json:"categoryId"`

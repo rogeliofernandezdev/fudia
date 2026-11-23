@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {existsSync,readFileSync} from "node:fs";
 import {createRequire} from "node:module";
 import vm from "node:vm";
 import ts from "typescript";
@@ -52,9 +52,7 @@ test("tarifas de delivery: la pantalla tiene carga, error, vacío y permisos",()
  for(const fragment of ["DeliveryFeesSkeleton","ErrorState","Sin rangos configurados","can(\"organizations.manage\")","Falta la ubicación del local","pageRoutes.locations"])assert.ok(panel.includes(fragment),fragment);
 });
 
-test("tarifas de delivery: viven en Delivery › Tarifas de envío y salen de la página del chatbot",()=>{
+test("tarifas de delivery: viven solo en Delivery › Tarifas de envío",()=>{
  assert.match(readFileSync(new URL("presentation/delivery-page.tsx",root),"utf8"),/tab==="fees"&&<DeliveryFeesPanel\/>/);
- const concierge=readFileSync(new URL("../src/modules/configuration/presentation/concierge-settings-page.tsx",import.meta.url),"utf8");
- assert.doesNotMatch(concierge,/DeliveryFeesPanel/);
- assert.match(concierge,/deliveryTabPath\("fees"\)/,"el chatbot enlaza a la pestaña de tarifas");
+ assert.equal(existsSync(new URL("../src/modules/configuration/presentation/concierge-settings-page.tsx",import.meta.url)),false,"Fudia Concierge ya no es una pantalla");
 });

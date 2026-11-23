@@ -725,8 +725,16 @@ pertenece además al local activo y conserva fecha de negocio, descripción, imp
 `numeric`, medio de pago, referencia, notas y usuario creador.
 
 Un gasto confirmado no se edita ni elimina. Una corrección se realiza mediante anulación
-auditable, conservando usuario, fecha y motivo. El registro del gasto no modifica
-implícitamente un turno de caja: Caja y turnos mantiene su propia trazabilidad de efectivo.
+auditable, conservando usuario, fecha y motivo.
+
+Desde la migración 000142 un gasto en efectivo nace en el turno de caja y es el
+mismo registro que su egreso: `expenses.cash_shift_id` apunta al turno y el
+movimiento usa `source_type='expense'` con `source_id` = gasto (índice único por
+origen). Los gastos que no pasan por la caja (transferencia, billetera, tarjeta)
+no tocan ningún turno. Anular un gasto del turno solo procede con el turno
+abierto y devuelve el importe con un ingreso `expense_void`; un turno cerrado no
+se altera. Los egresos manuales previos (`source_type='manual'`) son historial
+sin gasto asociado.
 
 ## Empresa, locales y configuración financiera
 

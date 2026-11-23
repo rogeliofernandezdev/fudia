@@ -323,7 +323,7 @@ remotos y el aislamiento de caché por usuario/empresa/local. Contexto verifica
 que el selector conserve el local activo para empresa y plataforma; la empresa
 se muestra por separado en la barra superior.
 
-`plan-navigation.test.mjs` verifica Menús y combos y Concierge en Emprende, abastecimiento, recetas, reservas y gastos desde Impulso como suma acumulativa, ocultación de
+`plan-navigation.test.mjs` verifica Menús y combos en Emprende (Concierge es módulo sin pantalla, no aparece en el menú), abastecimiento, recetas, reservas y gastos desde Impulso como suma acumulativa, ocultación de
 módulos no incluidos incluso con rol de acceso total, separación de acceso y
 lectura, catálogo de Plataforma y recarga de roles/permisos al cambiar el plan.
 

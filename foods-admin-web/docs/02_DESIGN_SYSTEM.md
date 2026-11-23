@@ -2736,8 +2736,14 @@ recalculan al pasar la medianoche local. «Desde» y «Hasta» solo se muestran
 en «Personalizado» (al elegirlo parten del rango del periodo anterior); con un
 periodo rápido no aparecen y el buscador ocupa la fila, porque la franja del
 total ya nombra el periodo. El rango es opcional: admite una
-sola fecha e incluye todo el día final según la zona del local, filtrando la
-fecha de registro mostrada en la tabla; bajo «Hasta» vacío se lee «Vacío: hasta
+sola fecha e incluye todo el día final según la zona del local. Cada venta se
+fecha por su **último cobro** (`paidAt`), el mismo criterio del Dashboard
+(«Pedidos») y de Caja: un pedido registrado anoche y cobrado hoy es venta de hoy
+(confirmado 2026-11-22). La columna «Fecha» muestra ese cobro y la lista se
+ordena por él, del más reciente; un pedido sin cobros (total cero) usa su fecha
+de registro. El detalle conserva la fecha de registro. Un pedido pagado en partes
+en días distintos aparece completo el día en que terminó de pagarse, mientras la
+tarjeta Ventas del Dashboard reparte cada cobro en su día. Bajo «Hasta» vacío se lee «Vacío: hasta
 hoy» porque el calendario nativo no admite otro texto. Sobre la tabla, una franja
 muestra el total del periodo (cobrado neto de **todo** el filtro, no solo la
 página; importe en `primary-700` como único protagonista), el número de ventas y
@@ -2795,7 +2801,7 @@ Formulario de cliente (`ModalForm` + `ModalBody`, un solo scroll con barra fina)
 - El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
 - `active` representa si un módulo está habilitado para una empresa (por plan si es **Disponible**, como piloto si está **En desarrollo**); no representa su estado de desarrollo.
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
-- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos» y «Fudia Concierge»; «Inventario», «Compras», «Kárdex», «Recetas», «Reservas» y «Costos y gastos» aparecen desde Impulso. No hay pantallas ni controles específicos de un plan: todo depende de los módulos efectivos.
+- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos» y el módulo Fudia Concierge (`whatsapp_bot`, sin pantalla propia); «Inventario», «Compras», «Kárdex», «Recetas», «Reservas» y la pestaña «Gastos» de Caja (módulo `costos`) aparecen desde Impulso. No hay pantallas ni controles específicos de un plan: todo depende de los módulos efectivos.
 - Editor de roles (2026-11-04): en «Acciones», las que exigen las pantallas o
   acciones marcadas aparecen marcadas, sin poder quitarse, con una línea 12 px
   `ink-500` «Necesario para Recetas, Administrar recetas» y un check `primary-300`
@@ -3068,10 +3074,21 @@ mientras el despacho siga en Delivery Fudia.
   delivery») usa icono `motorbike`, tono `peach` (atención) y abre el detalle en
   Pedidos (`?orderId=`).
 
+### Fudia Concierge sin pantalla de empresa
+
+Desde el 2026-11-22 «Fudia Concierge» no aparece en el menú lateral, en la
+portada de Configuración ni en el editor de roles: el restaurante no configura
+nada del canal. El canal (chat web de Fudia, Meta o whatsmeow) lo elige la
+plataforma por país en «Países y WhatsApp». El módulo `whatsapp_bot` sigue
+existiendo en planes y empresas porque decide si el QR acepta pedidos; el
+consumo y el tope mensual siguen en Plataforma. La ruta antigua `/whatsapp-bot`
+redirige a Configuración. En roles, «Ver / Editar tarifas de envío» pasan a la
+pantalla Delivery.
+
 ### Tarifas de envío
 
 Viven en Delivery › Tarifas de envío (`DeliveryFeesPanel`, módulo `delivery`)
-desde el 2026-11-14. La pantalla Fudia Concierge solo enlaza a esa pestaña. El
+desde el 2026-11-14; es el único lugar donde se editan. El
 panel abre con una línea («El chatbot cotiza el envío por la distancia en línea
 recta…»), sin título que repita la pestaña.
 
@@ -3720,6 +3737,28 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   diferencia queda explicada. Cerrar sin asociar deja el movimiento pendiente
   (lista y campana); la asociación registra el cobro real por el flujo de
   pagos y es de un solo uso (409 en reintento).
+- **Caja › Gastos** (2026-11-22, pestaña `receipt` de Caja y turnos; antes
+  «Costos y gastos» en el menú Inteligencia). Solo aparece con el módulo
+  `costos` y el permiso `expenses.read` (o para Plataforma); el cajero no la ve.
+  `ExpensesPanel` recibe de Caja su `TabsBar` (`renderTabsBar`) y le entrega
+  sus acciones: «Categorías» (secundario, `layers`) + «Nuevo gasto»; en la
+  vista de categorías, «Gastos» (secundario, `chevronLeft`) + «Nueva
+  categoría», y el panel lleva el `toolbar-title` «Categorías de gastos», como
+  Zonas en Mesas. Sin pestañas anidadas. `/expenses` y `/costos` redirigen a
+  `/cash?tab=gastos`. En roles, ver, registrar y anular gastos son acciones de
+  la pantalla Caja.
+- **Gasto del turno = egreso de caja** (2026-11-22, un solo registro). Con el
+  módulo `costos`, el botón del turno dice «Gasto» (no «Egreso») y abre
+  «Registrar gasto»: Monto, Categoría, Descripción y Observación, sin elegir
+  medio de pago (sale del efectivo). Las categorías tienen skeleton, error y
+  vacío («Un administrador puede crearlas en Caja › Gastos › Categorías»). El
+  gasto aparece en el turno (origen «Gasto») y en Caja › Gastos con «Efectivo ·
+  {caja}» como medio de pago. «Nuevo gasto» en la pestaña no ofrece medios de
+  efectivo y lo dice en una línea `field-help`. Anular un gasto en efectivo
+  solo es posible con su turno abierto: el importe vuelve al turno (origen
+  «Gasto anulado»); con el turno cerrado no hay botón de anular. Sin el módulo
+  `costos` (Emprende) el turno conserva «Egreso» con motivo libre. Los egresos
+  registrados antes de este cambio quedan como historial del turno, sin gasto.
 - **Caja › Pagos detectados** (pestaña `wallet` de Caja y turnos, sin casilla
   de menú propia: la habilita el acceso a Caja): barra de filtros (estado y
   proveedor, más una línea de ayuda en `ink-400`, como el historial de Turnos),

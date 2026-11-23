@@ -20,6 +20,9 @@ type CashMovementInput struct {
 	Amount       float64 `json:"amount"`
 	Reason       string  `json:"reason"`
 	Note         string  `json:"note"`
+	// CategoryID convierte el egreso en un gasto cuando la empresa tiene el
+	// módulo `costos`: el gasto y el movimiento de caja son un solo registro.
+	CategoryID string `json:"categoryId,omitempty"`
 }
 
 type CloseShiftInput struct {

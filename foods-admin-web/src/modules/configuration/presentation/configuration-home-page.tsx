@@ -14,7 +14,6 @@ const sections:Array<{title:string;description:string;href:string;permission?:st
   {title:"Usuarios y roles",description:"Equipo, roles y accesos por local",href:pageRoutes.usersSettings,permission:"users.read"},
   {title:"Módulos",description:"Control de módulos contratado por empresa",href:pageRoutes.modulesSettings,platformAdminOnly:true},
   {title:"Empresas y planes",description:"Plan contratado y situación de pago de cada empresa cliente",href:pageRoutes.companiesSettings,platformAdminOnly:true},
-  {title:"Fudia Concierge",description:"Pedidos conversacionales por WhatsApp desde el QR",href:pageRoutes.concierge,permission:"organizations.read",module:"whatsapp_bot"},
 ];
 
 export function ConfigurationHomePage(){

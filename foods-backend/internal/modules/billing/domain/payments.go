@@ -46,6 +46,8 @@ type PosOrderSummary struct {
 	PaymentStatus   string   `json:"paymentStatus"`
 	PaymentMethods  []string `json:"paymentMethods"`
 	CreatedAt       string   `json:"createdAt"`
+	// PaidAt es el último cobro del pedido; nil sin cobros.
+	PaidAt *string `json:"paidAt"`
 }
 type PaymentReceiptContext struct {
 	OrganizationName string `json:"organizationName"`

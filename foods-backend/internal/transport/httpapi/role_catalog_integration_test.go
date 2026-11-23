@@ -45,12 +45,11 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, menu := range []string{"combos", "whatsapp_bot"} {
-		if !slices.Contains(roleCatalogValues(catalog.Menus), menu) {
-			t.Fatalf("Emprende cannot configure %s", menu)
-		}
+	if !slices.Contains(roleCatalogValues(catalog.Menus), "combos") {
+		t.Fatal("Emprende cannot configure combos")
 	}
-	for _, menu := range []string{"inventario", "compras", "kardex", "costos"} {
+	// Fudia Concierge (whatsapp_bot) y Costos (costos) son módulos sin casilla de menú.
+	for _, menu := range []string{"inventario", "compras", "kardex", "costos", "whatsapp_bot"} {
 		if slices.Contains(roleCatalogValues(catalog.Menus), menu) {
 			t.Fatalf("Emprende exposes Impulso module %s", menu)
 		}
@@ -82,10 +81,8 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 		}
 		if role.SystemKey != nil && *role.SystemKey == "administrator" {
 			foundAdmin = true
-			for _, menu := range []string{"combos", "whatsapp_bot"} {
-				if !slices.Contains(role.MenuAccess, menu) {
-					t.Fatalf("company administrator missing %s", menu)
-				}
+			if !slices.Contains(role.MenuAccess, "combos") {
+				t.Fatal("company administrator missing combos")
 			}
 			for _, permission := range []string{"menu.read", "menu.manage", "organizations.manage"} {
 				if !slices.Contains(role.Permissions, permission) {

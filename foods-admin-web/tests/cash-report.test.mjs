@@ -39,6 +39,7 @@ test("cerrar exige botón explícito, bloquea doble envío y espera el API",asyn
   if(name==="@/design-system")return new Proxy({},{get:(_,key)=>String(key)});
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
   if(name.endsWith("cash-report-content"))return{CashReportContent:"CashReportContent"};
+  if(name.endsWith("cash-api"))return{listCashExpenseCategories:async()=>({items:[]})};
   if(name.endsWith("shift-attribution"))return{};return require(name);
  });
  const report=cashReportFixture();report.shift.status="open";const all=nodes(dialog.CloseCashShiftDialog({shift:report.shift,currency:"PEN",formatMoney:format.cashReportFormat(report).money,busy:false,close:()=>{},save:async draft=>{saveCount++;assert.equal(draft.counts.length,0);await new Promise(resolve=>{done=resolve;});}}));

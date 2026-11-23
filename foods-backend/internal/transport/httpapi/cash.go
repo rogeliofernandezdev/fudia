@@ -19,6 +19,9 @@ func (a *API) openCashShift(w http.ResponseWriter, r *http.Request) {
 func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Cash.CreateCashMovement(w, r)
 }
+func (a *API) listCashExpenseCategories(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Cash.ListCashExpenseCategories(w, r)
+}
 func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Cash.CloseCashShift(w, r)
 }

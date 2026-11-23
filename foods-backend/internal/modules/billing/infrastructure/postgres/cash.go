@@ -112,6 +112,68 @@ func (r *Payments) CreateMovement(ctx context.Context, s scope, shiftID string, 
 		Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
 	return item, billingError(err)
 }
+// CashExpensesEnabled: con el módulo `costos` el egreso del turno es un gasto.
+func (r *Payments) CashExpensesEnabled(ctx context.Context, s scope) (bool, error) {
+	var enabled bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM organization_modules WHERE organization_id=$1 AND module_key='costos' AND active)`, s.OrganizationID).Scan(&enabled)
+	return enabled, err
+}
+
+// CashExpenseCategories lista las categorías activas para el gasto del turno.
+func (r *Payments) CashExpenseCategories(ctx context.Context, s scope) ([]domain.ExpenseCategoryView, error) {
+	rows, err := r.db(ctx).Query(ctx, `SELECT id::text,name,active FROM expense_categories WHERE organization_id=$1 AND active ORDER BY name`, s.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []domain.ExpenseCategoryView{}
+	for rows.Next() {
+		var v domain.ExpenseCategoryView
+		if err = rows.Scan(&v.ID, &v.Name, &v.Active); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+// CashExpenseCategoryActive devuelve ErrNotFound si la categoría no es de la empresa.
+func (r *Payments) CashExpenseCategoryActive(ctx context.Context, s scope, id string) (bool, error) {
+	var active bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT active FROM expense_categories WHERE id::text=$1 AND organization_id=$2`, id, s.OrganizationID).Scan(&active)
+	return active, billingError(err)
+}
+
+// CashExpenseMethod es el medio de efectivo habilitado para gastos (ErrNotFound si no hay).
+func (r *Payments) CashExpenseMethod(ctx context.Context, s scope) (string, error) {
+	var code string
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT code FROM payment_methods
+		WHERE organization_id=$1 AND active AND affects_cash AND expenses_enabled
+		ORDER BY sort_order,code LIMIT 1`, s.OrganizationID).Scan(&code)
+	return code, billingError(err)
+}
+
+// CreateCashExpense registra el gasto y su egreso del turno en una sola sentencia:
+// el movimiento apunta al gasto (source_type 'expense') y el gasto al turno.
+func (r *Payments) CreateCashExpense(ctx context.Context, s scope, shiftID, method string, in domain.CashMovementInput) (domain.CashMovementView, error) {
+	var item domain.CashMovementView
+	err := r.db(ctx).QueryRow(ctx, `
+		WITH expense AS (
+		  INSERT INTO expenses(organization_id,location_id,category_id,business_date,description,amount,payment_method,notes,created_by,cash_shift_id)
+		  SELECT $1,$2,$4::uuid,cs.business_date,$6,$5,$7,$8,$9,cs.id
+		  FROM cash_shifts cs WHERE cs.id=$3 AND cs.organization_id=$1 AND cs.location_id=$2
+		  RETURNING id
+		)
+		INSERT INTO cash_movements(organization_id,location_id,shift_id,movement_type,source_type,source_id,amount,reason,note,created_by)
+		SELECT $1,$2,$3,'expense','expense',expense.id,$5,$6,$8,$9 FROM expense
+		RETURNING id::text,movement_type,source_type,source_id::text,amount::text,reason,note,
+		          (SELECT full_name FROM users WHERE id=$9 AND organization_id=$1),
+		          to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+	`, s.OrganizationID, s.LocationID, shiftID, in.CategoryID, in.Amount, in.Reason, method, in.Note, s.UserID).
+		Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
+	return item, billingError(err)
+}
 func (r *Payments) LockClosingShift(ctx context.Context, s scope, shiftID string) (string, bool, float64, float64, float64, error) {
 	var status string
 	var owned bool

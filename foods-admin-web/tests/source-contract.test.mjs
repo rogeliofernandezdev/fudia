@@ -978,7 +978,6 @@ test("el QR de mesa abre Concierge sin una interfaz intermedia",()=>{
   const tables=read("src/modules/operations/tables/presentation/tables-manager.tsx");
   const legacyRedirect=read("src/app/table/[qr]/page.tsx");
   const routes=read("src/shared/routing/page-routes.ts");
-  const settings=read("src/modules/configuration/presentation/concierge-settings-page.tsx");
   const startProxy=read("src/app/api/public/concierge/[qr]/route.ts");
 
   assert.ok(routes.includes('publicConcierge:"/api/public/concierge/:qr"'),"El catálogo declara la entrada pública a Concierge");
@@ -986,8 +985,6 @@ test("el QR de mesa abre Concierge sin una interfaz intermedia",()=>{
   assert.equal(tables.includes("publicTablePath"),false,"Los QR nuevos no apuntan a la pantalla retirada");
   assert.ok(legacyRedirect.includes("redirect(publicConciergePath(qr))"),"Los QR antiguos redirigen a Concierge sin renderizar una interfaz");
   assert.equal(tables.includes("wa.me/"),false,"Admin Web no construye enlaces con un número almacenado");
-  assert.equal(settings.includes("data.whatsappPhone"),false,"La configuración de empresa no muestra un número persistido");
-  assert.ok(settings.includes("Meta / WhatsApp Business"),"La UI identifica Meta como administrador del canal");
   assert.ok(startProxy.includes("FUDIA_CONCIERGE_URL"),"El BFF delega el deeplink al servicio Concierge");
 });
 

@@ -37,6 +37,11 @@ const movementSchema=z.object({
   amount:moneyField("Ingresa un monto mayor que cero."),
   reason:z.string().trim().min(1,"Indica el motivo del movimiento.").max(120,"El motivo no puede superar 120 caracteres."),
   note:z.string().max(240,"La observación no puede superar 240 caracteres."),
+  categoryId:z.string(),
+});
+const cashExpenseSchema=movementSchema.extend({
+  reason:z.string().trim().min(1,"Describe el gasto.").max(120,"La descripción no puede superar 120 caracteres."),
+  categoryId:z.string().min(1,"Selecciona la categoría del gasto."),
 });
 
 const operationSchema=z.object({
@@ -73,5 +78,6 @@ const closeSchema=z.object({
 export const cashRegisterResolver=resolverFor<CashRegisterDraft>(registerSchema);
 export const openCashShiftResolver=resolverFor<OpenCashShiftDraft>(openSchema);
 export const cashMovementResolver=resolverFor<CashMovementDraft>(movementSchema);
+export const cashExpenseResolver=resolverFor<CashMovementDraft>(cashExpenseSchema);
 export const closeCashShiftResolver=resolverFor<CloseCashShiftDraft>(closeSchema);
 export const cashOperationResolver=resolverFor<CashOperationDraft>(operationSchema);

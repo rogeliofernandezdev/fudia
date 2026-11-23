@@ -296,19 +296,42 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		filter += posPaymentReadySQL
 	}
 
+	// Ventas fecha cada pedido por su último cobro, el mismo criterio con que el
+	// Dashboard y Caja cuentan lo cobrado: un pedido registrado anoche y cobrado
+	// hoy es venta de hoy. Sin cobros (total cero) vale la fecha de registro.
 	baseFrom := `
 		FROM orders o
 		LEFT JOIN tables t
 		  ON t.id=o.table_id
 		 AND t.organization_id=o.organization_id
 		 AND t.location_id=o.location_id
+		LEFT JOIN LATERAL (
+		  SELECT max(lp.created_at) AS paid_at FROM payments lp
+		  WHERE lp.order_id=o.id AND lp.organization_id=o.organization_id AND lp.location_id=o.location_id
+		) last_payment ON true
 	`
+	const paidAtSQL = `COALESCE(last_payment.paid_at,o.created_at)`
+	inRange := func(column string) string {
+		return `($4='' OR ` + column + ` >= (NULLIF($4,'')::date::timestamp AT TIME ZONE ` + posLocationTimezoneSQL + `))
+		AND ($5='' OR ` + column + ` < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE ` + posLocationTimezoneSQL + `))`
+	}
+	order := `o.created_at DESC,o.id DESC`
+	if status == "paid" {
+		order = paidAtSQL + ` DESC,o.id DESC`
+	}
 	where := `
 		o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 		AND ($3='' OR o.code ILIKE '%'||$3||'%' OR o.customer_name ILIKE '%'||$3||'%'
 		  OR COALESCE(t.name,'') ILIKE '%'||$3||'%')
-		AND ($4='' OR o.created_at >= (NULLIF($4,'')::date::timestamp AT TIME ZONE `+posLocationTimezoneSQL+`))
-		AND ($5='' OR o.created_at < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE `+posLocationTimezoneSQL+`))
+		-- Con rango, los cobros del rango (índice por local y fecha) acotan los
+		-- candidatos antes de calcular el último cobro de cada pedido.
+		AND (($4='' AND $5='') OR o.id IN (
+		      SELECT window_payment.order_id FROM payments window_payment
+		      WHERE window_payment.organization_id=$1 AND window_payment.location_id=$2
+		        AND ` + inRange("window_payment.created_at") + `)
+		  OR (` + inRange("o.created_at") + ` AND NOT EXISTS(
+		      SELECT 1 FROM payments np WHERE np.order_id=o.id AND np.organization_id=$1 AND np.location_id=$2)))
+		AND ` + inRange(paidAtSQL) + `
 		AND ($6='' OR (o.completed_at IS NULL AND o.paid_amount < o.total)
 		 OR EXISTS(SELECT 1 FROM payments cp WHERE cp.order_id=o.id AND cp.organization_id=$1 AND cp.location_id=$2 AND cp.shift_id=NULLIF($6,'')::uuid))
 		AND ($6='' OR (o.channel='salon' AND o.table_id IS NOT NULL AND o.waiter_id=$7))
@@ -331,6 +354,7 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		         ELSE 'partial'
 		       END,
 		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
+		       to_char(last_payment.paid_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
 		       -- Medios con saldo neto positivo: solo para las filas de la página.
 		       COALESCE((
 		         SELECT array_agg(DISTINCT pm.name ORDER BY pm.name)
@@ -346,7 +370,7 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		         FROM order_items i WHERE i.order_id=o.id AND i.organization_id=o.organization_id),'')
 	`+baseFrom+`
 		WHERE `+where+`
-		ORDER BY o.created_at DESC,o.id DESC
+		ORDER BY `+order+`
 		LIMIT $8 OFFSET $9
 	`, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID, s.UserID, size, (page-1)*size)
 	if err != nil {
@@ -360,7 +384,7 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		if err := rows.Scan(
 			&item.ID, &item.Code, &item.Channel, &item.Status, &item.CustomerName, &item.TableName,
 			&item.Total, &item.PaidAmount, &item.RemainingAmount, &item.PaymentStatus, &item.CreatedAt,
-			&item.PaymentMethods, &item.BillClosed, &item.WaiterID, &item.ItemsText,
+			&item.PaidAt, &item.PaymentMethods, &item.BillClosed, &item.WaiterID, &item.ItemsText,
 		); err != nil {
 			return out, err
 		}

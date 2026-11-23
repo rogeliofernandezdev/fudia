@@ -78,7 +78,7 @@ test("la barra compartida alinea acciones en escritorio y les da una fila comple
  assert.equal(declaration(css,".ds-tabs-bar>:first-child","width","(width<=600px)"),"100%");
  assert.equal(declaration(css,".ds-tabs-actions","width","(width<=600px)"),"100%");
  assert.equal(declaration(css,".ds-tabs-actions .button","flex","(width<=600px)"),"1 1 var(--size-150)");
- for(const file of ["operations/orders/presentation/orders-manager.tsx","menu/products/presentation/catalog-manager.tsx","operations/tables/presentation/tables-manager.tsx","operations/cash/presentation/cash-page.tsx","supply/purchases/presentation/purchases-page.tsx","expenses/presentation/expenses-page.tsx","identity/presentation/users-roles-manager.tsx","organizations/presentation/organization-admin.tsx","platform/presentation/platform-plans-page.tsx"]){
+ for(const file of ["operations/orders/presentation/orders-manager.tsx","menu/products/presentation/catalog-manager.tsx","operations/tables/presentation/tables-manager.tsx","operations/cash/presentation/cash-page.tsx","supply/purchases/presentation/purchases-page.tsx","identity/presentation/users-roles-manager.tsx","organizations/presentation/organization-admin.tsx","platform/presentation/platform-plans-page.tsx"]){
   assert.match(read(`modules/${file}`),/<TabsBar (sticky )?action=/);
  }
 });
