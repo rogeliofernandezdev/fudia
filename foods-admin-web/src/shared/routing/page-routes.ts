@@ -101,8 +101,8 @@ export const legacyPageRedirects=[
   // Fudia Concierge dejó de ser pantalla: el canal lo administra la plataforma.
   {legacy:"/whatsapp-bot",canonical:pageRoutes.settings},
   // Costos y gastos es la pestaña «Gastos» de Caja desde el 2026-11-22.
-  {legacy:"/expenses",canonical:"/cash?tab=gastos"},
-  {legacy:"/costos",canonical:"/cash?tab=gastos"},
+  {legacy:"/expenses",canonical:"/cash?tab=expenses"},
+  {legacy:"/costos",canonical:"/cash?tab=expenses"},
 ] as const;
 
 export function companySettingsPath(organizationId:string){

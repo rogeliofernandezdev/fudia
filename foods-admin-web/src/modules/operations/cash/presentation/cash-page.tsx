@@ -7,7 +7,9 @@ import {useRouter} from "next/navigation";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,IconTile,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader,type TabItem} from "@/design-system";
 import {PayNotificationsPanel} from "@/modules/payment-devices";
-import {ExpensesPanel} from "@/modules/expenses";
+// Import directo: el barrel `@/modules/expenses` cambió de exportación y next dev
+// conserva el mapa viejo de `optimizePackageImports` hasta borrar su caché.
+import {ExpensesPanel} from "@/modules/expenses/presentation/expenses-page";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -21,7 +23,7 @@ import {CashClosingDialog} from "./cash-closing-dialog";
 import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
-export type CashTab="registers"|"history"|"pagos"|"gastos";
+export type CashTab="registers"|"history"|"payments"|"expenses";
 const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cierre","Efectivo esperado","Efectivo contado","Resultado","Estado","Acciones"];
 
 function recordedAmount(value:string|null|undefined){
@@ -43,7 +45,7 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
   const showExpenses=Boolean(user?.platformAdmin)||(Boolean(modules?.costos)&&can("expenses.read"));
   // Con el módulo `costos`, el egreso del turno se registra como gasto (un solo registro).
   const cashExpenses=Boolean(modules?.costos);
-  const[tab,setTab]=useState<CashTab>(initialTab==="gastos"&&!showExpenses?"registers":initialTab);
+  const[tab,setTab]=useState<CashTab>(initialTab==="expenses"&&!showExpenses?"registers":initialTab);
   const[q,setQ]=useState("");
   const[status,setStatus]=useState("");
   const[page,setPage]=useState(1);
@@ -234,8 +236,8 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
   const tabItems:TabItem<CashTab>[]=[
     {value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},
     {value:"history",label:"Turnos",icon:"clock"},
-    {value:"pagos",label:"Pagos detectados",icon:"wallet"},
-    ...(showExpenses?[{value:"gastos" as const,label:"Gastos",icon:"receipt" as const}]:[]),
+    {value:"payments",label:"Pagos detectados",icon:"wallet"},
+    ...(showExpenses?[{value:"expenses" as const,label:"Gastos",icon:"receipt" as const}]:[]),
   ];
   const tabsBar=(action?:ReactNode)=><TabsBar action={action}>
       <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={tabItems}/>
@@ -247,11 +249,11 @@ export function CashPage({initialTab="registers"}:{initialTab?:CashTab}={}){
       description="Controla las cajas del local, sus turnos y el efectivo esperado en tiempo real."
     />
 
-    {tab==="gastos"?<ExpensesPanel renderTabsBar={tabsBar}/>:<>{tabsBar(headerAction)}
+    {tab==="expenses"?<ExpensesPanel renderTabsBar={tabsBar}/>:<>{tabsBar(headerAction)}
 
     <section className="panel standardized-management cash-panel">
 
-      {tab==="pagos"
+      {tab==="payments"
         ?<><h2 className="sr-only">Pagos detectados</h2><PayNotificationsPanel dateTime={dateTime}/></>
         :tab==="registers"
         ?<><h2 className="sr-only">Cajas</h2><CashRegisters

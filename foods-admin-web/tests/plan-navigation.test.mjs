@@ -104,8 +104,8 @@ test("los gastos viven en la pestaña «Gastos» de Caja, solo con el módulo co
  const {readFileSync}=await import("node:fs");
  const cash=readFileSync(new URL("../src/modules/operations/cash/presentation/cash-page.tsx",import.meta.url),"utf8");
  assert.match(cash,/const showExpenses=Boolean\(user\?\.platformAdmin\)\|\|\(Boolean\(modules\?\.costos\)&&can\("expenses\.read"\)\)/);
- assert.match(cash,/\.\.\.\(showExpenses\?\[\{value:"gastos"/);
- assert.match(cash,/tab==="gastos"\?<ExpensesPanel renderTabsBar=\{tabsBar\}\/>/);
+ assert.match(cash,/\.\.\.\(showExpenses\?\[\{value:"expenses"/);
+ assert.match(cash,/tab==="expenses"\?<ExpensesPanel renderTabsBar=\{tabsBar\}\/>/);
  const routes=readFileSync(new URL("../src/shared/routing/page-routes.ts",import.meta.url),"utf8");
- assert.match(routes,/\{legacy:"\/expenses",canonical:"\/cash\?tab=gastos"\}/);
+ assert.match(routes,/\{legacy:"\/expenses",canonical:"\/cash\?tab=expenses"\}/);
 });

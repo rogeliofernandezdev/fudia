@@ -31,7 +31,7 @@ test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de prefer
  assert.deepEqual([...rules.noticeTargets({kind:"bill_requested"})],[routes.pos,routes.diningRoom]);
  assert.deepEqual([...rules.noticeTargets({kind:"stale_account"})],[routes.diningRoom,routes.pos]);
  assert.deepEqual([...rules.noticeTargets({kind:"pay_detected"})],[routes.cash]);
- assert.equal(rules.noticeHref(routes.cash,{kind:"pay_detected"}),"/cash?tab=pagos");
+ assert.equal(rules.noticeHref(routes.cash,{kind:"pay_detected"}),"/cash?tab=payments");
  // Listo en mesa: el mozo entrega en Salón; sin mesa (mostrador, recojo, delivery) se ve en Pedidos.
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready",tableId:"t1"})],[routes.diningRoom,routes.orders]);
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready"})],[routes.orders,routes.pos]);

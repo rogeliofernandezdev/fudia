@@ -706,7 +706,7 @@ El aviso `pay_detected` trae `payNotificationId`. Con Caja permitida, la campana
 no navega: monta `PayNotificationOpener` (de `modules/payment-devices`), que lee
 el pago con `GET /api/admin/pay-notifications/{id}` (clave
 `["pay-notification", id]`, sin caché) y abre «Asociar pago a pedido»; al asociar
-invalida `["staff-notices"]`. Sin id, el aviso lleva a `/cash?tab=pagos`.
+invalida `["staff-notices"]`. Sin id, el aviso lleva a `/cash?tab=payments`.
 
 «Cuenta anterior sin cerrar» (`stale_account`, icono `clock`, tono `peach`) llega
 cuando alguien escanea el QR de una mesa cuya cuenta lleva más de 3 h sin pedidos;

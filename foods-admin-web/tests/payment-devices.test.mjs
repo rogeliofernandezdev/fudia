@@ -96,7 +96,7 @@ test("Asociar pago: pedidos por mesa o cliente, saldo pendiente y búsqueda en e
 
 test("Fudia Pay: Caja revisa los pagos detectados y cada local vincula sus dispositivos",()=>{
   const cash=read("src/modules/operations/cash/presentation/cash-page.tsx");
-  assert.match(cash,/value:"pagos",label:"Pagos detectados",icon:"wallet"/);
+  assert.match(cash,/value:"payments",label:"Pagos detectados",icon:"wallet"/);
   assert.match(cash,/PayNotificationsPanel dateTime=\{dateTime\}/);
   const admin=read("src/modules/organizations/presentation/organization-admin.tsx");
   assert.doesNotMatch(admin,/pay-devices-settings/,"Mi restaurante ya no lista dispositivos: son de cada local");

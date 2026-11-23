@@ -201,7 +201,7 @@ Corrección 2026-11-18 (migración `000136_pay_staff_notices`): el tipo
 `pay_detected` estaba declarado pero faltaba tanto en la normalización como
 en la restricción SQL de avisos. Se admite en ambas y se recuperan, sin
 duplicados, los avisos de pagos todavía detectados de las últimas 24 horas.
-La campana los muestra a caja y abre `/cash?tab=pagos`. La tarjeta flotante
+La campana los muestra a caja y abre `/cash?tab=payments`. La tarjeta flotante
 es independiente: X o 8 segundos la ocultan sin descartar ni asociar el pago;
 el tiempo se pausa con hover, foco o pestaña oculta. Solo emergen pagos nuevos
 después de cargar el historial, y el contexto se reinicia al cambiar de usuario,

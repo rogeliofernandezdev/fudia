@@ -47,7 +47,7 @@ export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[
  * cuenta pedida abre el cobro del pedido; los demás avisos llegan a la pantalla.
  */
 export function noticeHref(target:string,notice:Pick<StaffNotice,"kind"|"orderId">){
- if(notice.kind==="pay_detected"&&target===pageRoutes.cash)return `${target}?tab=pagos`;
+ if(notice.kind==="pay_detected"&&target===pageRoutes.cash)return `${target}?tab=payments`;
  const opensDetail=target===pageRoutes.diningRoom||target===pageRoutes.orders||(target===pageRoutes.pos&&(notice.kind==="bill_requested"||notice.kind==="stale_account"));
  return notice.orderId&&opensDetail?`${target}?orderId=${encodeURIComponent(notice.orderId)}`:target;
 }

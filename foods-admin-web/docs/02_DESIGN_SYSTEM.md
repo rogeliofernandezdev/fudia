@@ -3638,7 +3638,7 @@ pago. Tocar el aviso abre en el lugar el mismo modal «Asociar pago a pedido» d
 aviso flotante y de la tabla (2026-11-22): el aviso trae `payNotificationId` y el
 modal lee el pago por id, con skeleton y error explícito. Si el pago ya se asoció
 o se descartó, muestra su «Detalle del pago». Sin id (backend anterior) o sin
-acceso a Caja, el aviso sigue llevando a «Pagos detectados» (`/cash?tab=pagos`).
+acceso a Caja, el aviso sigue llevando a «Pagos detectados» (`/cash?tab=payments`).
 Las filas de pago de la campana muestran el círculo de billetera de 40 px
 (ver «Lista de avisos»). Se reconoce solo
 el título canónico del aviso de pago; los demás avisos conservan su icono.
@@ -3745,7 +3745,7 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   vista de categorías, «Gastos» (secundario, `chevronLeft`) + «Nueva
   categoría», y el panel lleva el `toolbar-title` «Categorías de gastos», como
   Zonas en Mesas. Sin pestañas anidadas. `/expenses` y `/costos` redirigen a
-  `/cash?tab=gastos`. En roles, ver, registrar y anular gastos son acciones de
+  `/cash?tab=expenses`. En roles, ver, registrar y anular gastos son acciones de
   la pantalla Caja.
 - **Gasto del turno = egreso de caja** (2026-11-22, un solo registro). Con el
   módulo `costos`, el botón del turno dice «Gasto» (no «Egreso») y abre
