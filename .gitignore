@@ -30,3 +30,7 @@ gha-creds-*.json
 fudia-pay/.gradle/
 fudia-pay/build/
 fudia-pay/app/build/
+
+# Documentos de Word (entregables locales) y sus temporales «~$…»: nunca se versionan.
+*.docx
+~$*
