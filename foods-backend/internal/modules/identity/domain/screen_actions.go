@@ -33,7 +33,6 @@ var ScreenActions = map[string][]ScreenAction{
 	"inventario":     {{"inventory.read", "Ver inventario"}, {"inventory.manage", "Registrar ajustes y editar artículos"}, {"inventory.transfer", "Transferir stock entre locales"}},
 	"kardex":         {{"inventory.read", "Ver movimientos del kárdex"}},
 	"compras":        {{"purchases.read", "Ver compras y proveedores"}, {"purchases.manage", "Crear órdenes y administrar proveedores"}, {"purchases.approve", "Aprobar órdenes de compra"}, {"purchases.receive", "Recibir compras"}},
-	"delivery":       {{"organizations.read", "Ver tarifas de envío"}, {"organizations.manage", "Editar tarifas de envío"}},
 	"clientes":       {{"customers.read", "Ver clientes"}, {"customers.manage", "Crear y editar clientes"}},
 	"locales":        {{"organizations.read", "Ver locales"}, {"organizations.manage", "Crear, editar y desactivar locales"}, {"subscription.read", "Consultar el límite de locales del plan"}},
 	"mi_restaurante": {{"organizations.read", "Ver los datos del restaurante"}, {"organizations.manage", "Editar los datos del restaurante"}},

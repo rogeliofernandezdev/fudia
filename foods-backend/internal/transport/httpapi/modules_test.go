@@ -12,6 +12,8 @@ func TestModuleCatalogMatchesAdminNavigation(t *testing.T) {
 		"recetas": {name:"Recetas",icon:"cookingPot"},
 		"kardex": {name:"Kardex",icon:"ledger"},
 		"usuarios": {name:"Usuarios y roles",icon:"users"},
+		// Gastos es la pestaña de Caja desde el 2026-11-22.
+		"costos": {name:"Gastos",icon:"receipt",descriptionContains:"egresos de caja"},
 	}
 	for key,expected:=range want {
 		found:=false
@@ -20,6 +22,9 @@ func TestModuleCatalogMatchesAdminNavigation(t *testing.T) {
 			found=true
 			if module.Name!=expected.name {
 				t.Fatalf("%s name: expected %q, got %q",key,expected.name,module.Name)
+			}
+			if key=="costos" && module.Category!="Operación" {
+				t.Fatalf("costos category: expected Operación, got %q",module.Category)
 			}
 			if module.Icon!=expected.icon {
 				t.Fatalf("%s icon: expected %q, got %q",key,expected.icon,module.Icon)

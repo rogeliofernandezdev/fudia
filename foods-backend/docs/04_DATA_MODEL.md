@@ -39,9 +39,11 @@ nunca se pudo enviar). La `priority` solo ordena el historial. La primera centra
 que acepta se queda con el pedido bajo el bloqueo pedido → despacho → central;
 las demás ofertas se retiran y sus botones responden `taken` (doble clic:
 `already_accepted`). Si todas rechazan o vencen, el despacho queda `unassigned`
-y se publica `delivery_unassigned` a caja. «Reintentar» abre otra vuelta para
-todas las centrales; «Usar delivery propio» lo deja en `own` y retira las
-ofertas. Si cocina ya terminó, la central recibe de inmediato «listo para recoger».
+y el barrido abre otra vuelta para todas las centrales cada 2 minutos, hasta 3
+vueltas; recién al agotarlas (o sin centrales activas) se publica
+`delivery_unassigned` a caja (2026-11-23). «Usar delivery propio» lo deja en
+`own` y retira las ofertas, solo mientras ninguna central aceptó; «Reintentar»
+manual queda para Plataforma. Si cocina ya terminó, la central recibe de inmediato «listo para recoger».
 El motorizado, la liberación, las alertas de recogida y la entrega fallida
 (migración 000126) se describen en `15_DELIVERY_GEOGRAPHY.md`. «Recoger» pasa el
 pedido a `en_camino` por el caso de uso de Orders y el despacho a `picked_up`.

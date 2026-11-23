@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/foods-platform/foods-backend/internal/modules/delivery/application"
 	"github.com/foods-platform/foods-backend/internal/modules/delivery/domain"
@@ -78,26 +77,6 @@ func (r *Repository) KeepPickupAlert(ctx context.Context, s scope, dispatchID st
 		WHERE d.id=$1 AND d.organization_id=$2 AND o.id=d.order_id AND o.organization_id=d.organization_id
 		  AND `+pickupLevelSQL+`>0`, dispatchID, s.OrganizationID)
 	return tag.RowsAffected() > 0, err
-}
-
-// MarkPickupAlerted registra el aviso crítico al restaurante una sola vez por motorizado.
-func (r *Repository) MarkPickupAlerted(ctx context.Context, s scope, dispatchID string) (application.PickupDelay, bool, error) {
-	var out application.PickupDelay
-	var alerted time.Time
-	err := r.db(ctx).QueryRow(ctx, `
-		UPDATE delivery_dispatches d SET pickup_alerted_at=now(),updated_at=now()
-		FROM orders o, delivery_partners p
-		WHERE d.id=$1 AND d.organization_id=$2 AND o.id=d.order_id AND o.organization_id=d.organization_id
-		  AND p.id=d.accepted_partner_id AND d.pickup_alerted_at IS NULL AND `+pickupLevelSQL+`=3
-		RETURNING p.name,COALESCE(d.courier_assigned_at,d.ready_notified_at)`, dispatchID, s.OrganizationID).Scan(&out.PartnerName, &alerted)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return out, false, nil
-	}
-	if err != nil {
-		return out, false, err
-	}
-	out.Key = fmt.Sprint(alerted.UnixMicro())
-	return out, true, nil
 }
 
 // ReportDeliveryIssue registra «No pude entregar» con la distancia del motorizado

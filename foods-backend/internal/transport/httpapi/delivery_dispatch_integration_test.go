@@ -233,17 +233,47 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 			t.Fatalf("cashier must resolve unassigned dispatch before %s: %d %s", status, rec.Code, rec.Body.String())
 		}
 	}
-	var notices int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM staff_notices WHERE order_id=$1 AND kind='delivery_unassigned'`, orderID).Scan(&notices); err != nil || notices != 1 {
-		t.Fatalf("unassigned notice: %d %v", notices, err)
+	unassignedNotices := func(orderID string) int {
+		t.Helper()
+		var notices int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM staff_notices WHERE order_id=$1 AND kind='delivery_unassigned'`, orderID).Scan(&notices); err != nil {
+			t.Fatal(err)
+		}
+		return notices
+	}
+	if n := unassignedNotices(orderID); n != 0 {
+		t.Fatalf("no restaurant notice while automatic retries remain: %d", n)
 	}
 	if got := act("accept", secondToken, phone(2)); got != "expired" {
 		t.Fatalf("accept after expiry: %s", got)
 	}
-
-	retry := call(d.RetryDispatch, "POST", "", orderID, s)
-	if retry.Code != 200 || !strings.Contains(retry.Body.String(), `"round":2`) {
-		t.Fatalf("retry: %d %s", retry.Code, retry.Body.String())
+	round := func(orderID string) int {
+		t.Helper()
+		var n int
+		if err := pool.QueryRow(ctx, `SELECT round FROM delivery_dispatches WHERE order_id=$1`, orderID).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	// Reintento automático: antes de AutoRetryInterval el barrido espera.
+	if err := api.dispatcher.Sweep(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if dispatchStatus(orderID) != "unassigned" || round(orderID) != 1 {
+		t.Fatalf("retried before the interval: %s %d", dispatchStatus(orderID), round(orderID))
+	}
+	autoRetry := func(orderID string) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, `UPDATE delivery_dispatches SET updated_at=now()-interval '3 minutes' WHERE order_id=$1`, orderID); err != nil {
+			t.Fatal(err)
+		}
+		if err := api.dispatcher.Sweep(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	autoRetry(orderID)
+	if dispatchStatus(orderID) != "searching" || round(orderID) != 2 {
+		t.Fatalf("automatic retry: %s %d", dispatchStatus(orderID), round(orderID))
 	}
 	offers = claim()
 	if len(offers) != 2 {
@@ -331,32 +361,85 @@ func TestDeliveryFudiaPartnerCascade(t *testing.T) {
 		t.Fatalf("withdrawn offer still sent: %#v", late)
 	}
 
-	// Aceptado y luego delivery propio: el envío vuelve al pedido del local.
-	backID := prepare()
+	// Aceptado por una central: el local ya no puede usar su delivery propio;
+	// el reparto lo coordina Fudia y la central no recibe cancelación.
+	acceptedID := prepare()
 	offers = claim()
 	if len(offers) != 2 || act("accept", byPhone(offers, phone(1)).ActionToken, phone(1)) != "accepted" {
 		t.Fatalf("accept before own: %#v", offers)
 	}
-	if total, fee := money(backID); total != "60.00" || fee != "0.00" {
-		t.Fatalf("released fee: %s %s", total, fee)
-	}
-	if own := call(d.UseOwnDelivery, "POST", "", backID, s); own.Code != 200 {
+	if own := call(d.UseOwnDelivery, "POST", "", acceptedID, s); own.Code != 409 || !strings.Contains(own.Body.String(), "delivery_already_accepted") {
 		t.Fatalf("own after accept: %d %s", own.Code, own.Body.String())
 	}
-	if total, fee := money(backID); total != "65.00" || fee != "5.00" {
-		t.Fatalf("restored fee: %s %s", total, fee)
+	if total, fee := money(acceptedID); total != "60.00" || fee != "0.00" || dispatchStatus(acceptedID) != "accepted" {
+		t.Fatalf("accepted order changed: %s %s %s", total, fee, dispatchStatus(acceptedID))
 	}
-	if notice := claim(); len(notice) != 1 || notice[0].Kind != "cancelled" {
-		t.Fatalf("central must be told: %#v", notice)
+	if notice := claim(); len(notice) != 0 {
+		t.Fatalf("central must not be cancelled: %#v", notice)
 	}
+	call(api.updateOrderStatus, "PATCH", `{"status":"cancelado"}`, acceptedID, s)
+	claim()
+
+	t.Run("automatic_retries_then_restaurant_notice", func(t *testing.T) {
+		id := prepare()
+		expireAll := func() {
+			t.Helper()
+			if len(claim()) != 2 {
+				t.Fatal("each round offers every central")
+			}
+			if _, err := pool.Exec(ctx, `UPDATE delivery_dispatch_offers f SET expires_at=now()-interval '1 second' FROM delivery_dispatches d WHERE f.dispatch_id=d.id AND d.order_id=$1 AND f.status='pending'`, id); err != nil {
+				t.Fatal(err)
+			}
+			if err := api.dispatcher.Sweep(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if dispatchStatus(id) != "unassigned" {
+				t.Fatalf("round %d must end unassigned: %s", round(id), dispatchStatus(id))
+			}
+		}
+		for want := 1; want <= 3; want++ {
+			if want > 1 {
+				autoRetry(id)
+			}
+			if round(id) != want {
+				t.Fatalf("round: %d, want %d", round(id), want)
+			}
+			expireAll()
+			if n, notify := unassignedNotices(id), want == 3; (n == 1) != notify || n > 1 {
+				t.Fatalf("round %d notices: %d", want, n)
+			}
+		}
+		// Agotadas las vueltas, el barrido ya no reintenta: decide el local.
+		if _, err := pool.Exec(ctx, `UPDATE delivery_dispatches SET updated_at=now()-interval '3 minutes' WHERE order_id=$1`, id); err != nil {
+			t.Fatal(err)
+		}
+		if err := api.dispatcher.Sweep(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if dispatchStatus(id) != "unassigned" || round(id) != 3 || len(claim()) != 0 {
+			t.Fatalf("retried after the last round: %s %d", dispatchStatus(id), round(id))
+		}
+		if own := call(d.UseOwnDelivery, "POST", "", id, s); own.Code != 200 || dispatchStatus(id) != "own" {
+			t.Fatalf("own after rounds: %d %s", own.Code, own.Body.String())
+		}
+	})
 
 	t.Run("stale_buttons_cannot_take_reassigned_order", func(t *testing.T) {
-		oldToken := byPhone(offers, phone(1)).ActionToken
-		if got := act("accept", oldToken, phone(1)); got != "taken" {
-			t.Fatalf("old acceptance after own: %s", got)
+		backID := prepare()
+		first := claim()
+		if len(first) != 2 {
+			t.Fatalf("offer: %#v", first)
 		}
-		if rec := call(d.RetryDispatch, "POST", "", backID, s); rec.Code != 200 {
-			t.Fatal(rec.Body.String())
+		oldToken := byPhone(first, phone(1)).ActionToken
+		if _, err := pool.Exec(ctx, `UPDATE delivery_dispatch_offers f SET expires_at=now()-interval '1 second' FROM delivery_dispatches d WHERE f.dispatch_id=d.id AND d.order_id=$1`, backID); err != nil {
+			t.Fatal(err)
+		}
+		if err := api.dispatcher.Sweep(ctx); err != nil {
+			t.Fatal(err)
+		}
+		autoRetry(backID)
+		if got := act("accept", oldToken, phone(1)); got != "taken" {
+			t.Fatalf("old acceptance after a new round: %s", got)
 		}
 		next := claim()
 		if len(next) != 2 {

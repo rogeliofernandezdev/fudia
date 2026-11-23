@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/foods-platform/foods-backend/internal/modules/delivery/application"
@@ -26,11 +27,14 @@ func (r *Repository) OrderFacts(ctx context.Context, s scope, orderID string) (a
 	return f, err
 }
 
-const dispatchStateColumns = `id::text,order_id::text,status,round,ready_notified_at IS NOT NULL`
+// dispatchStateColumns incluye si el despacho sin asignar ya cumplió la espera
+// del reintento automático.
+var dispatchStateColumns = fmt.Sprintf(`id::text,order_id::text,status,round,ready_notified_at IS NOT NULL,
+	(status='unassigned' AND updated_at<=now()-interval '%d seconds')`, int(domain.AutoRetryInterval.Seconds()))
 
 func scanState(row pgx.Row) (application.DispatchState, error) {
 	var d application.DispatchState
-	err := row.Scan(&d.ID, &d.OrderID, &d.Status, &d.Round, &d.ReadyNotified)
+	err := row.Scan(&d.ID, &d.OrderID, &d.Status, &d.Round, &d.ReadyNotified, &d.RetryDue)
 	return d, err
 }
 
@@ -291,7 +295,7 @@ func (r *Repository) Dispatch(ctx context.Context, s scope, orderID string) (dom
 //   - despacho buscando central sin oferta pendiente o con la oferta vencida;
 //   - central aceptó y cocina terminó, sin «listo para recoger» enviado;
 //   - despacho activo de un pedido cancelado, o resuelto por el local;
-//   - pedido listo hace 8 minutos sin recoger, sin aviso crítico al restaurante.
+//   - despacho sin asignar hace AutoRetryInterval al que le quedan vueltas automáticas.
 func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.OrderRef, error) {
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT DISTINCT organization_id::text,location_id::text,order_id::text FROM (
@@ -318,10 +322,9 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		  JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id
 		  WHERE d.status IN ('searching','accepted','unassigned') AND (
 		    o.status='cancelado'
-		    OR (d.status='searching' AND o.paid_amount>0)
+		    OR (d.status IN ('searching','unassigned') AND o.paid_amount>0)
 		    OR (d.status='accepted' AND d.ready_notified_at IS NULL AND o.status='listo')
-		    OR (d.status='accepted' AND o.status='listo' AND d.pickup_alerted_at IS NULL
-		        AND `+pickupWaitSinceSQL+`<now()-make_interval(secs => $3))
+		    OR (d.status='unassigned' AND d.round<$4 AND d.updated_at<=now()-make_interval(secs => $3))
 		    OR (d.status<>'accepted' AND (o.completed_at IS NOT NULL OR o.status IN ('en_camino','entregado'))))
 		  UNION ALL
 		  -- Envío por mover: la central lo tiene y aún no salió del pedido, o el
@@ -333,7 +336,7 @@ func (r *Repository) DueOrders(ctx context.Context, limit int) ([]application.Or
 		    (d.status IN ('accepted','picked_up','delivered') AND NOT d.fee_released AND COALESCE(d.partner_fee,0)>0)
 		    OR (d.status NOT IN ('accepted','picked_up','delivered','cancelled') AND d.fee_released))
 		) due
-		LIMIT $1`, limit, domain.UndeliveredOfferTimeout.Seconds(), domain.PickupCriticalAfter.Seconds())
+		LIMIT $1`, limit, domain.UndeliveredOfferTimeout.Seconds(), domain.AutoRetryInterval.Seconds(), domain.AutoRetryRounds)
 	if err != nil {
 		return nil, err
 	}

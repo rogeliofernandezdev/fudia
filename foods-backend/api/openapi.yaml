@@ -971,6 +971,7 @@ paths:
     get:
       operationId: getConciergeDeliveryFees
       summary: Rangos de tarifa de delivery por distancia del local activo para Fudia Concierge
+      description: "Solo Plataforma: las tarifas de envío las fija Fudia por local (2026-11-23)."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Tarifas del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryFees" } } } }
@@ -978,7 +979,7 @@ paths:
     put:
       operationId: saveConciergeDeliveryFees
       summary: Reemplaza los rangos de tarifa de delivery del local activo
-      description: "Hasta 10 rangos con límites distintos entre 0.01 y 50 km y costos de 0 a 999, con dos decimales. Una lista vacía deja solo recojo."
+      description: "Solo Plataforma. Hasta 10 rangos con límites distintos entre 0.01 y 50 km y costos de 0 a 999, con dos decimales. Una lista vacía deja solo recojo."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryFeesInput" } } } }
       responses:
@@ -2611,30 +2612,30 @@ paths:
     get:
       operationId: listLocationDeliveryOrders
       summary: Tablero de deliveries del local (opción «Delivery»)
-      description: "Exige orders.read; alcance de empresa y local de la sesión. Lista los deliveries abiertos y los creados en las últimas 24 horas, abiertos primero. dispatchStatus vacío significa delivery propio. Incluye central y motorizado asignados, espera de recogida con su alerta (3, 5 y 8 min), el reporte «No pude entregar» y si se registró la entrega fallida."
+      description: "Solo Plataforma, en el local activo de la sesión (Delivery lo administra Fudia). Lista los deliveries abiertos y los creados en las últimas 24 horas, abiertos primero. dispatchStatus vacío significa delivery propio. Incluye central y motorizado asignados, espera de recogida con su alerta (3, 5 y 8 min), el reporte «No pude entregar» y si se registró la entrega fallida."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Deliveries del local, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/DeliveryBoardOrder" } } } } } } }
-        "403": { description: "Permiso insuficiente o location_required" }
+        "403": { description: "platform_forbidden o location_required" }
   /v1/admin/delivery/partners:
     get:
       operationId: listLocationDeliveryPartners
       summary: Centrales de Delivery Fudia que cubren el local (solo lectura)
-      description: "Exige orders.read. Las empresas no editan centrales: solo Plataforma las administra. enabled indica si Delivery Fudia está activo para la empresa."
+      description: "Solo Plataforma, en el local activo de la sesión. enabled indica si Delivery Fudia está activo para la empresa."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Centrales del local, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryLocationPartners" } } } }
-        "403": { description: "Permiso insuficiente o location_required" }
+        "403": { description: "platform_forbidden o location_required" }
         "404": { description: location_not_found }
   /v1/admin/delivery/failed-deliveries:
     get:
       operationId: listLocationFailedDeliveries
       summary: Entregas fallidas del local de los últimos 90 días
-      description: "Exige orders.read; alcance de empresa y local de la sesión."
+      description: "Solo Plataforma, en el local activo de la sesión."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Entregas fallidas, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { allOf: [{ $ref: "#/components/schemas/DeliveryFailedDelivery" }, { type: object, required: [partnerName], properties: { partnerName: { type: string } } }] } } } } } } }
-        "403": { description: "Permiso insuficiente o location_required" }
+        "403": { description: "platform_forbidden o location_required" }
   /v1/admin/orders/{id}/delivery-dispatch:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     get:
@@ -2649,23 +2650,24 @@ paths:
     post:
       operationId: retryOrderDeliveryDispatch
       summary: Vuelve a ofrecer el pedido a todas las centrales activas (nueva vuelta)
-      description: "Permitido si ninguna central aceptó (unassigned) o si el local había elegido su delivery propio (own), mientras el pedido de delivery siga en preparación o listo. Incluye a las centrales que lo habían liberado. Exige orders.manage."
+      description: "Solo Plataforma (2026-11-23): los reintentos normales son automáticos (cada 2 min sin asignar, hasta 3 vueltas). Permitido si ninguna central aceptó (unassigned) o si el local había elegido su delivery propio (own), mientras el pedido de delivery siga en preparación o listo. Incluye a las centrales que lo habían liberado."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Pedido ofrecido de nuevo, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryDispatch" } } } }
         "404": { description: Pedido inexistente }
+        "403": { description: platform_forbidden }
         "409": { description: "delivery_dispatch_in_progress, delivery_not_dispatchable o delivery_partners_missing" }
   /v1/admin/orders/{id}/delivery-dispatch/own:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
       operationId: useOwnDeliveryForOrder
       summary: Deja el pedido para el delivery propio del local
-      description: "Retira las ofertas pendientes; si una central ya había aceptado, recibe el aviso de cancelación. Exige orders.manage."
+      description: "Retira las ofertas pendientes. Solo mientras ninguna central haya aceptado (searching o unassigned); aceptado, el reparto lo coordina Fudia. Exige orders.manage."
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Despacho en modo own, content: { application/json: { schema: { $ref: "#/components/schemas/DeliveryDispatch" } } } }
         "404": { description: Pedido inexistente }
-        "409": { description: "delivery_already_picked_up u order_closed" }
+        "409": { description: "delivery_already_accepted, delivery_already_picked_up u order_closed" }
   /v1/admin/locations/{id}/delivery-link:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     get:
@@ -3117,7 +3119,7 @@ components:
         courierName: { type: string, description: "Motorizado responsable; vacío hasta que la central lo asigna." }
         courierToken: { type: string, description: "Enlace del motorizado (/delivery-courier/{courierToken} en foods-admin-web); vacío si no hay." }
         pickupWaitSeconds: { type: integer, description: "Espera con el pedido listo sin recoger, desde que cocina terminó o desde el último cambio de motorizado; 0 fuera de esa situación." }
-        pickupAlert: { type: string, enum: ["", warning, urgent, critical], description: "warning a los 3 min, urgent a los 5 y critical a los 8 (también avisa al restaurante con delivery_pickup_delayed). Nunca libera el pedido." }
+        pickupAlert: { type: string, enum: ["", warning, urgent, critical], description: "warning a los 3 min, urgent a los 5 y critical a los 8. Lo siguen la central y Fudia; el restaurante no recibe avisos de reparto desde 2026-11-23. Nunca libera el pedido." }
         pickupAlertAcknowledged: { type: boolean, description: "La central eligió mantener al motorizado en este nivel." }
         issueReportedAt: { type: string, format: date-time, description: "El motorizado marcó «No pude entregar»." }
         failAvailableInSeconds: { type: integer, description: "Segundos que faltan para poder registrar la entrega fallida (10 min desde el reporte); 0 si ya se puede o no aplica." }
@@ -3218,7 +3220,7 @@ components:
       required: [id, kind, title, detail, createdAt, read]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned, delivery_pickup_delayed, pay_detected], description: "pay_detected: pago de Yape o Plin pendiente de revisar en Caja. delivery_pickup_delayed: el pedido lleva 8 minutos listo y el motorizado no llega; deja de mostrarse al recogerlo o liberarlo." }
+        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned, delivery_pickup_delayed, pay_detected], description: "pay_detected: pago de Yape o Plin pendiente de revisar en Caja. delivery_unassigned: ninguna central aceptó tras las 3 vueltas automáticas. delivery_pickup_delayed: histórico; ya no se genera desde 2026-11-23." }
         title: { type: string, maxLength: 120, description: Texto final redactado por el backend }
         detail: { type: string, maxLength: 240 }
         orderId: { type: string, format: uuid }

@@ -38,7 +38,7 @@ probar el flujo en WhatsApp real y la impresión del QR en sitio.
 
 Homologación de planes (2026-10-23): planes acumulativos con módulos Disponibles.
 Emprende vende y atiende en un local e incluye Concierge; Impulso suma Inventario,
-Compras, Kardex, Recetas, Reservas y Costos y gastos; Escala tiene los módulos de
+Compras, Kardex, Recetas, Reservas y Gastos; Escala tiene los módulos de
 Impulso con más locales y usuarios. Matriz oficial en `docs/01_PRODUCT_SCOPE.md`.
 Migración 000090; las empresas Emprende existentes conservan abastecimiento en el
 plan no vendible «Emprende con abastecimiento».
@@ -142,8 +142,9 @@ La vertical de **Gastos** está cerrada para su alcance actual:
 - permisos `expenses.read`, `expenses.manage` y `expenses.void`;
 - integración con el onboarding y el catálogo de medios de pago.
 
-**Importante:** esto no significa que el módulo completo **Costos y gastos**
-esté terminado. Falta la parte de costeo y rentabilidad.
+**Importante:** desde el 2026-11-22 el módulo `costos` se llama **Gastos**
+(categoría Operación, pestaña «Gastos» de Caja) y cubre solo los gastos. El
+costeo y la rentabilidad siguen pendientes (ver P1).
 
 ---
 
@@ -164,6 +165,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Cocina | `cocina` | 🟢 Ready / activable | KDS habilitado en MVP. Auditoría de cierre pendiente. |
 | Mesas y zonas | `mesas` | 🟢 Ready / activable | Gestión por local implementada; zona inicial creada por onboarding. Auditoría de cierre pendiente. |
 | Caja y turnos | `caja` | 🟢 Ready / activable | Apertura/cierre, movimientos, pagos y devoluciones integrados. Auditoría final de cierre pendiente. |
+| Gastos | `costos` | 🟢 Ready / activable | Pestaña «Gastos» de Caja; el egreso del turno es un gasto con categoría. Antes «Costos y gastos» en Inteligencia. |
 | Reservas | `reservas` | 🟢 Ready / activable | Disponible en MVP. Auditoría de cierre pendiente. |
 | Carta digital QR | `carta_qr` | 🔵 En desarrollo | No declararla terminada. |
 | Call center | `call_center` | ⚪ Planificado | Pendiente. |
@@ -188,6 +190,14 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 
 ### Delivery
 
+**Desde el 2026-11-23 Delivery no es un módulo de la empresa:** lo administra
+Fudia. `delivery`, `delivery_apps` y `repartidores` salieron del catálogo de
+Módulos; Delivery Fudia se activa por empresa en Plataforma › Empresa y la
+opción «Delivery» (centrales, tarifas por local y entregas fallidas) es solo de
+Plataforma. Las centrales reciben reintentos automáticos (cada 2 min, hasta 3
+vueltas) y el restaurante solo puede usar su delivery propio antes de que una
+central acepte. La tabla queda como historial del alcance.
+
 | Módulo | Clave | Estado | Observación |
 | --- | --- | --- | --- |
 | Delivery propio | `delivery` | 🟡 Parcial | Alta manual desde Pedidos (Delivery, Recojo y Mostrador): datos de atención → comanda compartida con Salón, sin mesa ficticia ni creación al avanzar; conserva ítems y notas al volver. Catálogo real y envío a Cocina implementados el 2026-10-07; reutiliza seguimiento y cobro existentes. Tarifas por distancia en línea recta (rangos por local) ya existen para pedidos de Concierge (2026-10-16). Delivery Fudia, fase 1 backend (2026-11-06, migración 000113): centrales registradas por Plataforma, modo y hasta 3 centrales por local, oferta por WhatsApp al confirmar con cascada (Rechazar o 3 min sin respuesta pasa a la siguiente; sin ninguna, aviso a caja con Reintentar o Usar delivery propio), «listo para recoger» y «Recoger» que pasa el pedido a En camino. Fase 2 Concierge (2026-11-06, migración 000114): envío a las centrales con plantillas de Meta (o botones interactivos en pruebas), botones Aceptar/Rechazar/Recoger aplicados en foods-backend y aviso «va en camino» al cliente de WhatsApp; las plantillas deben aprobarse en Meta (`fudia-concierge/docs/09_DELIVERY_PARTNERS.md`). Fase 3 (2026-11-06, migración 000115): enlace/QR de delivery por local que abre el WhatsApp de Fudia ya ligado al local para pedir delivery o recojo sin escanear antes una mesa. Fase 4 (2026-11-06, migraciones 000116 y 000117): Delivery Fudia global, con centrales y su orden en Plataforma › Centrales de delivery y activación por empresa en Plataforma › Empresa; Locales › Delivery solo con el enlace/QR; despacho en el detalle del pedido con Reintentar centrales y Usar delivery propio; aviso «Ninguna central aceptó» en la campana; al aceptar, el envío pasa a la central y caja le cobra solo el pedido. Fase 5 (2026-11-07, migración 000118): centrales registradas una sola vez con cobertura por distritos marcados mediante casillas, filtrados por departamento y provincia y administrados solo por Fudia; catálogo INEI y distrito estructurado en Locales/Primer local, selección por cobertura del local, invalidación de botones antiguos, retiro de ofertas de centrales inactivas y aceptación/recogida/costo de envío atómicos, con rechazo ante pagos previos. Pendientes: plantillas aprobadas en Meta y prueba con WhatsApp real, zonas por polígono y seguimiento logístico. No se cambia la disponibilidad comercial del módulo avanzado. |
@@ -209,7 +219,6 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 
 | Módulo | Clave | Estado | Observación |
 | --- | --- | --- | --- |
-| Costos y gastos | `costos` | 🟡 Parcial | **Gastos está terminado.** Falta costo de recetas/productos, costo teórico/real, food cost, margen y rentabilidad. |
 | Restaurant BI | `bi` | ⚪ Planificado | Debe apoyarse en ventas, costos e inventario consolidados. |
 | App manager | `app_manager` | ⚪ Planificado | Pendiente. |
 
@@ -318,7 +327,7 @@ cada cobro se elige Sin comprobante, Boleta o Factura. Detalle en
 
 ### P1 — Costeo real y rentabilidad
 
-Completar `Costos y gastos`:
+Costeo y rentabilidad (hoy `costos` cubre solo Gastos):
 
 - costo de insumos;
 - costo por receta;
@@ -331,7 +340,8 @@ Completar `Costos y gastos`:
 - gastos operativos ya implementados;
 - rentabilidad por producto, categoría, local y periodo.
 
-Al cerrar esta prioridad el módulo `costos` podrá evaluarse para **100% cerrado**.
+Falta decidir si el costeo amplía el módulo `costos` (Gastos) o es un módulo
+propio de Inteligencia.
 
 ### P2 — Reportes consolidados
 

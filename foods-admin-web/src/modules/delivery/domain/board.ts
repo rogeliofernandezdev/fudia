@@ -2,29 +2,23 @@ import type {IconName} from "@/design-system";
 import type {DeliveryBoardOrder,PickupAlert} from "./types";
 
 /** Pestañas de Delivery; el valor viaja en `?tab=`. */
-export type DeliveryTab="providers"|"fees"|"failed"|"apps"|"couriers";
-type TabDefinition={value:DeliveryTab;label:string;icon:IconName;module?:string};
+export type DeliveryTab="providers"|"fees"|"failed";
+type TabDefinition={value:DeliveryTab;label:string;icon:IconName};
 
 /**
- * Configuración e incidencias de delivery; los pedidos se gestionan en Pedidos. «Apps de
- * delivery» y «Repartidores propios» aún están en desarrollo: solo aparecen si
- * la empresa tiene activo su módulo.
+ * Delivery lo administra Fudia (2026-11-23): la opción del menú es solo de
+ * Plataforma. Centrales, tarifas de envío por local e incidencias; los pedidos
+ * se gestionan en Pedidos.
  */
 export const deliveryTabs:readonly TabDefinition[]=[
   {value:"providers",label:"Proveedores",icon:"motorbike"},
   {value:"fees",label:"Tarifas de envío",icon:"route"},
   {value:"failed",label:"Entregas fallidas",icon:"alert"},
-  {value:"apps",label:"Apps de delivery",icon:"apps",module:"delivery_apps"},
-  {value:"couriers",label:"Repartidores propios",icon:"bike",module:"repartidores"},
 ];
 
-export function visibleDeliveryTabs(modules:Record<string,boolean>|null|undefined){
-  return deliveryTabs.filter(tab=>!tab.module||modules?.[tab.module]===true);
-}
-
-/** Pestaña inicial: la pedida en la URL si existe y está visible; si no, Proveedores. */
-export function deliveryTabFrom(value:string|null|undefined,modules:Record<string,boolean>|null|undefined):DeliveryTab{
-  return visibleDeliveryTabs(modules).find(tab=>tab.value===value)?.value??"providers";
+/** Pestaña inicial: la pedida en la URL si existe; si no, Proveedores. */
+export function deliveryTabFrom(value:string|null|undefined):DeliveryTab{
+  return deliveryTabs.find(tab=>tab.value===value)?.value??"providers";
 }
 
 /** Ruta a una pestaña de Delivery, para enlaces y redirecciones. */

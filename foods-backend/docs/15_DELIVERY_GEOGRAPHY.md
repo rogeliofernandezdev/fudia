@@ -133,13 +133,14 @@ pedido en sus estados de siempre. Los hechos del reparto son columnas de
 - **Liberar.** `release` (solo antes de recoger) marca la oferta `withdrawn` con
   `released_at`, invalida el enlace, abre una vuelta nueva, devuelve el envío al
   pedido y ofrece el pedido a las demás centrales. La central que liberó no lo
-  vuelve a recibir automáticamente; «Reintentar» de caja sí la incluye. Con pagos
+  vuelve a recibir automáticamente; el «Reintentar» manual de Plataforma sí la incluye. Con pagos
   registrados responde `payment_conflict`; recogido, `already_picked_up`.
 - **Alertas de recogida.** Con el pedido `listo` y el despacho `accepted`, la
   espera cuenta desde `ready_notified_at` o desde el último cambio de motorizado
-  (`courier_assigned_at`): 3 min `warning`, 5 min `urgent` y 8 min `critical`. A
-  los 8 min el barrido publica una sola vez por motorizado `delivery_pickup_delayed`
-  a caja (`pickup_alerted_at`). La central decide: `keep` (guarda
+  (`courier_assigned_at`): 3 min `warning`, 5 min `urgent` y 8 min `critical`.
+  Desde el 2026-11-23 el restaurante no recibe `delivery_pickup_delayed`: la
+  recogida demorada la siguen la central y Fudia (`pickup_alerted_at` ya no se
+  marca). La central decide: `keep` (guarda
   `pickup_alert_ack_level`), cambiar motorizado (nuevo enlace, la espera se
   reinicia) o `release`. Fudia nunca libera por tiempo.
 - **No pude entregar.** El motorizado llama al cliente al número del pedido
@@ -184,8 +185,24 @@ solo «Delivery».
 
 Plataforma sigue siendo la única que administra centrales
 (`/v1/platform/delivery-partners`); en el frontend lo hace desde la misma
-pestaña «Proveedores». Reintentar y usar delivery propio siguen en
-`/v1/admin/orders/{id}/delivery-dispatch/*`.
+pestaña «Proveedores».
+
+**Delivery lo administra Fudia (2026-11-23, migración 000143).** La opción
+«Delivery» es solo de Plataforma: `/v1/admin/delivery/*` y
+`/v1/admin/concierge-settings/delivery-fees` exigen `requirePlatformAdmin` y
+actúan sobre el local activo de la sesión. La migración retira `delivery` de
+`roles.menu_access`, y `delivery`, `delivery_apps` y `repartidores` salen del
+catálogo de Módulos (Delivery Fudia se activa por empresa en Plataforma ›
+Empresa). En Pedidos el restaurante solo conserva «Usar delivery propio»
+(`POST .../delivery-dispatch/own`) mientras ninguna central aceptó; con
+`accepted` responde `409 delivery_already_accepted`. `POST .../retry` queda
+para Plataforma: los reintentos son automáticos. Un despacho `unassigned` con
+centrales activas abre otra vuelta tras `AutoRetryInterval` (2 min), hasta
+`AutoRetryRounds` (3); `delivery_unassigned` sale solo al agotarlas o si no hay
+centrales activas. Un pago registrado antes de que una central acepte
+(`searching` o `unassigned`) deja el pedido en delivery propio.
+`TestDeliveryFudiaPartnerCascade` cubre las vueltas y el aviso, y
+`TestDeliveryAdministrationIsPlatformOnly` el 403 al administrador de empresa.
 
 `TestDeliveryFudiaCourierFlow` recorre nombre inválido, oferta ajena, doble clic
 con el mismo nombre, cambio de motorizado con enlace anterior inválido,
@@ -265,8 +282,8 @@ además de sus fechas y ofertas. La central solo se informa con asignación
 vigente (accepted, picked_up o delivered); una oferta pendiente no es asignación.
 La consulta conserva organización y local, y funciona fuera del límite de
 200 pedidos recientes del tablero. No hay migración ni cambio de permisos.
-El frontend muestra seguimiento en el detalle y Reintentar y Usar delivery propio
-en las acciones de cada fila de Pedidos;
+El frontend muestra seguimiento en el detalle y «Usar delivery propio» (antes
+de que una central acepte) en las acciones de cada fila de Pedidos;
 Delivery conserva configuración e incidencias. La prueba de motorizado también
 comprueba los nuevos datos del detalle y el aislamiento por local.
 

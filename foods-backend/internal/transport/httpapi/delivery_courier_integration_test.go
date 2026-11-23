@@ -272,8 +272,9 @@ func TestDeliveryFudiaCourierFlow(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if n := count(delayed, orderID); n != 1 {
-		t.Fatalf("restaurant critical alert once: %d", n)
+	// La recogida demorada la siguen la central y Fudia: el restaurante no recibe avisos de reparto.
+	if n := count(delayed, orderID); n != 0 {
+		t.Fatalf("restaurant must not get pickup alerts: %d", n)
 	}
 	if dispatch, _, _ := state(orderID); dispatch != "accepted" {
 		t.Fatalf("time must not release the order: %s", dispatch)

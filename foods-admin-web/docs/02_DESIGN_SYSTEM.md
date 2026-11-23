@@ -370,7 +370,7 @@ se usan emojis ni glifos Unicode como iconos.
 La navegación comparte su selección con los accesos de Configuración mediante
 `navigationItemForPath`; la búsqueda y el menú móvil consumen el mismo catálogo.
 Cocina usa `chefHat`, Carta y productos `dish`, Mesas y zonas `grid`, Caja y turnos
-`cashShift` (reloj con importe), Delivery `truck` (sus pestañas: Pedidos `orders`, Proveedores `motorbike`, Tarifas `route`, Entregas fallidas `alert`, Apps de delivery `apps`, Repartidores propios `bike`),
+`cashShift` (reloj con importe), Delivery `truck` (sus pestañas: Pedidos `orders`, Proveedores `motorbike`, Tarifas `route`, Entregas fallidas `alert`),
 Personal y asistencias `userCheck`, Locales `mapPin`, Mi restaurante `store`,
 Países y WhatsApp `whatsapp`, Impuestos de plataforma
 `tax` (recibo con porcentaje, `IconReceiptTax`) y Concierge `chatbot`.
@@ -2956,19 +2956,20 @@ se gestiona globalmente (decisión del 2026-11-06):
 - El local solo tiene su enlace/QR.
 - Caja sigue el despacho del pedido.
 
-- **Delivery** (`/delivery`, decisión del 2026-11-14): el menú DELIVERY tiene una
-  sola opción, «Delivery», con proveedores, tarifas e incidencias en `Tabs` (la pestaña
-  viaja en `?tab=`, en inglés). «Apps de delivery» y «App repartidores» dejaron de
-  ser opciones sueltas: `/delivery-apps`, `/couriers`, `/repartidores` y
-  `/platform/delivery-partners` redirigen a su pestaña. En móvil la pista de
+- **Delivery** (`/delivery`, decisión del 2026-11-14; solo Plataforma desde el
+  2026-11-23 porque Delivery lo administra Fudia): el menú DELIVERY tiene una
+  sola opción, «Delivery» (`platformAdminOnly`), con proveedores, tarifas e
+  incidencias del local activo en `Tabs` (la pestaña viaja en `?tab=`, en
+  inglés). El restaurante no la ve. `/delivery-apps`, `/couriers` y
+  `/repartidores` redirigen a `/delivery`; `/platform/delivery-partners` a
+  Proveedores. En móvil la pista de
   pestañas se desplaza y la activa se lleva a la vista.
 
   | Pestaña (`tab`) | Contenido |
   | --- | --- |
-  | Proveedores (`providers`) | Restaurante: tabla de solo lectura «CENTRAL · TELÉFONO» con todas las centrales activas y una línea que explica la oferta simultánea y la aceptación exclusiva. Plataforma: la administración completa de centrales (abajo) |
+  | Proveedores (`providers`) | La administración completa de centrales (abajo) |
   | Tarifas de envío (`fees`) | `DeliveryFeesPanel` (ver «Tarifas de envío») |
   | Entregas fallidas (`failed`) | Tabla «PEDIDO · CLIENTE · CENTRAL · COMIDA · REEMBOLSO · CENTRAL ASUME · FUDIA ASUME · APORTE FUDIA», con `Tag` neutro «Con/Sin aporte Fudia» y las notas de validación |
-  | Apps de delivery (`apps`) · Repartidores propios (`couriers`) | «Próximamente», solo si el módulo `delivery_apps` o `repartidores` está activo |
 
   En móvil las tablas usan el desplazamiento horizontal estándar del sistema.
   El enlace/QR de delivery sigue en Locales › Editar (es un canal de venta del
@@ -3037,21 +3038,23 @@ se gestiona globalmente (decisión del 2026-11-06):
     solo si tiene asignación vigente.
   - El detalle es solo seguimiento: las acciones de reparto están en la columna
     Acciones del registro en Pedidos, junto a Ver detalle (`OrderDispatchActions`).
-    Usa `IconButton` del sistema: `refresh` «Reintentar centrales» y `store`
-    «Usar delivery propio», con tooltip, nombre accesible y área táctil de 44 px
-    en móvil. El clic no abre el detalle. Se ocultan por estado y permiso
-    `orders.manage`, y se bloquean durante la operación.
+    Desde el 2026-11-23 solo queda `IconButton` `store` «Usar delivery
+    propio», con tooltip, nombre accesible y área táctil de 44 px en móvil, y
+    solo mientras ninguna central aceptó («Buscando central» o «Sin central»).
+    «Reintentar centrales» se retiró: el backend reintenta solo. El clic no abre
+    el detalle; se oculta por estado y permiso `orders.manage` y se bloquea
+    durante la operación.
   - Usar delivery propio conserva `ConfirmDialog`, montado en `document.body`
-    para no quedar recortado por la tabla. Si hay central aceptante, explica
-    que recibirá el aviso. Pedidos cerrados no ofrecen acciones de reparto.
+    para no quedar recortado por la tabla. Con una central aceptada ya no se
+    ofrece: el reparto lo coordina Fudia. Pedidos cerrados no ofrecen acciones.
   - La columna Acciones reserva 176 px y la tabla móvil conserva su scroll
     horizontal estándar; no se reducen controles para hacerlos caber.
   - Consulta individual con skeleton, error explícito y reintento (sin reintento
     ante 403), y vacío «Este pedido aún no tiene despacho a centrales registrado».
     No depende del límite ni del historial del antiguo tablero.
 El avance de Delivery Fudia pertenece al motorizado: Caja no ofrece «En camino»
-ni «Entregar», tampoco en «Sin central». Primero debe reintentar centrales o
-confirmar el cambio a delivery propio; el backend rechaza el avance manual
+ni «Entregar», tampoco en «Sin central». Mientras ninguna central acepta,
+puede confirmar el cambio a delivery propio; el backend rechaza el avance manual
 mientras el despacho siga en Delivery Fudia.
 
 - **Matriz del despacho** (`dispatchStatusMeta`, sin rojo porque nada es un error):
@@ -3068,11 +3071,13 @@ mientras el despacho siga en Delivery Fudia.
 
 - **Cobro:** al aceptar una central, el envío sale del total del pedido del
   restaurante. Caja cobra a la central solo el pedido, y el resumen de cuenta y
-  POS ya muestran ese importe. Si el local vuelve a su delivery propio, el envío
-  regresa al pedido.
+  POS ya muestran ese importe. Una vez aceptado, el local ya no puede volver a
+  su delivery propio.
 - **Campana:** el aviso `delivery_unassigned` («Ninguna central aceptó el
   delivery») usa icono `motorbike`, tono `peach` (atención) y abre el detalle en
-  Pedidos (`?orderId=`).
+  Pedidos (`?orderId=`). Desde el 2026-11-23 sale solo tras las 3 vueltas
+  automáticas (o sin centrales activas). El restaurante ya no recibe
+  `delivery_pickup_delayed`; el mapeo se conserva para avisos antiguos.
 
 ### Fudia Concierge sin pantalla de empresa
 
@@ -3087,7 +3092,7 @@ pantalla Delivery.
 
 ### Tarifas de envío
 
-Viven en Delivery › Tarifas de envío (`DeliveryFeesPanel`, módulo `delivery`)
+Viven en Delivery › Tarifas de envío (`DeliveryFeesPanel`, solo Plataforma)
 desde el 2026-11-14; es el único lugar donde se editan. El
 panel abre con una línea («El chatbot cotiza el envío por la distancia en línea
 recta…»), sin título que repita la pestaña.
@@ -3739,7 +3744,7 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   pagos y es de un solo uso (409 en reintento).
 - **Caja › Gastos** (2026-11-22, pestaña `receipt` de Caja y turnos; antes
   «Costos y gastos» en el menú Inteligencia). Solo aparece con el módulo
-  `costos` y el permiso `expenses.read` (o para Plataforma); el cajero no la ve.
+  `costos` (en Módulos: «Gastos», categoría Operación) y el permiso `expenses.read` (o para Plataforma); el cajero no la ve.
   `ExpensesPanel` recibe de Caja su `TabsBar` (`renderTabsBar`) y le entrega
   sus acciones: «Categorías» (secundario, `layers`) + «Nuevo gasto»; en la
   vista de categorías, «Gastos» (secundario, `chevronLeft`) + «Nueva

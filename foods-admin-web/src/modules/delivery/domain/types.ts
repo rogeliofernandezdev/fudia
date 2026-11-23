@@ -37,7 +37,6 @@ export type DeliveryBoardOrder={
 };
 
 /** Centrales activas que cubren el distrito del local (solo lectura para el restaurante). */
-export type DeliveryProviders={enabled:boolean;districtName:string;items:{name:string;whatsappPhone:string}[]};
 
 /** Entrega fallida registrada por la central para un pedido del local. */
 export type LocationFailedDelivery={

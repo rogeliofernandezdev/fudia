@@ -93,19 +93,6 @@ func DeliveryUnassigned(orderID, code, customer string, round int) Input {
 	}
 }
 
-// DeliveryPickupDelayed avisa a caja que el pedido de Delivery Fudia lleva 8
-// minutos listo y el motorizado de la central no llega. La central decide si lo
-// mantiene, lo cambia o libera el pedido; Fudia no lo libera por tiempo. key
-// distingue cada motorizado asignado.
-func DeliveryPickupDelayed(orderID, code, customer, partner, key string) Input {
-	return Input{
-		Kind: KindDeliveryPickupDelayed, Audience: AudienceCashier,
-		Title:   "El motorizado no llega a recoger",
-		Detail:  Join(code, customer, partner, "Listo hace 8 min"),
-		OrderID: orderID, DedupeKey: dedupe("delivery-pickup-delayed", orderID, key),
-	}
-}
-
 // PaymentDetected avisa a caja que un dispositivo de Fudia Pay detectó un pago
 // de Yape o Plin. Es una notificación por revisar, nunca una confirmación
 // bancaria: el cajero la asocia y confirma con el flujo de cobros. La clave de

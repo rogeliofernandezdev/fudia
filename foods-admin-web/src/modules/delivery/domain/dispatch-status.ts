@@ -24,9 +24,11 @@ export function isDispatchStatus(value:unknown):value is DispatchStatus{
   return typeof value==="string"&&value in dispatchStatusMeta;
 }
 
-/** Caja puede volver a ofrecer el pedido desde la 1.ª central. */
-export function canRetryDispatch(status:DispatchStatus){return status==="unassigned"||status==="own";}
-/** Caja puede dejar el pedido para su propio repartidor. */
-export function canUseOwnDelivery(status:DispatchStatus){return status==="searching"||status==="accepted"||status==="unassigned";}
+/**
+ * Caja puede dejar el pedido para su propio repartidor solo mientras ninguna
+ * central lo aceptó; después lo coordina Fudia. Los reintentos a las centrales
+ * son automáticos (2026-11-23).
+ */
+export function canUseOwnDelivery(status:DispatchStatus){return status==="searching"||status==="unassigned";}
 
 export function hasDeliveryLink(link:DeliveryLink|undefined):link is DeliveryLink{return Boolean(link?.token&&link.active);}

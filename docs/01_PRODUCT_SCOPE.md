@@ -106,15 +106,15 @@ Plataforma y fuera del plan.
 | Inventario | `inventario` | — | ✓ | ✓ |
 | Kardex | `kardex` | — | ✓ | ✓ |
 | Compras | `compras` | — | ✓ | ✓ |
-| Costos y gastos | `costos` | — | ✓ | ✓ |
+| Gastos | `costos` | — | ✓ | ✓ |
 | Facturación electrónica | `facturacion` | — | ✓ | ✓ |
 
 - **Emprende** vende y atiende en un solo local. Los egresos del turno se
   registran en Caja; no incluye abastecimiento ni control de costos.
 - **Impulso** agrega el control del negocio: lo que entra (Compras), lo que hay
-  (Inventario y Kardex), lo que cuesta (Recetas y Costos y gastos) y Reservas.
-  El costeo y la rentabilidad futuros de `costos` dependen de Recetas e
-  Inventario, por eso viven en el mismo plan.
+  (Inventario y Kardex), lo que cuesta (Recetas y Gastos) y Reservas. El
+  costeo y la rentabilidad futuros dependen de Recetas e Inventario, por eso
+  viven en el mismo plan.
 - **Escala** tiene los mismos módulos que Impulso con límites de 10 locales y
   60 usuarios.
 - Concierge está en todos los planes, con un límite mensual de conversaciones

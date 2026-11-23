@@ -25,6 +25,8 @@ type DispatchState struct {
 	ID, OrderID, Status string
 	Round               int
 	ReadyNotified       bool
+	// RetryDue: el despacho lleva AutoRetryInterval sin asignar.
+	RetryDue bool
 }
 
 // OfferState es la oferta a la que pertenece el token de un botón, con su
@@ -77,8 +79,6 @@ type DispatchRepository interface {
 	AssignCourier(ctx context.Context, s scope, dispatchID, name string) (CourierAssignment, error)
 	ReleaseOffer(ctx context.Context, s scope, offerID string) error
 	KeepPickupAlert(ctx context.Context, s scope, dispatchID string) (bool, error)
-	// MarkPickupAlerted registra el aviso crítico al restaurante; ok=false si no corresponde o ya se envió.
-	MarkPickupAlerted(ctx context.Context, s scope, dispatchID string) (PickupDelay, bool, error)
 	// ReportDeliveryIssue registra «No pude entregar»; first=false si ya estaba reportado.
 	ReportDeliveryIssue(ctx context.Context, s scope, dispatchID string) (bool, error)
 	FailedDeliveryFacts(ctx context.Context, s scope, dispatchID string) (FailedDeliveryRecord, error)
@@ -282,35 +282,45 @@ func (a *Dispatcher) sync(ctx context.Context, s scope, orderID string) (*notice
 			return nil, err
 		}
 		return a.offerNext(ctx, s, facts, d, true)
+	case domain.DispatchUnassigned:
+		// Un pago antes de que una central acepte: el local reparte con lo suyo.
+		if facts.HasPayments {
+			return nil, a.stop(ctx, s, d, domain.DispatchOwn)
+		}
+		return a.autoRetry(ctx, s, facts, d)
 	case domain.DispatchAccepted:
+		// La recogida demorada la siguen la central y Fudia; el restaurante no
+		// recibe avisos de reparto (2026-11-23).
 		if err := a.settleFee(ctx, s, orderID); err != nil {
 			return nil, err
 		}
-		if err := a.notifyReady(ctx, s, d, facts.Status); err != nil {
-			return nil, err
-		}
-		return a.pickupDelayNotice(ctx, s, facts, d)
+		return nil, a.notifyReady(ctx, s, d, facts.Status)
 	}
 	return nil, nil
 }
 
-// pickupDelayNotice avisa al restaurante, una vez por motorizado, que el pedido
-// lleva 8 minutos listo sin recoger. Nunca libera el pedido: decide la central.
-func (a *Dispatcher) pickupDelayNotice(ctx context.Context, s scope, facts OrderFacts, d DispatchState) (*noticecontracts.Notice, error) {
-	if facts.Status != "listo" {
+// autoRetry abre otra vuelta con todas las centrales cuando el despacho lleva
+// AutoRetryInterval sin asignar y le quedan vueltas. Sin centrales activas no
+// reintenta: el aviso al restaurante ya salió.
+func (a *Dispatcher) autoRetry(ctx context.Context, s scope, facts OrderFacts, d DispatchState) (*noticecontracts.Notice, error) {
+	if !d.RetryDue || !domain.AutoRetryPending(d.Round) || !domain.OrderDispatchable(facts.Channel, facts.Status, facts.Completed) {
 		return nil, nil
 	}
-	delay, ok, err := a.repo.MarkPickupAlerted(ctx, s, d.ID)
-	if err != nil || !ok {
+	active, err := a.repo.HasActivePartners(ctx, s)
+	if err != nil || !active {
 		return nil, err
 	}
-	notice := noticecontracts.DeliveryPickupDelayed(facts.ID, facts.Code, facts.CustomerName, delay.PartnerName, delay.Key)
-	return &notice, nil
+	d.Round++
+	if err = a.repo.StartRound(ctx, s, d.ID, d.Round); err != nil {
+		return nil, err
+	}
+	return a.offerNext(ctx, s, facts, d, true)
 }
 
 // offerNext ofrece el pedido a la vez a todas las centrales activas con
 // cobertura que aún no lo tienen en la vuelta. Si ninguna queda por responder,
-// lo deja sin asignar y prepara el aviso a caja.
+// lo deja sin asignar; el aviso a caja sale solo al agotar las vueltas
+// automáticas o si no hay centrales activas.
 func (a *Dispatcher) offerNext(ctx context.Context, s scope, facts OrderFacts, d DispatchState, excludeReleased bool) (*noticecontracts.Notice, error) {
 	created, err := a.repo.OfferAll(ctx, s, d.ID, d.Round, excludeReleased)
 	if err != nil {
@@ -328,7 +338,13 @@ func (a *Dispatcher) offerNext(ctx context.Context, s scope, facts OrderFacts, d
 	if err = a.repo.SetDispatchStatus(ctx, s, d.ID, domain.DispatchUnassigned); err != nil {
 		return nil, err
 	}
-	notice := noticecontracts.DeliveryUnassigned(facts.ID, facts.Code, facts.CustomerName, d.Round)
+	if domain.AutoRetryPending(d.Round) {
+		active, err := a.repo.HasActivePartners(ctx, s)
+		if err != nil || active {
+			return nil, err
+		}
+	}
+	notice :=noticecontracts.DeliveryUnassigned(facts.ID, facts.Code, facts.CustomerName, d.Round)
 	return &notice, nil
 }
 
@@ -385,8 +401,8 @@ func (a *Dispatcher) Dispatch(ctx context.Context, s scope, orderID string) (dom
 	return out, nil
 }
 
-// Retry vuelve a ofrecer el pedido a todas las centrales (nueva vuelta). Sirve
-// cuando ninguna aceptó o cuando el local había elegido su delivery propio.
+// Retry vuelve a ofrecer el pedido a todas las centrales (nueva vuelta). Solo
+// Plataforma lo usa: los reintentos normales los hace el barrido.
 func (a *Dispatcher) Retry(ctx context.Context, s scope, orderID string) (domain.Dispatch, error) {
 	if !uuidPattern.MatchString(orderID) {
 		return domain.Dispatch{}, errDispatchNotFound
@@ -441,7 +457,7 @@ func (a *Dispatcher) Retry(ctx context.Context, s scope, orderID string) (domain
 			return fail(err)
 		}
 	}
-	// Caja decide reintentar: incluye también a las centrales que lo liberaron.
+	// Plataforma decide reintentar: incluye también a las centrales que lo liberaron.
 	notice, err := a.offerNext(tctx, s, facts, d, false)
 	if err != nil {
 		return fail(err)
@@ -453,8 +469,8 @@ func (a *Dispatcher) Retry(ctx context.Context, s scope, orderID string) (domain
 	return a.Dispatch(ctx, s, orderID)
 }
 
-// UseOwn deja el pedido para el delivery propio del local: retira las ofertas
-// y avisa a la central que ya había aceptado.
+// UseOwn deja el pedido para el delivery propio del local y retira las ofertas.
+// Solo mientras ninguna central lo haya aceptado: después lo coordina Fudia.
 func (a *Dispatcher) UseOwn(ctx context.Context, s scope, orderID string) (domain.Dispatch, error) {
 	if !uuidPattern.MatchString(orderID) {
 		return domain.Dispatch{}, errDispatchNotFound
@@ -496,8 +512,8 @@ func (a *Dispatcher) UseOwn(ctx context.Context, s scope, orderID string) (domai
 		return domain.Dispatch{}, failure(apperror.Conflict, "delivery_already_picked_up", "La central ya recogió este pedido.")
 	case d.Status == domain.DispatchCancelled:
 		return domain.Dispatch{}, failure(apperror.Conflict, "order_closed", "El pedido está cancelado.")
-	case d.Status == domain.DispatchAccepted && facts.HasPayments:
-		return domain.Dispatch{}, failure(apperror.Conflict, "delivery_payment_conflict", "Devuelve primero los pagos registrados antes de cambiar a delivery propio.")
+	case !domain.OwnAllowed(d.Status):
+		return domain.Dispatch{}, failure(apperror.Conflict, "delivery_already_accepted", "Una central ya aceptó este pedido. Fudia coordina su reparto.")
 	default:
 		if err = a.stop(tctx, s, d, domain.DispatchOwn); err != nil {
 			return fail(err)

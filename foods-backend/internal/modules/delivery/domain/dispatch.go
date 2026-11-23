@@ -25,6 +25,20 @@ const OfferTimeout = 3 * time.Minute
 // UndeliveredOfferTimeout descarta una oferta cuyo mensaje nunca se pudo enviar.
 const UndeliveredOfferTimeout = 5 * time.Minute
 
+// Reintentos automáticos (2026-11-23): si ninguna central acepta, el barrido
+// vuelve a ofrecer el pedido a todas tras AutoRetryInterval, hasta
+// AutoRetryRounds vueltas. Recién al agotarlas se avisa al restaurante, que
+// puede usar su delivery propio mientras ninguna central haya aceptado.
+const (
+	AutoRetryInterval = 2 * time.Minute
+	AutoRetryRounds   = 3
+)
+
+// AutoRetryPending indica si a un despacho sin asignar le quedan vueltas automáticas.
+func AutoRetryPending(round int) bool {
+	return round < AutoRetryRounds
+}
+
 // Estados del despacho.
 const (
 	DispatchSearching  = "searching"
@@ -284,7 +298,13 @@ func ActiveDispatch(status string) bool {
 	return status == DispatchSearching || status == DispatchAccepted || status == DispatchUnassigned
 }
 
-// Retryable indica si caja puede volver a ofrecer el pedido a todas las centrales.
+// Retryable indica si Plataforma puede volver a ofrecer el pedido a todas las centrales.
 func Retryable(status string) bool {
 	return status == DispatchUnassigned || status == DispatchOwn
+}
+
+// OwnAllowed indica si el local aún puede quedarse el pedido para su delivery
+// propio: solo mientras ninguna central lo haya aceptado (2026-11-23).
+func OwnAllowed(status string) bool {
+	return status == DispatchSearching || status == DispatchUnassigned || status == DispatchOwn
 }

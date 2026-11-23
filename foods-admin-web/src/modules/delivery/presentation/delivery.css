@@ -37,12 +37,9 @@
 .delivery-board-order small,.delivery-board-customer small,.delivery-board-owner small{color:var(--ink-500);font-size:var(--font-size-label)}
 .delivery-board-customer small{max-width:var(--size-240);overflow:hidden;text-overflow:ellipsis}
 .delivery-board-owner small{display:inline-flex;align-items:center;gap:var(--space-1)}
-.delivery-board-owner a,.delivery-providers a{color:var(--primary-700);font-size:var(--font-size-label);text-decoration:none}
+.delivery-board-owner a{color:var(--primary-700);font-size:var(--font-size-label);text-decoration:none}
 .delivery-board-muted{color:var(--ink-500);font-size:var(--font-size-label)}
-.delivery-providers-intro{margin:0;padding:var(--space-3) var(--space-4);max-width:72ch;color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
-.delivery-providers .ds-notice{margin:0 var(--space-4) var(--space-3)}
 .delivery-failed-share{display:grid;gap:var(--space-1);justify-items:start}
 .delivery-failed-notes{margin:0;padding-left:var(--space-4);color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal);white-space:normal}
 @media(max-width:600px){
- .delivery-providers-intro{padding:var(--space-3)}
 }

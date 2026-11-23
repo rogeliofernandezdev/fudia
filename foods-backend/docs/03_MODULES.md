@@ -19,10 +19,17 @@ pedidos desde el QR, pero no es una casilla del menú de roles. La migración
 (`organizations.read` / `organizations.manage`) se muestran en la pantalla
 `delivery`.
 
-`costos` tampoco tiene casilla propia desde el 2026-11-22: sus gastos son la
+`costos` tampoco tiene casilla propia desde el 2026-11-22: en el catálogo se
+llama «Gastos» (categoría Operación, junto a Caja y turnos), sus gastos son la
 pestaña «Gastos» de Caja y las acciones `expenses.*` se muestran en la pantalla
 `caja`. La migración 000141 retira `costos` de `roles.menu_access` y agrega
 `caja` solo a los roles que ya tenían `cash.read` (no otorga permisos nuevos).
+
+Delivery no es un módulo de la empresa desde el 2026-11-23: lo administra
+Fudia. `delivery`, `delivery_apps` y `repartidores` salen del catálogo de
+Módulos; Delivery Fudia se activa por empresa en Plataforma › Empresa y la
+opción «Delivery» del menú es solo de Plataforma (migración 000143 la retira de
+`roles.menu_access`). Detalle en `15_DELIVERY_GEOGRAPHY.md`.
 
 Gasto en efectivo y egreso de caja son un solo registro (migración 000142). Con
 `costos` activo, `POST /v1/admin/cash-shifts/{id}/movements` de tipo `expense`

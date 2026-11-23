@@ -36,6 +36,7 @@ var ModuleCatalog = []ModuleDef{
 	{Key: "cocina", Name: "Cocina", Description: "KDS con tiempos y estados de preparación", Icon: "kitchen", Category: "Operación"},
 	{Key: "mesas", Name: "Mesas y zonas", Description: "Gestión de mesas, zonas y estado de ocupación", Icon: "grid", Category: "Operación"},
 	{Key: "caja", Name: "Caja y turnos", Description: "Apertura/cierre de caja, ingresos y egresos", Icon: "sales", Category: "Operación"},
+	{Key: "costos", Name: "Gastos", Description: "Gastos operativos y egresos de caja con categoría", Icon: "receipt", Category: "Operación"},
 	{Key: "reservas", Name: "Reservas", Description: "Reservas de mesa por fecha, hora y comensales", Icon: "clock", Category: "Operación"},
 	{Key: "call_center", Name: "Call center", Description: "Central de pedidos telefónicos", Icon: "receipt", Category: "Operación"},
 	{Key: "carta_qr", Name: "Carta digital QR", Description: "Menú escaneable desde la mesa vía QR", Icon: "qr", Category: "Operación"},
@@ -52,10 +53,8 @@ var ModuleCatalog = []ModuleDef{
 	{Key: "compras", Name: "Compras", Description: "Órdenes de compra, proveedores y recepción", Icon: "truck", Category: "Abastecimiento"},
 	{Key: "logistica", Name: "Logística", Description: "Distribución entre locales y ventas logísticas", Icon: "truck", Category: "Abastecimiento"},
 
-	// Delivery
-	{Key: "delivery", Name: "Delivery propio", Description: "Delivery con flota propia, zonas y tarifas", Icon: "truck", Category: "Delivery"},
-	{Key: "delivery_apps", Name: "Apps de delivery", Description: "Integración con Rappi, PedidosYa y UberEats", Icon: "settings", Category: "Delivery"},
-	{Key: "repartidores", Name: "App repartidores", Description: "App para repartidores con tracking", Icon: "truck", Category: "Delivery"},
+	// Delivery no es un módulo de la empresa (2026-11-23): lo administra Fudia y
+	// Delivery Fudia se activa por empresa en Plataforma › Empresa.
 
 	// Negocio
 	{Key: "clientes", Name: "Clientes", Description: "Directorio de clientes e historial", Icon: "users", Category: "Negocio"},
@@ -66,7 +65,6 @@ var ModuleCatalog = []ModuleDef{
 	{Key: "locales", Name: "Locales", Description: "Gestión de sedes y configuración por local", Icon: "store", Category: "Negocio"},
 
 	// Inteligencia
-	{Key: "costos", Name: "Costos y gastos", Description: "Costos de producción, gastos operativos y rentabilidad", Icon: "stock", Category: "Inteligencia"},
 	{Key: "bi", Name: "Restaurant BI", Description: "Business intelligence y analítica avanzada", Icon: "grid", Category: "Inteligencia"},
 	{Key: "app_manager", Name: "App manager", Description: "Supervisión operativa remota", Icon: "settings", Category: "Inteligencia"},
 

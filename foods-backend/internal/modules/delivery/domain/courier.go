@@ -54,7 +54,7 @@ var pickupAlertSteps = []struct {
 	{3 * time.Minute, PickupAlertWarning},
 }
 
-// PickupCriticalAfter avisa también al restaurante.
+// PickupCriticalAfter es el nivel crítico de la alerta de la central.
 const PickupCriticalAfter = 8 * time.Minute
 
 // PickupAlertLevel devuelve el nivel (0 a 3) y su nombre para la espera dada.

@@ -29,9 +29,9 @@ test("Delivery Fudia: cada estado del despacho tiene etiqueta y tono suave de la
  assert.equal(status.isDispatchStatus(undefined),false);
 });
 
-test("Delivery Fudia: caja reintenta sin central o desde delivery propio, y deja de usar centrales antes de recoger",()=>{
- assert.deepEqual(["searching","accepted","unassigned","picked_up","delivered","own","cancelled"].filter(status.canRetryDispatch),["unassigned","own"]);
- assert.deepEqual(["searching","accepted","unassigned","picked_up","delivered","own","cancelled"].filter(status.canUseOwnDelivery),["searching","accepted","unassigned"]);
+test("Delivery Fudia: los reintentos son automáticos y caja usa su delivery propio solo antes de que una central acepte",()=>{
+ assert.equal(status.canRetryDispatch,undefined,"sin botón «Reintentar centrales»");
+ assert.deepEqual(["searching","accepted","unassigned","picked_up","delivered","own","cancelled"].filter(status.canUseOwnDelivery),["searching","unassigned"]);
 });
 
 test("Delivery Fudia: «Ninguna central aceptó» abre el pedido en Pedidos con tono de atención",()=>{
@@ -51,7 +51,7 @@ test("Delivery Fudia: pantallas conectadas sin catálogos ni códigos en el fron
  assert.ok(block.includes('getDeliveryDispatch(order.id)'));
  assert.doesNotMatch(block,/retryDeliveryDispatch|switchToOwnDelivery|ConfirmDialog/,"el detalle es solo seguimiento");
  const actions=read("src/modules/delivery/presentation/order-dispatch-actions.tsx");
- assert.ok(actions.includes('retryDeliveryDispatch(order.id)'));
+ assert.doesNotMatch(actions,/retryDeliveryDispatch|Reintentar centrales/);
  assert.ok(actions.includes('switchToOwnDelivery(order.id)'));
  assert.ok(actions.includes('can("orders.manage")'));
  assert.ok(actions.includes('createPortal(<ConfirmDialog'));
@@ -67,7 +67,7 @@ test("Delivery Fudia: pantallas conectadas sin catálogos ni códigos en el fron
  const platform=read("src/modules/platform/presentation/delivery-partners-admin.tsx");
  assert.match(platform,/EmptyState icon="motorbike" title="Aún no hay centrales"/);
  assert.doesNotMatch(read("src/modules/platform/presentation/platform-shell.tsx"),/Centrales de delivery/,"las centrales salen del menú de Plataforma");
- assert.match(read("src/modules/delivery/presentation/delivery-providers.tsx"),/if\(user\?\.platformAdmin\)return <DeliveryPartnersAdmin\/>/,"Plataforma las administra en Delivery › Proveedores");
+ assert.match(read("src/modules/delivery/presentation/delivery-page.tsx"),/tab==="providers"&&<DeliveryPartnersAdmin\/>/,"Plataforma las administra en Delivery › Proveedores");
  // Orden global de centrales y activación por empresa desde Plataforma.
  assert.match(platform,/reorderDeliveryPartners/);
  assert.match(platform,/label="Subir en el orden"/);
@@ -80,22 +80,24 @@ const board=compile("src/modules/delivery/domain/board.ts");
 const plain=value=>JSON.parse(JSON.stringify(value));
 const boardOrder=(overrides={})=>({status:"preparando",failedDelivery:false,dispatchStatus:"accepted",pickupWaitSeconds:0,pickupAlert:"",...overrides});
 
-test("Delivery: una sola opción del menú con pestañas; las de módulos en desarrollo dependen del módulo",()=>{
- assert.deepEqual(plain(board.visibleDeliveryTabs({delivery:true}).map(tab=>tab.value)),["providers","fees","failed"]);
- assert.deepEqual(plain(board.visibleDeliveryTabs({delivery:true,delivery_apps:true,repartidores:true}).map(tab=>tab.value)),["providers","fees","failed","apps","couriers"]);
- assert.equal(board.deliveryTabFrom("fees",{delivery:true}),"fees");
- assert.equal(board.deliveryTabFrom("apps",{delivery:true}),"providers","una pestaña de un módulo inactivo vuelve a Proveedores");
- assert.equal(board.deliveryTabFrom("nope",null),"providers");
- assert.equal(board.deliveryTabFrom("orders",null),"providers");
+test("Delivery: una sola opción del menú, solo de Plataforma, con Proveedores, Tarifas y Entregas fallidas",()=>{
+ assert.deepEqual(plain(board.deliveryTabs.map(tab=>tab.value)),["providers","fees","failed"]);
+ assert.equal(board.visibleDeliveryTabs,undefined,"las pestañas ya no dependen de módulos");
+ assert.equal(board.deliveryTabFrom("fees"),"fees");
+ assert.equal(board.deliveryTabFrom("apps"),"providers","Apps de delivery ya no es una pestaña");
+ assert.equal(board.deliveryTabFrom("nope"),"providers");
+ assert.equal(board.deliveryTabFrom("orders"),"providers");
  assert.ok(read("src/app/(admin)/delivery/page.tsx").includes('if(params.tab==="orders")redirect(pageRoutes.orders)'));
  assert.doesNotMatch(read("src/modules/delivery/presentation/delivery-page.tsx"),/DeliveryBoard/);
  assert.equal(board.deliveryTabPath("providers"),"/delivery?tab=providers");
  for(const tab of board.deliveryTabs)assert.match(tab.value,/^[a-z]+$/,"la pestaña viaja en inglés en la URL");
  const navigation=read("src/shell/navigation.ts");
- assert.match(navigation,/\{label:"DELIVERY",items:\[\{href:pageRoutes\.delivery,name:"Delivery",icon:"truck",module:"delivery"\}\]\}/);
+ assert.match(navigation,/\{label:"DELIVERY",items:\[\{href:pageRoutes\.delivery,name:"Delivery",icon:"truck",module:"whatsapp_bot",platformAdminOnly:true\}\]\}/,"Delivery lo administra Fudia");
  assert.doesNotMatch(navigation,/Delivery propio|Apps de delivery|App repartidores/);
+ assert.doesNotMatch(read("src/modules/delivery/presentation/delivery-page.tsx"),/ComingSoon|Próximamente|useSession/);
  const routes=read("src/shared/routing/page-routes.ts");
- for(const [legacy,tab] of [["/delivery-apps","apps"],["/couriers","couriers"],["/repartidores","couriers"],["/platform/delivery-partners","providers"]])assert.ok(routes.includes(`{legacy:"${legacy}",canonical:"/delivery?tab=${tab}"}`),legacy);
+ for(const legacy of ["/delivery-apps","/couriers","/repartidores"])assert.ok(routes.includes(`{legacy:"${legacy}",canonical:"/delivery"}`),legacy);
+ assert.ok(routes.includes('{legacy:"/platform/delivery-partners",canonical:"/delivery?tab=providers"}'));
  assert.match(read("src/app/(admin)/delivery/page.tsx"),/<DeliveryPage initialTab=\{params\.tab\}\/>/);
 });
 
@@ -119,13 +121,12 @@ test("Delivery › Pedidos: en curso, modo, alertas de recogida e incidencias",(
 test("Delivery: cada pestaña con carga, error y vacío; la central se edita solo desde Plataforma",()=>{
  for(const [file,fragments] of Object.entries({
   "order-dispatch-block.tsx":["Skeleton","ErrorState","getDeliveryDispatch"],
-  "delivery-providers.tsx":["TableSkeleton","ErrorState","EmptyState","getDeliveryProviders"],
   "failed-deliveries.tsx":["TableSkeleton","ErrorState","EmptyState","getLocationFailedDeliveries","Con aporte Fudia"],
  })){
   const source=read(`src/modules/delivery/presentation/${file}`);
   for(const fragment of fragments)assert.ok(source.includes(fragment),`${file}: ${fragment}`);
  }
  const api=read("src/modules/delivery/infrastructure/delivery-api.ts");
- for(const path of ['"delivery/orders"','"delivery/partners"','"delivery/failed-deliveries"'])assert.ok(api.includes(path),path);
- assert.doesNotMatch(read("src/modules/delivery/presentation/delivery-providers.tsx"),/saveDeliveryPartner|reorderDeliveryPartners/,"el restaurante solo consulta sus centrales");
+ for(const path of ['"delivery/orders"','"delivery/failed-deliveries"'])assert.ok(api.includes(path),path);
+ assert.doesNotMatch(api,/"delivery\/partners"/,"el restaurante ya no consulta centrales");
 });

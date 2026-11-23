@@ -69,7 +69,7 @@ export const legacyPageAliases=[
   {legacy:"/kardex",canonical:pageRoutes.stockLedger},
   {legacy:"/compras",canonical:pageRoutes.purchases},
   {legacy:"/logistica",canonical:pageRoutes.logistics},
-  {legacy:"/repartidores",canonical:"/delivery?tab=couriers"},
+  {legacy:"/repartidores",canonical:"/delivery"},
   {legacy:"/clientes",canonical:pageRoutes.customers},
   {legacy:"/puntos",canonical:pageRoutes.loyaltyPoints},
   {legacy:"/ofertas",canonical:pageRoutes.offers},
@@ -95,8 +95,8 @@ export const legacyPageRedirects=[
   {legacy:"/configuracion/onboarding",canonical:pageRoutes.platformOnboarding},
   {legacy:"/platform/configuracion-global",canonical:pageRoutes.platformGlobalSettings},
   // Todo el delivery vive en una sola opción del menú: las pantallas sueltas abren su pestaña.
-  {legacy:"/delivery-apps",canonical:"/delivery?tab=apps"},
-  {legacy:"/couriers",canonical:"/delivery?tab=couriers"},
+  {legacy:"/delivery-apps",canonical:"/delivery"},
+  {legacy:"/couriers",canonical:"/delivery"},
   {legacy:"/platform/delivery-partners",canonical:"/delivery?tab=providers"},
   // Fudia Concierge dejó de ser pantalla: el canal lo administra la plataforma.
   {legacy:"/whatsapp-bot",canonical:pageRoutes.settings},

@@ -588,12 +588,13 @@ cursor, filtros y agregados independientes de la ventana visible.
   (`deliveryDispatchStatus` `accepted`, `picked_up` o `delivered`) que está listo
   o en camino; el backend responde `delivery_in_progress_not_cancellable`. Sin
   despacho o con delivery propio la regla no cambia.
-- Campana: `delivery_pickup_delayed` (8 min sin recogida) abre Pedidos, tono
-  `peach` e ícono `clock`.
+- Campana: `delivery_pickup_delayed` ya no se genera (2026-11-23): la recogida
+  demorada la siguen la central y Fudia. El mapeo (Pedidos, `peach`, `clock`)
+  queda para avisos antiguos.
 
 ## Tarifas de envío
 
-`DeliveryFeesPanel` (módulo `delivery`, pestaña Delivery › Tarifas de envío) usa la
+`DeliveryFeesPanel` (solo Plataforma, pestaña Delivery › Tarifas de envío) usa la
 clave `["delivery-fees"]` con `GET concierge-settings/delivery-fees` y guarda
 con `PUT concierge-settings/delivery-fees` (el proxy `/api/admin` reenvía `PUT`).
 El borrador de filas es estado local; `deliveryFeeErrors` valida límites
@@ -641,8 +642,10 @@ de distritos antes de este frontend.
   cerrado. Incluye central, teléfono, motorizado, fechas, alerta e incidencia
   sin descargar la lista del local. Solo `404 delivery_dispatch_not_found`
   representa ausencia de despacho; el resto conserva el error explícito.
-  - Reintentar y Usar delivery propio están en `OrderDispatchActions`, dentro
-    de la fila de Pedidos, y llaman los POST existentes `retry|own`. El detalle
+  - Usar delivery propio está en `OrderDispatchActions`, dentro de la fila de
+    Pedidos, solo con despacho `searching` o `unassigned`, y llama `POST own`.
+    Los reintentos son automáticos (2026-11-23); `POST retry` es solo de
+    Plataforma y el frontend no lo usa. El detalle
     solo presenta seguimiento. La fila usa `deliveryDispatchStatus` del listado
     sin pedir el despacho por cada registro; el listado se refresca cada 10 s.
     Tras la operación se invalidan despacho, detalle, lista,
@@ -653,8 +656,8 @@ de distritos antes de este frontend.
     la autorización y todas las transiciones, incluidos conflictos por pagos.
 
 El avance de Delivery Fudia pertenece al motorizado: Caja no ofrece «En camino»
-ni «Entregar», tampoco en «Sin central». Primero debe reintentar centrales o
-confirmar el cambio a delivery propio; el backend rechaza el avance manual
+ni «Entregar», tampoco en «Sin central». Mientras ninguna central acepta,
+puede confirmar el cambio a delivery propio; el backend rechaza el avance manual
 mientras el despacho siga en Delivery Fudia.
 
 ## Tope mensual de Fudia Concierge (solo Plataforma)

@@ -18,9 +18,6 @@ import (
 // CourierAssignment es el motorizado vigente y su enlace.
 type CourierAssignment struct{ Name, Token string }
 
-// PickupDelay identifica el aviso crítico al restaurante (uno por motorizado).
-type PickupDelay struct{ PartnerName, Key string }
-
 // FailedDeliveryRecord reúne lo que se conserva de una entrega fallida.
 type FailedDeliveryRecord struct {
 	DispatchID, OrderID, PartnerID       string

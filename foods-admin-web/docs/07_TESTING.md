@@ -67,7 +67,7 @@ contraseña nueva (`passwordChangeProblem`) y la pestaña «Operadores» de
 Plataforma (contraseña temporal visible una sola vez, restablecer con
 confirmación y activar/desactivar). `order-delivery.test.mjs` cubre que un delivery con central
 asignada, listo o en camino, no muestra «Cancelar», sin cambiar el delivery
-propio; `delivery-fudia.test.mjs`, el aviso `delivery_pickup_delayed`.
+propio; `delivery-fudia.test.mjs`, el mapeo del aviso histórico `delivery_pickup_delayed`.
 
 `number-input-behavior.test.mjs` verifica avances de una unidad, fracciones,
 límites y redondeo. `node tests/helpers/number-input-preview.mjs` permite probar
@@ -342,16 +342,18 @@ de solo lectura y la ausencia de topes comerciales fijos en el frontend.
 `delivery-fudia.test.mjs` cubre:
 
 - La matriz del despacho (etiquetas y tonos sin rojo).
-- Cuándo caja puede reintentar o usar su delivery propio.
+- Que no hay «Reintentar centrales» y que caja usa su delivery propio solo antes
+  de que una central acepte (2026-11-23).
 - El orden global (subir/bajar) y el panel por empresa.
 - Que el local ya no elige modo ni centrales.
 - El aviso «Ninguna central aceptó» (pantalla, enlace, tono e icono).
 - Que las centrales vienen del API.
 - Que el enlace usa la ruta pública del QR.
 - El vacío de Plataforma.
-- La opción única «Delivery» del menú: pestañas visibles según módulos, `?tab=`
-  en inglés con caída a Pedidos y las redirecciones de `/delivery-apps`,
-  `/couriers`, `/repartidores` y `/platform/delivery-partners`.
+- La opción única «Delivery» del menú, solo de Plataforma: pestañas Proveedores,
+  Tarifas y Entregas fallidas, `?tab=` en inglés con caída a Pedidos y las
+  redirecciones de `/delivery-apps`, `/couriers`, `/repartidores` y
+  `/platform/delivery-partners`.
 - El tablero de Pedidos (en curso, modo, alertas de recogida, incidencias y
   teléfono agrupado), carga/error/vacío de cada pestaña, que el restaurante solo
   consulta sus centrales y que Plataforma las administra en Proveedores.
