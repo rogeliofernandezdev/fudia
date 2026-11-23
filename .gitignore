@@ -26,10 +26,15 @@ foods-admin-web/public/pdfjs/
 # Temporary credentials created by google-github-actions/auth (OIDC).
 gha-creds-*.json
 
-# Salidas de compilación de Android (Gradle); el APK publicado vive en la raíz.
+# Salidas de compilación de Android (Gradle) y APK/AAB generados: se compilan, no se versionan.
 fudia-pay/.gradle/
 fudia-pay/build/
 fudia-pay/app/build/
+*.apk
+*.aab
+
+# Temporales de compilación de Go (GOTMPDIR local).
+**/.tmp/
 
 # Documentos de Word (entregables locales) y sus temporales «~$…»: nunca se versionan.
 *.docx
