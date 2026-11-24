@@ -10,7 +10,7 @@ export function savePurchaseCombination(input:{unit:string;code:string;name:stri
 export function savePurchasePresentation(id:string,draft:PurchasePresentationDraft){
   return apiFetch<PurchasePresentation>(`purchase-inventory-items/${id}/presentations`,{method:"POST",body:JSON.stringify({...draft,unitsPerPresentation:Number(draft.unitsPerPresentation)})});
 }
-import type {LinkableProduct,PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
+import type {AssignableItem,LinkableProduct,PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,status:input.status,page:String(input.page),pageSize:String(input.pageSize)});
@@ -101,6 +101,14 @@ export async function listPurchaseItemCategories(){
     page++;
   }while(items.length<total);
   return items;
+}
+
+export function listAssignableItems(q:string){
+  return apiFetch<{items:AssignableItem[]}>(`purchase-assignable-items?${new URLSearchParams({q}).toString()}`);
+}
+/** Agrega al local activo un artículo existente de la empresa (o lo reactiva). */
+export function assignInventoryItem(id:string){
+  return apiFetch<void>(`purchase-inventory-items/${id}/assignment`,{method:"POST"});
 }
 
 export function listLinkableProducts(q:string){

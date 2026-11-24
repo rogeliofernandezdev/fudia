@@ -1,15 +1,15 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
-import {useQuery} from "@tanstack/react-query";
+import {useQuery,useQueryClient} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,EmptyState,ErrorState,FormField,Icon,Input,Skeleton,Status,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseInventoryItemResolver} from "../domain/purchase-schema";
 import {linkableControlLabel} from "../domain/linkable-product";
-import type {LinkableProduct,PurchaseInventoryItemDraft,PurchaseInventoryOption} from "../domain/types";
-import {listLinkableProducts,listPurchaseInventory} from "../infrastructure/purchases-api";
+import type {AssignableItem,LinkableProduct,PurchaseInventoryItemDraft,PurchaseInventoryOption} from "../domain/types";
+import {assignInventoryItem,listAssignableItems,listLinkableProducts,listPurchaseInventory} from "../infrastructure/purchases-api";
 import {PurchaseUnitField} from "./purchase-unit-field";
 import {PurchaseCategoryField} from "./purchase-category-field";
 import {PurchasePresentationsField} from "./purchase-presentations-field";
@@ -55,6 +55,16 @@ export function PurchaseItemDialog({
     enabled:searching,
     staleTime:10000,
   });
+  // Artículos de la empresa que este local aún no usa: se agregan, no se duplican.
+  const assignable=useQuery({
+    queryKey:["purchase-assignable-items",organization?.id,location?.id,deferredSearch],
+    queryFn:()=>listAssignableItems(deferredSearch),
+    enabled:searching&&linkSearch,
+    staleTime:10000,
+  });
+  const queryClient=useQueryClient();
+  const[assigning,setAssigning]=useState("");
+  const[assignError,setAssignError]=useState("");
   const linkable=useQuery({
     queryKey:["purchase-linkable-products",organization?.id,deferredSearch],
     queryFn:()=>listLinkableProducts(deferredSearch),
@@ -90,6 +100,20 @@ export function PurchaseItemDialog({
     finally{submitting.current=false}
   }
 
+  async function addFromCompany(item:AssignableItem){
+    if(assigning)return;
+    setAssigning(item.inventoryItemId);setAssignError("");
+    try{
+      await assignInventoryItem(item.inventoryItemId);
+      for(const key of ["purchase-item-picker","purchase-assignable-items","purchase-inventory","inventory","inventory-products"])void queryClient.invalidateQueries({queryKey:[key]});
+      const added=(await listPurchaseInventory(item.name)).items.find(option=>option.id===item.inventoryItemId);
+      if(added)choose(added);
+      else setAssignError("Agregamos "+item.name+" a este local. Búscalo de nuevo para elegirlo.");
+    }catch(error){
+      setAssignError(error instanceof Error?error.message:"No pudimos agregar el artículo a este local.");
+    }finally{setAssigning("")}
+  }
+
   function startCreate(){
     reset({...blankDraft,mode:usesRecipes?"new_ingredient":"new_product",name:search.trim()});
     setView({kind:"create"});
@@ -108,7 +132,8 @@ export function PurchaseItemDialog({
 
   const existing=items.data?.items??[];
   const linkableItems=linkSearch?linkable.data?.items??[]:[];
-  const nothingFound=!items.isLoading&&!items.isError&&!existing.length&&(!linkSearch||(!linkable.isLoading&&!linkable.isError&&!linkableItems.length));
+  const assignableItems=linkSearch?assignable.data?.items??[]:[];
+  const nothingFound=!items.isLoading&&!items.isError&&!existing.length&&(!linkSearch||(!linkable.isLoading&&!linkable.isError&&!linkableItems.length&&!assignable.isLoading&&!assignable.isError&&!assignableItems.length));
 
   const quantityInput={step:unitCountable?"1":"0.001",inputMode:unitCountable?"numeric" as const:"decimal" as const};
   const stockFields=<><section className="purchase-item-section">
@@ -158,6 +183,19 @@ export function PurchaseItemDialog({
                   <Icon name="chevron" size={16}/>
                 </button>})}
               </div>}
+              {linkSearch&&(assignable.isLoading?<div className="purchase-item-results" role="status" aria-busy="true" aria-label="Buscando en otros locales"><Skeleton/></div>
+              :assignable.isError?<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{assignable.error.message}<Button type="button" kind="secondary" icon="refresh" onClick={()=>void assignable.refetch()}>Reintentar</Button></div>
+              :assignableItems.length>0&&<div className="purchase-linkable-group">
+                <p className="purchase-linkable-title">En otros locales</p>
+                <div className="purchase-result-list" aria-label="Artículos de otros locales">
+                  {assignableItems.map(item=><button type="button" className="purchase-result" key={item.inventoryItemId} disabled={Boolean(assigning)} aria-busy={assigning===item.inventoryItemId} onClick={()=>void addFromCompany(item)}>
+                    <span className="purchase-result-copy"><b>{item.name}</b><small>{item.inactiveHere?"Desactivado en este local":item.locations.length?"Lo usa "+item.locations.join(", "):"Sin local asignado"} · {item.unitName}</small></span>
+                    <span className="purchase-result-action">{assigning===item.inventoryItemId?"Agregando…":item.inactiveHere?"Reactivar":"Agregar"}</span>
+                    <Icon name="chevron" size={16}/>
+                  </button>)}
+                </div>
+                {assignError&&<p className="field-error" role="alert">{assignError}</p>}
+              </div>)}
               {linkSearch&&(linkable.isLoading?<div className="purchase-item-results" role="status" aria-busy="true" aria-label="Buscando en la carta"><Skeleton/></div>
               :linkable.isError?<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{linkable.error.message}<Button type="button" kind="secondary" icon="refresh" onClick={()=>void linkable.refetch()}>Reintentar</Button></div>
               :linkableItems.length>0&&<div className="purchase-linkable-group">

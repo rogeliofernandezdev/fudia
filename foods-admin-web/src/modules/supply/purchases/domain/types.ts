@@ -120,6 +120,8 @@ export type SupplierDraft={
 
 /** Producto de la carta que aún usa Disponibilidad (o ningún control) y puede vincularse al inventario. */
 export type LinkableProduct={productId:string;sku:string;name:string;categoryName:string|null;quantityControl:"none"|"portions"};
+/** Artículo de la empresa que este local aún no usa (o desactivó): se agrega sin duplicarlo. */
+export type AssignableItem={inventoryItemId:string;productId:string|null;name:string;unit:string;unitName:string;inactiveHere:boolean;locations:string[]};
 
 export type PurchaseInventoryItemDraft={
   /** new_product se vende a clientes; new_ingredient es un insumo; link_product reutiliza un producto existente. */

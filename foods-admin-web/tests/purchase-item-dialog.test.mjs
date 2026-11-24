@@ -34,7 +34,7 @@ test("un nombre duplicado se marca sin perder los datos y permite corregirlo",as
   assert.equal(ui.control.getFieldState("name").error,undefined);
  }
 });
-function mount({save=async()=>{},busy=false,modules={},linkable=[]}={}){
+function mount({save=async()=>{},busy=false,modules={},linkable=[],assignable=[],api={},choose=()=>{}}={}){
  const state=[],refs=[];let cursor=0,refCursor=0,formControl;
  const {PurchaseItemDialog}=compile("modules/supply/purchases/presentation/purchase-item-dialog.tsx",name=>{
   if(name==="react")return {useState:initial=>{const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],value=>{state[i]=value}]},useRef:initial=>{const i=refCursor++;return refs[i]??(refs[i]={current:initial})},useDeferredValue:value=>value};
@@ -42,7 +42,7 @@ function mount({save=async()=>{},busy=false,modules={},linkable=[]}={}){
    formControl??=createFormControl(options);
    return {...formControl,formState:{errors:formControl.control._formState.errors,isSubmitted:formControl.control._formState.isSubmitted,isSubmitting:formControl.control._formState.isSubmitting}};
   },useWatch:({name})=>formControl.getValues(name)};
-  if(name==="@tanstack/react-query")return {useQuery:({queryKey})=>({data:{items:queryKey[0]==="purchase-linkable-products"?linkable:[]},isLoading:false,isError:false})};
+  if(name==="@tanstack/react-query")return {useQuery:({queryKey})=>({data:{items:queryKey[0]==="purchase-linkable-products"?linkable:queryKey[0]==="purchase-assignable-items"?assignable:[]},isLoading:false,isError:false}),useQueryClient:()=>({invalidateQueries:()=>{}})};
   if(name==="@/providers/session-context")return {useSession:()=>({location:{country:"PE",name:"Miraflores"},modules})};
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Textarea","Dialog","EmptyState","ErrorState","Skeleton","Status","ModalHeader","ModalFooter"].map(key=>[key,key]));
   if(name==="../domain/linkable-product")return {linkableControlLabel:()=>"Usa cupo del día"};
@@ -50,13 +50,14 @@ function mount({save=async()=>{},busy=false,modules={},linkable=[]}={}){
   if(name==="./purchase-unit-field")return {PurchaseUnitField:"PurchaseUnitField"};
   if(name==="./purchase-category-field")return {PurchaseCategoryField:"PurchaseCategoryField"};
   if(name==="./purchase-presentations-field")return {PurchasePresentationsField:"PurchasePresentationsField"};
-  if(name==="../infrastructure/purchases-api"||name==="@/shared/i18n/regional-format")return {};
+  if(name==="../infrastructure/purchases-api")return api;
+  if(name==="@/shared/i18n/regional-format")return {};
   return require(name);
  });
  function render(){
   cursor=refCursor=0;const nodes=[];
   function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){nodes.push(node);visit(node.props?.children);visit(node.props?.action)}}
-  visit(PurchaseItemDialog({currencySymbol:"S/",busy,close:()=>{},choose:()=>{},save}));
+  visit(PurchaseItemDialog({currencySymbol:"S/",busy,close:()=>{},choose,save}));
   return {nodes,form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&["Crear y agregar","Vincular y agregar","Guardando…"].includes(node.props.children))};
  }
  render();
@@ -197,4 +198,24 @@ test("los niveles respetan la unidad contable y conservan los valores al corregi
  assert.equal(measured.props.step,"0.001");assert.equal(measured.props.inputMode,"decimal");
  await ui.render().button.props.onClick();await tick();
  assert.equal(saved.length,1);assert.equal(saved[0].optimalStock,"15.5");
+});
+
+test("un artículo de otro local se agrega a este local en lugar de duplicarse",async()=>{
+ const calls=[],chosen=[];
+ const option={id:"lemon",name:"Limón",unit:"kg",kind:"ingredient",quantity:"0",presentations:[]};
+ const ui=mount({
+  assignable:[{inventoryItemId:"lemon",productId:null,name:"Limón",unit:"kg",unitName:"Kilogramo",inactiveHere:false,locations:["Central"]}],
+  api:{assignInventoryItem:async id=>{calls.push(["assign",id])},listPurchaseInventory:async q=>{calls.push(["search",q]);return {items:[option]}}},
+  choose:item=>chosen.push(item),
+ });
+ const search=ui.render().nodes.find(node=>node.type==="Input"&&node.props.placeholder==="Escribe el nombre del producto o insumo");
+ search.props.onChange({target:{value:"Lim"}});
+ const view=ui.render();
+ assert.ok(view.nodes.some(node=>node.type==="p"&&node.props.children==="En otros locales"));
+ const row=view.nodes.find(node=>node.type==="button"&&node.key==="lemon");
+ assert.match(JSON.stringify(row.props.children),/Lo usa Central/);
+ assert.match(JSON.stringify(row.props.children),/Agregar/);
+ await row.props.onClick();await tick();
+ assert.deepEqual(calls,[["assign","lemon"],["search","Limón"]]);
+ assert.equal(chosen.length,1);assert.equal(chosen[0].id,"lemon");
 });

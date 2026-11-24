@@ -454,6 +454,62 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
    presentación o saldo parcial.
 7. Las reposiciones posteriores usan siempre el mismo `InventoryItemId`.
 
+### Artículos por local (migración 000145, 2026-11-24)
+
+La ficha de un artículo (`inventory_items`: nombre, unidad base, presentaciones y
+vínculo con Carta) es de la empresa; todo lo demás es del local. Una fila en
+`inventory_location_settings` significa que el local **usa** el artículo y su
+columna `active` lo oculta solo en ese local, conservando kárdex y documentos.
+
+- **Crear:** el alta desde Compras asigna el artículo únicamente al local activo.
+  Los demás locales no lo ven en Inventario ni en sus selectores.
+- **Agregar existente:** `GET /purchase-assignable-items?q=` busca artículos de
+  la empresa que el local no usa (o desactivó) y `POST
+  /purchase-inventory-items/{id}/assignment` los agrega o reactiva, en lugar de
+  crear duplicados. Auditoría `inventory.item_assigned`.
+- **Movimientos:** el disparador `stock_movement_assigns_inventory_item` asigna
+  (o reactiva) el artículo en el local de cualquier movimiento: recepción,
+  transferencia recibida, consumo de receta o reversa. Las operaciones desde un
+  local (ajustes, entradas, transferencias de salida, órdenes de compra)
+  rechazan artículos desactivados en ese local.
+- **Listado:** `GET /inventory?status=active|inactive|all` muestra solo los
+  artículos del local (asignados, o con saldo en datos anteriores sin fila).
+  El selector de Compras y `GET /inventory/products?scope=location` (Ajustes y
+  Transferencias) también se limitan al local; sin `scope`, ese mismo endpoint
+  lista toda la empresa porque las recetas son de la empresa.
+- **Desactivar / activar:** `PATCH /inventory/items/{id}/status` solo afecta al
+  local activo. Desactivar exige existencia 0 en el local, ninguna orden de
+  compra del local sin recibir (`draft`, `pending_approval`, `approved`,
+  `partially_received`) y ninguna receta activa que lo use. Un producto de Carta
+  vinculado sigue a la venta y se ve agotado en ese local.
+- **Eliminar:** `DELETE /inventory/items/{id}` solo si ningún local lo usó
+  nunca (sin movimientos, entradas, ajustes, compras, devoluciones,
+  transferencias, recetas ni saldo distinto de 0), sin órdenes de compra y sin
+  otro local que lo tenga activo. Borra saldos en 0, asignaciones y
+  presentaciones; un producto de Carta vinculado queda con
+  `quantity_control='none'`. Auditoría `inventory.item_deleted`.
+- **Unidad base:** `PATCH /inventory/items/{id}/settings` acepta `unit`. Sin
+  historial el cambio es libre; con historial es una **corrección**: las
+  cantidades conservan sus números y se leen en la nueva unidad en todos los
+  locales (no se convierte kg↔g). Se bloquea con órdenes de compra sin recibir,
+  recetas que consumen en otra unidad, decimales si la nueva unidad es contable
+  o presentaciones no configuradas para la nueva unidad. Las recetas que
+  consumen en la propia unidad y las entradas manuales pasan a la nueva unidad.
+  `GET /inventory/items/{id}/unit-change?unit=` anticipa el modo y los
+  bloqueos. Auditoría `inventory.unit_changed` con `from`, `to` y `mode`.
+- **Cambios de empresa desde un local:** renombrar, cambiar la unidad o quitar
+  presentaciones de un artículo que otro local usa exige `inventory.manage`
+  también en ese local (403 `inventory_item_other_locations`).
+- **Presentaciones:** `DELETE /inventory/items/{id}/presentations/{presentationId}`
+  borra una presentación sin documentos o la oculta (`active=false`) si compras o
+  entradas la usaron. La base nunca se quita y vuelve a ser predeterminada.
+
+La migración asigna cada artículo a los locales donde tiene documentos y retira
+las asignaciones que la migración 42 creó en locales que nunca lo usaron; un
+artículo sin ningún uso conserva sus asignaciones porque no se sabe dónde nació.
+La bajada elimina el disparador y la columna, pero no restaura las asignaciones
+retiradas.
+
 #### Valorización de entradas y ajustes
 
 Una entrada (`POST /inventory/entries`) o un ajuste de entrada acepta `unitCost`,
@@ -591,6 +647,7 @@ por su cuenta.
 | `products` | Catálogo comercial único; separa `product_type` de `quantity_control`. |
 | `product_availability` | Porciones, vendidos y override manual por local/día. |
 | `inventory_items` | Catálogo físico: insumos internos o mercadería vendible; `product_id` es opcional y `unit` define la unidad base. |
+| `inventory_location_settings` | Asignación del artículo a cada local (la fila existe si el local lo usa), `active` por local y niveles mínimo/óptimo del local. |
 | `inventory_presentations` | Presentaciones reutilizables de ingreso y su factor hacia la unidad base. |
 | `stock_balances` | Saldo físico actual por local e item interno, siempre expresado en unidad base. |
 | `inventory_entries` | Documento auditable: cantidad recibida, presentación, factor y equivalencia en unidad base. |

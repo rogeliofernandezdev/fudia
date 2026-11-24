@@ -11,32 +11,35 @@ const require=createRequire(import.meta.url);
 const root=new URL("../src/",import.meta.url);
 function compile(path,resolve){
  const exports={};
- vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
+ vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve,URLSearchParams});
  return exports;
 }
 const resolver=compile("shared/forms/zod-resolver.ts",require);
 const schema=compile("modules/supply/inventory/domain/inventory-settings-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
-const item={inventoryItemId:"water",name:"Agua mineral San Luis",unitCountable:true,minimumStock:"2.000",reorderPoint:"2.000",optimalStock:"2.000"};
+const item={inventoryItemId:"water",productId:null,productName:null,name:"Agua mineral San Luis",unit:"botella",unitName:"Botella",unitCountable:true,active:true,quantity:"0",minimumStock:"2.000",reorderPoint:"2.000",optimalStock:"2.000",hasHistory:false,recipes:[],otherLocations:[],presentations:[],canDelete:false,canDeactivate:true,deactivateBlockers:[]};
+const units=[{id:"1",code:"botella",name:"Botella",countable:true},{id:"2",code:"und",name:"Unidad",countable:true},{id:"3",code:"kg",name:"Kilogramo",countable:false}];
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function mount({busy=false,save=async()=>{},close=()=>{},record=item}={}){
- let control;const submitting={current:false};
+function mount({busy=false,save=async()=>{},close=()=>{},record=item,preview=null,remove=()=>{},removePresentation=()=>{}}={}){
+ let control;const submitting={current:false};const previews=[];
  const {InventorySettingsDialog}=compile("modules/supply/inventory/presentation/inventory-settings-dialog.tsx",name=>{
   if(name==="react")return {useRef:()=>submitting};
   if(name==="react-hook-form")return {useForm:options=>{
    control??=createFormControl(options);
    return {...control,formState:control.control._formState};
-  }};
-  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon",ModalForm:"form",ModalBody:"ModalBody"};
+  },useWatch:({name:field})=>control.getValues(field)};
+  if(name==="@tanstack/react-query")return {useQuery:options=>{previews.push(options);return options.enabled?{isLoading:false,isError:false,data:preview}:{isLoading:false,isError:false}}};
+  if(name==="../infrastructure/inventory-api")return {previewInventoryUnitChange:()=>preview};
+  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon",ModalForm:"form",ModalBody:"ModalBody",FormSection:"FormSection",Select:"Select",InlineNotice:"InlineNotice",RowActionButton:"RowActionButton",Tag:"Tag"};
   if(name==="../domain/inventory-settings-schema")return schema;
   return require(name);
  });
  function render(){
   const nodes=[];
   function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){nodes.push(node);visit(node.props?.children)}}
-  visit(InventorySettingsDialog({item:record,busy,save,close}));
-  return {nodes,dialog:nodes.find(node=>node.type==="Dialog"),form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&node.props.kind!=="ghost"&&node.props.action!=="cancel")};
+  visit(InventorySettingsDialog({item:record,units,busy,save,close,remove,removePresentation,removingPresentation:""}));
+  return {nodes,dialog:nodes.find(node=>node.type==="Dialog"),form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&!node.props.kind&&node.props.action!=="cancel")};
  }
- render();return {render,control};
+ render();return {render,control,previews};
 }
 
 test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
@@ -44,11 +47,11 @@ test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  assert.ok(dialog.props.children.includes(form));
  const body=form.props.children[0];
  assert.equal(body.type,"ModalBody");
- assert.equal(body.props.children.props.title,"Datos del artículo");
- assert.equal(body.props.children.props.children.props.className,"form-grid");
+ assert.equal(body.props.children[0].props.title,"Datos del artículo");
+ assert.equal(body.props.children[0].props.children.props.className,"form-grid");
  assert.equal(form.props.children[1].type,"ModalFooter");
- assert.equal(form.props.children[1].props.children.length,2);
- assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Nombre","Stock mínimo","Stock óptimo"]);
+ assert.deepEqual(Array.from(form.props.children[1].props.children.filter(Boolean),node=>node.props.children),["Cancelar","Guardar"]);
+ assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Nombre","Unidad","Stock mínimo","Stock óptimo"]);
  assert.equal(nodes.find(node=>node.type==="ModalHeader").props.title,"Editar artículo");
  assert.equal(nodes.some(node=>node.type==="Input"&&node.props.name==="reorderPoint"),false);
  assert.equal(dialog.props["aria-labelledby"],nodes.find(node=>node.type==="ModalHeader").props.titleId);
@@ -139,7 +142,7 @@ test("unidades contables muestran enteros y rechazan fracciones en ambos niveles
 });
 
 test("unidades medibles conservan fracciones y eliminan solo ceros de presentación",async()=>{
- const saved=[];const ui=mount({record:{...item,unitCountable:false,minimumStock:"0.500",reorderPoint:"1.250",optimalStock:"2.000"},save:async value=>saved.push(value)});
+ const saved=[];const ui=mount({record:{...item,unit:"kg",unitName:"Kilogramo",unitCountable:false,minimumStock:"0.500",reorderPoint:"1.250",optimalStock:"2.000"},save:async value=>saved.push(value)});
  assert.equal(ui.control.getValues("minimumStock"),"0.5");
  assert.equal(ui.control.getValues("optimalStock"),"2");
  assert.ok(ui.render().nodes.filter(node=>node.type==="Input"&&node.props.type==="number").every(node=>node.props.step==="0.001"&&node.props.inputMode==="decimal"));
@@ -192,4 +195,81 @@ test("ocupado también impide llamadas directas y conserva el cierre global por 
  await button.props.onClick();assert.equal(saved,0);
  assert.equal(dialog.props.onResponseClose,close);
  dialog.props.onResponseClose();assert.equal(closed,1);
+});
+
+test("la unidad se elige del catálogo del API y solo viaja cuando cambia",async()=>{
+ const saved=[];const ui=mount({save:async draft=>saved.push(draft),preview:{unit:"und",unitName:"Unidad",mode:"free",allowed:true,blockers:[],quantity:"0",fromUnit:"Botella",toUnit:"Unidad"}});
+ const select=ui.render().nodes.find(node=>node.type==="Select");
+ assert.deepEqual(Array.from(select.props.children,option=>option.props.value),["botella","und","kg"]);
+ await ui.render().button.props.onClick();
+ assert.equal(saved[0].unit,undefined,"sin cambio no envía la unidad");
+ ui.control.setValue("unit","und");
+ ui.render();
+ assert.ok(ui.previews.some(options=>options.enabled&&options.queryKey.includes("und")),"consulta el efecto del cambio");
+ await ui.render().button.props.onClick();
+ assert.equal(saved[1].unit,"und");
+});
+
+test("una corrección con historial explica que las cantidades conservan su número",()=>{
+ const ui=mount({record:{...item,hasHistory:true},preview:{unit:"und",unitName:"Unidad",mode:"correction",allowed:true,blockers:[],quantity:"10",fromUnit:"Kilogramo",toUnit:"Unidad"}});
+ ui.control.setValue("unit","und");
+ const notice=ui.render().nodes.find(node=>node.type==="InlineNotice");
+ assert.equal(notice.props.tone,"warning");
+ assert.equal(notice.props.title,"Corrección de unidad");
+ assert.match(notice.props.children.join(""),/10 kilogramo pasan a 10 unidad/);
+});
+
+test("un cambio de unidad bloqueado lista los motivos y no permite guardar",async()=>{
+ let saved=0;const ui=mount({save:async()=>{saved++},preview:{unit:"und",unitName:"Unidad",mode:"correction",allowed:false,blockers:["Lo usa la receta de Pan en otra unidad. Cambia esas recetas primero."],quantity:"0",fromUnit:"Botella",toUnit:"Unidad"}});
+ ui.control.setValue("unit","und");
+ const view=ui.render();
+ const notice=view.nodes.find(node=>node.type==="InlineNotice");
+ assert.equal(notice.props.tone,"danger");
+ assert.ok(view.nodes.some(node=>node.type==="span"&&String(node.props.children).includes("receta de Pan")));
+ assert.equal(view.button.props.disabled,true);
+ await view.button.props.onClick();assert.equal(saved,0);
+});
+
+test("otro local que usa el artículo se menciona al cambiar nombre o unidad",()=>{
+ const ui=mount({record:{...item,otherLocations:[{locationId:"n",name:"Sucursal Norte",active:true,quantity:"0"}]}});
+ assert.equal(ui.render().nodes.some(node=>node.type==="InlineNotice"),false);
+ ui.control.setValue("name","Agua sin gas");
+ const notice=ui.render().nodes.find(node=>node.type==="InlineNotice");
+ assert.match(notice.props.children.join(""),/Sucursal Norte/);
+});
+
+test("eliminar solo aparece sin historial y abre la confirmación del padre",()=>{
+ assert.equal(mount().render().nodes.some(node=>node.type==="Button"&&node.props.kind==="danger-outline"),false);
+ let removed=0;const view=mount({record:{...item,canDelete:true},remove:()=>{removed++}}).render();
+ const footer=view.form.props.children[1].props.children.filter(Boolean);
+ assert.deepEqual(Array.from(footer,node=>node.props.children),["Eliminar","Cancelar","Guardar"],"acciones contiguas a la derecha");
+ footer[0].props.onClick();assert.equal(removed,1);
+});
+
+test("las presentaciones de compra se quitan salvo la base",()=>{
+ const removed=[];
+ const record={...item,presentations:[{id:"base",presentationType:"unit",unitsPerPresentation:"1",name:"Unidad",isDefault:true,isBase:true,used:true},{id:"pack",presentationType:"package",unitsPerPresentation:"6",name:"Paquete",isDefault:false,isBase:false,used:false}]};
+ const view=mount({record,removePresentation:id=>removed.push(id)}).render();
+ const actions=view.nodes.filter(node=>node.type==="RowActionButton");
+ assert.equal(actions.length,1);
+ assert.equal(actions[0].props.label,"Quitar Paquete x 6");
+ actions[0].props.onClick();assert.deepEqual(removed,["pack"]);
+ assert.ok(view.nodes.some(node=>node.type==="Tag"&&node.props.children==="Base"));
+});
+
+test("el contrato envía unidad, estado por local, eliminación y filtro de estado",async()=>{
+ const requests=[];
+ const api=compile("modules/supply/inventory/infrastructure/inventory-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options={})=>{requests.push({path,method:options.method,body:options.body?JSON.parse(options.body):undefined})}}:require(name));
+ await api.updateInventorySettings({inventoryItemId:"water",name:"Agua",unit:"und",minimumStock:"1",optimalStock:"2"});
+ await api.setInventoryItemActive("water",false);
+ await api.deleteInventoryItem("water");
+ await api.listInventory({q:"",page:1,pageSize:10});
+ await api.listInventory({q:"",page:1,pageSize:10,status:"inactive"});
+ await api.removeInventoryPresentation("water","pack");
+ assert.deepEqual(requests[0].body,{name:"Agua",unit:"und",minimumStock:1,optimalStock:2});
+ assert.deepEqual(requests[1],{path:"inventory/items/water/status",method:"PATCH",body:{active:false}});
+ assert.deepEqual(requests[2],{path:"inventory/items/water",method:"DELETE",body:undefined});
+ assert.match(requests[3].path,/status=active/);
+ assert.match(requests[4].path,/status=inactive/);
+ assert.deepEqual(requests[5],{path:"inventory/items/water/presentations/pack",method:"DELETE",body:undefined});
 });

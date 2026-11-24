@@ -181,6 +181,7 @@ type InventoryStockHandler interface {
 	ListLinkableProducts(http.ResponseWriter, *http.Request)
 	ListInventory(http.ResponseWriter, *http.Request)
 	ListInventoryProducts(http.ResponseWriter, *http.Request)
+	ListPurchaseInventoryItems(http.ResponseWriter, *http.Request)
 	ListInventoryMovements(http.ResponseWriter, *http.Request)
 	CreateInventoryEntry(http.ResponseWriter, *http.Request)
 	CreateInventoryAdjustment(http.ResponseWriter, *http.Request)
@@ -188,6 +189,13 @@ type InventoryStockHandler interface {
 	SavePurchasePresentation(http.ResponseWriter, *http.Request)
 	UpdateInventoryLocationSettings(http.ResponseWriter, *http.Request)
 	ListInventoryCombinations(http.ResponseWriter, *http.Request)
+	GetInventoryItem(http.ResponseWriter, *http.Request)
+	PreviewInventoryUnitChange(http.ResponseWriter, *http.Request)
+	UpdateInventoryItemStatus(http.ResponseWriter, *http.Request)
+	DeleteInventoryItem(http.ResponseWriter, *http.Request)
+	RemoveInventoryPresentation(http.ResponseWriter, *http.Request)
+	ListAssignableItems(http.ResponseWriter, *http.Request)
+	AssignInventoryItem(http.ResponseWriter, *http.Request)
 }
 type PurchasingHandler interface {
 	ListSuppliers(http.ResponseWriter, *http.Request)

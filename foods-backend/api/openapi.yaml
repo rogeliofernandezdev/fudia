@@ -1384,9 +1384,11 @@ paths:
     get:
       operationId: listInventory
       summary: Existencias físicas de productos vendibles e insumos en el local activo
+      description: "Solo lista los artículos asignados al local activo (los que creó, compró, recibió por transferencia o agregó desde otro local). La ficha (nombre y unidad) es de la empresa; existencia, costo, niveles y estado son del local."
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive, all], default: active }, description: "Estado del artículo en el local activo." }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
@@ -1399,6 +1401,7 @@ paths:
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: q, schema: { type: string }, description: "Busca por nombre o SKU; % y _ se tratan como texto literal." }
+        - { in: query, name: scope, schema: { type: string, enum: [company, location], default: company }, description: "company (Recetas, que son de la empresa) lista todos los artículos; location (Ajustes y Transferencias) solo los activos del local." }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
@@ -1484,11 +1487,73 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: Producto o clasificación incompatible }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/inventory/items/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getInventoryItem
+      summary: Ficha del artículo en el local activo con las reglas de edición ya evaluadas
+      description: "Requiere inventory.read. 404 si el artículo no está asignado al local activo. canDelete y canDeactivate aplican las mismas reglas que los comandos."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Ficha del artículo, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryItemDetail" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo no encontrado en este local }
+    delete:
+      operationId: deleteInventoryItem
+      summary: Elimina de forma permanente un artículo que ningún local usó
+      description: "Requiere inventory.manage. Solo sin historial (compras, recepciones, devoluciones, entradas, ajustes, transferencias, recetas ni existencia) en ningún local, sin órdenes de compra y sin otro local que lo tenga activo. Un producto de Carta vinculado se conserva sin control de stock. Queda en auditoría (inventory.item_deleted)."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Artículo eliminado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo no encontrado en este local }
+        "409": { description: "inventory_item_delete_blocked: tiene historial u otro local lo usa; el mensaje indica qué hacer.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /v1/admin/inventory/items/{id}/unit-change:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: previewInventoryUnitChange
+      summary: Anticipa qué hará el cambio de unidad base antes de guardarlo
+      description: "Requiere inventory.manage. mode=free sin historial; mode=correction con historial: las cantidades conservan sus números y se leen en la nueva unidad en todos los locales. allowed=false lista bloqueos: órdenes de compra sin recibir, recetas en otra unidad, decimales con unidad contable, presentaciones no configuradas para la unidad u otros locales sin permiso inventory.manage."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: unit, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Efecto del cambio, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnitChangePreview" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo no encontrado en este local }
+  /v1/admin/inventory/items/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateInventoryItemStatus
+      summary: Activa o desactiva el artículo solo en el local activo
+      description: "Requiere inventory.manage. Desactivar exige existencia 0 en el local, ninguna orden de compra sin recibir del local y ninguna receta activa que lo use. Los demás locales no cambian y el kárdex se conserva. Un movimiento de stock posterior en el local (recepción, transferencia recibida, reversa) lo reactiva. Queda en auditoría."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryItemStatusInput" } } } }
+      responses:
+        "204": { description: Estado guardado }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo no encontrado en este local }
+        "409": { description: "inventory_item_deactivation_blocked: el mensaje lista qué falta resolver.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /v1/admin/inventory/items/{id}/presentations/{presentationId}:
+    parameters:
+      - { $ref: "#/components/parameters/EntityId" }
+      - { in: path, name: presentationId, required: true, schema: { type: string, format: uuid } }
+    delete:
+      operationId: removeInventoryPresentation
+      summary: Quita una presentación de compra del artículo
+      description: "Requiere inventory.manage y el mismo permiso en los otros locales que usan el artículo. Sin documentos que la usen se elimina (result=deleted); con compras o entradas se oculta para nuevas compras (result=hidden). La presentación base no se quita y pasa a predeterminada si se quitó la predeterminada."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Presentación quitada, content: { application/json: { schema: { type: object, required: [result], properties: { result: { type: string, enum: [deleted, hidden] } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo o presentación no encontrados }
+        "409": { description: "inventory_base_presentation: la presentación base no se quita." }
   /v1/admin/inventory/items/{id}/settings:
     patch:
       operationId: updateInventoryLocationSettings
-      summary: Edita el nombre del artículo y sus niveles de stock en el local activo
-      description: "Requiere inventory.manage. Nombre pertenece al catálogo de la empresa; si se vende, se corrige también el producto de Carta. Nombre y niveles se guardan atómicamente, conservando identidad, existencias e historial. Omite name para conservar compatibilidad con clientes anteriores."
+      summary: Edita nombre, unidad base y niveles de stock del artículo en el local activo
+      description: "Requiere inventory.manage. Nombre y unidad pertenecen a la ficha de la empresa; si se vende, el nombre se corrige también en el producto de Carta. Si otro local usa el artículo, el usuario necesita inventory.manage también allí (403 inventory_item_other_locations). La unidad sigue las reglas de previewInventoryUnitChange (409 inventory_unit_change_blocked) y queda en auditoría (inventory.unit_changed). Nombre, unidad y niveles se guardan atómicamente. Omite name y unit para conservar compatibilidad con clientes anteriores."
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
@@ -1554,6 +1619,7 @@ paths:
     get:
       operationId: listPurchaseInventoryItems
       summary: Artículos existentes disponibles para líneas de orden de compra
+      description: "Solo artículos activos del local activo; los de otros locales se buscan con listAssignableItems."
       security: [{ sessionCookie: [] }]
       parameters: [{ in: query, name: q, schema: { type: string } }]
       responses:
@@ -1609,6 +1675,28 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { description: Artículo no encontrado }
         "503": { description: No se guardó la presentación }
+  /v1/admin/purchase-assignable-items:
+    get:
+      operationId: listAssignableItems
+      summary: Busca artículos de la empresa que el local activo todavía no usa
+      description: "Requiere purchases.read. Devuelve artículos de otros locales o desactivados en este, para agregarlos en lugar de crear duplicados. Sin q devuelve una lista vacía; máximo 20."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+      responses:
+        "200": { description: Artículos asignables, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryAssignableItem" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/purchase-inventory-items/{id}/assignment:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: assignInventoryItem
+      summary: Agrega un artículo existente de la empresa al local activo o lo reactiva
+      description: "Requiere purchases.manage. Conserva la ficha compartida (nombre y unidad); existencia, costo y niveles empiezan propios del local. Queda en auditoría (inventory.item_assigned)."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Artículo disponible en el local }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo no encontrado en la empresa }
   /v1/admin/purchase-item-categories:
     get:
       operationId: listPurchaseItemCategories
@@ -3739,6 +3827,10 @@ components:
         pageSize: { type: integer, minimum: 1 }
     ProductAvailability: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, description, allergens, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string, description: "Descripción del plato; cadena vacía si no tiene." }, allergens: { type: array, items: { type: string }, description: "Nombres legibles de los alérgenos asignados al producto; lista vacía si no tiene." }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date }, hasModifiers: { type: boolean, description: "El plato tiene grupos de opciones (término, acompañamiento, adicionales) que se eligen al tomar el pedido; ver GET /v1/operations/products/{id}/modifiers." } } } ] }
     InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, unitCountable, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, unitCountable: { type: boolean, description: "La unidad se cuenta por piezas y sus niveles de stock requieren enteros." }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
+    InventoryItemDetail: { type: object, required: [inventoryItemId, productId, productName, name, unit, unitName, unitCountable, active, quantity, minimumStock, optimalStock, hasHistory, recipes, otherLocations, presentations, canDelete, canDeactivate, deactivateBlockers], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, productName: { type: [string, "null"], description: "Producto de Carta vinculado." }, name: { type: string }, unit: { type: string }, unitName: { type: string }, unitCountable: { type: boolean }, active: { type: boolean, description: "Estado en el local activo." }, quantity: { type: string }, minimumStock: { type: string }, optimalStock: { type: string }, hasHistory: { type: boolean, description: "Algún local tiene compras, movimientos, recetas o existencia." }, recipes: { type: array, items: { type: object, required: [productName, consumptionUnit], properties: { productName: { type: string }, consumptionUnit: { type: string } } } }, otherLocations: { type: array, items: { type: object, required: [locationId, name, active, quantity], properties: { locationId: { type: string, format: uuid }, name: { type: string }, active: { type: boolean }, quantity: { type: string } } } }, presentations: { type: array, items: { type: object, required: [id, presentationType, unitsPerPresentation, name, isDefault, isBase, used], properties: { id: { type: string, format: uuid }, presentationType: { type: string }, unitsPerPresentation: { type: string }, name: { type: string }, isDefault: { type: boolean }, isBase: { type: boolean }, used: { type: boolean } } } }, canDelete: { type: boolean }, deleteBlocker: { type: string }, canDeactivate: { type: boolean }, deactivateBlockers: { type: array, items: { type: string } } } }
+    InventoryUnitChangePreview: { type: object, required: [unit, unitName, mode, allowed, blockers, quantity, fromUnit, toUnit], properties: { unit: { type: string }, unitName: { type: string }, mode: { type: string, enum: [same, free, correction] }, allowed: { type: boolean }, blockers: { type: array, items: { type: string } }, quantity: { type: string, description: "Existencia del local activo, que conserva su número." }, fromUnit: { type: string }, toUnit: { type: string } } }
+    InventoryItemStatusInput: { type: object, required: [active], properties: { active: { type: boolean } } }
+    InventoryAssignableItem: { type: object, required: [inventoryItemId, productId, name, unit, unitName, inactiveHere, locations], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, name: { type: string }, unit: { type: string }, unitName: { type: string }, inactiveHere: { type: boolean, description: "Estaba en este local y está desactivado." }, locations: { type: array, items: { type: string }, description: "Otros locales donde está activo." } } }
     InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation, name, isDefault], properties: { id: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: string }, name: { type: string }, isDefault: { type: boolean } } }
     InventoryPresentationInput: { type: object, required: [presentationType, unitsPerPresentation], properties: { presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100000000000, multipleOf: 0.001, description: "Unidad base siempre 1. Conversión por artículo. Admite fracciones solo si la unidad base no es contable (InventoryUnit.countable); con unidades contables debe ser al menos 1 o responde 400 invalid_presentation_content. Aplica al crear artículos, agregar presentaciones y registrar entradas." }, isDefault: { type: boolean, default: false } } }
     InventoryCombination: { type: object, required: [code, name, unit, unitName, unitCountable, isDefault], properties: { code: { type: string }, name: { type: string }, unit: { type: string }, unitName: { type: string }, unitCountable: { type: boolean, description: "Copia de InventoryUnit.countable para validar el contenido de la presentación en el formulario." }, isDefault: { type: boolean } } }
@@ -3767,7 +3859,7 @@ components:
     PurchaseOrder: { allOf: [{ $ref: "#/components/schemas/PurchaseOrderSummary" }, { type: object, required: [items, history], properties: { items: { type: array, items: { $ref: "#/components/schemas/PurchaseOrderItem" } }, history: { type: array, description: Recepciones de la orden y correcciones o devoluciones hechas sobre ellas, de la más antigua a la más reciente, items: { $ref: "#/components/schemas/PurchaseOrderEvent" } } } }] }
     PurchaseOrderEvent: { type: object, required: [id, kind, code, receiptId, reason, notes, createdByName, createdAt, itemCount], properties: { id: { type: string, format: uuid }, kind: { type: string, enum: [receipt, receipt_correction, supplier_return] }, code: { type: string, description: REC-… o DEV-… }, receiptId: { type: string, format: uuid, description: Recepción a la que pertenece el evento (la propia en kind=receipt) }, reason: { type: string, description: Vacío en recepciones }, notes: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, itemCount: { type: integer } } }
     InventoryAdjustmentInput: { type: object, required: [inventoryItemId, movementType, reason, quantity], properties: { inventoryItemId: { type: string, format: uuid }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100000000000 }, observation: { type: string, maxLength: 240 }, unitCost: { type: number, minimum: 0, exclusiveMaximum: 10000000000, description: "Solo para entradas: costo por unidad base que recalcula el promedio ponderado. Si se omite se usa el promedio vigente; es obligatorio (unit_cost_required) cuando el artículo aún no tiene costo promedio. Las salidas siempre salen al costo promedio y lo ignoran." } }, description: "Un saldo resultante igual o mayor a 100000000000 responde stock_limit_exceeded." }
-    InventoryLocationSettingsInput: { type: object, properties: { name: { type: string, minLength: 1, maxLength: 160, description: "Nombre del artículo en toda la empresa. Opcional para clientes anteriores; conserva stock e identidad y actualiza también el producto vinculado de Carta." }, minimumStock: { type: number, minimum: 0, exclusiveMaximum: 100000000000 }, reorderPoint: { type: number, minimum: 0, exclusiveMaximum: 100000000000, deprecated: true, description: "Compatibilidad con clientes anteriores. Omitir para igualarlo al mínimo." }, optimalStock: { type: number, minimum: 0, exclusiveMaximum: 100000000000 } }, description: "Las unidades contables requieren niveles enteros (400 fractional_inventory_settings si contienen fracciones); las medibles admiten decimales. El frontend usa solo mínimo y óptimo. Sin reorderPoint, el valor interno se iguala al mínimo y el óptimo nunca queda por debajo del mínimo. Los clientes anteriores que envían reorden conservan su normalización." }
+    InventoryLocationSettingsInput: { type: object, properties: { name: { type: string, minLength: 1, maxLength: 160, description: "Nombre del artículo en toda la empresa. Opcional para clientes anteriores; conserva stock e identidad y actualiza también el producto vinculado de Carta." }, unit: { type: string, description: "Unidad base de la ficha de la empresa. Sin historial se cambia libremente; con historial es una corrección: las cantidades conservan sus números." }, minimumStock: { type: number, minimum: 0, exclusiveMaximum: 100000000000 }, reorderPoint: { type: number, minimum: 0, exclusiveMaximum: 100000000000, deprecated: true, description: "Compatibilidad con clientes anteriores. Omitir para igualarlo al mínimo." }, optimalStock: { type: number, minimum: 0, exclusiveMaximum: 100000000000 } }, description: "Las unidades contables requieren niveles enteros (400 fractional_inventory_settings si contienen fracciones); las medibles admiten decimales. El frontend usa solo mínimo y óptimo. Sin reorderPoint, el valor interno se iguala al mínimo y el óptimo nunca queda por debajo del mínimo. Los clientes anteriores que envían reorden conservan su normalización." }
     InventoryAdjustmentResult: { type: object, required: [id, inventoryItemId, name, unit, movementType, reason, quantity, stockBefore, stockAfter, observation, createdAt, createdByName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, name: { type: string }, unit: { type: string }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number }, stockBefore: { type: number, minimum: 0 }, stockAfter: { type: number, minimum: 0 }, unitCost: { type: number, minimum: 0, description: Costo por unidad base con el que se valorizó el ajuste }, averageUnitCost: { type: number, minimum: 0, description: Costo promedio resultante }, observation: { type: string }, createdAt: { type: string, format: date-time }, createdByName: { type: string } } }
     StockMovement: { type: object, required: [id, inventoryItemId, productId, itemName, unitName, movementType, quantityDelta, balanceBefore, balanceAfter, sourceType, sourceId, sourceReference, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, itemName: { type: string }, unitName: { type: string, description: "Nombre legible de la unidad del artículo (p. ej. «litros»); mostrar junto a cantidades y stocks." }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment, inventory_adjustment, supplier_return, receipt_correction, transfer_out, transfer_in, recipe_consumption, recipe_reversal] }, adjustmentType: { type: [string, "null"], enum: [entry, exit, null] }, reason: { type: [string, "null"], enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit, null] }, quantityDelta: { type: string }, balanceBefore: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order, inventory_adjustment, purchase_receipt, purchase_return, inventory_transfer] }, sourceId: { type: string, format: uuid }, sourceReference: { type: string, description: "Referencia legible del origen, sin códigos internos (p. ej. «Recepción de compra · Proveedor», «Transferencia · Origen → Destino»)." }, note: { type: string, description: Texto escrito por el usuario o motivo del movimiento }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     CashRegisterInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 80 }, blindClose: { type: boolean, default: false } } }

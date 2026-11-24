@@ -6,6 +6,7 @@ const stockLevel=z.string().trim().refine(value=>value!==""&&Number.isFinite(Num
 const schema=z.object({
   inventoryItemId:z.string().trim().min(1,"Selecciona un artículo."),
   name:z.string().trim().min(1,"Ingresa el nombre del artículo.").max(160,"Usa hasta 160 caracteres."),
+  unit:z.string().trim().min(1,"Selecciona la unidad.").optional(),
   minimumStock:stockLevel,
   optimalStock:stockLevel,
 });

@@ -27,7 +27,7 @@ func (r *Stock) CreateTransfer(ctx context.Context, s scope, in domain.TransferI
 func (r *Stock) TransferItem(ctx context.Context, s scope, line domain.TransferLine) (*string, string, error) {
 	var productID *string
 	var name string
-	err := r.db(ctx).QueryRow(ctx, `SELECT product_id,COALESCE((SELECT name FROM products p WHERE p.id=inventory_items.product_id),name) FROM inventory_items WHERE id=$1 AND organization_id=$2 AND active FOR SHARE`, line.InventoryItemID, s.OrganizationID).Scan(&productID, &name)
+	err := r.db(ctx).QueryRow(ctx, `SELECT ii.product_id,COALESCE((SELECT name FROM products p WHERE p.id=ii.product_id),ii.name) FROM inventory_items ii WHERE ii.id=$1 AND ii.organization_id=$2 AND ii.active AND `+notInactiveHereSQL("$3")+` FOR SHARE OF ii`, line.InventoryItemID, s.OrganizationID, s.LocationID).Scan(&productID, &name)
 	return productID, name, stockError(err)
 }
 func (r *Stock) EnsureTransferBalances(ctx context.Context, s scope, line domain.TransferLine, in domain.TransferInput) (int64, error) {

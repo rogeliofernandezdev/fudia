@@ -73,6 +73,17 @@ metadata de la unidad. `inventory_settings_units_integration_test.go` comprueba
 el catálogo en el listado real, 400 sin escritura para botellas y aceptación de
 fracciones en kg; requiere PostgreSQL efímero.
 
+Artículos por local: `inventory/domain/item_admin_test.go` fija los mensajes de
+bloqueo para desactivar, eliminar y cambiar la unidad.
+`inventory_location_items_integration_test.go` (PostgreSQL efímero) verifica
+que un artículo nuevo solo aparece en su local, la búsqueda y el alta desde otro
+local, el 403 al renombrar sin permiso en el otro local, niveles aislados,
+desactivación con existencia 0 que conserva el kárdex y no afecta al otro local,
+reactivación por transferencia recibida, la corrección de unidad sin convertir
+(saldo, entradas, recetas en la propia unidad y auditoría), el bloqueo por receta
+en otra unidad o por decimales con unidad contable, y la eliminación solo sin
+historial (presentación base protegida, producto de Carta sin control de stock).
+
 El dashboard verifica ventas por categoría con dos decimales y solo pedidos
 totalmente pagados. La regresión de cantidades fraccionarias comprueba el
 redondeo después de sumar, en hoy/7/30 días, sin modificar cantidades ni precios

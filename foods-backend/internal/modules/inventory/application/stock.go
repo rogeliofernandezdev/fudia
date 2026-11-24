@@ -22,7 +22,12 @@ var ErrNameTaken = errors.New("inventory item name already exists")
 
 type StockFilter struct {
 	Query, InventoryItemID, ProductID, MovementType, SourceType, From, To string
-	Page, Size                                                            int
+	// Status filters the location's list: active (default), inactive or all.
+	Status string
+	// Scope "location" limits article lookups to the active location's list;
+	// otherwise they cover the company (recipes are company-wide).
+	Scope      string
+	Page, Size int
 }
 type Stock struct {
 	repo         StockRepository
@@ -43,6 +48,7 @@ func stockFailure(kind apperror.Kind, code, message string) error {
 }
 
 type StockRepository interface {
+	ItemAdminRepository
 	LockItemName(context.Context, scope, string, string) (domain.InventoryNameTarget, error)
 	RenameItem(context.Context, scope, string, string) (int64, error)
 	// CatalogNameTaken serializes new article creation within the company until commit.

@@ -37,6 +37,25 @@ func stockError(err error) error {
 
 var _ application.StockRepository = (*Stock)(nil)
 
+// hereStateSQL is the article's state in the location's list: the assignment
+// flag, or active when a balance exists without assignment (older data), or
+// NULL when the location does not use the article.
+const hereStateSQL = `COALESCE(ils.active,CASE WHEN sb.inventory_item_id IS NOT NULL THEN true END)`
+
+// itemStatusFilter selects the location's list by status: active (default),
+// inactive or all. The argument is the SQL placeholder holding the status.
+func itemStatusFilter(arg string) string {
+	return `(` + hereStateSQL + ` IS NOT NULL AND (` + arg + `='all' OR (` + arg + `='inactive' AND NOT ` + hereStateSQL + `) OR (` + arg + ` NOT IN ('all','inactive') AND ` + hereStateSQL + `)))`
+}
+
+// notInactiveHereSQL rejects articles deactivated in the location placeholder.
+// Using an article not yet assigned assigns it through its stock movement.
+func notInactiveHereSQL(location string) string {
+	return `NOT EXISTS(SELECT 1 FROM inventory_location_settings here
+	  WHERE here.organization_id=ii.organization_id AND here.location_id=` + location + `
+	    AND here.inventory_item_id=ii.id AND NOT here.active)`
+}
+
 func (r *Stock) UnitExists(ctx context.Context, s scope, code string) (bool, error) {
 	var valid bool
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM inventory_units WHERE organization_id=$1 AND code=$2)`, s.OrganizationID, code).Scan(&valid)
@@ -210,8 +229,9 @@ func (r *Stock) LockEntryItem(ctx context.Context, s scope, in domain.InventoryE
 			  AND ii.organization_id=$2
 			  AND ii.active
 			  AND (p.id IS NULL OR p.active)
+			  AND `+notInactiveHereSQL("$3")+`
 			FOR UPDATE OF ii`,
-		in.InventoryItemID, s.OrganizationID,
+		in.InventoryItemID, s.OrganizationID, s.LocationID,
 	).Scan(&inventoryItemID, &itemSKU, &itemName, &inventoryUnit, &linkedProductID, &quantityControl)
 	return inventoryItemID, itemSKU, itemName, inventoryUnit, linkedProductID, quantityControl, stockError(err)
 }
@@ -300,7 +320,8 @@ func (r *Stock) LockAdjustmentItem(ctx context.Context, s scope, in domain.Inven
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 		WHERE ii.id=$1 AND ii.organization_id=$2 AND ii.active
 		  AND (p.id IS NULL OR p.active)
-		FOR UPDATE OF ii`, in.InventoryItemID, s.OrganizationID).
+		  AND `+notInactiveHereSQL("$3")+`
+		FOR UPDATE OF ii`, in.InventoryItemID, s.OrganizationID, s.LocationID).
 		Scan(&productID, &itemName, &unit)
 	return productID, itemName, unit, stockError(err)
 }
@@ -355,15 +376,20 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 		FROM inventory_items ii
 		LEFT JOIN products p
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		LEFT JOIN inventory_location_settings ils
+		  ON ils.organization_id=ii.organization_id AND ils.location_id=$3 AND ils.inventory_item_id=ii.id
+		LEFT JOIN stock_balances sb
+		  ON sb.organization_id=ii.organization_id AND sb.location_id=$3 AND sb.inventory_item_id=ii.id
 		WHERE ii.organization_id=$1 AND ii.active
+		  AND `+itemStatusFilter("$4")+`
 		  AND (p.name ILIKE $2 OR ii.name ILIKE $2 OR p.sku ILIKE $2 OR ii.sku ILIKE $2)`,
-		s.OrganizationID, search).Scan(&total); err != nil {
+		s.OrganizationID, search, s.LocationID, f.Status).Scan(&total); err != nil {
 		return out, err
 	}
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
 		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
-		       c.name,COALESCE(p.active,ii.active),ii.unit,COALESCE(u.countable,false),
+		       c.name,`+hereStateSQL+`,ii.unit,COALESCE(u.countable,false),
 		       COALESCE(sb.quantity,0)::text,
 		       COALESCE(ils.minimum_stock,ii.minimum_stock)::text,
 		       COALESCE(ils.reorder_point,COALESCE(ils.minimum_stock,ii.minimum_stock))::text,
@@ -392,10 +418,11 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 		 AND ils.location_id=$2
 		 AND ils.inventory_item_id=ii.id
 		WHERE ii.organization_id=$1 AND ii.active
+		  AND `+itemStatusFilter("$6")+`
 		  AND (p.name ILIKE $3 OR ii.name ILIKE $3 OR p.sku ILIKE $3 OR ii.sku ILIKE $3)
-		ORDER BY COALESCE(p.active,ii.active) DESC,COALESCE(p.name,ii.name),ii.id
+		ORDER BY `+hereStateSQL+` DESC,COALESCE(p.name,ii.name),ii.id
 		LIMIT $4 OFFSET $5`,
-		s.OrganizationID, s.LocationID, search, size, (page-1)*size)
+		s.OrganizationID, s.LocationID, search, size, (page-1)*size, f.Status)
 	if err != nil {
 		return out, err
 	}
@@ -469,6 +496,7 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 		 AND ils.inventory_item_id=ii.id
 		WHERE ii.organization_id=$1
 		  AND ii.active
+		  AND ($6<>'location' OR COALESCE(`+hereStateSQL+`,false))
 		  AND (p.id IS NULL OR (
 		    p.active
 		    AND p.quantity_control='inventory'
@@ -480,7 +508,7 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 		  ))
 		  AND (p.name ILIKE $3 OR ii.name ILIKE $3 OR p.sku ILIKE $3 OR ii.sku ILIKE $3)
 		ORDER BY COALESCE(p.name,ii.name),ii.id
-		LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, search, size, (page-1)*size)
+		LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, search, size, (page-1)*size, f.Scope)
 	if err != nil {
 		return out, err
 	}

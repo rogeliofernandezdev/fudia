@@ -326,7 +326,9 @@ func ValidDateFilters(values ...string) bool {
 }
 
 type LocationSettings struct {
-	Name         *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
+	// Unit corrects the company-wide base unit; see ItemAdmin rules.
+	Unit         *string `json:"unit,omitempty"`
 	MinimumStock float64 `json:"minimumStock"`
 	ReorderPoint float64 `json:"reorderPoint"`
 	OptimalStock float64 `json:"optimalStock"`

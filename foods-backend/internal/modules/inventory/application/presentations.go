@@ -130,7 +130,18 @@ func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in dom
 	if err != nil {
 		return stockFailure(apperror.Unavailable, "inventory_units_unavailable", "No pudimos validar la unidad del artículo.")
 	}
-	if rule.Countable && !domain.WholeLocationSettings(in) {
+	countable := rule.Countable
+	if in.Unit != nil {
+		target, err := a.repo.UnitTarget(ctx, s, strings.TrimSpace(*in.Unit))
+		if err != nil {
+			return stockFailure(apperror.Unavailable, "inventory_units_unavailable", "No pudimos validar la unidad del artículo.")
+		}
+		if !target.Exists {
+			return stockFailure(apperror.Invalid, "invalid_inventory_unit", "Selecciona una unidad registrada en tu empresa.")
+		}
+		countable = target.Countable
+	}
+	if countable && !domain.WholeLocationSettings(in) {
 		return stockFailure(apperror.Invalid, "fractional_inventory_settings", "Usa cantidades enteras para los niveles de stock de esta unidad.")
 	}
 	if in.ReorderPoint < in.MinimumStock {
@@ -139,7 +150,7 @@ func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in dom
 	if in.OptimalStock < in.ReorderPoint {
 		in.OptimalStock = in.ReorderPoint
 	}
-	if in.Name != nil {
+	if in.Name != nil || in.Unit != nil {
 		return a.updateNamedItem(ctx, s, id, in)
 	}
 	_, err = a.repo.LocationSettings(ctx, s, id, in)

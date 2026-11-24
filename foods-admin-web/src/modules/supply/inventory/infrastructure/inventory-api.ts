@@ -1,13 +1,14 @@
 import {apiFetch} from "@/shared/api/client";
-import type {InventoryAdjustmentDraft,InventoryAdjustmentResult,InventoryList,InventoryProductOption,InventorySettingsDraft,InventoryTransferDraft,InventoryTransferSummary,LocationOption,StockMovementsResponse} from "../domain/types";
+import type {InventoryAdjustmentDraft,InventoryAdjustmentResult,InventoryItemDetail,InventoryList,InventoryProductOption,InventorySettingsDraft,InventoryStatusFilter,InventoryTransferDraft,InventoryTransferSummary,InventoryUnitChangePreview,InventoryUnitOption,LocationOption,StockMovementsResponse} from "../domain/types";
 
-export function listInventory(input:{q:string;page:number;pageSize:number}){
-  const params=new URLSearchParams({q:input.q,page:String(input.page),pageSize:String(input.pageSize)});
+export function listInventory(input:{q:string;page:number;pageSize:number;status?:InventoryStatusFilter}){
+  const params=new URLSearchParams({q:input.q,page:String(input.page),pageSize:String(input.pageSize),status:input.status??"active"});
   return apiFetch<InventoryList>(`inventory?${params.toString()}`);
 }
 // Lookups search on the server: the list is paginated and never truncates the catalog.
+// Ajustes y transferencias solo operan artículos del local activo.
 export function searchInventoryProducts(q=""){
-  const params=new URLSearchParams({q:q.trim(),page:"1",pageSize:"20"});
+  const params=new URLSearchParams({q:q.trim(),page:"1",pageSize:"20",scope:"location"});
   return apiFetch<{items:InventoryProductOption[];total:number}>(`inventory/products?${params.toString()}`);
 }
 export function createInventoryAdjustment(draft:InventoryAdjustmentDraft){
@@ -19,6 +20,7 @@ export function createInventoryAdjustment(draft:InventoryAdjustmentDraft){
 export function updateInventorySettings(draft:InventorySettingsDraft){
   return apiFetch<void>(`inventory/items/${draft.inventoryItemId}/settings`,{method:"PATCH",body:JSON.stringify({
     ...(draft.name!==undefined?{name:draft.name.trim()}:{}),
+    ...(draft.unit?{unit:draft.unit}:{}),
     minimumStock:Number(draft.minimumStock||0),optimalStock:Number(draft.optimalStock||0),
   })});
 }
@@ -40,3 +42,16 @@ export function createInventoryTransfer(draft:InventoryTransferDraft){
   })});
 }
 export function listTransferLocations(){return apiFetch<{items:LocationOption[]}>("locations/available")}
+export function getInventoryItem(id:string){return apiFetch<InventoryItemDetail>(`inventory/items/${id}`)}
+export function previewInventoryUnitChange(id:string,unit:string){
+  return apiFetch<InventoryUnitChangePreview>(`inventory/items/${id}/unit-change?${new URLSearchParams({unit}).toString()}`);
+}
+/** Activa o desactiva el artículo solo en el local activo. */
+export function setInventoryItemActive(id:string,active:boolean){
+  return apiFetch<void>(`inventory/items/${id}/status`,{method:"PATCH",body:JSON.stringify({active})});
+}
+export function deleteInventoryItem(id:string){return apiFetch<void>(`inventory/items/${id}`,{method:"DELETE"})}
+export function removeInventoryPresentation(id:string,presentationId:string){
+  return apiFetch<{result:"deleted"|"hidden"}>(`inventory/items/${id}/presentations/${presentationId}`,{method:"DELETE"});
+}
+export function listInventoryUnitOptions(){return apiFetch<{items:InventoryUnitOption[]}>("inventory/units")}

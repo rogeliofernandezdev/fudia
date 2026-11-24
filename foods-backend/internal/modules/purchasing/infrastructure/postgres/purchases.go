@@ -123,8 +123,11 @@ func (r *Purchasing) OrderPresentation(ctx context.Context, s scope, line domain
 			JOIN inventory_items ii
 			  ON ii.id=ip.inventory_item_id AND ii.organization_id=ip.organization_id
 			WHERE ip.id=$1 AND ip.inventory_item_id=$2 AND ip.organization_id=$3
-			  AND ip.active AND ii.active`,
-		line.PresentationID, line.InventoryItemID, s.OrganizationID,
+			  AND ip.active AND ii.active
+			  AND NOT EXISTS(SELECT 1 FROM inventory_location_settings here
+			    WHERE here.organization_id=ii.organization_id AND here.location_id=$4
+			      AND here.inventory_item_id=ii.id AND NOT here.active)`,
+		line.PresentationID, line.InventoryItemID, s.OrganizationID, s.LocationID,
 	).Scan(&presentationType, &unitsPerPresentation)
 	return presentationType, unitsPerPresentation, purchaseError(err)
 }

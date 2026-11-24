@@ -748,6 +748,38 @@ local: los márgenes, la separación de acciones y la columna única en móvil
 provienen del sistema compartido. Valida cantidades no negativas con RHF/Zod y
 bloquea campos y cierres manuales mientras espera la respuesta del guardado.
 
+«Editar artículo» (2026-11-24) carga la ficha con `GET /inventory/items/{id}`
+(`RemoteModalSkeleton` mientras llega y `ErrorState` con Reintentar) y el
+catálogo de `GET /inventory/units`. Campos: Nombre, Unidad (`Select` con las
+unidades del API), Stock mínimo y Stock óptimo; los enteros dependen de la
+unidad elegida. Al cambiar la unidad consulta `unit-change` y muestra un único
+`InlineNotice`: ámbar «Corrección de unidad» cuando hay historial (las
+cantidades conservan su número), rojo «No se puede cambiar la unidad» con cada
+bloqueo en su línea (y Guardar deshabilitado), o nada si el cambio es libre. Si
+otro local usa el artículo y cambian nombre o unidad, un aviso informativo lo
+nombra. «Presentaciones de compra» lista las presentaciones con `Tag` «Base» y
+`RowActionButton action="remove"` en las demás; agregar sigue en Compras. El
+pie es `[Eliminar] [Cancelar] [Guardar]`, contiguo a la derecha; «Eliminar»
+(`danger-outline`, icono `trash`) solo aparece si el backend responde
+`canDelete` y abre un `ConfirmDialog` rojo que nombra el artículo y, si se
+vende, avisa que el producto sigue en Carta sin control de stock.
+
+La fila de Inventario usa `RowActionButton` `edit` y el interruptor
+`activate`/`deactivate` de Clientes y Roles, con `stateLabel` «Estado de … en
+este local». Desactivar abre `ConfirmDialog` danger que primero revisa la ficha:
+mientras carga muestra `Skeleton`; si hay bloqueos (existencia, órdenes sin
+recibir, recetas) los lista en un `InlineNotice` rojo y deshabilita confirmar.
+Activar usa el tono success. El filtro `Select chip` «Activos / Inactivos /
+Todos los estados» va junto a la búsqueda; un inactivo muestra `Status` gris
+«Inactivo» en lugar del estado de stock.
+
+En «Agregar artículo» de Compras, con 2 o más letras, la búsqueda muestra el
+grupo «En otros locales» (`GET /purchase-assignable-items`) con el mismo
+`purchase-result` de «En tu carta, sin inventario»: «Lo usa Central ·
+Kilogramo» o «Desactivado en este local», y la acción «Agregar» o «Reactivar».
+Al tocarlo se asigna al local (`POST /purchase-inventory-items/{id}/assignment`)
+y queda elegido para la orden, sin crear un duplicado.
+
 ## Unidades de consumo en Recetas
 
 Cada fila combina cantidad y selector de unidad compatible, con controles

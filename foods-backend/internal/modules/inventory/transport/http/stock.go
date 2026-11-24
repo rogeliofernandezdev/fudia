@@ -27,7 +27,7 @@ func stockResponse(w http.ResponseWriter, status int, out any, err error) {
 func stockFilter(r *http.Request) application.StockFilter {
 	page, size := shared.PageParams(r)
 	q := r.URL.Query()
-	return application.StockFilter{Page: page, Size: size, Query: q.Get("q"), InventoryItemID: q.Get("inventoryItemId"), ProductID: q.Get("productId"), MovementType: q.Get("movementType"), SourceType: q.Get("sourceType"), From: q.Get("from"), To: q.Get("to")}
+	return application.StockFilter{Page: page, Size: size, Query: q.Get("q"), InventoryItemID: q.Get("inventoryItemId"), ProductID: q.Get("productId"), MovementType: q.Get("movementType"), SourceType: q.Get("sourceType"), From: q.Get("from"), To: q.Get("to"), Status: q.Get("status"), Scope: q.Get("scope")}
 }
 func (h *Stock) ListInventory(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.Items(r.Context(), stockScope(r), stockFilter(r))
@@ -35,6 +35,14 @@ func (h *Stock) ListInventory(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Stock) ListInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.Products(r.Context(), stockScope(r), stockFilter(r))
+	stockResponse(w, 200, out, err)
+}
+
+// ListPurchaseInventoryItems is the purchase picker: only the location's articles.
+func (h *Stock) ListPurchaseInventoryItems(w http.ResponseWriter, r *http.Request) {
+	f := stockFilter(r)
+	f.Scope = "location"
+	out, err := h.service.Products(r.Context(), stockScope(r), f)
 	stockResponse(w, 200, out, err)
 }
 func (h *Stock) ListInventoryMovements(w http.ResponseWriter, r *http.Request) {
