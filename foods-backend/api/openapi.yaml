@@ -3585,7 +3585,7 @@ components:
         paidOrders: { type: integer, minimum: 0, description: Pedidos no cancelados cuyos cobros netos de devoluciones cubren el total y cuyo último cobro cae en el periodo; cada pedido cuenta una sola vez, en el periodo en que se terminó de pagar }
         averageTicket: { type: string, description: Promedio del importe total de esos pedidos }
         openOrders: { type: integer, minimum: 0 }
-        criticalStock: { type: integer, minimum: 0 }
+        criticalStock: { type: integer, minimum: 0, description: Artículos activos «Sin stock» o «Stock bajo» en Inventario, con el mínimo del local si existe y si no el del artículo }
         purchasesToApprove: { type: integer, minimum: 0 }
         reservationsToday: { type: integer, minimum: 0 }
         kitchenPending: { type: integer, minimum: 0 }
@@ -3607,7 +3607,7 @@ components:
         unpaidOrders: { type: integer, minimum: 0 }
         partialOrders: { type: integer, minimum: 0 }
         tablesTotal: { type: integer, minimum: 0, description: Mesas activas del local }
-        tablesOccupied: { type: integer, minimum: 0, description: Mesas activas con un pedido de salón sin finalizar }
+        tablesOccupied: { type: integer, minimum: 0, description: Mesas de servicio activas ocupadas con la misma regla del plano del Salón, incluidos los pedidos por QR }
         kitchenConfirmed: { type: integer, minimum: 0 }
         kitchenPreparing: { type: integer, minimum: 0 }
         readyOrders: { type: integer, minimum: 0, description: Pedidos listos aún sin entregar }
@@ -3618,7 +3618,7 @@ components:
         cashBalance: { type: [string, "null"], description: Efectivo esperado de turnos abiertos; null si una caja ciega impide consultar el importe }
         soldOutProducts: { type: integer, minimum: 0, description: Productos activos agotados hoy por control manual, cupos, inventario o composición de menú; excluye productos fuera de horario }
         tablesBillRequested: { type: integer, minimum: 0, description: Mesas de servicio ocupadas cuya cuenta ya se pidió (Por cobrar en Salón) }
-        tableMinutesAverage: { type: [integer, "null"], minimum: 0, description: Minutos promedio desde el primer pedido de salón aún activo de cada mesa de servicio ocupada; null sin mesas ocupadas }
+        tableMinutesAverage: { type: [integer, "null"], minimum: 0, description: Minutos promedio desde el primer pedido aún activo de cada mesa de servicio ocupada (cualquier canal, incluido QR); null sin mesas ocupadas }
         oldestTable:
           type: [object, "null"]
           description: Mesa de servicio ocupada desde hace más tiempo; null sin mesas ocupadas

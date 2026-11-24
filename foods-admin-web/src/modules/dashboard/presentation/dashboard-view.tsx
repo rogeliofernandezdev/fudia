@@ -32,6 +32,8 @@ const digitalTones:DashTone[]=["teal","sky","indigo","navy","peach"];
 function methodTone(item:{affectsCash?:boolean;digitalIndex?:number}):DashTone{return item.affectsCash?"violet":item.digitalIndex===undefined?"gray":digitalTones[item.digitalIndex%digitalTones.length]}
 /** Duración legible: «45 min», «1 h», «1 h 35 min». */
 function formatMinutes(total:number){const hours=Math.floor(total/60),minutes=total%60;return hours?`${hours} h${minutes?` ${minutes} min`:""}`:`${minutes} min`}
+/** «04» → «Mesa 04»; un nombre que ya empieza con «Mesa» se respeta tal cual. */
+function tableTitle(name:string){const trimmed=name.trim();return /^mesa\b/i.test(trimmed)?trimmed:`Mesa ${trimmed}`}
 
 type Change={value:string;direction:"up"|"down"|"flat"};
 type RankItem={key:string;name:string;qty:number;revenue:number;ranked:boolean};
@@ -140,7 +142,7 @@ export function DashboardView(){
     {label:"Libres",value:String(Math.max(0,operations.tablesTotal-operations.tablesOccupied)),tone:"green"},
     {label:"Por cobrar",value:String(operations.tablesBillRequested??0),tone:"orange"},
     ...(operations.tableMinutesAverage!=null&&operations.tablesOccupied>0?[{label:"Tiempo promedio",value:formatMinutes(operations.tableMinutesAverage)}]:[]),
-    ...(operations.oldestTable?[{label:"Más tiempo",value:`Mesa ${operations.oldestTable.name} · ${formatMinutes(operations.oldestTable.minutes)}`}]:[]),
+    ...(operations.oldestTable?[{label:"Más tiempo",value:`${tableTitle(operations.oldestTable.name)} · ${formatMinutes(operations.oldestTable.minutes)}`}]:[]),
   ]});
   if(enabled("cocina"))areas.push({title:"Cocina",href:pageRoutes.kitchen,rows:[
     {label:"Por preparar",value:String(operations.kitchenConfirmed),tone:"indigo"},

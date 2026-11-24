@@ -111,9 +111,12 @@ func queueDashboardOperations(batch *pgx.Batch, s scope, canSeeExpected bool) {
 		  FROM orders o WHERE o.organization_id=$1 AND o.location_id=$2
 		    AND o.status<>'cancelado' AND o.completed_at IS NULL
 		), occupied AS (
+		  -- Misma regla que el plano del salón (orders Floor): cualquier canal con
+		  -- la mesa asignada ocupa la mesa, incluidos los pedidos por QR (whatsapp).
 		  SELECT t.name,min(o.created_at) AS since,bool_or(o.bill_closed_at IS NOT NULL) AS bill_requested
 		  FROM tables t
-		  JOIN active_orders o ON o.channel='salon' AND o.table_id=t.id
+		  JOIN orders o ON o.organization_id=t.organization_id AND o.location_id=t.location_id AND o.table_id=t.id
+		    AND o.status<>'cancelado' AND (o.status<>'entregado' OR (o.channel='salon' AND o.completed_at IS NULL))
 		  WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active AND t.service_type='table'
 		  GROUP BY t.id,t.name
 		), cash AS (
@@ -137,12 +140,13 @@ func queueDashboardOperations(batch *pgx.Batch, s scope, canSeeExpected bool) {
 		      WHEN pa.portion_quantity-COALESCE(pa.sold_quantity,0)<=3 THEN 'low' ELSE 'available' END
 		    WHEN p.quantity_control='inventory' THEN CASE
 		      WHEN COALESCE(sb.quantity,0)<=0 THEN 'sold_out'
-		      WHEN sb.quantity<=3 OR (ii.minimum_stock>0 AND sb.quantity<=ii.minimum_stock) THEN 'low' ELSE 'available' END
+		      WHEN sb.quantity<=3 OR (COALESCE(ils.minimum_stock,ii.minimum_stock)>0 AND sb.quantity<=COALESCE(ils.minimum_stock,ii.minimum_stock)) THEN 'low' ELSE 'available' END
 		    ELSE 'available' END AS status
 		  FROM products p CROSS JOIN loc
 		  LEFT JOIN product_availability pa ON pa.product_id=p.id AND pa.organization_id=p.organization_id AND pa.location_id=$2 AND pa.business_date=loc.day
 		  LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
 		  LEFT JOIN stock_balances sb ON sb.organization_id=p.organization_id AND sb.location_id=$2 AND sb.inventory_item_id=ii.id
+		  LEFT JOIN inventory_location_settings ils ON ils.organization_id=p.organization_id AND ils.location_id=$2 AND ils.inventory_item_id=ii.id
 		  WHERE p.organization_id=$1 AND p.active
 		), blocked_combos AS (
 		  SELECT DISTINCT g.combo_product_id FROM menu_combo_groups g
@@ -157,8 +161,7 @@ func queueDashboardOperations(batch *pgx.Batch, s scope, canSeeExpected bool) {
 		  (SELECT count(*) FROM active_orders WHERE total>paid AND paid<=0),
 		  (SELECT count(*) FROM active_orders WHERE total>paid AND paid>0),
 		  (SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND active AND service_type='table'),
-		  (SELECT count(*) FROM tables t WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active AND t.service_type='table'
-		    AND EXISTS(SELECT 1 FROM active_orders o WHERE o.channel='salon' AND o.table_id=t.id)),
+		  (SELECT count(*) FROM occupied),
 		  (SELECT count(*) FROM active_orders WHERE status='confirmado'),
 		  (SELECT count(*) FROM active_orders WHERE status='preparando'),
 		  (SELECT count(*) FROM active_orders WHERE status='listo'),
@@ -408,14 +411,21 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		  (SELECT count(*) FROM orders
 		   WHERE organization_id=$1 AND location_id=$2
 		     AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))),
+		  -- Stock crítico = «Sin stock» + «Stock bajo» de Inventario: mismo mínimo
+		  -- efectivo (el del local si existe, si no el del artículo).
 		  (SELECT count(*)
 		   FROM inventory_items i
 		   LEFT JOIN stock_balances b
 		     ON b.inventory_item_id=i.id
 		    AND b.organization_id=i.organization_id
 		    AND b.location_id=$2
+		   LEFT JOIN inventory_location_settings ils
+		     ON ils.inventory_item_id=i.id
+		    AND ils.organization_id=i.organization_id
+		    AND ils.location_id=$2
 		   WHERE i.organization_id=$1 AND i.active
-		     AND COALESCE(b.quantity,0)<=i.minimum_stock),
+		     AND (COALESCE(b.quantity,0)<=0
+		       OR (COALESCE(ils.minimum_stock,i.minimum_stock)>0 AND COALESCE(b.quantity,0)<=COALESCE(ils.minimum_stock,i.minimum_stock)))),
 		  (SELECT count(*) FROM purchase_orders
 		   WHERE organization_id=$1 AND location_id=$2 AND status='pending_approval'),
 		  (SELECT count(*)

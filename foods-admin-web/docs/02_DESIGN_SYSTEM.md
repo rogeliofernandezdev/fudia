@@ -2672,9 +2672,11 @@ anteriores»), solo cuando hay alguna variación que mostrar. No se repite:
   turnos) en `cloud-100`/`ink-800`; bloques Atención (Pedidos activos, Reservas de hoy), Mesas
   (2026-11-20, con los términos del Salón: Ocupadas «N de M», Libres, Por cobrar
   —cuenta pedida—, Tiempo promedio y Más tiempo «Mesa 04 · 1 h 35 min», medidos
-  desde el primer pedido aún activo de cada mesa; sin mesas ocupadas no hay
-  tiempos), Cocina, Delivery y Caja según los módulos contratados, y al pie «Por
-  revisar» (Stock crítico, Compras por aprobar, Productos agotados) como filas de
+  desde el primer pedido aún activo de cada mesa, con la misma ocupación del plano
+  del Salón —incluye pedidos por QR—; un nombre que ya dice «Mesa» no se repite;
+  sin mesas ocupadas no hay tiempos), Cocina, Delivery y Caja según los módulos contratados, y al pie «Por
+  revisar» (Stock crítico —«Sin stock» + «Stock bajo» de Inventario, con el
+  mínimo del local—, Compras por aprobar, Productos agotados) como filas de
   44 px con el nombre, el conteo en pastilla `warning-50` y chevron; sin
   pendientes, una línea con check «Sin pendientes por revisar». Bajo 1180 px el
   panel pasa debajo del análisis y sus bloques se reparten en dos columnas

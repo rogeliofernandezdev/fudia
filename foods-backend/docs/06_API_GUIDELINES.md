@@ -139,10 +139,16 @@ ventana inmediatamente anterior de igual duración hasta el mismo instante de ha
 para `today` (horas con movimientos de hoy o de la comparación) y por día para 7 y
 30 días (todos los días, con 0 cuando no hubo ventas); `trend.now` indica el tramo
 en curso y cada punto trae `previous` completo como referencia del gráfico.
+`criticalStock` suma los artículos activos que Inventario muestra como «Sin stock»
+(existencia ≤ 0) o «Stock bajo» (mínimo > 0 y existencia ≤ mínimo), con el mínimo
+del local si está configurado y si no el del artículo; la disponibilidad de
+productos con control por inventario usa ese mismo mínimo.
 `operations.tablesOccupied` solo cuenta mesas de servicio (`service_type='table'`),
 igual que `tablesTotal`; `tablesBillRequested` cuenta las ocupadas con la cuenta
-pedida, y `tableMinutesAverage`/`oldestTable` miden desde el primer pedido de
-salón aún activo de cada mesa (null sin mesas ocupadas). En `salesByChannel`,
+pedida, y `tableMinutesAverage`/`oldestTable` miden desde el primer pedido aún
+activo de cada mesa (null sin mesas ocupadas). La ocupación es la misma del plano
+del Salón: cualquier canal con la mesa asignada, incluidos los pedidos por QR
+(`whatsapp`) hasta entregarse. En `salesByChannel`,
 `orders` y `averageTicket` usan la definición de `paidOrders`; su suma es
 `paidOrders`. Canal y medio de
 pago restan las devoluciones en el canal y medio del cobro que revierten; las

@@ -15,6 +15,7 @@ type dashboardTestResponse struct {
 	PaidOrders        int                 `json:"paidOrders"`
 	AverageTicket     string              `json:"averageTicket"`
 	OpenOrders        int                 `json:"openOrders"`
+	CriticalStock     int                 `json:"criticalStock"`
 	ReservationsToday int                 `json:"reservationsToday"`
 	BusinessDate      string              `json:"businessDate"`
 	Operations        dashboardOperations `json:"operations"`
@@ -188,6 +189,81 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 	if readDashboardTest(t, pool, s).BusinessDate != expectedDate {
 		t.Fatal("business date must use selected location timezone")
+	}
+}
+
+// El bloque Mesas usa la misma regla de ocupación que el plano del salón:
+// un pedido por QR (whatsapp) con mesa asignada también la ocupa.
+func TestDashboardTablesMatchSalonFloorOccupancy(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	id := func(query string, args ...any) string {
+		t.Helper()
+		var result string
+		if err := pool.QueryRow(ctx, query, args...).Scan(&result); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	table := func(name string) string {
+		return id(`INSERT INTO tables(organization_id,location_id,name,qr_token) VALUES($1,$2,$3,gen_random_uuid()::text) RETURNING id`, s.OrganizationID, s.LocationID, name)
+	}
+	order := func(channel, status, age string, tableID string) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, `INSERT INTO orders(organization_id,location_id,channel,status,total,table_id,created_by,created_at) VALUES($1,$2,$3,$4,10,$5,$6,now()-$7::interval)`, s.OrganizationID, s.LocationID, channel, status, tableID, s.UserID, age); err != nil {
+			t.Fatal(err)
+		}
+	}
+	salon, qr, delivered := table("Mesa 1"), table("Mesa 2"), table("Mesa 3")
+	table("Mesa 4")
+	order("salon", "confirmado", "3 days", salon)
+	order("whatsapp", "preparando", "5 days", qr)
+	order("whatsapp", "entregado", "9 days", delivered)
+
+	op := readDashboardTest(t, pool, s).Operations
+	if op.TablesTotal != 4 || op.TablesOccupied != 2 {
+		t.Fatalf("a QR order occupies its table, a delivered one frees it: %+v", op)
+	}
+	if op.OldestTable == nil || op.OldestTable.Name != "Mesa 2" || op.OldestTable.Minutes != 5*24*60 {
+		t.Fatalf("the longest-occupied table includes QR orders: %+v", op.OldestTable)
+	}
+	if op.TableMinutesAverage == nil || *op.TableMinutesAverage != 4*24*60 {
+		t.Fatalf("average covers every occupied table: %+v", op.TableMinutesAverage)
+	}
+}
+
+// Stock crítico suma «Sin stock» y «Stock bajo» de Inventario, con el mínimo
+// del local cuando existe (si no, el del artículo).
+func TestDashboardCriticalStockMatchesInventoryStatus(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	item := func(sku string, quantity, minimum float64, localMinimum any) {
+		t.Helper()
+		var id string
+		if err := pool.QueryRow(ctx, `INSERT INTO inventory_items(organization_id,sku,name,unit,minimum_stock) VALUES($1,$2,$2,'kg',$3) RETURNING id`, s.OrganizationID, sku, minimum).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		if quantity != 0 {
+			if _, err := pool.Exec(ctx, `INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity) VALUES($1,$2,$3,$4)`, s.OrganizationID, s.LocationID, id, quantity); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if localMinimum != nil {
+			if _, err := pool.Exec(ctx, `INSERT INTO inventory_location_settings(organization_id,location_id,inventory_item_id,minimum_stock) VALUES($1,$2,$3,$4)`, s.OrganizationID, s.LocationID, id, localMinimum); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	item("ACEITE", 19.01, 20, 10) // Saludable: el mínimo del local (10) manda sobre el general (20).
+	item("CEBOLLA", 0.32, 2, nil) // Stock bajo.
+	item("AJI", 0, 1, nil)        // Sin stock.
+	item("SAL", 0, 0, nil)        // Sin stock aunque no tenga mínimo.
+	item("PAPA", 5, 0, 8)         // Stock bajo por el mínimo del local.
+	item("ARROZ", 23.74, 10, nil) // Saludable.
+	if got := readDashboardTest(t, pool, s).CriticalStock; got != 4 {
+		t.Fatalf("critical stock must follow Inventario statuses, got %d", got)
 	}
 }
 
