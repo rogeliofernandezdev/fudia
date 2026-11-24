@@ -2666,12 +2666,11 @@ anteriores»), solo cuando hay alguna variación que mostrar. No se repite:
   pedidos debajo. Cada cifra va en una píldora suave con el tono de su estado
   (tinte 100 + texto legible de la familia): Pedidos activos y Ocupadas
   `primary-100`/`primary-700`, Libres y Efectivo en caja `brand-100`/`brand-700`,
-  Por cobrar, En preparación y Por despachar `warning-100`/`warning-800`, Por
+  En preparación y Por despachar `warning-100`/`warning-800`, Por
   preparar `indigo-100`/`indigo-700`, Por entregar `purple-100`/`purple-600`, En
   camino `cloud-150`/`navigation-900`; las cifras sin estado (reservas, tiempos,
   turnos) en `cloud-100`/`ink-800`; bloques Atención (Pedidos activos, Reservas de hoy), Mesas
-  (2026-11-20, con los términos del Salón: Ocupadas «N de M», Libres, Por cobrar
-  —cuenta pedida—, Tiempo promedio y Más tiempo «Mesa 04 · 1 h 35 min», medidos
+  (Ocupadas «N de M», Libres, Tiempo promedio y Más tiempo «Mesa 04 · 1 h 35 min», medidos
   desde el primer pedido aún activo de cada mesa, con la misma ocupación del plano
   del Salón —incluye pedidos por QR—; un nombre que ya dice «Mesa» no se repite;
   sin mesas ocupadas no hay tiempos), Cocina, Delivery y Caja según los módulos contratados, y al pie «Por
