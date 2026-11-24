@@ -319,11 +319,18 @@ func TestInventoryUnitCorrectionKeepsNumbersAndRespectsRecipes(t *testing.T) {
 	if _, err := h.pool.Exec(ctx, `UPDATE product_recipe_items SET consumption_unit='kg',consumption_quantity=0.2,consumption_factor=1 WHERE recipe_id=$1`, recipeID); err != nil {
 		t.Fatal(err)
 	}
-	if rec := h.settings(h.a, flour.ID, `{"unit":"g","minimumStock":0,"optimalStock":0}`); rec.Code != 204 {
+	// kg→g would read 0.2 kg as 0.2 g: with history it needs a conversion.
+	if p := h.preview(h.a, flour.ID, "g"); p.Allowed || !strings.Contains(strings.Join(p.Blockers, " "), "miden lo mismo") {
+		t.Fatalf("same measure correction must be blocked: %+v", p)
+	}
+	if rec := h.settings(h.a, flour.ID, `{"unit":"g","minimumStock":0,"optimalStock":0}`); rec.Code != 409 {
+		t.Fatalf("kg→g with history must fail: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := h.settings(h.a, flour.ID, `{"unit":"und","minimumStock":0,"optimalStock":0}`); rec.Code != 204 {
 		t.Fatalf("unit change with recipe in own unit: %d %s", rec.Code, rec.Body.String())
 	}
 	var recipeUnit string
-	if err := h.pool.QueryRow(ctx, `SELECT consumption_unit FROM product_recipe_items WHERE recipe_id=$1`, recipeID).Scan(&recipeUnit); err != nil || recipeUnit != "g" {
+	if err := h.pool.QueryRow(ctx, `SELECT consumption_unit FROM product_recipe_items WHERE recipe_id=$1`, recipeID).Scan(&recipeUnit); err != nil || recipeUnit != "und" {
 		t.Fatalf("recipe unit must follow the correction: %q %v", recipeUnit, err)
 	}
 }

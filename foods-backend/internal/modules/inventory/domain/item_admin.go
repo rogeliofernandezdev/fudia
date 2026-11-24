@@ -135,12 +135,16 @@ func DeactivateBlockers(f ItemFacts) []string {
 
 // UnitChangeBlockers lists what prevents changing the base unit. Without history
 // the change is free; with history it is a correction: quantities keep their
-// numbers and are read in the new unit, so recipes in another unit, pending
-// purchases and fractional stock of a countable unit must be resolved first.
+// numbers and are read in the new unit, so it is only allowed between different
+// kinds of measure (kg→botella), and recipes in another unit, pending purchases
+// and fractional stock of a countable unit must be resolved first.
 func UnitChangeBlockers(f ItemFacts, to UnitChangeTarget, incompatible []string) []string {
 	blockers := []string{}
 	if !to.Exists {
 		return append(blockers, "Selecciona una unidad registrada en tu empresa.")
+	}
+	if f.HasHistory && sameMeasure(f.UnitFamily, to.Family) {
+		blockers = append(blockers, f.UnitName+" y "+strings.ToLower(to.Name)+" miden lo mismo: con historial, cambiar entre ellas exigiría convertir cantidades, costos y recetas, y eso aún no está disponible.")
 	}
 	if f.OpenOrdersAny > 0 {
 		blockers = append(blockers, "Está en "+ordersLabel(f.OpenOrdersAny)+" sin recibir. Recíbela o cancélala primero.")
@@ -161,6 +165,12 @@ func UnitChangeBlockers(f ItemFacts, to UnitChangeTarget, incompatible []string)
 		blockers = append(blockers, "La presentación «"+name+"» no aplica a "+strings.ToLower(to.Name)+". Quítala primero.")
 	}
 	return blockers
+}
+
+// sameMeasure is true for two weights or two volumes (kg↔g, l↔ml): relabeling
+// between them would misread every quantity, so it needs a real conversion.
+func sameMeasure(from, to string) bool {
+	return from != "" && from == to && (from == "mass" || from == "volume")
 }
 
 func unitLabel(f ItemFacts) string {

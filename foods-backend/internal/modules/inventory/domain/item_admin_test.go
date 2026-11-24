@@ -49,3 +49,24 @@ func TestQuantityLabelUsesSpanishPlural(t *testing.T) {
 		}
 	}
 }
+
+func TestUnitCorrectionWithinTheSameMeasureNeedsConversion(t *testing.T) {
+	gram := UnitChangeTarget{Code: "g", Name: "Gramo", Family: "mass", Exists: true}
+	used := ItemFacts{Unit: "kg", UnitName: "Kilogramo", UnitFamily: "mass", HasHistory: true}
+	if got := strings.Join(UnitChangeBlockers(used, gram, nil), " "); !strings.Contains(got, "Kilogramo y gramo miden lo mismo") {
+		t.Fatalf("kg→g with history must be blocked: %q", got)
+	}
+	fresh := used
+	fresh.HasHistory = false
+	if got := UnitChangeBlockers(fresh, gram, nil); len(got) != 0 {
+		t.Fatalf("kg→g without history is free: %v", got)
+	}
+	bottle := UnitChangeTarget{Code: "botella", Name: "Botella", Family: "count", Countable: true, Exists: true}
+	if got := UnitChangeBlockers(used, bottle, nil); len(got) != 0 {
+		t.Fatalf("kg→botella with history is a correction: %v", got)
+	}
+	milliliter := UnitChangeTarget{Code: "ml", Name: "Mililitro", Family: "volume", Exists: true}
+	if got := UnitChangeBlockers(ItemFacts{Unit: "l", UnitName: "Litro", UnitFamily: "volume", HasHistory: true}, milliliter, nil); len(got) != 1 {
+		t.Fatalf("l→ml with history must be blocked: %v", got)
+	}
+}

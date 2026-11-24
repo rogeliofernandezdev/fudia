@@ -489,7 +489,9 @@ columna `active` lo oculta solo en ese local, conservando kárdex y documentos.
 - **Unidad base:** `PATCH /inventory/items/{id}/settings` acepta `unit`. Sin
   historial el cambio es libre; con historial es una **corrección**: las
   cantidades conservan sus números y se leen en la nueva unidad en todos los
-  locales (no se convierte kg↔g). Se bloquea con órdenes de compra sin recibir,
+  locales. Por eso solo se permite entre medidas distintas (kg→botella): entre
+  dos pesos o dos volúmenes (kg↔g, l↔ml) se bloquea con historial, porque
+  exigiría convertir cantidades, costos y recetas. También se bloquea con órdenes de compra sin recibir,
   recetas que consumen en otra unidad, decimales si la nueva unidad es contable
   o presentaciones no configuradas para la nueva unidad. Las recetas que
   consumen en la propia unidad y las entradas manuales pasan a la nueva unidad.

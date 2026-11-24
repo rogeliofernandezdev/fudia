@@ -1503,7 +1503,7 @@ paths:
     get:
       operationId: previewInventoryUnitChange
       summary: Anticipa qué hará el cambio de unidad base antes de guardarlo
-      description: "Requiere inventory.manage. mode=free sin historial; mode=correction con historial: las cantidades conservan sus números y se leen en la nueva unidad en todos los locales. allowed=false lista bloqueos: órdenes de compra sin recibir, recetas en otra unidad, decimales con unidad contable, presentaciones no configuradas para la unidad u otros locales sin permiso inventory.manage."
+      description: "Requiere inventory.manage. mode=free sin historial; mode=correction con historial: las cantidades conservan sus números y se leen en la nueva unidad en todos los locales, por lo que solo se permite entre medidas distintas (kg→botella). allowed=false lista bloqueos: kg↔g o l↔ml con historial (exigiría convertir), órdenes de compra sin recibir, recetas en otra unidad, decimales con unidad contable, presentaciones no configuradas para la unidad u otros locales sin permiso inventory.manage."
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: unit, required: true, schema: { type: string } }

@@ -754,8 +754,9 @@ catálogo de `GET /inventory/units`. Campos: Nombre, Unidad (`Select` con las
 unidades del API), Stock mínimo y Stock óptimo; los enteros dependen de la
 unidad elegida. Al cambiar la unidad consulta `unit-change` y muestra un único
 `InlineNotice`: ámbar «Corrección de unidad» cuando hay historial (las
-cantidades conservan su número), rojo «No se puede cambiar la unidad» con cada
-bloqueo en su línea (y Guardar deshabilitado), o nada si el cambio es libre. Si
+cantidades conservan su número; solo entre medidas distintas, nunca kg↔g ni
+l↔ml), rojo «No se puede cambiar la unidad» con cada bloqueo en su línea (y
+Guardar deshabilitado), o nada si el cambio es libre. Si
 otro local usa el artículo y cambian nombre o unidad, un aviso informativo lo
 nombra. «Presentaciones de compra» se leen «Bolsa · 5 kilogramos» (plural con
 `unitQuantityLabel`); la base lleva `Tag` «Base» y las demás un `IconButton`
