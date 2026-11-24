@@ -98,7 +98,8 @@ test("dashboard conserva importes negativos y estados vacíos específicos",()=>
 
 test("dashboard consolida la operación en vivo en una columna",()=>{
  const nodes=render(base);
- for(const label of ["Atención","Pedidos activos","Mesas","Ocupadas","3 de 8","Libres","5","Por cobrar","Tiempo promedio","48 min","Más tiempo","Mesa 04 · 1 h 35 min","Cocina","Delivery","Caja","Por preparar","En preparación","Por entregar","Por despachar","En camino","Turnos abiertos","1 de 2","Efectivo en caja","S/ 120.00","Productos agotados","Stock crítico","S/ 80.00"])assert.ok(has(nodes,label),label);
+ for(const label of ["Atención","Pedidos activos","Mesas","Ocupadas","3 de 8","Libres","5","Tiempo promedio","48 min","Más tiempo","Mesa 04 · 1 h 35 min","Cocina","Delivery","Caja","Por preparar","En preparación","Por entregar","Por despachar","En camino","Turnos abiertos","1 de 2","Efectivo en caja","S/ 120.00","Productos agotados","Stock crítico","S/ 80.00"])assert.ok(has(nodes,label),label);
+ assert.equal(has(nodes,"Por cobrar"),false,"Mesas muestra ocupación y tiempos; el saldo y los pedidos pendientes se muestran en «Saldo por cobrar»");
  assert.ok(has(nodes,"3 pedidos · 2 con pago parcial"));
  const named=render({...base,operations:{...base.operations,oldestTable:{name:"Mesa 1",minutes:4371}}});
  assert.ok(has(named,"Mesa 1 · 72 h 51 min"),"Un nombre que ya dice «Mesa» no se repite");

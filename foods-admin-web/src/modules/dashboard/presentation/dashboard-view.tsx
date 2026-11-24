@@ -140,7 +140,6 @@ export function DashboardView(){
   if(enabled("mesas"))areas.push({title:"Mesas",href:pageRoutes.diningRoom,rows:[
     {label:"Ocupadas",value:`${operations.tablesOccupied} de ${operations.tablesTotal}`,tone:"primary"},
     {label:"Libres",value:String(Math.max(0,operations.tablesTotal-operations.tablesOccupied)),tone:"green"},
-    {label:"Por cobrar",value:String(operations.tablesBillRequested??0),tone:"orange"},
     ...(operations.tableMinutesAverage!=null&&operations.tablesOccupied>0?[{label:"Tiempo promedio",value:formatMinutes(operations.tableMinutesAverage)}]:[]),
     ...(operations.oldestTable?[{label:"Más tiempo",value:`${tableTitle(operations.oldestTable.name)} · ${formatMinutes(operations.oldestTable.minutes)}`}]:[]),
   ]});
