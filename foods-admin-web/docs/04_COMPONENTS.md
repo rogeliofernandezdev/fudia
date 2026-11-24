@@ -756,13 +756,15 @@ unidad elegida. Al cambiar la unidad consulta `unit-change` y muestra un único
 `InlineNotice`: ámbar «Corrección de unidad» cuando hay historial (las
 cantidades conservan su número; solo entre medidas distintas, nunca kg↔g ni
 l↔ml), rojo «No se puede cambiar la unidad» con cada bloqueo en su línea (y
-Guardar deshabilitado), o nada si el cambio es libre. Si
+Guardar deshabilitado), o nada si el cambio es libre y no oculta
+presentaciones. Si
 otro local usa el artículo y cambian nombre o unidad, un aviso informativo lo
-nombra. «Presentaciones de compra» se leen «Bolsa · 5 kilogramos» (plural con
-`unitQuantityLabel`); la base lleva `Tag` «Base» y las demás un `IconButton`
-`trash` en rojo que abre `ConfirmDialog` «Quitar presentación»: se oculta para
-compras nuevas, las anteriores la conservan y, si otro local usa el artículo,
-la nota lo nombra. Agregar presentaciones sigue en Compras. El pie es
+nombra. El modal no lista presentaciones de compra ni ofrece quitarlas
+(2026-11-24): al cambiar la unidad, el mismo aviso nombra las que dejarán de
+ofrecerse en Compras («Paquete · 20 kilogramos» dejará de ofrecerse en Compras;
+crea la nueva desde allí. Las compras anteriores no cambian.) — dentro de
+«Corrección de unidad» como línea aparte, o como aviso ámbar «Presentaciones de
+compra» si el cambio es libre. Nunca bloquean Guardar. El pie es
 `[Cancelar] [Guardar]`: no hay eliminación física de artículos (2026-11-24),
 solo desactivación por local desde la lista.
 

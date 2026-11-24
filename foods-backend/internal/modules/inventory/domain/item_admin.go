@@ -93,6 +93,9 @@ type UnitChangePreview struct {
 	Quantity string   `json:"quantity"`
 	FromUnit string   `json:"fromUnit"`
 	ToUnit   string   `json:"toUnit"`
+	// HiddenPresentations names the purchase presentations the change stops
+	// offering for new purchases («Paquete · 20 kilogramos»).
+	HiddenPresentations []string `json:"hiddenPresentations"`
 }
 
 // ItemStatusInput activates or deactivates the article in the active location.
@@ -137,8 +140,9 @@ func DeactivateBlockers(f ItemFacts) []string {
 // the change is free; with history it is a correction: quantities keep their
 // numbers and are read in the new unit, so it is only allowed between different
 // kinds of measure (kg→botella), and recipes in another unit, pending purchases
-// and fractional stock of a countable unit must be resolved first.
-func UnitChangeBlockers(f ItemFacts, to UnitChangeTarget, incompatible []string) []string {
+// and fractional stock of a countable unit must be resolved first. Purchase
+// presentations never block: the change hides them (see HiddenByUnitChange).
+func UnitChangeBlockers(f ItemFacts, to UnitChangeTarget) []string {
 	blockers := []string{}
 	if !to.Exists {
 		return append(blockers, "Selecciona una unidad registrada en tu empresa.")
@@ -161,10 +165,28 @@ func UnitChangeBlockers(f ItemFacts, to UnitChangeTarget, incompatible []string)
 	if to.Countable && f.FractionalAnyStock {
 		blockers = append(blockers, "Hay existencias o niveles de stock con decimales. "+to.Name+" solo admite cantidades enteras: ajústalos primero.")
 	}
-	for _, name := range incompatible {
-		blockers = append(blockers, "La presentación «"+name+"» no aplica a "+strings.ToLower(to.Name)+". Quítala primero.")
-	}
 	return blockers
+}
+
+// HiddenByUnitChange names the presentations a unit change stops offering:
+// every one except the base. «Paquete · 20 kilogramos» would read «Paquete · 20
+// unidades», which is almost never right, so the user creates it again in
+// Compras. Documents that used them keep them.
+func HiddenByUnitChange(presentations []ItemPresentation, unitName string) []string {
+	out := []string{}
+	unit := strings.ToLower(unitName)
+	for _, p := range presentations {
+		if p.IsBase {
+			continue
+		}
+		units, err := strconv.ParseFloat(p.UnitsPerPresentation, 64)
+		if err != nil {
+			out = append(out, p.Name+" · "+p.UnitsPerPresentation+" "+unit)
+			continue
+		}
+		out = append(out, p.Name+" · "+QuantityLabel(units, unit))
+	}
+	return out
 }
 
 // sameMeasure is true for two weights or two volumes (kg↔g, l↔ml): relabeling

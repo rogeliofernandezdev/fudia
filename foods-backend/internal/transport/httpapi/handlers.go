@@ -192,7 +192,6 @@ type InventoryStockHandler interface {
 	GetInventoryItem(http.ResponseWriter, *http.Request)
 	PreviewInventoryUnitChange(http.ResponseWriter, *http.Request)
 	UpdateInventoryItemStatus(http.ResponseWriter, *http.Request)
-	RemoveInventoryPresentation(http.ResponseWriter, *http.Request)
 	ListAssignableItems(http.ResponseWriter, *http.Request)
 	AssignInventoryItem(http.ResponseWriter, *http.Request)
 }

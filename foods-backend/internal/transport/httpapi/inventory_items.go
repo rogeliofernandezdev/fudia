@@ -11,9 +11,6 @@ func (a *API) previewInventoryUnitChange(w http.ResponseWriter, r *http.Request)
 func (a *API) updateInventoryItemStatus(w http.ResponseWriter, r *http.Request) {
 	a.handlers.InventoryStock.UpdateInventoryItemStatus(w, r)
 }
-func (a *API) removeInventoryPresentation(w http.ResponseWriter, r *http.Request) {
-	a.handlers.InventoryStock.RemoveInventoryPresentation(w, r)
-}
 func (a *API) listAssignableItems(w http.ResponseWriter, r *http.Request) {
 	a.handlers.InventoryStock.ListAssignableItems(w, r)
 }

@@ -20,21 +20,35 @@ func TestDeactivateBlockersExplainWhatToResolve(t *testing.T) {
 
 func TestUnitChangeBlockers(t *testing.T) {
 	target := UnitChangeTarget{Code: "und", Name: "Unidad", Countable: true, Exists: true}
-	if got := UnitChangeBlockers(ItemFacts{Unit: "kg"}, UnitChangeTarget{}, nil); len(got) != 1 {
+	if got := UnitChangeBlockers(ItemFacts{Unit: "kg"}, UnitChangeTarget{}); len(got) != 1 {
 		t.Fatalf("unknown unit: %v", got)
 	}
-	if got := UnitChangeBlockers(ItemFacts{Unit: "kg", Recipes: []ItemRecipeUse{{ProductName: "Pan", ConsumptionUnit: "kg"}}}, target, nil); len(got) != 0 {
+	if got := UnitChangeBlockers(ItemFacts{Unit: "kg", Recipes: []ItemRecipeUse{{ProductName: "Pan", ConsumptionUnit: "kg"}}}, target); len(got) != 0 {
 		t.Fatalf("recipe in own unit follows the correction: %v", got)
 	}
-	got := UnitChangeBlockers(ItemFacts{Unit: "kg", OpenOrdersAny: 1, FractionalAnyStock: true, Recipes: []ItemRecipeUse{{ProductName: "Pan", ConsumptionUnit: "g"}}}, target, []string{"Caja x 0.5"})
+	got := UnitChangeBlockers(ItemFacts{Unit: "kg", OpenOrdersAny: 1, FractionalAnyStock: true, Recipes: []ItemRecipeUse{{ProductName: "Pan", ConsumptionUnit: "g"}}}, target)
 	joined := strings.Join(got, " ")
-	for _, want := range []string{"1 orden de compra", "Lo usa la receta de Pan en otra unidad. Cambia esa receta", "decimales", "«Caja x 0.5»"} {
+	for _, want := range []string{"1 orden de compra", "Lo usa la receta de Pan en otra unidad. Cambia esa receta", "decimales"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing %q in %q", want, joined)
 		}
 	}
-	if got := UnitChangeBlockers(ItemFacts{Unit: "kg", FractionalAnyStock: true}, UnitChangeTarget{Code: "g", Name: "Gramo", Exists: true}, nil); len(got) != 0 {
+	if got := UnitChangeBlockers(ItemFacts{Unit: "kg", FractionalAnyStock: true}, UnitChangeTarget{Code: "g", Name: "Gramo", Exists: true}); len(got) != 0 {
 		t.Fatalf("measurable unit accepts decimals: %v", got)
+	}
+}
+
+func TestUnitChangeHidesEveryPresentationButTheBase(t *testing.T) {
+	got := HiddenByUnitChange([]ItemPresentation{
+		{Name: "Unidad", UnitsPerPresentation: "1", IsBase: true},
+		{Name: "Paquete", UnitsPerPresentation: "20"},
+		{Name: "Bolsa", UnitsPerPresentation: "1"},
+	}, "Kilogramo")
+	if strings.Join(got, "|") != "Paquete · 20 kilogramos|Bolsa · 1 kilogramo" {
+		t.Fatalf("hidden presentations: %q", got)
+	}
+	if got := HiddenByUnitChange([]ItemPresentation{{Name: "Unidad", UnitsPerPresentation: "1", IsBase: true}}, "Kilogramo"); len(got) != 0 {
+		t.Fatalf("base presentation stays: %q", got)
 	}
 }
 
@@ -53,20 +67,20 @@ func TestQuantityLabelUsesSpanishPlural(t *testing.T) {
 func TestUnitCorrectionWithinTheSameMeasureNeedsConversion(t *testing.T) {
 	gram := UnitChangeTarget{Code: "g", Name: "Gramo", Family: "mass", Exists: true}
 	used := ItemFacts{Unit: "kg", UnitName: "Kilogramo", UnitFamily: "mass", HasHistory: true}
-	if got := strings.Join(UnitChangeBlockers(used, gram, nil), " "); !strings.Contains(got, "Kilogramo y gramo miden lo mismo") {
+	if got := strings.Join(UnitChangeBlockers(used, gram), " "); !strings.Contains(got, "Kilogramo y gramo miden lo mismo") {
 		t.Fatalf("kg→g with history must be blocked: %q", got)
 	}
 	fresh := used
 	fresh.HasHistory = false
-	if got := UnitChangeBlockers(fresh, gram, nil); len(got) != 0 {
+	if got := UnitChangeBlockers(fresh, gram); len(got) != 0 {
 		t.Fatalf("kg→g without history is free: %v", got)
 	}
 	bottle := UnitChangeTarget{Code: "botella", Name: "Botella", Family: "count", Countable: true, Exists: true}
-	if got := UnitChangeBlockers(used, bottle, nil); len(got) != 0 {
+	if got := UnitChangeBlockers(used, bottle); len(got) != 0 {
 		t.Fatalf("kg→botella with history is a correction: %v", got)
 	}
 	milliliter := UnitChangeTarget{Code: "ml", Name: "Mililitro", Family: "volume", Exists: true}
-	if got := UnitChangeBlockers(ItemFacts{Unit: "l", UnitName: "Litro", UnitFamily: "volume", HasHistory: true}, milliliter, nil); len(got) != 1 {
+	if got := UnitChangeBlockers(ItemFacts{Unit: "l", UnitName: "Litro", UnitFamily: "volume", HasHistory: true}, milliliter); len(got) != 1 {
 		t.Fatalf("l→ml with history must be blocked: %v", got)
 	}
 }

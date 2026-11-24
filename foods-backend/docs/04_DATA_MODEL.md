@@ -492,18 +492,20 @@ columna `active` lo oculta solo en ese local, conservando kárdex y documentos.
   locales. Por eso solo se permite entre medidas distintas (kg→botella): entre
   dos pesos o dos volúmenes (kg↔g, l↔ml) se bloquea con historial, porque
   exigiría convertir cantidades, costos y recetas. También se bloquea con órdenes de compra sin recibir,
-  recetas que consumen en otra unidad, decimales si la nueva unidad es contable
-  o presentaciones no configuradas para la nueva unidad. Las recetas que
-  consumen en la propia unidad y las entradas manuales pasan a la nueva unidad.
-  `GET /inventory/items/{id}/unit-change?unit=` anticipa el modo y los
-  bloqueos. Auditoría `inventory.unit_changed` con `from`, `to` y `mode`.
-- **Cambios de empresa desde un local:** renombrar, cambiar la unidad o quitar
-  presentaciones de un artículo que otro local usa exige `inventory.manage`
-  también en ese local (403 `inventory_item_other_locations`).
-- **Presentaciones:** `DELETE /inventory/items/{id}/presentations/{presentationId}`
-  solo la oculta (`active=false`) para compras nuevas; las compras y entradas
-  anteriores la conservan. La base nunca se quita y vuelve a ser predeterminada.
-  Auditoría `inventory.presentation_hidden`.
+  recetas que consumen en otra unidad o decimales si la nueva unidad es
+  contable. Las recetas que consumen en la propia unidad y las entradas
+  manuales pasan a la nueva unidad.
+  `GET /inventory/items/{id}/unit-change?unit=` anticipa el modo, los bloqueos
+  y `hiddenPresentations`. Auditoría `inventory.unit_changed` con `from`, `to`,
+  `mode` y `hiddenPresentations`.
+- **Cambios de empresa desde un local:** renombrar o cambiar la unidad de un
+  artículo que otro local usa exige `inventory.manage` también en ese local (403 `inventory_item_other_locations`).
+- **Presentaciones (2026-11-24):** no hay acción para quitarlas. Al cambiar la
+  unidad base, todas salvo la base se ocultan (`active=false`), porque
+  «Paquete · 20 kilogramos» leído como «Paquete · 20 unidades» casi nunca es
+  correcto; nunca bloquean el cambio. La base pasa a predeterminada. Las
+  compras y entradas anteriores conservan su presentación, y volver a crearla
+  en Compras reactiva la misma fila.
 
 La migración asigna cada artículo a los locales donde tiene documentos y retira
 las asignaciones que la migración 42 creó en locales que nunca lo usaron; un

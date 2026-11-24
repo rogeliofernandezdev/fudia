@@ -166,35 +166,6 @@ func (r *Stock) UnitTarget(ctx context.Context, s scope, code string) (domain.Un
 	return out, err
 }
 
-func (r *Stock) IncompatiblePresentations(ctx context.Context, s scope, id, unit string) ([]string, error) {
-	rows, err := r.db(ctx).Query(ctx, `
-		SELECT pt.name||' x '||trim(trailing '.' FROM trim(trailing '0' FROM ip.units_per_presentation::text))
-		FROM inventory_presentations ip
-		JOIN inventory_presentation_types pt ON pt.organization_id=ip.organization_id AND pt.code=ip.presentation_type
-		LEFT JOIN inventory_units u ON u.organization_id=ip.organization_id AND u.code=$3
-		WHERE ip.organization_id=$1 AND ip.inventory_item_id=$2 AND ip.active
-		  AND NOT (ip.presentation_type='unit' AND ip.units_per_presentation=1)
-		  AND (
-		    NOT EXISTS(SELECT 1 FROM inventory_unit_combinations c
-		      WHERE c.organization_id=ip.organization_id AND c.unit=$3 AND c.presentation_type=ip.presentation_type)
-		    OR (COALESCE(u.countable,false) AND ip.units_per_presentation<>trunc(ip.units_per_presentation))
-		  )
-		ORDER BY pt.sort_order,ip.units_per_presentation`, s.OrganizationID, id, unit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
-		}
-		out = append(out, name)
-	}
-	return out, rows.Err()
-}
-
 // LocationsWithoutPermission lists the other active locations that keep the
 // article and where the user lacks the permission: a company-wide change made
 // from one location must not reach locations the user cannot manage.
@@ -228,6 +199,8 @@ func (r *Stock) LocationsWithoutPermission(ctx context.Context, s scope, id, per
 
 // ChangeUnit relabels the article: quantities keep their numbers. Recipes that
 // consume it in its own unit and manual entries move to the new code with it.
+// Purchase presentations other than the base are hidden (never deleted, so
+// documents keep them) and the base becomes the default.
 func (r *Stock) ChangeUnit(ctx context.Context, s scope, id, from, to string) error {
 	tag, err := r.db(ctx).Exec(ctx, `UPDATE inventory_items SET unit=$3,updated_at=now() WHERE organization_id=$1 AND id=$2 AND active`, s.OrganizationID, id, to)
 	if err != nil {
@@ -239,7 +212,23 @@ func (r *Stock) ChangeUnit(ctx context.Context, s scope, id, from, to string) er
 	if _, err = r.db(ctx).Exec(ctx, `UPDATE product_recipe_items SET consumption_unit=$4 WHERE organization_id=$1 AND inventory_item_id=$2 AND consumption_unit=$3`, s.OrganizationID, id, from, to); err != nil {
 		return err
 	}
-	_, err = r.db(ctx).Exec(ctx, `UPDATE inventory_entries SET unit=$4 WHERE organization_id=$1 AND inventory_item_id=$2 AND unit=$3`, s.OrganizationID, id, from, to)
+	if _, err = r.db(ctx).Exec(ctx, `UPDATE inventory_entries SET unit=$4 WHERE organization_id=$1 AND inventory_item_id=$2 AND unit=$3`, s.OrganizationID, id, from, to); err != nil {
+		return err
+	}
+	// Two statements: the one-default index is checked row by row, so the old
+	// default is cleared before the base takes it. Recreating a hidden
+	// presentation in Compras reactivates the same row.
+	if _, err = r.db(ctx).Exec(ctx, `
+		UPDATE inventory_presentations
+		SET active=(presentation_type='unit' AND units_per_presentation=1),is_default=false,updated_at=now()
+		WHERE organization_id=$1 AND inventory_item_id=$2 AND (active OR is_default)`, s.OrganizationID, id); err != nil {
+		return err
+	}
+	_, err = r.db(ctx).Exec(ctx, `
+		INSERT INTO inventory_presentations(organization_id,inventory_item_id,presentation_type,units_per_presentation,active,is_default)
+		VALUES($1,$2,'unit',1,true,true)
+		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
+		DO UPDATE SET active=true,is_default=true,updated_at=now()`, s.OrganizationID, id)
 	return err
 }
 
@@ -251,27 +240,6 @@ func (r *Stock) SetLocationActive(ctx context.Context, s scope, id string, activ
 		ON CONFLICT(location_id,inventory_item_id) DO UPDATE SET active=EXCLUDED.active,updated_at=now()`,
 		s.OrganizationID, id, s.LocationID, active)
 	return err
-}
-
-// HidePresentation stops offering a presentation; rows are never deleted so
-// purchases and entries keep their reference. The base one is never hidden and
-// becomes the default when the hidden one was.
-func (r *Stock) HidePresentation(ctx context.Context, s scope, id, presentationID string) (bool, error) {
-	var base, wasDefault bool
-	err := r.db(ctx).QueryRow(ctx, `
-		SELECT ip.presentation_type='unit' AND ip.units_per_presentation=1,ip.is_default
-		FROM inventory_presentations ip
-		WHERE ip.organization_id=$1 AND ip.inventory_item_id=$2 AND ip.id=$3 AND ip.active
-		FOR UPDATE`, s.OrganizationID, id, presentationID).Scan(&base, &wasDefault)
-	if err != nil || base {
-		return base, stockError(err)
-	}
-	if _, err = r.db(ctx).Exec(ctx, `UPDATE inventory_presentations SET active=false,is_default=false,updated_at=now() WHERE organization_id=$1 AND id=$2`, s.OrganizationID, presentationID); err != nil || !wasDefault {
-		return false, err
-	}
-	_, err = r.db(ctx).Exec(ctx, `UPDATE inventory_presentations SET is_default=true,updated_at=now()
-		WHERE organization_id=$1 AND inventory_item_id=$2 AND active AND presentation_type='unit' AND units_per_presentation=1`, s.OrganizationID, id)
-	return false, err
 }
 
 func (r *Stock) AssignableItems(ctx context.Context, s scope, query string, limit int) ([]domain.AssignableItem, error) {

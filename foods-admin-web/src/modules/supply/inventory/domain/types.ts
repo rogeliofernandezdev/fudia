@@ -122,7 +122,7 @@ export type InventoryItemDetail={
   deactivateBlockers:string[];
 };
 /** free: sin historial; correction: las cantidades conservan sus números en la nueva unidad. */
-export type InventoryUnitChangePreview={unit:string;unitName:string;mode:"same"|"free"|"correction";allowed:boolean;blockers:string[];quantity:string;fromUnit:string;toUnit:string};
+export type InventoryUnitChangePreview={unit:string;unitName:string;mode:"same"|"free"|"correction";allowed:boolean;blockers:string[];quantity:string;fromUnit:string;toUnit:string;hiddenPresentations:string[]};
 export type InventoryUnitOption={id:string;code:string;name:string;countable:boolean};
 export type InventoryTransferDraft={idempotencyKey:string;toLocationId:string;notes:string;items:Array<{inventoryItemId:string;quantity:string}>};
 export type InventoryTransferSummary={id:string;code:string;fromLocationName:string;toLocationName:string;notes:string;createdByName:string;createdAt:string;itemCount:number};

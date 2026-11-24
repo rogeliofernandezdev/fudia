@@ -19,11 +19,11 @@ type ItemAdminRepository interface {
 	ItemLevels(ctx context.Context, s scope, id string) (string, string, error)
 	ItemPresentations(ctx context.Context, s scope, id string) ([]domain.ItemPresentation, error)
 	UnitTarget(ctx context.Context, s scope, code string) (domain.UnitChangeTarget, error)
-	IncompatiblePresentations(ctx context.Context, s scope, id, unit string) ([]string, error)
 	LocationsWithoutPermission(ctx context.Context, s scope, id, permission string) ([]string, error)
+	// ChangeUnit relabels the article and hides every purchase presentation but
+	// the base, which becomes the default.
 	ChangeUnit(ctx context.Context, s scope, id, from, to string) error
 	SetLocationActive(ctx context.Context, s scope, id string, active bool) error
-	HidePresentation(ctx context.Context, s scope, id, presentationID string) (bool, error)
 	AssignableItems(ctx context.Context, s scope, query string, limit int) ([]domain.AssignableItem, error)
 	AuditItem(ctx context.Context, s scope, action, id string, metadata map[string]any) error
 }
@@ -82,8 +82,9 @@ func (a *Stock) ItemDetail(ctx context.Context, s scope, id string) (domain.Item
 
 // unitChange evaluates a base-unit change. mode is "same", "free" (no history)
 // or "correction" (history keeps its numbers, read in the new unit).
+// Every purchase presentation but the base stops being offered.
 func (a *Stock) unitChange(ctx context.Context, s scope, f domain.ItemFacts, unit string) (domain.UnitChangePreview, error) {
-	out := domain.UnitChangePreview{Unit: unit, FromUnit: f.UnitName, Quantity: domain.FormatQuantity(f.QuantityHere), Blockers: []string{}}
+	out := domain.UnitChangePreview{Unit: unit, FromUnit: f.UnitName, Quantity: domain.FormatQuantity(f.QuantityHere), Blockers: []string{}, HiddenPresentations: []string{}}
 	target, err := a.repo.UnitTarget(ctx, s, unit)
 	if err != nil {
 		return out, itemUnavailable("No pudimos validar la unidad.")
@@ -97,11 +98,12 @@ func (a *Stock) unitChange(ctx context.Context, s scope, f domain.ItemFacts, uni
 	if !f.HasHistory {
 		out.Mode = "free"
 	}
-	incompatible, err := a.repo.IncompatiblePresentations(ctx, s, f.InventoryItemID, unit)
+	presentations, err := a.repo.ItemPresentations(ctx, s, f.InventoryItemID)
 	if err != nil {
-		return out, itemUnavailable("No pudimos validar las presentaciones.")
+		return out, itemUnavailable("No pudimos cargar las presentaciones.")
 	}
-	out.Blockers = domain.UnitChangeBlockers(f, target, incompatible)
+	out.HiddenPresentations = domain.HiddenByUnitChange(presentations, f.UnitName)
+	out.Blockers = domain.UnitChangeBlockers(f, target)
 	if denied, err := a.deniedLocations(ctx, s, f.InventoryItemID); err != nil {
 		return out, err
 	} else if denied != "" {
@@ -168,7 +170,7 @@ func (a *Stock) applyIdentityChanges(ctx context.Context, s scope, id string, re
 	if err = a.repo.ChangeUnit(ctx, s, id, f.Unit, to); err != nil {
 		return itemUnavailable("No pudimos cambiar la unidad del artículo.")
 	}
-	if err = a.repo.AuditItem(ctx, s, "inventory.unit_changed", id, map[string]any{"from": f.Unit, "to": to, "mode": preview.Mode}); err != nil {
+	if err = a.repo.AuditItem(ctx, s, "inventory.unit_changed", id, map[string]any{"from": f.Unit, "to": to, "mode": preview.Mode, "hiddenPresentations": preview.HiddenPresentations}); err != nil {
 		return itemUnavailable("No pudimos registrar el cambio de unidad.")
 	}
 	return nil
@@ -237,41 +239,6 @@ func (a *Stock) AssignItem(ctx context.Context, s scope, id string) error {
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return itemUnavailable("No pudimos agregar el artículo al local.")
-	}
-	return nil
-}
-
-// RemovePresentation stops offering a purchase presentation for new purchases.
-// Nothing is deleted: documents that used it keep it and the base one stays.
-func (a *Stock) RemovePresentation(ctx context.Context, s scope, id, presentationID string) error {
-	tx, err := a.work.Begin(ctx, unitofwork.Options{})
-	if err != nil {
-		return itemUnavailable("No pudimos quitar la presentación.")
-	}
-	defer tx.Rollback(ctx)
-	if _, err = a.facts(tx.Context(), s, id, true); err != nil {
-		return err
-	}
-	if denied, err := a.deniedLocations(tx.Context(), s, id); err != nil {
-		return err
-	} else if denied != "" {
-		return stockFailure(apperror.Forbidden, "inventory_item_other_locations", denied)
-	}
-	base, err := a.repo.HidePresentation(tx.Context(), s, id, presentationID)
-	if errors.Is(err, ErrNotFound) {
-		return stockFailure(apperror.NotFound, "inventory_presentation_not_found", "La presentación no existe.")
-	}
-	if err != nil {
-		return itemUnavailable("No pudimos quitar la presentación.")
-	}
-	if base {
-		return stockFailure(apperror.Conflict, "inventory_base_presentation", "La presentación base no se puede quitar.")
-	}
-	if err = a.repo.AuditItem(tx.Context(), s, "inventory.presentation_hidden", id, map[string]any{"presentationId": presentationID}); err != nil {
-		return itemUnavailable("No pudimos registrar el cambio.")
-	}
-	if err = tx.Commit(ctx); err != nil {
-		return itemUnavailable("No pudimos quitar la presentación.")
 	}
 	return nil
 }

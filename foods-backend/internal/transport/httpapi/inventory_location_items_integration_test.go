@@ -335,7 +335,7 @@ func TestInventoryUnitCorrectionKeepsNumbersAndRespectsRecipes(t *testing.T) {
 	}
 }
 
-func TestInventoryPresentationsAreHiddenNeverDeleted(t *testing.T) {
+func TestInventoryUnitChangeHidesPresentationsNeverDeletes(t *testing.T) {
 	h := newLocationItemsHarness(t)
 	ctx := context.Background()
 	draft := h.create(h.a, `{"newIngredient":{"name":"Insumo de prueba"},"unit":"botella","presentations":[{"presentationType":"unit","unitsPerPresentation":1},{"presentationType":"package","unitsPerPresentation":6,"isDefault":true}]}`)
@@ -351,27 +351,23 @@ func TestInventoryPresentationsAreHiddenNeverDeleted(t *testing.T) {
 	if base == "" || pack == "" {
 		t.Fatalf("presentations: %+v", d.Presentations)
 	}
-	remove := func(id string) *httptest.ResponseRecorder {
-		return h.call(h.a, "DELETE", "/v1/admin/inventory/items/"+draft.ID+"/presentations/"+id, "", h.api.removeInventoryPresentation, map[string]string{"id": draft.ID, "presentationId": id})
+	// Presentations never block the change: the preview names what it hides.
+	p := h.preview(h.a, draft.ID, "kg")
+	if !p.Allowed || len(p.HiddenPresentations) != 1 || !strings.HasSuffix(p.HiddenPresentations[0], "· 6 botellas") {
+		t.Fatalf("preview must allow the change and name the hidden presentation: %+v", p)
 	}
-	if rec := remove(base); rec.Code != 409 {
-		t.Fatalf("base presentation removal: %d %s", rec.Code, rec.Body.String())
+	if rec := h.settings(h.a, draft.ID, `{"unit":"kg","minimumStock":0,"optimalStock":0}`); rec.Code != 204 {
+		t.Fatalf("unit change: %d %s", rec.Code, rec.Body.String())
 	}
-	if rec := remove(pack); rec.Code != 204 {
-		t.Fatalf("presentation removal: %d %s", rec.Code, rec.Body.String())
-	}
-	var active, baseDefault bool
-	if err := h.pool.QueryRow(ctx, `SELECT (SELECT active FROM inventory_presentations WHERE id=$1),(SELECT is_default FROM inventory_presentations WHERE id=$2)`, pack, base).Scan(&active, &baseDefault); err != nil || active || !baseDefault {
-		t.Fatalf("presentation must be hidden, not deleted, and base becomes default: active=%v baseDefault=%v err=%v", active, baseDefault, err)
+	var active, baseActive, baseDefault bool
+	if err := h.pool.QueryRow(ctx, `SELECT (SELECT active FROM inventory_presentations WHERE id=$1),(SELECT active FROM inventory_presentations WHERE id=$2),(SELECT is_default FROM inventory_presentations WHERE id=$2)`, pack, base).Scan(&active, &baseActive, &baseDefault); err != nil || active || !baseActive || !baseDefault {
+		t.Fatalf("presentation must be hidden, not deleted, and base becomes default: active=%v base=%v/%v err=%v", active, baseActive, baseDefault, err)
 	}
 	if _, d = h.detail(h.a, draft.ID); len(d.Presentations) != 1 || !d.Presentations[0].IsBase {
 		t.Fatalf("hidden presentation still offered: %+v", d.Presentations)
 	}
-	if rec := remove(pack); rec.Code != 404 {
-		t.Fatalf("hiding twice: %d %s", rec.Code, rec.Body.String())
-	}
 	var audited int
-	if err := h.pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='inventory.presentation_hidden'`, draft.ID).Scan(&audited); err != nil || audited != 1 {
-		t.Fatalf("presentation removal audit: %d %v", audited, err)
+	if err := h.pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='inventory.unit_changed' AND jsonb_array_length(metadata->'hiddenPresentations')=1`, draft.ID).Scan(&audited); err != nil || audited != 1 {
+		t.Fatalf("unit change audit must name hidden presentations: %d %v", audited, err)
 	}
 }

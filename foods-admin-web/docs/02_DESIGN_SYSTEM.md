@@ -2123,11 +2123,12 @@ y detalle; no se limita a apilar columnas de escritorio.
 ### Presentación del artículo en Compras
 
 Inventario ofrece «Editar artículo» desde el lápiz de cada fila, con Nombre,
-Unidad, Stock mínimo y Stock óptimo, y las presentaciones de compra. Cada local
-ve solo sus artículos: la ficha (nombre y unidad) es de la empresa y existencia,
-niveles y estado son del local. Desactivar es por local y usa el interruptor de
-la fila; los artículos y sus presentaciones nunca se eliminan, solo se
-desactivan u ocultan (detalle en `04_COMPONENTS.md` › Editar artículo). El editor usa el cuerpo y pie del modal compartido
+Unidad, Stock mínimo y Stock óptimo; no lista presentaciones de compra
+(2026-11-24): se crean en Compras y solo el cambio de unidad las oculta. Cada
+local ve solo sus artículos: la ficha (nombre y unidad) es de la empresa y
+existencia, niveles y estado son del local. Desactivar es por local y usa el
+interruptor de la fila; los artículos y sus presentaciones nunca se eliminan
+(detalle en `04_COMPONENTS.md` › Editar artículo). El editor usa el cuerpo y pie del modal compartido
 (`ModalForm`/`ModalBody`, sin CSS local) y el foco inicial cae en el Nombre. El
 nombre llega prellenado; si es vendible, la ayuda
 explica que también se usa en Carta y productos. Duplicados se marcan junto a

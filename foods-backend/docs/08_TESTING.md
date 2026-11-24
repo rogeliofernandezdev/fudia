@@ -81,9 +81,10 @@ local, el 403 al renombrar sin permiso en el otro local, niveles aislados,
 desactivación con existencia 0 que conserva el kárdex y no afecta al otro local,
 reactivación por transferencia recibida, la corrección de unidad sin convertir
 (saldo, entradas, recetas en la propia unidad y auditoría), el bloqueo por receta
-en otra unidad o por decimales con unidad contable, y que quitar una
-presentación solo la oculta (la base está protegida y vuelve a ser
-predeterminada). No existe eliminación física de artículos.
+en otra unidad o por decimales con unidad contable, y que cambiar la unidad
+oculta las presentaciones salvo la base sin bloquear ni borrar (la base pasa a
+predeterminada, el aviso las nombra y la auditoría las registra). No existe
+eliminación física de artículos ni acción para quitar presentaciones.
 
 El dashboard verifica ventas por categoría con dos decimales y solo pedidos
 totalmente pagados. La regresión de cantidades fraccionarias comprueba el

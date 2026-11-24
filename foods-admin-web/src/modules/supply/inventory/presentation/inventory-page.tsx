@@ -10,9 +10,8 @@ import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
-import {createInventoryAdjustment,createInventoryTransfer,getInventoryItem,listInventory,listInventoryUnitOptions,listTransferLocations,removeInventoryPresentation,setInventoryItemActive,updateInventorySettings} from "../infrastructure/inventory-api";
-import type {InventoryItem,InventoryItemPresentation,InventoryStatusFilter} from "../domain/types";
-import {unitQuantityLabel} from "../domain/unit-label";
+import {createInventoryAdjustment,createInventoryTransfer,getInventoryItem,listInventory,listInventoryUnitOptions,listTransferLocations,setInventoryItemActive,updateInventorySettings} from "../infrastructure/inventory-api";
+import type {InventoryItem,InventoryStatusFilter} from "../domain/types";
 
 const InventoryAdjustmentDialog=dynamic(()=>import("./inventory-adjustment-dialog").then(module=>module.InventoryAdjustmentDialog),{ssr:false});
 const InventorySettingsDialog=dynamic(()=>import("./inventory-settings-dialog").then(module=>module.InventorySettingsDialog),{ssr:false});
@@ -40,7 +39,6 @@ export function InventoryPage(){
  const[adjustmentOpen,setAdjustmentOpen]=useState(false);
  const[settingsItem,setSettingsItem]=useState<InventoryItem|null>(null);
  const[statusTarget,setStatusTarget]=useState<InventoryItem|null>(null);
- const[presentationTarget,setPresentationTarget]=useState<InventoryItemPresentation|null>(null);
  const[transferOpen,setTransferOpen]=useState(false);
  const refresh=()=>{for(const key of inventoryQueries)void client.invalidateQueries({queryKey:[key]})};
 
@@ -54,11 +52,6 @@ export function InventoryPage(){
   mutationFn:updateInventorySettings,
   onSuccess:()=>{setSettingsItem(null);refresh();notify({tone:"success",title:"Artículo actualizado",message:"La ficha y los niveles de stock quedaron guardados."})},
   onError:error=>{if("code" in error&&error.code==="inventory_item_name_taken")return;notify({tone:"danger",title:"No se pudo guardar el artículo",message:error.message})},
- });
- const presentationRemoval=useMutation({
-  mutationFn:(presentation:InventoryItemPresentation)=>removeInventoryPresentation(settingsItem?.inventoryItemId??"",presentation.id),
-  onSuccess:()=>{setPresentationTarget(null);refresh();notify({tone:"success",title:"Presentación quitada",message:"Ya no se ofrecerá en compras nuevas; las compras anteriores la conservan."})},
-  onError:error=>notify({tone:"danger",title:"No se pudo quitar la presentación",message:error.message}),
  });
  const statusSave=useMutation({
   mutationFn:(item:InventoryItem)=>setInventoryItemActive(item.inventoryItemId,!item.active),
@@ -90,7 +83,7 @@ export function InventoryPage(){
  const filtered=Boolean(search)||status!=="active";
  const noInventory=!inventory.isLoading&&!inventory.isError&&!filtered&&(inventory.data?.total??0)===0;
  const blockers=statusDetail.data?.deactivateBlockers??[];
- const closeSettings=()=>{setSettingsItem(null);presentationRemoval.reset()};
+ const closeSettings=()=>setSettingsItem(null);
 
  return <>
   <PageHeader
@@ -131,7 +124,7 @@ export function InventoryPage(){
    <RemoteModalSkeleton className="crud-modal compact" label="Cargando artículo" rows={4} title="Editar artículo" close={closeSettings}/>
    :detail.isError||units.isError?
    <LoadError title="No pudimos cargar el artículo" stateTitle="Artículo no disponible" message={(detail.error??units.error)?.message??""} close={closeSettings} retry={()=>{void detail.refetch();void units.refetch()}}/>
-   :detail.data&&<InventorySettingsDialog key={detail.data.inventoryItemId} item={detail.data} units={units.data?.items??[]} busy={settingsSave.isPending||presentationRemoval.isPending} close={closeSettings} removePresentation={setPresentationTarget} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch(error){if(error&&typeof error==="object"&&"code" in error&&error.code==="inventory_item_name_taken")throw error;}}}/>
+   :detail.data&&<InventorySettingsDialog key={detail.data.inventoryItemId} item={detail.data} units={units.data?.items??[]} busy={settingsSave.isPending} close={closeSettings} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch(error){if(error&&typeof error==="object"&&"code" in error&&error.code==="inventory_item_name_taken")throw error;}}}/>
   )}
   {transferOpen&&(locations.isLoading?
    <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando transferencia" rows={5} title="Transferir a otro local" close={()=>setTransferOpen(false)}/>
@@ -159,17 +152,6 @@ export function InventoryPage(){
    :blockers.length>0?<InlineNotice tone="danger" title="Antes de desactivarlo"><>{blockers.map(blocker=><span className="inventory-blocker" key={blocker}>{blocker}</span>)}</></InlineNotice>
    :statusDetail.data?.productName?<p className="confirm-note">{statusDetail.data.productName} seguirá en la Carta y se mostrará agotado en este local.</p>:null)}
   </ConfirmDialog>
-  <ConfirmDialog
-   open={Boolean(presentationTarget)}
-   title="Quitar presentación"
-   subject={presentationTarget&&detail.data?{label:"Presentación",name:`${presentationTarget.name} · ${unitQuantityLabel(presentationTarget.unitsPerPresentation,detail.data.unitName)}`}:undefined}
-   description="Ya no se ofrecerá en compras nuevas. Las compras anteriores la conservan."
-   note={presentationTarget&&detail.data?.otherLocations.length?`También deja de ofrecerse en ${detail.data.otherLocations.map(location=>location.name).join(", ")}.`:undefined}
-   confirmLabel="Quitar"
-   pending={presentationRemoval.isPending}
-   onCancel={()=>setPresentationTarget(null)}
-   onConfirm={()=>presentationTarget&&presentationRemoval.mutate(presentationTarget)}
-  />
  </>;
 }
 

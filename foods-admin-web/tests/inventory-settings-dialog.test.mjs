@@ -20,7 +20,7 @@ const item={inventoryItemId:"water",productId:null,productName:null,name:"Agua m
 const units=[{id:"1",code:"botella",name:"Botella",countable:true},{id:"2",code:"und",name:"Unidad",countable:true},{id:"3",code:"kg",name:"Kilogramo",countable:false}];
 const unitLabel=compile("modules/supply/inventory/domain/unit-label.ts",require);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function mount({busy=false,save=async()=>{},close=()=>{},record=item,preview=null,removePresentation=()=>{}}={}){
+function mount({busy=false,save=async()=>{},close=()=>{},record=item,preview=null}={}){
  let control;const submitting={current:false};const previews=[];
  const {InventorySettingsDialog}=compile("modules/supply/inventory/presentation/inventory-settings-dialog.tsx",name=>{
   if(name==="react")return {useRef:()=>submitting};
@@ -31,14 +31,14 @@ function mount({busy=false,save=async()=>{},close=()=>{},record=item,preview=nul
   if(name==="@tanstack/react-query")return {useQuery:options=>{previews.push(options);return options.enabled?{isLoading:false,isError:false,data:preview}:{isLoading:false,isError:false}}};
   if(name==="../infrastructure/inventory-api")return {previewInventoryUnitChange:()=>preview};
   if(name==="../domain/unit-label")return unitLabel;
-  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon",ModalForm:"form",ModalBody:"ModalBody",FormSection:"FormSection",Select:"Select",InlineNotice:"InlineNotice",IconButton:"IconButton",Tag:"Tag"};
+  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon",ModalForm:"form",ModalBody:"ModalBody",FormSection:"FormSection",Select:"Select",InlineNotice:"InlineNotice"};
   if(name==="../domain/inventory-settings-schema")return schema;
   return require(name);
  });
  function render(){
   const nodes=[];
   function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){nodes.push(node);visit(node.props?.children)}}
-  visit(InventorySettingsDialog({item:record,units,busy,save,close,removePresentation}));
+  visit(InventorySettingsDialog({item:record,units,busy,save,close}));
   return {nodes,dialog:nodes.find(node=>node.type==="Dialog"),form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&!node.props.kind&&node.props.action!=="cancel")};
  }
  render();return {render,control,previews};
@@ -49,8 +49,8 @@ test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  assert.ok(dialog.props.children.includes(form));
  const body=form.props.children[0];
  assert.equal(body.type,"ModalBody");
- assert.equal(body.props.children[0].props.title,"Datos del artículo");
- assert.equal(body.props.children[0].props.children.props.className,"form-grid");
+ assert.equal(body.props.children.props.title,"Datos del artículo");
+ assert.equal(body.props.children.props.children.props.className,"form-grid");
  assert.equal(form.props.children[1].type,"ModalFooter");
  assert.deepEqual(Array.from(form.props.children[1].props.children.filter(Boolean),node=>node.props.children),["Cancelar","Guardar"]);
  assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Nombre","Unidad","Stock mínimo","Stock óptimo"]);
@@ -247,20 +247,32 @@ test("el editor no elimina artículos: solo Cancelar y Guardar",()=>{
  assert.deepEqual(Array.from(view.form.props.children[1].props.children.filter(Boolean),node=>node.props.children),["Cancelar","Guardar"]);
 });
 
-test("las presentaciones se quitan con papelera salvo la base y se leen en plural",()=>{
- const removed=[];
- const pack={id:"pack",presentationType:"package",unitsPerPresentation:"5",name:"Bolsa",isDefault:false,isBase:false,used:false};
- const record={...item,unit:"kg",unitName:"Kilogramo",unitCountable:false,presentations:[{id:"base",presentationType:"unit",unitsPerPresentation:"1",name:"Unidad base",isDefault:true,isBase:true,used:true},pack]};
- const view=mount({record,removePresentation:presentation=>removed.push(presentation)}).render();
- const labels=view.nodes.filter(node=>node.type==="span"&&Array.isArray(node.props.children)).map(node=>node.props.children.join(""));
- assert.ok(labels.includes("Unidad base · 1 kilogramo"));
- assert.ok(labels.includes("Bolsa · 5 kilogramos"));
- const actions=view.nodes.filter(node=>node.type==="IconButton");
- assert.equal(actions.length,1);
- assert.equal(actions[0].props.icon,"trash");
- assert.equal(actions[0].props.label,"Quitar Bolsa · 5 kilogramos");
- actions[0].props.onClick();assert.equal(removed[0].id,"pack","la confirmación la abre el padre con la presentación");
- assert.ok(view.nodes.some(node=>node.type==="Tag"&&node.props.children==="Base"));
+test("el editor no lista presentaciones ni ofrece quitarlas",()=>{
+ const record={...item,unit:"kg",unitName:"Kilogramo",unitCountable:false,presentations:[{id:"base",presentationType:"unit",unitsPerPresentation:"1",name:"Unidad base",isDefault:true,isBase:true,used:true},{id:"pack",presentationType:"package",unitsPerPresentation:"5",name:"Bolsa",isDefault:false,isBase:false,used:false}]};
+ const view=mount({record}).render();
+ assert.equal(view.nodes.some(node=>node.props?.["aria-label"]==="Presentaciones de compra"),false);
+ assert.equal(view.nodes.some(node=>node.type==="IconButton"||node.type==="Tag"),false);
+ const source=readFileSync(new URL("modules/supply/inventory/presentation/inventory-settings-dialog.tsx",root),"utf8");
+ assert.doesNotMatch(source,/trash|removePresentation/);
+});
+
+test("cambiar la unidad avisa qué presentaciones dejan de ofrecerse en Compras",()=>{
+ const free=mount({preview:{unit:"kg",unitName:"Kilogramo",mode:"free",allowed:true,blockers:[],quantity:"0",fromUnit:"Botella",toUnit:"Kilogramo",hiddenPresentations:["Paquete · 20 botellas"]}});
+ free.control.setValue("unit","kg");
+ const view=free.render();
+ const notice=view.nodes.find(node=>node.type==="InlineNotice");
+ assert.equal(notice.props.tone,"warning");
+ assert.equal(notice.props.title,"Presentaciones de compra");
+ assert.equal(notice.props.children,"«Paquete · 20 botellas» dejará de ofrecerse en Compras; crea la nueva desde allí. Las compras anteriores no cambian.");
+ assert.equal(view.button.props.disabled,false,"las presentaciones nunca bloquean el cambio");
+
+ const correction=mount({record:{...item,hasHistory:true},preview:{unit:"und",unitName:"Unidad",mode:"correction",allowed:true,blockers:[],quantity:"4",fromUnit:"Botella",toUnit:"Unidad",hiddenPresentations:["Caja · 6 botellas","Bolsa · 1 botella"]}});
+ correction.control.setValue("unit","und");
+ const notices=correction.render().nodes.filter(node=>node.type==="InlineNotice");
+ assert.equal(notices.length,1,"un solo aviso explica el cambio");
+ assert.equal(notices[0].props.title,"Corrección de unidad");
+ const line=correction.render().nodes.find(node=>node.type==="span"&&node.props.className==="inventory-notice-line");
+ assert.equal(line.props.children,"«Caja · 6 botellas», «Bolsa · 1 botella» dejarán de ofrecerse en Compras; crea la nueva desde allí. Las compras anteriores no cambian.");
 });
 
 test("las unidades se leen en plural cuando la cantidad no es 1",()=>{
@@ -271,18 +283,17 @@ test("las unidades se leen en plural cuando la cantidad no es 1",()=>{
  assert.equal(unitLabel.pluralUnit("Litro"),"litros");
 });
 
-test("el contrato envía unidad, estado por local, presentación oculta y filtro de estado",async()=>{
+test("el contrato envía unidad, estado por local y filtro de estado",async()=>{
  const requests=[];
  const api=compile("modules/supply/inventory/infrastructure/inventory-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options={})=>{requests.push({path,method:options.method,body:options.body?JSON.parse(options.body):undefined})}}:require(name));
  await api.updateInventorySettings({inventoryItemId:"water",name:"Agua",unit:"und",minimumStock:"1",optimalStock:"2"});
  await api.setInventoryItemActive("water",false);
  await api.listInventory({q:"",page:1,pageSize:10});
  await api.listInventory({q:"",page:1,pageSize:10,status:"inactive"});
- await api.removeInventoryPresentation("water","pack");
  assert.deepEqual(requests[0].body,{name:"Agua",unit:"und",minimumStock:1,optimalStock:2});
  assert.deepEqual(requests[1],{path:"inventory/items/water/status",method:"PATCH",body:{active:false}});
  assert.equal(api.deleteInventoryItem,undefined,"no existe eliminación física");
  assert.match(requests[2].path,/status=active/);
  assert.match(requests[3].path,/status=inactive/);
- assert.deepEqual(requests[4],{path:"inventory/items/water/presentations/pack",method:"DELETE",body:undefined});
+ assert.equal(api.removeInventoryPresentation,undefined,"quitar presentaciones no es una acción aparte");
 });

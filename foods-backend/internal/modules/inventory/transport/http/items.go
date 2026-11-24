@@ -25,10 +25,6 @@ func (h *Stock) UpdateInventoryItemStatus(w http.ResponseWriter, r *http.Request
 	err := h.service.SetItemStatus(r.Context(), stockScope(r), r.PathValue("id"), in)
 	stockResponse(w, 204, nil, err)
 }
-func (h *Stock) RemoveInventoryPresentation(w http.ResponseWriter, r *http.Request) {
-	err := h.service.RemovePresentation(r.Context(), stockScope(r), r.PathValue("id"), r.PathValue("presentationId"))
-	stockResponse(w, 204, nil, err)
-}
 func (h *Stock) ListAssignableItems(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.AssignableItems(r.Context(), stockScope(r), r.URL.Query().Get("q"))
 	stockResponse(w, 200, map[string]any{"items": out}, err)

@@ -434,7 +434,9 @@ y retiro de la hoja/confirmación al perder gestión, conservando consulta.
 de niveles (formulario, campos y footer), estilos responsive desde 390 px sin
 CSS local, validación explícita, normalización de niveles, guardado por botón y
 una sola petición pendiente. Verifica bloqueo de campos/cierres y conserva el
-cierre global únicamente al comunicar la respuesta del API.
+cierre global únicamente al comunicar la respuesta del API. El editor no lista
+presentaciones ni tiene papelera; al cambiar la unidad, un único aviso nombra
+las presentaciones que dejarán de ofrecerse en Compras sin bloquear Guardar.
 
 `inventory-list.test.mjs` verifica Stock mínimo sin punto de reorden, incluidos
 cero y fracciones, sin texto secundario ni CSS correctivo. Conserva nueve
