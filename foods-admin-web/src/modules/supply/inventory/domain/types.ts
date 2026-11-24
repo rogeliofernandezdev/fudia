@@ -118,8 +118,6 @@ export type InventoryItemDetail={
   recipes:Array<{productName:string;consumptionUnit:string}>;
   otherLocations:InventoryItemLocation[];
   presentations:InventoryItemPresentation[];
-  canDelete:boolean;
-  deleteBlocker?:string;
   canDeactivate:boolean;
   deactivateBlockers:string[];
 };

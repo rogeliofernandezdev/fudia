@@ -482,12 +482,10 @@ columna `active` lo oculta solo en ese local, conservando kárdex y documentos.
   compra del local sin recibir (`draft`, `pending_approval`, `approved`,
   `partially_received`) y ninguna receta activa que lo use. Un producto de Carta
   vinculado sigue a la venta y se ve agotado en ese local.
-- **Eliminar:** `DELETE /inventory/items/{id}` solo si ningún local lo usó
-  nunca (sin movimientos, entradas, ajustes, compras, devoluciones,
-  transferencias, recetas ni saldo distinto de 0), sin órdenes de compra y sin
-  otro local que lo tenga activo. Borra saldos en 0, asignaciones y
-  presentaciones; un producto de Carta vinculado queda con
-  `quantity_control='none'`. Auditoría `inventory.item_deleted`.
+- **Sin eliminación física:** un artículo nunca se borra, ni siquiera si no
+  tiene uso; se desactiva por local y se reactiva cuando se necesite. Así se
+  conserva la auditoría y una nueva alta con el mismo nombre ofrece reactivar
+  el existente en lugar de duplicarlo.
 - **Unidad base:** `PATCH /inventory/items/{id}/settings` acepta `unit`. Sin
   historial el cambio es libre; con historial es una **corrección**: las
   cantidades conservan sus números y se leen en la nueva unidad en todos los
@@ -501,8 +499,9 @@ columna `active` lo oculta solo en ese local, conservando kárdex y documentos.
   presentaciones de un artículo que otro local usa exige `inventory.manage`
   también en ese local (403 `inventory_item_other_locations`).
 - **Presentaciones:** `DELETE /inventory/items/{id}/presentations/{presentationId}`
-  borra una presentación sin documentos o la oculta (`active=false`) si compras o
-  entradas la usaron. La base nunca se quita y vuelve a ser predeterminada.
+  solo la oculta (`active=false`) para compras nuevas; las compras y entradas
+  anteriores la conservan. La base nunca se quita y vuelve a ser predeterminada.
+  Auditoría `inventory.presentation_hidden`.
 
 La migración asigna cada artículo a los locales donde tiene documentos y retira
 las asignaciones que la migración 42 creó en locales que nunca lo usaron; un

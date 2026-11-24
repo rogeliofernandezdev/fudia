@@ -70,8 +70,6 @@ type ItemDetail struct {
 	Recipes            []ItemRecipeUse    `json:"recipes"`
 	OtherLocations     []ItemLocationUse  `json:"otherLocations"`
 	Presentations      []ItemPresentation `json:"presentations"`
-	CanDelete          bool               `json:"canDelete"`
-	DeleteBlocker      string             `json:"deleteBlocker,omitempty"`
 	CanDeactivate      bool               `json:"canDeactivate"`
 	DeactivateBlockers []string           `json:"deactivateBlockers"`
 }
@@ -133,27 +131,6 @@ func DeactivateBlockers(f ItemFacts) []string {
 		blockers = append(blockers, "Lo usa "+recipeList(f.Recipes)+". Quítalo de la receta primero.")
 	}
 	return blockers
-}
-
-// DeleteBlocker explains why the article cannot be removed permanently: only an
-// article no location ever used, and that no other location keeps, can be deleted.
-func DeleteBlocker(f ItemFacts) string {
-	if f.HasHistory {
-		return "Tiene compras, movimientos o recetas. Desactívalo para ocultarlo en este local."
-	}
-	if f.OpenOrdersAny > 0 {
-		return "Está en una orden de compra. Cancélala o quítalo de la orden primero."
-	}
-	others := []string{}
-	for _, l := range f.OtherLocations {
-		if l.Active {
-			others = append(others, l.Name)
-		}
-	}
-	if len(others) > 0 {
-		return "También lo usa " + strings.Join(others, ", ") + ". Desactívalo solo en este local."
-	}
-	return ""
 }
 
 // UnitChangeBlockers lists what prevents changing the base unit. Without history

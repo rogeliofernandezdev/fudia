@@ -168,8 +168,7 @@ func TestInventoryArticlesBelongToTheLocationThatUsesThem(t *testing.T) {
 		t.Fatalf("assignable search: %d %s", found.Code, found.Body.String())
 	}
 
-	// Without other locations and without history, it can be deleted.
-	if _, d := h.detail(h.a, lemon.ID); !d.CanDelete || !d.CanDeactivate || d.HasHistory {
+	if _, d := h.detail(h.a, lemon.ID); !d.CanDeactivate || d.HasHistory {
 		t.Fatalf("fresh article rules: %+v", d)
 	}
 	if rec := h.call(h.b, "POST", "/v1/admin/purchase-inventory-items/"+lemon.ID+"/assignment", "", h.api.assignInventoryItem, map[string]string{"id": lemon.ID}); rec.Code != 204 {
@@ -178,11 +177,8 @@ func TestInventoryArticlesBelongToTheLocationThatUsesThem(t *testing.T) {
 	if !h.listed(h.b, "active", lemon.ID) {
 		t.Fatal("assigned article must appear in the second location")
 	}
-	if _, d := h.detail(h.a, lemon.ID); d.CanDelete || !strings.Contains(d.DeleteBlocker, "Sucursal Norte") || len(d.OtherLocations) != 1 {
-		t.Fatalf("shared article must not be deletable: %+v", d)
-	}
-	if rec := h.call(h.a, "DELETE", "/v1/admin/inventory/items/"+lemon.ID, "", h.api.deleteInventoryItem, map[string]string{"id": lemon.ID}); rec.Code != 409 {
-		t.Fatalf("delete shared: %d %s", rec.Code, rec.Body.String())
+	if _, d := h.detail(h.a, lemon.ID); len(d.OtherLocations) != 1 || d.OtherLocations[0].Name != "Sucursal Norte" {
+		t.Fatalf("shared article must name the other location: %+v", d)
 	}
 
 	// A company-wide rename needs permission in the other location.
@@ -222,8 +218,8 @@ func TestInventoryArticlesBelongToTheLocationThatUsesThem(t *testing.T) {
 	if err := h.pool.QueryRow(context.Background(), `SELECT count(*) FROM stock_movements WHERE inventory_item_id=$1 AND location_id=$2`, lemon.ID, h.a.LocationID).Scan(&movements); err != nil || movements != 2 {
 		t.Fatalf("kardex must be kept: %d %v", movements, err)
 	}
-	if _, d := h.detail(h.a, lemon.ID); d.CanDelete || !d.HasHistory {
-		t.Fatalf("article with history must not be deletable: %+v", d)
+	if _, d := h.detail(h.a, lemon.ID); !d.HasHistory || d.Active {
+		t.Fatalf("deactivated article keeps its history: %+v", d)
 	}
 	if rec := h.status(h.a, lemon.ID, true); rec.Code != 204 || !h.listed(h.a, "active", lemon.ID) {
 		t.Fatalf("reactivate: %d %s", rec.Code, rec.Body.String())
@@ -332,10 +328,10 @@ func TestInventoryUnitCorrectionKeepsNumbersAndRespectsRecipes(t *testing.T) {
 	}
 }
 
-func TestInventoryDeleteOnlyUnusedArticles(t *testing.T) {
+func TestInventoryPresentationsAreHiddenNeverDeleted(t *testing.T) {
 	h := newLocationItemsHarness(t)
 	ctx := context.Background()
-	draft := h.create(h.a, `{"newIngredient":{"name":"Insumo de prueba"},"unit":"botella","presentations":[{"presentationType":"unit","unitsPerPresentation":1,"isDefault":true},{"presentationType":"package","unitsPerPresentation":6}]}`)
+	draft := h.create(h.a, `{"newIngredient":{"name":"Insumo de prueba"},"unit":"botella","presentations":[{"presentationType":"unit","unitsPerPresentation":1},{"presentationType":"package","unitsPerPresentation":6,"isDefault":true}]}`)
 	_, d := h.detail(h.a, draft.ID)
 	var base, pack string
 	for _, p := range d.Presentations {
@@ -354,31 +350,21 @@ func TestInventoryDeleteOnlyUnusedArticles(t *testing.T) {
 	if rec := remove(base); rec.Code != 409 {
 		t.Fatalf("base presentation removal: %d %s", rec.Code, rec.Body.String())
 	}
-	if rec := remove(pack); rec.Code != 200 || !strings.Contains(rec.Body.String(), "deleted") {
-		t.Fatalf("unused presentation removal: %d %s", rec.Code, rec.Body.String())
+	if rec := remove(pack); rec.Code != 204 {
+		t.Fatalf("presentation removal: %d %s", rec.Code, rec.Body.String())
 	}
-	if rec := h.call(h.a, "DELETE", "/v1/admin/inventory/items/"+draft.ID, "", h.api.deleteInventoryItem, map[string]string{"id": draft.ID}); rec.Code != 204 {
-		t.Fatalf("delete unused: %d %s", rec.Code, rec.Body.String())
+	var active, baseDefault bool
+	if err := h.pool.QueryRow(ctx, `SELECT (SELECT active FROM inventory_presentations WHERE id=$1),(SELECT is_default FROM inventory_presentations WHERE id=$2)`, pack, base).Scan(&active, &baseDefault); err != nil || active || !baseDefault {
+		t.Fatalf("presentation must be hidden, not deleted, and base becomes default: active=%v baseDefault=%v err=%v", active, baseDefault, err)
 	}
-	var exists bool
-	if err := h.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM inventory_items WHERE id=$1)`, draft.ID).Scan(&exists); err != nil || exists {
-		t.Fatalf("deleted article still exists: %v %v", exists, err)
+	if _, d = h.detail(h.a, draft.ID); len(d.Presentations) != 1 || !d.Presentations[0].IsBase {
+		t.Fatalf("hidden presentation still offered: %+v", d.Presentations)
 	}
-
-	// A sold product without history: the inventory goes, the Carta product stays.
-	category := seedRetailCategory(t, h.pool, h.a)
-	sold := h.create(h.a, fmt.Sprintf(`{"newProduct":{"name":"Agua sin gas","categoryId":%q,"price":"2"},"unit":"botella"}`, category))
-	if rec := h.call(h.a, "DELETE", "/v1/admin/inventory/items/"+sold.ID, "", h.api.deleteInventoryItem, map[string]string{"id": sold.ID}); rec.Code != 204 {
-		t.Fatalf("delete linked: %d %s", rec.Code, rec.Body.String())
+	if rec := remove(pack); rec.Code != 404 {
+		t.Fatalf("hiding twice: %d %s", rec.Code, rec.Body.String())
 	}
-	var control string
-	if err := h.pool.QueryRow(ctx, `SELECT quantity_control FROM products WHERE id=$1`, *sold.ProductID).Scan(&control); err != nil || control != "none" {
-		t.Fatalf("linked product must stay without stock control: %q %v", control, err)
-	}
-
-	used := h.create(h.a, `{"newIngredient":{"name":"Aceite"},"unit":"l"}`)
-	h.entry(h.a, used.ID, "l", 1)
-	if rec := h.call(h.a, "DELETE", "/v1/admin/inventory/items/"+used.ID, "", h.api.deleteInventoryItem, map[string]string{"id": used.ID}); rec.Code != 409 {
-		t.Fatalf("delete with history: %d %s", rec.Code, rec.Body.String())
+	var audited int
+	if err := h.pool.QueryRow(ctx, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='inventory.presentation_hidden'`, draft.ID).Scan(&audited); err != nil || audited != 1 {
+		t.Fatalf("presentation removal audit: %d %v", audited, err)
 	}
 }

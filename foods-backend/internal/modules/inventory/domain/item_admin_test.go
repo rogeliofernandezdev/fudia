@@ -18,22 +18,6 @@ func TestDeactivateBlockersExplainWhatToResolve(t *testing.T) {
 	}
 }
 
-func TestDeleteBlockerOnlyAllowsUnusedArticlesOfOneLocation(t *testing.T) {
-	if DeleteBlocker(ItemFacts{}) != "" {
-		t.Fatal("unused article must be deletable")
-	}
-	if !strings.Contains(DeleteBlocker(ItemFacts{HasHistory: true}), "Desactívalo") {
-		t.Fatal("history must suggest deactivation")
-	}
-	if !strings.Contains(DeleteBlocker(ItemFacts{OpenOrdersAny: 1}), "orden de compra") {
-		t.Fatal("purchase order must block deletion")
-	}
-	others := []ItemLocationUse{{Name: "Norte", Active: true}, {Name: "Sur", Active: false}}
-	if got := DeleteBlocker(ItemFacts{OtherLocations: others}); !strings.Contains(got, "Norte") || strings.Contains(got, "Sur") {
-		t.Fatalf("only active locations block deletion: %q", got)
-	}
-}
-
 func TestUnitChangeBlockers(t *testing.T) {
 	target := UnitChangeTarget{Code: "und", Name: "Unidad", Countable: true, Exists: true}
 	if got := UnitChangeBlockers(ItemFacts{Unit: "kg"}, UnitChangeTarget{}, nil); len(got) != 1 {

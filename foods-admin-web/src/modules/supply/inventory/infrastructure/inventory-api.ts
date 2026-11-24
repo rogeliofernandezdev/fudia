@@ -50,8 +50,8 @@ export function previewInventoryUnitChange(id:string,unit:string){
 export function setInventoryItemActive(id:string,active:boolean){
   return apiFetch<void>(`inventory/items/${id}/status`,{method:"PATCH",body:JSON.stringify({active})});
 }
-export function deleteInventoryItem(id:string){return apiFetch<void>(`inventory/items/${id}`,{method:"DELETE"})}
+/** Deja de ofrecer la presentación en compras nuevas; las anteriores la conservan. */
 export function removeInventoryPresentation(id:string,presentationId:string){
-  return apiFetch<{result:"deleted"|"hidden"}>(`inventory/items/${id}/presentations/${presentationId}`,{method:"DELETE"});
+  return apiFetch<void>(`inventory/items/${id}/presentations/${presentationId}`,{method:"DELETE"});
 }
 export function listInventoryUnitOptions(){return apiFetch<{items:InventoryUnitOption[]}>("inventory/units")}

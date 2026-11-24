@@ -23,8 +23,7 @@ type ItemAdminRepository interface {
 	LocationsWithoutPermission(ctx context.Context, s scope, id, permission string) ([]string, error)
 	ChangeUnit(ctx context.Context, s scope, id, from, to string) error
 	SetLocationActive(ctx context.Context, s scope, id string, active bool) error
-	DeleteItem(ctx context.Context, s scope, id string, productID *string) error
-	RemovePresentation(ctx context.Context, s scope, id, presentationID string) (string, error)
+	HidePresentation(ctx context.Context, s scope, id, presentationID string) (bool, error)
 	AssignableItems(ctx context.Context, s scope, query string, limit int) ([]domain.AssignableItem, error)
 	AuditItem(ctx context.Context, s scope, action, id string, metadata map[string]any) error
 }
@@ -72,13 +71,11 @@ func (a *Stock) ItemDetail(ctx context.Context, s scope, id string) (domain.Item
 		return out, itemUnavailable("No pudimos cargar las presentaciones.")
 	}
 	blockers := domain.DeactivateBlockers(f)
-	deleteBlocker := domain.DeleteBlocker(f)
 	return domain.ItemDetail{
 		InventoryItemID: f.InventoryItemID, ProductID: f.ProductID, ProductName: f.ProductName, Name: f.Name,
 		Unit: f.Unit, UnitName: f.UnitName, UnitCountable: f.UnitCountable, Active: f.ActiveHere,
 		Quantity: domain.FormatQuantity(f.QuantityHere), MinimumStock: minimum, OptimalStock: optimal,
 		HasHistory: f.HasHistory, Recipes: f.Recipes, OtherLocations: f.OtherLocations, Presentations: presentations,
-		CanDelete: deleteBlocker == "", DeleteBlocker: deleteBlocker,
 		CanDeactivate: f.ActiveHere && len(blockers) == 0, DeactivateBlockers: blockers,
 	}, nil
 }
@@ -244,65 +241,39 @@ func (a *Stock) AssignItem(ctx context.Context, s scope, id string) error {
 	return nil
 }
 
-// DeleteItem removes an article permanently when no location ever used it and
-// no other location keeps it.
-func (a *Stock) DeleteItem(ctx context.Context, s scope, id string) error {
+// RemovePresentation stops offering a purchase presentation for new purchases.
+// Nothing is deleted: documents that used it keep it and the base one stays.
+func (a *Stock) RemovePresentation(ctx context.Context, s scope, id, presentationID string) error {
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
-		return itemUnavailable("No pudimos eliminar el artículo.")
-	}
-	defer tx.Rollback(ctx)
-	f, err := a.facts(tx.Context(), s, id, true)
-	if err != nil {
-		return err
-	}
-	if blocker := domain.DeleteBlocker(f); blocker != "" {
-		return stockFailure(apperror.Conflict, "inventory_item_delete_blocked", blocker)
-	}
-	if err = a.repo.AuditItem(tx.Context(), s, "inventory.item_deleted", id, map[string]any{"name": f.Name, "unit": f.Unit, "productId": f.ProductID}); err != nil {
-		return itemUnavailable("No pudimos registrar la eliminación.")
-	}
-	if err = a.repo.DeleteItem(tx.Context(), s, id, f.ProductID); err != nil {
-		return itemUnavailable("No pudimos eliminar el artículo.")
-	}
-	if err = tx.Commit(ctx); err != nil {
-		return itemUnavailable("No pudimos eliminar el artículo.")
-	}
-	return nil
-}
-
-// RemovePresentation quits a purchase presentation; documents that used it keep it.
-func (a *Stock) RemovePresentation(ctx context.Context, s scope, id, presentationID string) (string, error) {
-	tx, err := a.work.Begin(ctx, unitofwork.Options{})
-	if err != nil {
-		return "", itemUnavailable("No pudimos quitar la presentación.")
+		return itemUnavailable("No pudimos quitar la presentación.")
 	}
 	defer tx.Rollback(ctx)
 	if _, err = a.facts(tx.Context(), s, id, true); err != nil {
-		return "", err
+		return err
 	}
 	if denied, err := a.deniedLocations(tx.Context(), s, id); err != nil {
-		return "", err
+		return err
 	} else if denied != "" {
-		return "", stockFailure(apperror.Forbidden, "inventory_item_other_locations", denied)
+		return stockFailure(apperror.Forbidden, "inventory_item_other_locations", denied)
 	}
-	mode, err := a.repo.RemovePresentation(tx.Context(), s, id, presentationID)
+	base, err := a.repo.HidePresentation(tx.Context(), s, id, presentationID)
 	if errors.Is(err, ErrNotFound) {
-		return "", stockFailure(apperror.NotFound, "inventory_presentation_not_found", "La presentación no existe.")
+		return stockFailure(apperror.NotFound, "inventory_presentation_not_found", "La presentación no existe.")
 	}
 	if err != nil {
-		return "", itemUnavailable("No pudimos quitar la presentación.")
+		return itemUnavailable("No pudimos quitar la presentación.")
 	}
-	if mode == "base" {
-		return "", stockFailure(apperror.Conflict, "inventory_base_presentation", "La presentación base no se puede quitar.")
+	if base {
+		return stockFailure(apperror.Conflict, "inventory_base_presentation", "La presentación base no se puede quitar.")
 	}
-	if err = a.repo.AuditItem(tx.Context(), s, "inventory.presentation_removed", id, map[string]any{"presentationId": presentationID, "mode": mode}); err != nil {
-		return "", itemUnavailable("No pudimos registrar el cambio.")
+	if err = a.repo.AuditItem(tx.Context(), s, "inventory.presentation_hidden", id, map[string]any{"presentationId": presentationID}); err != nil {
+		return itemUnavailable("No pudimos registrar el cambio.")
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return "", itemUnavailable("No pudimos quitar la presentación.")
+		return itemUnavailable("No pudimos quitar la presentación.")
 	}
-	return mode, nil
+	return nil
 }
 
 // AssignableItems searches company articles the active location does not use yet.

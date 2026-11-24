@@ -757,12 +757,13 @@ unidad elegida. Al cambiar la unidad consulta `unit-change` y muestra un único
 cantidades conservan su número), rojo «No se puede cambiar la unidad» con cada
 bloqueo en su línea (y Guardar deshabilitado), o nada si el cambio es libre. Si
 otro local usa el artículo y cambian nombre o unidad, un aviso informativo lo
-nombra. «Presentaciones de compra» lista las presentaciones con `Tag` «Base» y
-`RowActionButton action="remove"` en las demás; agregar sigue en Compras. El
-pie es `[Eliminar] [Cancelar] [Guardar]`, contiguo a la derecha; «Eliminar»
-(`danger-outline`, icono `trash`) solo aparece si el backend responde
-`canDelete` y abre un `ConfirmDialog` rojo que nombra el artículo y, si se
-vende, avisa que el producto sigue en Carta sin control de stock.
+nombra. «Presentaciones de compra» se leen «Bolsa · 5 kilogramos» (plural con
+`unitQuantityLabel`); la base lleva `Tag` «Base» y las demás un `IconButton`
+`trash` en rojo que abre `ConfirmDialog` «Quitar presentación»: se oculta para
+compras nuevas, las anteriores la conservan y, si otro local usa el artículo,
+la nota lo nombra. Agregar presentaciones sigue en Compras. El pie es
+`[Cancelar] [Guardar]`: no hay eliminación física de artículos (2026-11-24),
+solo desactivación por local desde la lista.
 
 La fila de Inventario usa `RowActionButton` `edit` y el interruptor
 `activate`/`deactivate` de Clientes y Roles, con `stateLabel` «Estado de … en

@@ -253,60 +253,25 @@ func (r *Stock) SetLocationActive(ctx context.Context, s scope, id string, activ
 	return err
 }
 
-// DeleteItem removes an article nobody used. A linked Carta product stays on
-// sale without stock control.
-func (r *Stock) DeleteItem(ctx context.Context, s scope, id string, productID *string) error {
-	statements := []string{
-		`DELETE FROM stock_balances WHERE organization_id=$1 AND inventory_item_id=$2`,
-		`DELETE FROM inventory_location_settings WHERE organization_id=$1 AND inventory_item_id=$2`,
-		`DELETE FROM inventory_presentations WHERE organization_id=$1 AND inventory_item_id=$2`,
-		`DELETE FROM inventory_items WHERE organization_id=$1 AND id=$2`,
-	}
-	for _, statement := range statements {
-		if _, err := r.db(ctx).Exec(ctx, statement, s.OrganizationID, id); err != nil {
-			return err
-		}
-	}
-	if productID == nil {
-		return nil
-	}
-	_, err := r.db(ctx).Exec(ctx, `UPDATE products SET quantity_control='none',updated_at=now() WHERE organization_id=$1 AND id=$2 AND quantity_control='inventory'`, s.OrganizationID, *productID)
-	return err
-}
-
-// RemovePresentation deletes an unused presentation, or hides one that purchase
-// documents already reference so their history keeps it. The base presentation
-// is never removed and becomes the default when the removed one was.
-func (r *Stock) RemovePresentation(ctx context.Context, s scope, id, presentationID string) (string, error) {
-	var base, used, wasDefault bool
+// HidePresentation stops offering a presentation; rows are never deleted so
+// purchases and entries keep their reference. The base one is never hidden and
+// becomes the default when the hidden one was.
+func (r *Stock) HidePresentation(ctx context.Context, s scope, id, presentationID string) (bool, error) {
+	var base, wasDefault bool
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT ip.presentation_type='unit' AND ip.units_per_presentation=1,
-		       EXISTS(SELECT 1 FROM purchase_order_items x WHERE x.organization_id=ip.organization_id AND x.presentation_id=ip.id)
-		       OR EXISTS(SELECT 1 FROM purchase_receipt_items x WHERE x.organization_id=ip.organization_id AND x.presentation_id=ip.id)
-		       OR EXISTS(SELECT 1 FROM inventory_entries x WHERE x.organization_id=ip.organization_id AND x.presentation_id=ip.id),
-		       ip.is_default
+		SELECT ip.presentation_type='unit' AND ip.units_per_presentation=1,ip.is_default
 		FROM inventory_presentations ip
 		WHERE ip.organization_id=$1 AND ip.inventory_item_id=$2 AND ip.id=$3 AND ip.active
-		FOR UPDATE`, s.OrganizationID, id, presentationID).Scan(&base, &used, &wasDefault)
-	if err != nil {
-		return "", stockError(err)
+		FOR UPDATE`, s.OrganizationID, id, presentationID).Scan(&base, &wasDefault)
+	if err != nil || base {
+		return base, stockError(err)
 	}
-	if base {
-		return "base", nil
-	}
-	mode := "deleted"
-	if used {
-		mode = "hidden"
-		_, err = r.db(ctx).Exec(ctx, `UPDATE inventory_presentations SET active=false,is_default=false,updated_at=now() WHERE organization_id=$1 AND id=$2`, s.OrganizationID, presentationID)
-	} else {
-		_, err = r.db(ctx).Exec(ctx, `DELETE FROM inventory_presentations WHERE organization_id=$1 AND id=$2`, s.OrganizationID, presentationID)
-	}
-	if err != nil || !wasDefault {
-		return mode, err
+	if _, err = r.db(ctx).Exec(ctx, `UPDATE inventory_presentations SET active=false,is_default=false,updated_at=now() WHERE organization_id=$1 AND id=$2`, s.OrganizationID, presentationID); err != nil || !wasDefault {
+		return false, err
 	}
 	_, err = r.db(ctx).Exec(ctx, `UPDATE inventory_presentations SET is_default=true,updated_at=now()
 		WHERE organization_id=$1 AND inventory_item_id=$2 AND active AND presentation_type='unit' AND units_per_presentation=1`, s.OrganizationID, id)
-	return mode, err
+	return false, err
 }
 
 func (r *Stock) AssignableItems(ctx context.Context, s scope, query string, limit int) ([]domain.AssignableItem, error) {

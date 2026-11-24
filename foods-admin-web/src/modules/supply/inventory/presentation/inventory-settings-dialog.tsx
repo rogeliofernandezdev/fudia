@@ -3,27 +3,26 @@ import {Dialog} from "@/design-system/dialog";
 import {useRef} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,FormField,InlineNotice,Input,ModalHeader,ModalFooter,ModalForm,ModalBody,FormSection,RowActionButton,Select,Tag} from "@/design-system";
+import {Button,FormField,IconButton,InlineNotice,Input,ModalHeader,ModalFooter,ModalForm,ModalBody,FormSection,Select,Tag} from "@/design-system";
 import {inventorySettingsResolver} from "../domain/inventory-settings-schema";
 import {previewInventoryUnitChange} from "../infrastructure/inventory-api";
-import type {InventoryItemDetail,InventorySettingsDraft,InventoryUnitOption} from "../domain/types";
+import type {InventoryItemDetail,InventoryItemPresentation,InventorySettingsDraft,InventoryUnitOption} from "../domain/types";
+import {pluralUnit,unitQuantityLabel} from "../domain/unit-label";
 
 const inputQuantity=(value:string)=>value.trim()!==""&&Number.isFinite(Number(value))?String(Number(value)):value;
-const lower=(value:string)=>value.toLocaleLowerCase("es");
 
 /**
  * Edita la ficha (nombre y unidad, compartidos por la empresa) y los niveles del local.
- * Las reglas de unidad, eliminación y presentaciones las evalúa el backend.
+ * Las reglas de unidad y presentaciones las evalúa el backend. Nada se elimina:
+ * el artículo se desactiva por local desde la lista y las presentaciones se ocultan.
  */
-export function InventorySettingsDialog({item,units,busy,close,save,remove,removePresentation,removingPresentation}:{
+export function InventorySettingsDialog({item,units,busy,close,save,removePresentation}:{
   item:InventoryItemDetail;
   units:InventoryUnitOption[];
   busy:boolean;
   close:()=>void;
   save:(draft:InventorySettingsDraft)=>Promise<void>;
-  remove:()=>void;
-  removePresentation:(presentationId:string)=>void;
-  removingPresentation:string;
+  removePresentation:(presentation:InventoryItemPresentation)=>void;
 }){
  const submitting=useRef(false);
  const unitOptions=units.some(unit=>unit.code===item.unit)?units:[{id:item.unit,code:item.unit,name:item.unitName,countable:item.unitCountable},...units];
@@ -74,7 +73,7 @@ export function InventorySettingsDialog({item,units,busy,close,save,remove,remov
       {preview.isLoading?<InlineNotice tone="info">Revisando el cambio de unidad…</InlineNotice>
       :preview.isError?<InlineNotice tone="danger" title="No pudimos revisar el cambio">{preview.error.message}</InlineNotice>
       :preview.data&&!preview.data.allowed?<InlineNotice tone="danger" title="No se puede cambiar la unidad"><>{preview.data.blockers.map(blocker=><span className="inventory-blocker" key={blocker}>{blocker}</span>)}</></InlineNotice>
-      :preview.data?.mode==="correction"?<InlineNotice tone="warning" title="Corrección de unidad">Las cantidades no cambian: {preview.data.quantity} {lower(preview.data.fromUnit)} pasan a {preview.data.quantity} {lower(preview.data.toUnit)}. Las compras y el kárdex anteriores también se leerán en {lower(preview.data.toUnit)}.</InlineNotice>
+      :preview.data?.mode==="correction"?<InlineNotice tone="warning" title="Corrección de unidad">Las cantidades no cambian: {unitQuantityLabel(preview.data.quantity,preview.data.fromUnit)} pasan a {unitQuantityLabel(preview.data.quantity,preview.data.toUnit)}. Las compras y el kárdex anteriores también se leerán en {pluralUnit(preview.data.toUnit)}.</InlineNotice>
       :null}
      </div>}
      <FormField label="Stock mínimo" icon="box" className="numeric-value" error={errors.minimumStock?.message}><Input type="number" min="0" {...quantityInput} disabled={locked} {...register("minimumStock")}/></FormField>
@@ -84,13 +83,12 @@ export function InventorySettingsDialog({item,units,busy,close,save,remove,remov
     {removable.length>0&&<section className="inventory-presentations" aria-label="Presentaciones de compra">
      <b className="modal-section-title">Presentaciones de compra</b>
      <ul>{item.presentations.map(presentation=><li key={presentation.id}>
-      <span>{presentation.name} x {presentation.unitsPerPresentation} {lower(item.unitName)}</span>
-      {presentation.isBase?<Tag>Base</Tag>:<RowActionButton action="remove" label={`Quitar ${presentation.name} x ${presentation.unitsPerPresentation}`} disabled={locked||Boolean(removingPresentation)} aria-busy={removingPresentation===presentation.id} onClick={()=>removePresentation(presentation.id)}/>}
+      <span>{presentation.name} · {unitQuantityLabel(presentation.unitsPerPresentation,item.unitName)}</span>
+      {presentation.isBase?<Tag>Base</Tag>:<IconButton icon="trash" className="danger" label={`Quitar ${presentation.name} · ${unitQuantityLabel(presentation.unitsPerPresentation,item.unitName)}`} disabled={locked} onClick={()=>removePresentation(presentation)}/>}
      </li>)}</ul>
     </section>}
    </ModalBody>
    <ModalFooter>
-    {item.canDelete&&<Button kind="danger-outline" icon="trash" onClick={remove} disabled={locked}>Eliminar</Button>}
     <Button action="cancel" onClick={close} disabled={locked}>Cancelar</Button>
     <Button disabled={locked||unitBlocked} onClick={submit} loading={locked}>{locked?"Guardando…":"Guardar"}</Button>
    </ModalFooter>
