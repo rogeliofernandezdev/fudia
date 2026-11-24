@@ -4,7 +4,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {IconButton,ConfirmDialog,EmptyState,ErrorState,SearchField,Select,Pagination,Status,TableSkeleton} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
-import {useFeedback,useMoney} from "@/providers";
+import {useFeedback,useMoney,useSession} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {payProviderLabel,payStatusMeta} from "../domain/pay-status";
 import type {PayNotification} from "../domain/types";
@@ -24,6 +24,9 @@ export function PayNotificationsPanel({dateTime}:Props){
   const qc=useQueryClient();
   const {notify}=useFeedback();
   const money=useMoney();
+  // Asociar y descartar exigen cash.manage en el API; quien solo ve Caja
+  // (cash.read: Auditor, Contador) consulta el pago sin esas acciones.
+  const canManage=useSession().can("cash.manage");
   const [status,setStatus]=useState("");
   const [provider,setProvider]=useState("");
   const [search,setSearch]=useState("");
@@ -68,7 +71,7 @@ export function PayNotificationsPanel({dateTime}:Props){
           {payProviderOptions.map(option=><option key={option} value={option}>{payProviderLabel[option]}</option>)}
         </Select>
       </div>
-      <p>{pending?"Hay pagos por revisar: asócialos a su pedido.":"Asociar un pago registra el cobro en su pedido."}</p>
+      {canManage&&<p>{pending?"Hay pagos por revisar: asócialos a su pedido.":"Asociar un pago registra el cobro en su pedido."}</p>}
     </div>
     {notifications.isLoading?<TableSkeleton columns={notificationColumns} rows={5} label="Cargando pagos detectados"/>
     :notifications.isError?<ErrorState className="pay-empty" title="No pudimos cargar los pagos detectados" text={notifications.error.message} onRetry={()=>void notifications.refetch()}/>
@@ -87,8 +90,8 @@ export function PayNotificationsPanel({dateTime}:Props){
             <td><div className="table-actions">
               <IconButton icon="eye" label={`Ver el detalle del pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>openPayment(item,"detail")}/>
               {/* Asociar es la tarea pendiente del pago: azul sólido para distinguirla de Ver (2026-11-21). */}
-              {item.status==="detected"&&<IconButton icon="link" className="solid" label={`Asociar el pago de ${item.senderName||payProviderLabel[item.provider]} a un pedido`} onClick={()=>openPayment(item,"associate")}/>}
-              {item.status==="associated"&&<IconButton icon="cancel" className="danger" label={`Descartar el pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDismissTarget(item)}/>}
+              {canManage&&item.status==="detected"&&<IconButton icon="link" className="solid" label={`Asociar el pago de ${item.senderName||payProviderLabel[item.provider]} a un pedido`} onClick={()=>openPayment(item,"associate")}/>}
+              {canManage&&item.status==="associated"&&<IconButton icon="cancel" className="danger" label={`Descartar el pago de ${item.senderName||payProviderLabel[item.provider]}`} onClick={()=>setDismissTarget(item)}/>}
             </div></td>
           </tr>;
         })}

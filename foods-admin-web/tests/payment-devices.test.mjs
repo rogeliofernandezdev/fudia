@@ -114,6 +114,9 @@ test("Fudia Pay: Caja revisa los pagos detectados y cada local vincula sus dispo
   assert.match(view,/openPayment\(item,"detail"\)/,"el ojo abre la consulta del pago");
   assert.match(view,/openPayment\(item,"associate"\)/,"el enlace abre directamente la tarea de asociación");
   assert.match(view,/mode=\{detailMode\}/,"el modal recibe la intención elegida");
+  assert.match(view,/const canManage=useSession\(\)\.can\("cash\.manage"\)/,"asociar y descartar exigen cash.manage en el API");
+  assert.match(view,/canManage&&item\.status==="detected"&&<IconButton icon="link"/,"sin cash.manage no se ofrece asociar");
+  assert.match(view,/canManage&&item\.status==="associated"&&<IconButton icon="cancel"/,"sin cash.manage no se ofrece descartar");
   const detail=read("src/modules/payment-devices/presentation/pay-notification-detail.tsx");
   assert.doesNotMatch(detail,/La asociación registra el cobro real/,"la revisión no repite lo que dice el botón");
   assert.match(detail,/<SelectedOrder order=\{\{\.\.\.selected,/,"la revisión identifica el pedido como la lista");

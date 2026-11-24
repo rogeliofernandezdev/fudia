@@ -242,6 +242,8 @@ para adjuntar o compartir una constancia real sigue pendiente de definición.
   propia: la habilita el acceso a Caja): filtros y paginación en el servidor
   (`?page=&size=`, respuesta `{items,total}`). Consulta y revisión posterior;
   los movimientos sin asociar permanecen pendientes sin afectar pedidos.
+  Ver pide `cash.read`; asociar y descartar piden `cash.manage`, y la
+  interfaz solo muestra esas acciones a quien lo tiene (2026-11-23).
 - Configuración › Locales › Editar local › «Dispositivos de pago» (desde
   2026-11-19; antes vivía en Mi restaurante y usaba el local de la sesión sin
   decirlo): vincular y revocar los teléfonos de ese local, con filtro

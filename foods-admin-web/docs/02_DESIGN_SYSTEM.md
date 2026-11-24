@@ -3770,6 +3770,9 @@ detectados»), los dispositivos se vinculan en el formulario de cada local
   `DataTable` (cabecera marino, filas alternas, `table-actions` de iconos:
   asociar `link`, descartar `cancel` danger) y paginación en el servidor con
   `Pagination` (20 por página); el monto va a la derecha con cifras tabulares.
+  Asociar, descartar y la línea de ayuda que invita a asociar solo aparecen con
+  `cash.manage` (2026-11-23): quien solo tiene `cash.read` (Auditor,
+  Contador) consulta el pago con el ojo, sin acciones que el API le niega.
 - **Locales › Nuevo / Editar local: distribución** (2026-11-19). Modal
   `size-lg` (880 px; antes `compact` de 480 px dejaba la Ubicación apretada).
   Una sola grilla de 3 columnas (`location-form-grid`) en todas las secciones y

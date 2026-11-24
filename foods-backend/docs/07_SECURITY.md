@@ -122,6 +122,14 @@ roles personalizados existentes. Los roles predefinidos ya los cumplen (prueba
 `TestDefaultRolesSatisfyRequirements`). Solo se agregan lecturas o acciones que la
 pantalla ya necesitaba: no amplían lo que el rol puede modificar.
 
+Los roles predeterminados se nombran por la persona que los usa (2026-11-23,
+migración 000144): `accounting` es «Contador» (antes «Contabilidad») y `buyer`
+es «Comprador» (antes «Compras»). La migración solo renombra los roles que
+conservan el nombre original y si la empresa no tiene otro rol con el nombre
+nuevo. El Contador consulta Ventas y Comprobantes en solo lectura (`orders.read`
+sin `orders.manage`), además de Dashboard, Caja y turnos con Gastos, Fiscal y
+moneda y Medios de pago; no toma pedidos, no cobra ni opera turnos.
+
 `GET /v1/admin/settings` (moneda, decimales e impuesto) solo exige sesión: todo
 usuario del panel los necesita para mostrar montos. Antes exigía
 `organizations.read` y los roles operativos recibían 403 con valores por defecto.
