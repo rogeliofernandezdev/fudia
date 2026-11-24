@@ -69,7 +69,7 @@ export function InventorySettingsDialog({item,units,busy,close,save,removePresen
     <FormSection icon="stock" title="Datos del artículo" bare><div className="form-grid">
      <FormField label="Nombre" className="span-2" error={errors.name?.message} help={item.productId?"Este nombre también se usa en Carta y productos.":undefined}><Input autoFocus maxLength={160} disabled={locked} aria-invalid={Boolean(errors.name)} {...register("name")}/></FormField>
      <FormField label="Unidad" className="span-2"><Select disabled={locked} {...register("unit")}>{unitOptions.map(option=><option key={option.code} value={option.code}>{option.name}</option>)}</Select></FormField>
-     {unitChanged&&<div className="span-2 inventory-unit-change" aria-live="polite">
+     {unitChanged&&preview.data?.mode!=="free"&&preview.data?.mode!=="same"&&<div className="span-2 inventory-unit-change" aria-live="polite">
       {preview.isLoading?<InlineNotice tone="info">Revisando el cambio de unidad…</InlineNotice>
       :preview.isError?<InlineNotice tone="danger" title="No pudimos revisar el cambio">{preview.error.message}</InlineNotice>
       :preview.data&&!preview.data.allowed?<InlineNotice tone="danger" title="No se puede cambiar la unidad"><>{preview.data.blockers.map(blocker=><span className="inventory-blocker" key={blocker}>{blocker}</span>)}</></InlineNotice>

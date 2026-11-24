@@ -206,8 +206,9 @@ test("la unidad se elige del catálogo del API y solo viaja cuando cambia",async
  await ui.render().button.props.onClick();
  assert.equal(saved[0].unit,undefined,"sin cambio no envía la unidad");
  ui.control.setValue("unit","und");
- ui.render();
+ const free=ui.render();
  assert.ok(ui.previews.some(options=>options.enabled&&options.queryKey.includes("und")),"consulta el efecto del cambio");
+ assert.equal(free.nodes.some(node=>node.props?.className==="span-2 inventory-unit-change"),false,"un cambio libre no deja un hueco vacío");
  await ui.render().button.props.onClick();
  assert.equal(saved[1].unit,"und");
 });

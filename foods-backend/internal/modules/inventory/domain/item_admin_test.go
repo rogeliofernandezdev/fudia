@@ -11,7 +11,7 @@ func TestDeactivateBlockersExplainWhatToResolve(t *testing.T) {
 	}
 	got := DeactivateBlockers(ItemFacts{UnitName: "Kilogramo", QuantityHere: 2.5, OpenOrdersHere: 2, Recipes: []ItemRecipeUse{{ProductName: "Ceviche"}, {ProductName: "Leche de tigre"}}})
 	joined := strings.Join(got, " ")
-	for _, want := range []string{"Quedan 2.5 kilogramo", "2 órdenes de compra", "las recetas de Ceviche, Leche de tigre"} {
+	for _, want := range []string{"Quedan 2.5 kilogramos", "2 órdenes de compra", "Lo usan las recetas de Ceviche, Leche de tigre", "Quítalo de esas recetas"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing %q in %q", want, joined)
 		}
@@ -28,12 +28,24 @@ func TestUnitChangeBlockers(t *testing.T) {
 	}
 	got := UnitChangeBlockers(ItemFacts{Unit: "kg", OpenOrdersAny: 1, FractionalAnyStock: true, Recipes: []ItemRecipeUse{{ProductName: "Pan", ConsumptionUnit: "g"}}}, target, []string{"Caja x 0.5"})
 	joined := strings.Join(got, " ")
-	for _, want := range []string{"1 orden de compra", "receta de Pan", "decimales", "«Caja x 0.5»"} {
+	for _, want := range []string{"1 orden de compra", "Lo usa la receta de Pan en otra unidad. Cambia esa receta", "decimales", "«Caja x 0.5»"} {
 		if !strings.Contains(joined, want) {
 			t.Fatalf("missing %q in %q", want, joined)
 		}
 	}
 	if got := UnitChangeBlockers(ItemFacts{Unit: "kg", FractionalAnyStock: true}, UnitChangeTarget{Code: "g", Name: "Gramo", Exists: true}, nil); len(got) != 0 {
 		t.Fatalf("measurable unit accepts decimals: %v", got)
+	}
+}
+
+func TestQuantityLabelUsesSpanishPlural(t *testing.T) {
+	for _, row := range []struct {
+		quantity float64
+		unit     string
+		want     string
+	}{{1, "kilogramo", "1 kilogramo"}, {19.01, "litro", "19.01 litros"}, {2, "unidad", "2 unidades"}, {0, "botella", "0 botellas"}} {
+		if got := QuantityLabel(row.quantity, row.unit); got != row.want {
+			t.Fatalf("QuantityLabel(%v,%q)=%q want %q", row.quantity, row.unit, got, row.want)
+		}
 	}
 }

@@ -122,13 +122,13 @@ func FormatQuantity(value float64) string {
 func DeactivateBlockers(f ItemFacts) []string {
 	blockers := []string{}
 	if f.QuantityHere != 0 {
-		blockers = append(blockers, "Quedan "+FormatQuantity(f.QuantityHere)+" "+unitLabel(f)+" en este local. Registra un ajuste de salida para dejarlo en 0.")
+		blockers = append(blockers, "Quedan "+QuantityLabel(f.QuantityHere, unitLabel(f))+" en este local. Registra un ajuste de salida para dejarlo en 0.")
 	}
 	if f.OpenOrdersHere > 0 {
 		blockers = append(blockers, "Está en "+ordersLabel(f.OpenOrdersHere)+" de este local sin recibir. Recíbela o cancélala primero.")
 	}
 	if len(f.Recipes) > 0 {
-		blockers = append(blockers, "Lo usa "+recipeList(f.Recipes)+". Quítalo de la receta primero.")
+		blockers = append(blockers, recipeList(f.Recipes)+". Quítalo de "+recipeNoun(f.Recipes)+" primero.")
 	}
 	return blockers
 }
@@ -152,7 +152,7 @@ func UnitChangeBlockers(f ItemFacts, to UnitChangeTarget, incompatible []string)
 		}
 	}
 	if len(recipes) > 0 {
-		blockers = append(blockers, "Lo usa "+recipeList(recipes)+" en otra unidad. Cambia esas recetas primero.")
+		blockers = append(blockers, recipeList(recipes)+" en otra unidad. Cambia "+recipeNoun(recipes)+" primero.")
 	}
 	if to.Countable && f.FractionalAnyStock {
 		blockers = append(blockers, "Hay existencias o niveles de stock con decimales. "+to.Name+" solo admite cantidades enteras: ajústalos primero.")
@@ -177,13 +177,46 @@ func ordersLabel(n int) string {
 	return strconv.Itoa(n) + " órdenes de compra"
 }
 
+// recipeList starts the sentence with the verb agreeing with the count:
+// «Lo usa la receta de Pan» or «Lo usan las recetas de Pan, Ceviche».
 func recipeList(recipes []ItemRecipeUse) string {
 	names := make([]string, 0, len(recipes))
 	for _, r := range recipes {
 		names = append(names, r.ProductName)
 	}
 	if len(names) == 1 {
-		return "la receta de " + names[0]
+		return "Lo usa la receta de " + names[0]
 	}
-	return "las recetas de " + strings.Join(names, ", ")
+	return "Lo usan las recetas de " + strings.Join(names, ", ")
+}
+
+func recipeNoun(recipes []ItemRecipeUse) string {
+	if len(recipes) == 1 {
+		return "esa receta"
+	}
+	return "esas recetas"
+}
+
+// QuantityLabel joins a quantity with its unit in Spanish, plural unless it is 1:
+// «1 kilogramo», «19.01 litros», «2 unidades».
+func QuantityLabel(quantity float64, unit string) string {
+	text := FormatQuantity(quantity)
+	if unit == "" || text == "1" {
+		return strings.TrimSpace(text + " " + unit)
+	}
+	return text + " " + PluralUnit(unit)
+}
+
+// PluralUnit pluralizes a lowercase unit name: litro→litros, unidad→unidades.
+func PluralUnit(unit string) string {
+	switch {
+	case unit == "":
+		return unit
+	case strings.HasSuffix(unit, "z"):
+		return strings.TrimSuffix(unit, "z") + "ces"
+	case strings.ContainsAny(unit[len(unit)-1:], "aeiou") || strings.HasSuffix(unit, "á") || strings.HasSuffix(unit, "é") || strings.HasSuffix(unit, "ó"):
+		return unit + "s"
+	default:
+		return unit + "es"
+	}
 }
