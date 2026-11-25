@@ -19,6 +19,9 @@ td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
 .management td:first-child{min-width:var(--size-260)}
 .management td:first-child small{margin-left:var(--space-11)}
 .catalog-panel th:last-child,.catalog-panel td:last-child,.standardized-management th:last-child,.standardized-management td:last-child{text-align:center}
+/* Columna de acciones centrada con su cabecera en toda tabla, sin depender de la clase del panel (2026-11-25). */
+.data-table tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action){text-align:center}
+.data-table:has(tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action)) thead th:last-child{text-align:center}
 /* La columna de acciones mide lo que sus botones: sin espacio vacío a la derecha. */
 tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon-button){width:1%;white-space:nowrap}
 /* `isolation` encierra la columna fija de la tabla: nunca pinta sobre franjas fijas de la página. */
