@@ -72,3 +72,14 @@ test("Cerrar turno: el cierre ciego oculta los importes y el normal siempre mues
   const report=read("src/modules/operations/cash/presentation/cash-report-content.tsx");
   assert.match(report,/\{showCashAmounts&&<><div><dt>Egresos de efectivo<\/dt>/);
 });
+
+test("tablas que crecen con el tiempo paginan con la primitiva compartida aunque el API entregue la lista completa",()=>{
+  const hook=read("src/shared/hooks/use-client-pagination.ts");
+  assert.match(hook,/rows:items\.slice\(\(current-1\)\*size,current\*size\)/);
+  assert.match(hook,/if\(key!==resetKey\)\{setKey\(resetKey\);setPage\(1\);\}/,"una búsqueda nueva vuelve a la primera página");
+  for(const [file,name] of [["src/modules/menu/recipes/presentation/recipes-page.tsx","recipePage"],["src/modules/delivery/presentation/failed-deliveries.tsx","failedPage"],["src/modules/platform/presentation/platform-subscription-page.tsx","paymentPage"],["src/modules/platform/presentation/platform-concierge-usage.tsx","historyPage"]]){
+    const source=read(file);
+    assert.ok(source.includes(`${name}.rows.map(`),`${file} pinta solo la página actual`);
+    assert.ok(source.includes(`<Pagination {...${name}.pagination}/>`),`${file} muestra la paginación compartida`);
+  }
+});

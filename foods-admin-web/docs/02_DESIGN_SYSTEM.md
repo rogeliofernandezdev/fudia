@@ -2113,7 +2113,13 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
   `--font-size-control` (13 px en escritorio). La cabecera conserva peso 600.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
   muestra páginas, elipsis, anterior y siguiente con estado activo inequívoco.
-- Toda tabla de gestión incluye paginación, incluida la de categorías.
+- Toda tabla de gestión incluye paginación, incluida la de categorías. Si el API
+  entrega la lista completa (Recetas, Entregas fallidas, Historial de pagos de
+  suscripción, Historial mensual de Concierge), se pagina en el navegador con
+  `useClientPagination` (`@/shared/hooks/use-client-pagination`) y la misma
+  `Pagination`; una búsqueda nueva vuelve a la primera página. Las listas cortas de
+  configuración (series por local, canales por país, periodos del IGV reducido,
+  centrales de delivery) no paginan.
 - La paginación es una primitiva única y compartida. No se replica su cálculo,
   marcado ni estilos dentro de los módulos de negocio.
 - No conservar paginadores antiguos ni sus reglas (`catalog-pagination`, `pagination-meta`, estilos

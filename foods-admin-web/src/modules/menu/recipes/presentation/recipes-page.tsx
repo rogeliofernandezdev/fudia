@@ -1,4 +1,5 @@
 "use client";
+import {useClientPagination} from "@/shared/hooks/use-client-pagination";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./recipes.css";
@@ -7,7 +8,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Skeleton} from "@/design-system/skeleton";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,Select,PageHeader,RowActionButton,Status,Textarea,Tooltip,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
+import {Button,ConfirmDialog,Pagination,EmptyState,ErrorState,FieldLabel,Icon,Input,Select,PageHeader,RowActionButton,Status,Textarea,Tooltip,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
 import {compatibleMeasurementUnits,convertMeasurementQuantity,suggestedRecipeUnit} from "@/shared/units/measurement-unit";
 import {stockStatus} from "@/shared/stock-status";
 import {useFeedback,useSession} from "@/providers";
@@ -183,6 +184,7 @@ export function RecipesPage(){
  }
 
  const items=recipes.data?.items??[];
+ const recipePage=useClientPagination(items,q);
 
  return <>
   <PageHeader
@@ -199,7 +201,7 @@ export function RecipesPage(){
     <ErrorState title={missingPermissionLabel(recipes.error)?`Falta el permiso «${missingPermissionLabel(recipes.error)}»`:isPermissionError(recipes.error)?"Falta un permiso para ver las recetas":"No pudimos cargar las recetas"} text={recipes.error.message} onRetry={isPermissionError(recipes.error)?undefined:()=>void recipes.refetch()} retrying={recipes.isFetching}/>
    :!items.length?
     <EmptyState icon="cookingPot" title="Aún no hay recetas" text="Configura una receta para descontar insumos automáticamente al vender un plato preparado." action={canManage?<Button icon="plus" onClick={openNew}>Nueva receta</Button>:undefined}/>
-   :<DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>Producto</th><th>Porciones</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable>}
+   :<><DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>Producto</th><th>Porciones</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{recipePage.rows.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable><Pagination {...recipePage.pagination}/></>}
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">

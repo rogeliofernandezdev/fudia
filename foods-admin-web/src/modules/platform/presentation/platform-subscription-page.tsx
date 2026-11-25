@@ -4,7 +4,8 @@ import "./platform-subscription.css";
 import {useMemo} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,ChoiceGroup,IconTile} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Pagination,Select,Status,ChoiceGroup,IconTile} from "@/design-system";
+import {useClientPagination} from "@/shared/hooks/use-client-pagination";
 import {Icon} from "@/design-system/icons";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -34,6 +35,7 @@ export function PlatformSubscriptionPage(){
 export function SubscriptionWorkspace({current,plans,country,timeZone,organizationId}:{current:OrganizationSubscription;plans:SubscriptionPlan[];country?:string;timeZone?:string;organizationId?:string}){
  const{notify}=useFeedback();
  const client=useQueryClient();
+ const paymentPage=useClientPagination(current.payments);
  const subscriptionKey=organizationId?["organization-subscription",organizationId]:["organization-subscription"];
  const change=useForm<SubscriptionDraft>({defaultValues:{planId:current.plan.id,billingCycle:current.billingCycle,status:current.status,autoRenew:current.autoRenew,termsAccepted:false},resolver:zodResolver<SubscriptionDraft>(subscriptionChangeSchema),mode:"onSubmit",reValidateMode:"onChange"});
  const paymentForm=useForm<PaymentDraft>({defaultValues:{amount:current.priceAmount,currency:current.currency,status:"paid",provider:"manual",externalReference:"",paidAt:""},resolver:zodResolver<PaymentDraft>(subscriptionPaymentSchema),mode:"onSubmit",reValidateMode:"onChange"});
@@ -105,7 +107,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
 
   <section className="panel subscription-history">
    <header><div><small>Historial</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
-   {current.payments.length?<DataTable label="Historial de pagos de suscripción"><thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Proveedor</th><th>Referencia</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b className="table-amount">{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></DataTable>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
+   {current.payments.length?<><DataTable label="Historial de pagos de suscripción"><thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Proveedor</th><th>Referencia</th></tr></thead><tbody>{paymentPage.rows.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b className="table-amount">{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></DataTable><Pagination {...paymentPage.pagination}/></>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
   </section>
  </>;
 }

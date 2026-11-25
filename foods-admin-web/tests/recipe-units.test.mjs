@@ -50,6 +50,7 @@ function mount({unitError=false,emptyUnits=false}={}){
   if(name==="@/providers")return{useSession:()=>({can:()=>true,organization:{id:"org"}}),useFeedback:()=>({notify:value=>notices.push(value)})};
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","ConfirmDialog","EmptyState","ErrorState","FieldLabel","Icon","Input","Select","PageHeader","RowActionButton","Status","Textarea","ModalHeader","ModalFooter","ModalForm","Skeleton","DataTable","Dialog"].map(key=>[key,key]).concat([["createLookupSelectStyles",()=>({})]]));
   if(name==="./recipes.css")return{};
+  if(name==="@/shared/hooks/use-client-pagination")return{useClientPagination:items=>({rows:items,pagination:{page:1,size:10,total:items.length,onPage:()=>{},onSize:()=>{}}})};
   if(name==="@/shared/stock-status")return{stockStatus:(quantity,minimum)=>{if(!(quantity>0))return{key:"out",tone:"gray",label:"Sin stock",hint:""};if(minimum>0&&quantity<=minimum)return{key:"low",tone:"orange",label:"Stock bajo",hint:""};return{key:"ok",tone:"green",label:"Saludable",hint:""}}};
   if(name==="@/shared/api/client")return{isPermissionError:()=>false,missingPermissionLabel:()=>""};
   if(name==="@/shared/units/measurement-unit")return unitsApi;
