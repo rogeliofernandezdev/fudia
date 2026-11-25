@@ -1,6 +1,15 @@
 import {Icon,type IconName} from "./icons";
 
-export type IconTileTone="primary"|"brand"|"digital"|"teal"|"sky"|"peach"|"rose"|"warning"|"danger"|"navy"|"info"|"purple"|"neutral";
+export type IconTileTone="primary"|"brand"|"digital"|"teal"|"sky"|"peach"|"rose"|"warning"|"danger"|"navy"|"info"|"purple"|"whatsapp"|"neutral";
+/** Identidad de cada función. No representa el estado de un registro. */
+const identityTones:Partial<Record<IconName,IconTileTone>>={
+ user:"sky",users:"sky",badge:"sky",calendar:"sky",info:"sky",
+ phone:"teal",mapPin:"teal",truck:"teal",cart:"teal",
+ dish:"digital",utensils:"digital",lock:"digital",key:"digital",contract:"digital",
+ chefHat:"brand",cookingPot:"brand",kitchen:"brand",register:"brand",cash:"brand",cashShift:"brand",wallet:"brand",
+ receipt:"peach",layers:"peach",tag:"peach",tax:"peach",note:"peach",
+};
+export function getIdentityTone(icon:IconName):IconTileTone{return identityTones[icon]??"primary"}
 type IconTileProps={name:IconName;size?:"sm"|"md"|"lg";className?:string;tone?:IconTileTone;appearance?:"soft"|"vivid"};
 
 /**

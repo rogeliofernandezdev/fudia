@@ -8,7 +8,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 // The QR encoder is only needed when a QR dialog opens; keep it out of the route chunk.
 const loadQRCode=()=>import("qrcode").then(module=>module.default);
 import {readCssToken} from "@/design-system/theme";
-import {Icon} from "@/design-system/icons";import {DataTable,EmptyState,ErrorState,FormField,Input,ModalHeader,ModalFooter} from "@/design-system";
+import {Icon} from "@/design-system/icons";import {DataTable,EmptyState,ErrorState,FormField,Input,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/design-system/page-header";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -180,10 +180,10 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
 
 function ZoneDialog({draft,busy,close,save}:{draft:ZoneDraft;busy:boolean;close:()=>void;save:(d:ZoneDraft)=>void}){
  const{register,handleSubmit,formState:{errors}}=useForm<ZoneDraft>({defaultValues:draft,resolver:zoneResolver,mode:"onSubmit",reValidateMode:"onChange"});
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><ModalHeader title={draft.id?"Editar zona":"Nueva zona"} titleId="zone-title" onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><div className="form-grid">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy} aria-describedby="zone-title-description"><ModalHeader title={draft.id?"Editar zona":"Nueva zona"} titleId="zone-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="layout" description="Organiza los espacios de atención del local."/><ModalForm onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><ModalBody className="form-grid">
  <FormField className="span-2" label="Nombre de la zona" error={errors.name?.message}><Input autoFocus maxLength={60} {...register("name")} placeholder="Ej. Terraza"/></FormField>
  <FormField className="span-2" label="Orden" help="Menor número aparece primero." error={errors.sortOrder?.message}><Input type="number" min="0" inputMode="numeric" {...register("sortOrder")} placeholder="0"/></FormField>
- </div><ModalFooter><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy}>{busy?"Guardando…":"Guardar"}</button></ModalFooter></form></Dialog></div>;
+ </ModalBody><ModalFooter><button type="button" className="button ghost" disabled={busy} onClick={close} data-action="cancel">Cancelar</button><button type="submit" className="button primary" disabled={busy}>{busy?"Guardando…":"Guardar"}</button></ModalFooter></ModalForm></Dialog></div>;
 }
 
 function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantName:string;close:()=>void}){
@@ -228,7 +228,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    </div>)}</div>}
  </div>
  <ModalFooter className="qr-footer">
-   <button type="button" className="button ghost" onClick={close}>Cancelar</button>
+   <button type="button" className="button ghost" onClick={close} data-action="cancel">Cancelar</button>
    <button type="button" className="button primary" onClick={doPrint} disabled={!printable.length}><Icon name="download" size={16}/>Imprimir {printable.length} QRs</button>
  </ModalFooter>
  </Dialog></div>;

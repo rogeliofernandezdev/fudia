@@ -25,9 +25,9 @@ test("los checks del editor de roles no desplazan ni vacían el modal al marcars
 test("en móvil el editor de roles es pantalla completa con un solo scroll y pestañas fijas",()=>{
  const mobile=css.slice(css.indexOf("@media(max-width:600px){"));
  assert.match(mobile,/\.role-editor-modal\{width:100%;height:100dvh;max-height:100dvh;border-radius:0\}/,"pantalla completa como la Comanda");
- assert.match(mobile,/\.role-editor-body\{[^}]*overflow:visible/,"sin scroll anidado: desplaza el form");
+ assert.match(manager,/<ModalForm[^>]*>[\s\S]*?<ModalBody className="role-editor-body">/,"el cuerpo compartido es el único scroll");
  assert.match(mobile,/\.role-editor-perms-panel\{[^}]*overflow:clip/,"clip conserva el radio sin romper sticky");
- assert.match(mobile,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--space-4\) \* -1\)/,"pestañas y búsqueda fijas arriba");
+ assert.match(mobile,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--modal-body-space\) \* -1\)/,"pestañas y búsqueda fijas arriba");
  assert.doesNotMatch(css,/\.re-perm-tabs \.ds-tabs b/,"los contadores móviles se ocultan en el componente compartido");
  assert.match(mobile,/\.re-perm-accordion\{overflow:visible\}/);
  assert.doesNotMatch(css.slice(0,css.indexOf("@media")),/\.re-perm-tabs \.ds-tabs b/,"escritorio conserva los contadores");
@@ -37,7 +37,7 @@ test("el rol editado sigue visible: su nombre es el título de la cabecera fija"
  assert.match(manager,/const editorTitle=roleName\|\|"Nuevo rol";/);
  assert.match(manager,/<ModalHeader title=\{editorTitle\} titleId="role-editor-title" onClose=/);
  assert.doesNotMatch(manager,/editorSubtitle/);
- assert.match(css,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--space-6\) \* -1\)/,"escritorio: pestañas, filtro y búsqueda fijas bajo la cabecera");
+ assert.match(css,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--modal-body-space\) \* -1\)/,"escritorio: pestañas, filtro y búsqueda fijas bajo la cabecera");
  assert.match(css,/\.re-acc-items\{columns:2;/,"permisos por columnas, no en zigzag");
  assert.ok(manager.includes('placeholder={permTab==="menu"?"Buscar opción…":"Buscar permiso…"}'),"placeholders que caben a 390 px");
 });

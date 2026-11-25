@@ -88,7 +88,7 @@ test("con teclado abierto en móvil el modal cede alto al formulario sin perder 
  assert.equal(declaration(css,".modal-header","min-height",keyboard),"var(--size-48)","más compacta que los 52 px habituales");
  assert.equal(declaration(css,".modal-header h2","font-size",keyboard),"var(--font-size-md)");
  assert.equal(declaration(css,".modal-context","display",keyboard),"none");
- assert.equal(declaration(css,".modal-body","padding"),"var(--space-2) var(--space-6) var(--space-6)");
+ assert.equal(declaration(css,".modal-body","padding"),"var(--modal-body-space) var(--modal-inset)");
  assert.equal(declaration(css,".modal-body","padding-top",keyboard),undefined,"el teclado no reintroduce espacio superior");
  assert.equal(declaration(css,".modal-footer","display",keyboard),undefined,"el pie sigue visible");
  assert.equal(declaration(css,".modal-footer","padding-block",keyboard),"var(--space-2) calc(var(--space-2) + var(--safe-area-bottom))");
@@ -123,24 +123,24 @@ test("pestañas móviles se desplazan en su contenedor con etiquetas largas sin 
 });
 test("cabecera, cuerpo y pie comparten margen y el cierre conserva su tamaño en todos los tamaños",()=>{
  const css=sheet("design-system/styles/modal.css");
- assert.equal(declaration(css,".crud-modal>header","padding"),"var(--space-1) var(--space-6)");
- assert.equal(declaration(css,".crud-modal>header","min-height"),"var(--size-52)","cabecera compacta de 52 px");
- assert.equal(declaration(css,".crud-modal>header","background"),"var(--surface)","cabecera blanca (FUDIA DS 1.0)");
+ assert.equal(declaration(css,".crud-modal>header","padding"),"var(--space-3) var(--modal-inset)");
+ assert.equal(declaration(css,".crud-modal>header","min-height"),"var(--size-64)","la cabecera reserva aire para el título");
+ assert.equal(declaration(css,".crud-modal>header","background"),"var(--modal-header-background)","cabecera clara del patrón compartido");
  assert.doesNotMatch(read("design-system/styles/modal.css"),/modal-accent/);
  assert.doesNotMatch(read("design-system/modal.tsx"),/modal-accent/);
- assert.equal(declaration(css,".crud-modal>header h2","color"),"var(--ink-950)");
- assert.equal(declaration(css,".modal-close","color"),"var(--ink-600)");
- assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--primary-600)");
- assert.equal(declaration(css,".modal-body","padding"),"var(--space-2) var(--space-6) var(--space-6)");
- assert.equal(declaration(css,".modal-footer","padding"),"var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom))");
+ assert.equal(declaration(css,".crud-modal>header h2","color"),"var(--modal-header-foreground)");
+ assert.equal(declaration(css,".modal-close","color"),"var(--modal-header-foreground)");
+ assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--modal-header-focus)");
+ assert.equal(declaration(css,".modal-body","padding"),"var(--modal-body-space) var(--modal-inset)");
+ assert.equal(declaration(css,".modal-footer","padding"),"var(--space-4) var(--modal-inset) calc(var(--space-4) + var(--safe-area-bottom))");
  for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-32)","cierre de 32 px en escritorio (especificación)");
  for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop,"(width<=600px)"),"var(--size-44)","área táctil de 44 px en móvil");
  assert.equal(declaration(css,".modal-footer>.modal-footer-note","flex-basis"),"100%");
 });
-test("la cabecera blanca solo lleva título y X neutra directa, sin icono ni caja",()=>{
+test("la cabecera admite icono de apoyo y mantiene la X neutra directa",()=>{
  const css=sheet("design-system/styles/modal.css");
- let titleIcon=false;css.walkRules(rule=>{if(/modal-title-icon|has-icon/.test(rule.selector))titleIcon=true;});
- assert.equal(titleIcon,false,"ningún modal reserva un icono antes del título");
+ assert.equal(declaration(css,".modal-heading-icon","width"),"var(--size-40)");
+ assert.equal(declaration(css,".modal-heading-icon","background"),undefined,"IconTile es el único dueño del color de identidad");
  assert.equal(declaration(css,".modal-close","background"),"transparent");
  assert.equal(declaration(css,".modal-close","border"),"0");
  let closeFrame=false;css.walkRules(rule=>{if(rule.selector.includes("modal-close::before"))closeFrame=true;});
@@ -150,7 +150,7 @@ test("la cabecera blanca solo lleva título y X neutra directa, sin icono ni caj
  }
  assert.equal(declaration(css,".modal-close:hover:not(:disabled)","background","(hover:hover) and (pointer:fine)"),undefined,"la X no cambia de color con hover");
  assert.doesNotMatch(declaration(css,".modal-close","transition"),/background|color/);
- assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--primary-600)");
+ assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--modal-header-focus)");
 });
 
 test("al guardar la X permanece blanca y opaca, y Producto no altera márgenes del modal",()=>{
@@ -173,7 +173,7 @@ test("Tabs conserva flechas, Home, End y un único elemento en el orden de Tab",
  const focused=[],changed=[];
  const elements=Array.from({length:3},(_,i)=>({focus:()=>focused.push(i)}));
  const exports={};
- vm.runInNewContext(ts.transpileModule(read("design-system/tabs.tsx"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name.endsWith(".css")?{}:name==="react"?{useRef:()=>({current:{querySelectorAll:()=>elements}})}:name==="./icons"?{Icon:"Icon"}:require(name)});
+ vm.runInNewContext(ts.transpileModule(read("design-system/tabs.tsx"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name.endsWith(".css")?{}:name==="react"?{useEffect:()=>{},useRef:()=>({current:{querySelectorAll:()=>elements}})}:name==="./icons"?{Icon:"Icon"}:require(name)});
  const view=exports.Tabs({label:"Vista",items:[{value:"a",label:"Productos",icon:"utensils"},{value:"b",label:"Categorías",icon:"layers"},{value:"c",label:"Disponibilidad",icon:"availability"}],value:"b",onChange:value=>changed.push(value)});
  assert.deepEqual(view.props.children.map(node=>node.props.tabIndex),[-1,0,-1]);
  assert.deepEqual(view.props.children.map(node=>node.props.children[0].props.name),["utensils","layers","availability"]);

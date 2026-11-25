@@ -61,7 +61,7 @@
 
 /* Diálogo de plan */
 .plan-dialog{width:min(var(--size-760),100%)}
-.plan-form{display:grid;gap:var(--space-5);padding:var(--space-5)}
+.plan-form{display:grid;gap:var(--space-5)}
 .plan-modules{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card)}
 .plan-modules>header{display:flex;align-items:center;justify-content:space-between;min-height:var(--size-56);padding:var(--space-2-5) var(--space-4);background:var(--cloud-50);border-bottom:var(--stroke-1) solid var(--line)}
 .plan-modules>header small:not(.field-error){font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps);color:var(--primary-600)}

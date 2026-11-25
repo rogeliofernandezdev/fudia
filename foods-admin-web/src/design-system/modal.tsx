@@ -1,9 +1,10 @@
 "use client";
 
-import {createContext,useCallback,useContext,useId,useState,type FormHTMLAttributes,type ReactNode} from "react";
+import {createContext,useCallback,useContext,useId,useState,type FormHTMLAttributes,type HTMLAttributes,type ReactNode} from "react";
 import {Dialog} from "./dialog";
 import {ConfirmDialog} from "./confirm-dialog";
-import {Icon} from "./icons";
+import {Icon,type IconName} from "./icons";
+import {IconTile,getIdentityTone,type IconTileTone} from "./icon-tile";
 import {Button,Spinner} from "./page-header";
 import {ErrorState} from "./states";
 import {Skeleton} from "./skeleton";
@@ -18,6 +19,11 @@ export const useModal=()=>useContext(ModalContext);
 type ModalProps={
   /** Acción concreta del modal: «Nuevo gasto», «Editar zona», «Pedido 0042». */
   title:ReactNode;
+  /** Icono de la tarea, de apoyo al título; se omite en detalles de lectura. */
+  icon?:IconName;
+  iconTone?:IconTileTone;
+  /** Contexto breve de la tarea, sin repetir el título ni inventar pasos. */
+  description?:ReactNode;
   /** Contexto adicional fuera de la cabecera, nunca junto al cierre. */
   meta?:ReactNode;
   /** Datos de lectura relacionados con la identidad, sin otra cabecera. */
@@ -37,18 +43,18 @@ type ModalProps={
 };
 
 /**
- * Modal homologado sobre `Dialog`: fondo, panel por tamaño, cabecera (título y X, sin icono),
+ * Modal homologado sobre `Dialog`: fondo, panel por tamaño, cabecera con icono opcional,
  * cuerpo desplazable y pie fijo. No cierra con Escape ni con el fondo.
  */
-export function Modal({title,meta,details,size="md",onClose,dirty=false,busy=false,closeLabel="Cerrar",onResponseClose,className="",children}:ModalProps){
+export function Modal({title,icon,iconTone,description,meta,details,size="md",onClose,dirty=false,busy=false,closeLabel="Cerrar",onResponseClose,className="",children}:ModalProps){
   const id=useId();
   const [confirmDiscard,setConfirmDiscard]=useState(false);
   const requestClose=useCallback(()=>{if(busy)return;if(dirty){setConfirmDiscard(true);return}onClose()},[busy,dirty,onClose]);
   return <ModalContext.Provider value={{requestClose,busy}}>
     <div className="modal-backdrop modal-overlay-in">
-      <Dialog onResponseClose={onResponseClose??onClose} className={`crud-modal ds-modal size-${size} ${className}`.trim()} aria-labelledby={`${id}-title`} aria-busy={busy||undefined}>
+      <Dialog onResponseClose={onResponseClose??onClose} className={`crud-modal ds-modal size-${size} ${className}`.trim()} aria-labelledby={`${id}-title`} aria-describedby={description?`${id}-description`:undefined} aria-busy={busy||undefined}>
 
-        <ModalHeader title={title} titleId={`${id}-title`} meta={meta} details={details} onClose={requestClose} busy={busy} closeLabel={closeLabel}/>
+        <ModalHeader title={title} icon={icon} iconTone={iconTone} description={description} descriptionId={`${id}-description`} titleId={`${id}-title`} meta={meta} details={details} onClose={requestClose} busy={busy} closeLabel={closeLabel}/>
         {children}
       </Dialog>
     </div>
@@ -57,15 +63,18 @@ export function Modal({title,meta,details,size="md",onClose,dirty=false,busy=fal
 }
 
 /**
- * Cabecera única (título y X; nunca un icono antes del título), también para detalles remotos que usan Dialog directamente. Con `busy` deshabilita la X y
+ * Cabecera única con título, icono de tarea opcional y X, también para detalles remotos que usan Dialog directamente. Con `busy` deshabilita la X y
  * cubre el cuerpo con `ModalBusy`: todo modal que guarda lo bloquea sin marcado propio. El botón que originó la
  * acción es el único que dice «Guardando…». `busyOverlay={false}` solo para pantallas de tarea completa (Comanda).
  */
-export function ModalHeader({title,titleId,meta,details,onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",initialFocusClose=false}:{title:ReactNode;titleId?:string;meta?:ReactNode;details?:ReactNode;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;initialFocusClose?:boolean}){
+export function ModalHeader({title,icon,iconTone,description,descriptionId,titleId,meta,details,onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",initialFocusClose=false}:{title:ReactNode;icon?:IconName;iconTone?:IconTileTone;description?:ReactNode;descriptionId?:string;titleId?:string;meta?:ReactNode;details?:ReactNode;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;initialFocusClose?:boolean}){
   const generatedId=useId();
   return <><header className="modal-header">
-    <div className="modal-heading">
-      <h2 id={titleId??`${generatedId}-title`}>{title}</h2>
+    <div className={icon?"modal-heading has-icon":"modal-heading"}>
+      {icon&&<span className="modal-heading-icon" aria-hidden="true"><IconTile name={icon} tone={iconTone??getIdentityTone(icon)} size="lg"/></span>}
+      <div className="modal-heading-copy"><h2 id={titleId??`${generatedId}-title`}>{title}</h2>
+        {description&&<p className="modal-header-description" id={descriptionId??`${titleId??generatedId}-description`}>{description}</p>}
+      </div>
     </div>
     <button type="button" className="modal-close" aria-label={closeLabel} onClick={onClose} disabled={busy} data-dialog-initial-focus={initialFocusClose||undefined}><Icon name="close" size={18}/></button>
   </header>
@@ -109,7 +118,7 @@ export function ModalItemComponents({label,items}:{label:string;items:ModalItemC
 /** Formulario del modal: ocupa el panel para que cuerpo y pie se repartan el alto. */
 export function ModalForm({className="",...props}:FormHTMLAttributes<HTMLFormElement>){return <form className={`modal-form ${className}`.trim()} {...props}/>}
 /** Cuerpo desplazable del modal. */
-export function ModalBody({children,className=""}:{children:ReactNode;className?:string}){return <div className={`modal-body ${className}`.trim()}>{children}</div>}
+export function ModalBody({children,className="",...props}:HTMLAttributes<HTMLDivElement>){return <div className={`modal-body ${className}`.trim()} {...props}>{children}</div>}
 /** Pie fijo: acciones contiguas a la derecha, principal al final; estado opcional a la izquierda. */
 export function ModalFooter({children,note,status,statusLabel="Estado",className=""}:{children?:ReactNode;note?:ReactNode;status?:ReactNode;statusLabel?:string;className?:string}){return <footer className={`modal-footer ${className}`.trim()}>{status&&<div className="modal-footer-status"><span>{statusLabel}</span>{status}</div>}{note&&<p className="modal-footer-note">{note}</p>}{children}</footer>}
 /** «Cancelar» homologado: usa el cierre del modal, que confirma el descarte si hay cambios. */

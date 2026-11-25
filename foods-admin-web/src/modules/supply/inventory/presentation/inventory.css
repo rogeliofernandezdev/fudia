@@ -27,7 +27,7 @@
 /* Transferencia entre locales */
 .inventory-transfer-modal{width:min(var(--size-680),calc(100vw - var(--size-28)));overflow:hidden}
 .inventory-transfer-modal form{padding:0}
-.inventory-transfer-body{max-height:min(68vh,var(--size-640));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;grid-auto-rows:max-content;gap:var(--space-4);background:var(--surface)}
+.inventory-transfer-body{display:grid;grid-auto-rows:max-content;gap:var(--space-4);background:var(--surface)}
 .inventory-transfer-route{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:var(--space-3)}
 .inventory-transfer-origin{display:grid;gap:var(--space-1-5);min-width:0}
 .inventory-transfer-origin small{font-size:var(--font-size-control);font-weight:var(--weight-semibold);color:var(--ink-950)}
@@ -65,7 +65,7 @@
  .inventory-toolbar .ds-input-shell,.inventory-toolbar .ds-select{width:100%;min-width:0}
  .inventory-adjustment-modal,.inventory-transfer-modal{width:100%;height:100%;max-height:none;border-radius:var(--radius-card)}
  .inventory-adjustment-fields{grid-template-columns:1fr}
- .inventory-transfer-body{max-height:none;flex:1;padding:var(--space-3-5)}
+ .inventory-transfer-body{flex:1}
  .inventory-transfer-modal form{min-height:0;flex:1;display:flex;flex-direction:column}
  .inventory-transfer-route{grid-template-columns:1fr}
  .inventory-transfer-arrow{display:none}

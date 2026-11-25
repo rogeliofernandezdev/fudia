@@ -152,7 +152,7 @@
 .salon-table-caption{display:inline-flex;align-items:center;gap:var(--space-1);max-width:100%;padding:0 var(--space-3);overflow:hidden;color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold);white-space:nowrap}
 .salon-table-caption>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .salon-table.free .salon-table-caption{color:var(--ink-500)}
-.salon-table-qr{position:absolute;right:calc(var(--space-1-5) * -1);bottom:calc(var(--space-1) * -1);display:grid;place-items:center;width:var(--size-26);height:var(--size-26);border:var(--stroke-2) solid var(--surface);border-radius:50%;background:var(--ink-700);color:var(--surface)}
+.salon-table-qr{position:absolute;right:calc(var(--space-1-5) * -1);bottom:calc(var(--space-1) * -1);display:grid;place-items:center;width:var(--size-26);height:var(--size-26);border:var(--stroke-2) solid var(--surface);border-radius:50%;background:var(--chat-header);color:var(--surface)}
 
 /* Pie sin banda: importe y tiempo abierta, o «Abrir mesa». El disco del pie es
    macizo en la libre (azul marino profundo, icono blanco) y neutro en la ocupada,

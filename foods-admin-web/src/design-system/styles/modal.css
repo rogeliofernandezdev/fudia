@@ -1,6 +1,6 @@
 /* Modal — único dueño de fondo, panel, cabecera, cuerpo y pie de los diálogos.
- * Superficie blanca, radio de diálogo (20 px) y cabecera blanca con título en tinta
- * y X neutral (FUDIA DS 1.0). Cabecera y pie fijos; solo el cuerpo se desplaza.
+ * Cabecera y pie blancos; jerarquía por tipografía, proximidad y superficies neutras.
+ * Radio de diálogo (20 px). Cabecera y pie fijos; solo el cuerpo se desplaza.
  * En móvil el panel es una hoja inferior. Escape y el fondo nunca cierran:
  * la X y Cancelar son los únicos cierres. */
 .modal-backdrop{position:fixed;inset:0;z-index:var(--z-modal);display:grid;place-items:center;padding:var(--space-6);background:var(--ink-950-alpha-40);backdrop-filter:blur(var(--blur-2));overscroll-behavior:contain}
@@ -10,19 +10,28 @@
 .crud-modal.size-lg{width:min(var(--size-880),100%)}
 .crud-modal.size-xl{width:min(var(--size-1040),100%)}
 
-.crud-modal>header,.modal-header{flex:none;position:relative;display:grid;grid-template-columns:minmax(0,1fr) var(--size-32);align-items:center;gap:var(--space-3);column-gap:var(--space-4);min-height:var(--size-52);padding:var(--space-1) var(--space-6);border-bottom:var(--stroke-1) solid var(--line);background:var(--surface)}
+.crud-modal>header,.modal-header{flex:none;position:relative;display:grid;grid-template-columns:minmax(0,1fr) var(--size-32);align-items:center;gap:var(--space-3);column-gap:var(--space-4);min-height:var(--size-64);padding:var(--space-3) var(--modal-inset);border-bottom:var(--stroke-1) solid var(--modal-header-line);background:var(--modal-header-background)}
 .crud-modal>header>div:not(.modal-heading-meta,.modal-header-details){display:grid;flex:1;gap:var(--space-1);min-width:0}
 .crud-modal h2{margin:0;color:var(--ink-950);font-size:var(--font-size-lg);font-weight:var(--weight-semibold);letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-tight);text-wrap:balance;overflow-wrap:anywhere}
-.crud-modal>header h2,.modal-header h2{margin:0;color:var(--ink-950);font-size:var(--font-size-lg);font-weight:var(--weight-semibold);line-height:var(--line-height-tight);overflow-wrap:anywhere}
+.crud-modal>header h2,.modal-header h2{margin:0;color:var(--modal-header-foreground);font-size:var(--font-size-lg);font-weight:var(--weight-semibold);line-height:var(--line-height-tight);overflow-wrap:anywhere}
 /* Cierre (32 px, icono 16): transparente, sin caja ni cambio de color con hover. */
-.crud-modal>header>button,.modal-close{position:relative;display:grid;flex:none;place-items:center;width:var(--size-32);height:var(--size-32);padding:0;border:0;border-radius:var(--radius-md);background:transparent;color:var(--ink-600);transition:transform var(--duration-press) var(--easing-out)}
-.crud-modal>header>button:focus-visible,.modal-close:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}
+.crud-modal>header>button,.modal-close{position:relative;display:grid;flex:none;place-items:center;width:var(--size-32);height:var(--size-32);padding:0;border:0;border-radius:var(--radius-md);background:transparent;color:var(--modal-header-foreground);transition:transform var(--duration-press) var(--easing-out)}
+.crud-modal>header>button:focus-visible,.modal-close:focus-visible{outline:var(--stroke-2) solid var(--modal-header-focus);outline-offset:var(--space-0-5)}
 .crud-modal>header>button:active:not(:disabled),.modal-close:active:not(:disabled){transform:scale(var(--press-scale-icon))}
 .crud-modal>header>button:disabled,.modal-close:disabled{cursor:not-allowed;opacity:1}
-/* Cabecera blanca: solo título en tinta y X neutra directa, sin icono ni caja. */
+/* El icono de tarea acompaña al título; el cierre mantiene su área propia. */
 .crud-modal>header>button>svg,.modal-header>.modal-close>svg{width:var(--size-16);height:var(--size-16);flex:none}
 .crud-modal>header .modal-heading,.modal-header .modal-heading{display:grid;flex:1 1 0;min-width:0}
 .modal-heading h2{min-width:0;text-wrap:pretty}
+.modal-heading-copy{display:grid;gap:var(--space-1);min-width:0}
+.modal-header-description{margin:0;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-regular);line-height:var(--line-height-normal);text-wrap:pretty;overflow-wrap:anywhere}
+.modal-header:has(.modal-header-description){min-height:var(--size-80)}
+.modal-header .modal-heading.has-icon{grid-template-columns:var(--size-40) minmax(0,1fr);align-items:center;gap:var(--space-3)}
+.modal-heading-icon{display:grid;place-items:center;width:var(--size-40);height:var(--size-40)}
+/* La combinación vive en las tres zonas del modal, no en cajas alrededor de campos. */
+.crud-modal:has(.modal-form)>.modal-header{padding-block:var(--space-4)}
+.crud-modal:has(.modal-form) .modal-body{padding-top:var(--space-5);background:var(--modal-form-background)}
+.modal-body.form-grid{background:var(--modal-primary-background)}
 .modal-context{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3) var(--space-5);padding:var(--space-3) var(--space-6);border-bottom:var(--stroke-1) solid var(--line)}
 .modal-heading-meta{min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-1-5)}
 .modal-header-details{min-width:0}
@@ -33,7 +42,7 @@
 .crud-modal :where(dd,.modal-data-value){font-size:var(--font-size-base);font-weight:var(--modal-value-weight);color:var(--ink-950);overflow-wrap:anywhere}
 .crud-modal dd small{font-size:var(--font-size-label);font-weight:var(--modal-value-weight);color:var(--ink-500)}
 .crud-modal h3{font-size:var(--font-size-md);font-weight:var(--weight-bold)}
-/* Títulos de sección del cuerpo en detalles de pedido, venta y cobro: mayúsculas en tinta neutra con regla índigo tenue. El texto del DOM queda en minúsculas para lectores de pantalla. */
+/* Títulos de sección en caja normal, tinta neutra y separador fino. */
 .crud-modal .modal-section-title{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);line-height:var(--line-height-tight)}
 .modal-section-rule{padding-bottom:var(--space-2-5);border-bottom:var(--stroke-1) solid var(--line)}
 
@@ -64,7 +73,7 @@
 /* Patrón de detalle: no se usa en formularios sin un resumen real. */
 .crud-modal>.modal-workspace{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}
 .modal-workspace>:first-child{flex:1 1 auto;min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-.modal-summary{flex:none;min-width:0;margin:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(var(--size-170),.7fr);align-items:center;gap:var(--space-3) var(--space-6);padding:var(--space-4) var(--space-6);border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
+.modal-summary{flex:none;min-width:0;margin:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(var(--size-170),.7fr);align-items:center;gap:var(--space-3) var(--space-6);padding:var(--space-4) var(--modal-inset);border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
 /* Detalles: el pie de acciones comparte la superficie del resumen; una línea fina `line` separa las acciones. */
 .modal-workspace:has(>.modal-summary)+.modal-footer{background:var(--surface)}
 /* Con resumen al pie, la lista termina pegada a su línea divisoria: sin los 24 px de aire inferior del cuerpo. */
@@ -129,26 +138,26 @@
 .modal-summary.is-band .modal-summary-total{width:auto;justify-self:stretch;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;text-align:left}
 .modal-summary-total strong{color:var(--ink-950);font-size:var(--font-size-2xl);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;letter-spacing:var(--letter-spacing-tight);line-height:var(--line-height-tight);overflow-wrap:anywhere}
 
-/* Cuerpo desplazable: tanto el patrón nuevo (.modal-body) como los formularios heredados. */
+/* ModalForm distribuye el alto; ModalBody es el único cuerpo desplazable. */
 .crud-modal>:is(form,.modal-form){display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
+.modal-form[hidden]{display:none}
 /* Modales: barra fina siempre visible cuando hay más contenido; no usar hover-scroll en el cuerpo (oculta la barra hasta el hover). */
-.modal-body{flex:1 1 auto;min-height:0;padding:var(--space-2) var(--space-6) var(--space-6);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+.modal-body{flex:1 1 auto;min-height:0;padding:var(--modal-body-space) var(--modal-inset);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent;align-content:start}
 .modal-description{margin:0;color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal);overflow-wrap:anywhere}
-.crud-modal>form:not(.modal-form){padding:var(--space-2) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
 
-.modal-footer,.crud-modal>footer,.crud-modal>form>footer{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--space-2-5);padding:var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom));border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
+.modal-footer,.crud-modal>footer,.crud-modal>form>footer{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--space-2-5);padding:var(--space-4) var(--modal-inset) calc(var(--space-4) + var(--safe-area-bottom));border-top:var(--stroke-1) solid var(--modal-footer-line);background:var(--modal-footer-background)}
 .modal-footer-status{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2);margin-right:auto;min-width:0}
 .modal-footer-status .status{max-width:100%;white-space:normal}
 .modal-footer-status>span{color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.crud-modal>form:not(.modal-form)>footer{position:sticky;bottom:0;z-index:var(--z-raised);margin:var(--space-6) calc(var(--space-6) * -1) 0}
-/* Pantalla completa con form heredado: el bloque previo al pie absorbe el alto libre y el pie queda abajo, sin hueco debajo.
-   Sin alto libre (hoja o escritorio) el margen automático vale 0 y se conserva la separación del pie. */
-.crud-modal>form:not(.modal-form)>:has(+footer){margin-bottom:auto}
 :is(.modal-footer,.crud-modal>form>footer) .button:is(.primary,.ghost):not(:has(svg))::before{content:"";display:block;flex:0 0 var(--size-14);width:var(--size-14);height:var(--size-14);background:currentColor;-webkit-mask:var(--icon-mask-check) center/contain no-repeat;mask:var(--icon-mask-check) center/contain no-repeat}
 :is(.modal-footer,.crud-modal>form>footer) .button.ghost:not(:has(svg))::before{-webkit-mask-image:var(--icon-mask-close);mask-image:var(--icon-mask-close)}
 .modal-footer>.modal-footer-note{flex-basis:100%;margin:0;color:var(--ink-500);font-size:var(--font-size-xs);line-height:var(--line-height-normal)}
 .modal-footer .button,.crud-modal>footer .button,.crud-modal>form>footer .button{min-width:var(--size-104)}
+/* Salir a la izquierda; alternativas y confirmación a la derecha. La intención
+   viene declarada por el botón, nunca se deduce de la etiqueta visible. */
+.modal-footer>[data-action=cancel]{margin-inline-end:auto;min-width:var(--size-64);padding-inline:var(--space-2);justify-content:flex-start}
+.modal-footer>[data-action=cancel]>svg,.modal-footer>[data-action=cancel]::before{display:none}
 .modal-action-layout{min-width:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-2-5)}
 
 .modal-loading{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:var(--space-4)}
@@ -159,7 +168,9 @@
 .modal-loading-value{width:72%;height:var(--size-14)}
 
 /* Guardado en curso: bloquea desde el primer cuadro, atenúa tras --duration-fast y solo en esperas largas muestra un spinner sin texto. */
-.modal-busy{position:absolute;inset:var(--size-52) 0 var(--size-64);z-index:var(--z-header);display:grid;place-items:center;background:var(--surface-alpha-64);cursor:progress;animation:modal-busy-in var(--duration-base) var(--easing-out) var(--duration-fast) both}
+.modal-busy{position:absolute;inset:var(--size-64) 0 var(--size-64);z-index:var(--z-header);display:grid;place-items:center;background:var(--surface-alpha-64);cursor:progress;animation:modal-busy-in var(--duration-base) var(--easing-out) var(--duration-fast) both}
+.crud-modal:has(.modal-form)>.modal-busy{inset-block-start:var(--size-72)}
+.crud-modal:has(.modal-header-description)>.modal-busy{inset-block-start:var(--size-80)}
 .modal-busy-indicator{display:grid;place-items:center;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-pill);color:var(--primary-600);background:var(--surface);box-shadow:var(--elevation-3);animation:modal-busy-indicator-in var(--duration-base) var(--easing-out) var(--delay-long-wait) both}
 @keyframes modal-busy-in{from{opacity:0}}
 @keyframes modal-busy-indicator-in{from{opacity:0;transform:scale(.9)}}
@@ -182,10 +193,14 @@
   .modal-summary-total strong{font-size:var(--font-size-lg)}
 }
 @media (width<=600px){
+  .crud-modal:has(.modal-form)>.modal-header{padding-block:var(--space-2-5)}
+  .crud-modal:is(.size-lg,.size-xl):has(.modal-form)>.modal-header{padding-top:calc(var(--space-2-5) + var(--safe-area-top))}
+  .crud-modal:has(.modal-form)>.modal-busy{inset-block-start:var(--size-64)}
+  .crud-modal:has(.modal-form) .modal-body{padding-top:var(--space-4)}
   .modal-backdrop{align-items:end;padding:0}
   .crud-modal,.crud-modal.compact,.crud-modal.size-sm,.crud-modal.size-md{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;animation:modal-sheet-in var(--duration-drawer) var(--easing-drawer) both}
   .crud-modal.size-lg,.crud-modal.size-xl{width:100%;height:100dvh;max-height:100dvh;border-radius:0;animation:modal-sheet-in var(--duration-drawer) var(--easing-drawer) both}
-  .crud-modal>header,.modal-header{padding-inline:var(--space-4)}
+  .crud-modal>header,.modal-header{min-height:var(--size-56);padding:var(--space-1-5) var(--modal-inset)}
   .crud-modal>header.modal-header{display:grid;grid-template-columns:minmax(0,1fr) var(--size-44)}
   .crud-modal>header>button,.modal-close{width:var(--size-44);height:var(--size-44)}
   .modal-header>.modal-heading{grid-row:1;grid-column:1}
@@ -200,11 +215,12 @@
   .modal-item-components .modal-item-component-name{grid-column:1/-1;grid-row:2;padding:0 0 var(--space-2)}
   .modal-item-components .modal-item-component-side{grid-column:2;grid-row:1;padding:var(--space-2) 0 var(--space-0-5)}
   .crud-modal.size-lg>header,.crud-modal.size-xl>header{padding-top:calc(var(--space-2) + var(--safe-area-top))}
-  .modal-body,.crud-modal>form:not(.modal-form){padding-inline:var(--space-4)}
-  .crud-modal>form:not(.modal-form)>footer{margin-inline:calc(var(--space-4) * -1)}
+  .modal-body{padding-inline:var(--space-4)}
   .modal-footer,.crud-modal>footer,.crud-modal>form>footer{padding-inline:var(--space-4)}
   .modal-footer-status{flex-basis:100%}
   .modal-footer .button,.crud-modal>footer .button,.crud-modal>form>footer .button{flex:1;min-width:0}
+  .modal-footer:has(>[data-action=cancel])>.button{flex:0 1 auto;min-width:var(--size-104)}
+  .modal-footer>[data-action=cancel]{min-width:var(--size-64)}
   .modal-action-layout{width:100%}
   .modal-action-layout>.modal-action-subgroup{display:contents}
   .modal-footer .modal-action-layout .button{flex:1 1 var(--size-150);width:auto;min-width:0;height:auto;min-height:var(--size-48);padding:0 var(--space-3);white-space:normal;line-height:var(--line-height-tight)}
@@ -217,6 +233,12 @@
    La hoja ocupa todo el alto, cabecera y pie se compactan y la franja de contexto (ya leída al abrir)
    se oculta para que el formulario muestre más campos. Las acciones siguen visibles. */
 @media (width<=600px) and (height<=560px){
+  .modal-header-description{display:none}
+  .modal-header:has(.modal-header-description){min-height:var(--size-48)}
+  .crud-modal:has(.modal-header-description)>.modal-busy{inset-block-start:var(--size-48)}
+  .crud-modal:has(.modal-form)>.modal-header,.crud-modal:is(.size-lg,.size-xl):has(.modal-form)>.modal-header{padding-block:var(--space-0-5)}
+  .crud-modal:has(.modal-form)>.modal-busy{inset-block-start:var(--size-48)}
+  .crud-modal:has(.modal-form) .modal-body{padding-top:var(--space-2)}
   .crud-modal,.crud-modal.compact,.crud-modal.size-sm,.crud-modal.size-md{max-height:100dvh;border-radius:0}
   .crud-modal>header,.modal-header{min-height:var(--size-48);padding-block:var(--space-0-5)}
   .crud-modal>header h2,.modal-header h2{font-size:var(--font-size-md)}

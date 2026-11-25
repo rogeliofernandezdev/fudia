@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Escenas de la demo — en orden</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f4f4f6; margin: 0; padding: 32px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { color: #666; margin: 0 0 28px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+  figure { margin: 0; background: #fff; border-radius: 12px; overflow: hidden;
+           box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  img { width: 100%; display: block; }
+  figcaption { padding: 10px 14px; font-size: 13px; }
+  .num { display: inline-block; background: #1a1a1a; color: #fff; border-radius: 6px;
+         padding: 1px 8px; font-weight: 600; margin-right: 8px; }
+  .t { color: #999; float: right; }
+</style>
+</head>
+<body>
+<h1>Demo «Kestrel» — 8 escenas en orden</h1>
+<p class="sub">Extraídas del video de 22 s; para cada escena se eligió el fotograma más nítido.</p>
+<div class="grid">
+  <figure><img src="escenas_finales/01_dashboard_inicial.png"><figcaption><span class="num">1</span>Dashboard inicial — 0 acciones, 00:00<span class="t">0.0 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/02_dashboard_tras_timelapse.png"><figcaption><span class="num">2</span>Dashboard tras el time-lapse — 14 acciones<span class="t">5.9 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/03_rebalance_detalle_ordenes.png"><figcaption><span class="num">3</span>Detalle «Rebalance to 50/25/15/10» — órdenes y market depth<span class="t">10.5 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/04_guardrail_checks_approve.png"><figcaption><span class="num">4</span>Guardrail checks + botón «Approve 4 orders»<span class="t">11.5 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/05_modal_aprobacion_sin_marcar.png"><figcaption><span class="num">5</span>Modal «Over your $5,000 approval line» — sin marcar<span class="t">13.8 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/06_modal_checkboxes_passkey.png"><figcaption><span class="num">6</span>Checkboxes marcados + «Confirm with passkey»<span class="t">16.6 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/07_modal_orders_placed.png"><figcaption><span class="num">7</span>Confirmación «✓ Orders placed»<span class="t">17.2 s</span></figcaption></figure>
+  <figure><img src="escenas_finales/08_dashboard_final.png"><figcaption><span class="num">8</span>Dashboard final — cierre de la demo<span class="t">21.5 s</span></figcaption></figure>
+</div>
+</body>
+</html>

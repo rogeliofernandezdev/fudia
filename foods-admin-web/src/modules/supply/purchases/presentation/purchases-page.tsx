@@ -6,7 +6,7 @@ import "./purchases.css";
 import {useRef,useState} from "react";
 import {useFieldArray,useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter,FormSection} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter,FormSection,ModalForm,ModalBody} from "@/design-system";
 import {useFeedback,useMoney,useSession,useSettings} from "@/providers";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -526,10 +526,10 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   });
 
   return <>
-    <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}>
-      <ModalHeader title={initial.id?"Editar orden":"Nueva orden de compra"} titleId="purchase-order-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-      <form onSubmit={handleSubmit(submit)} noValidate inert={busy}><div className="purchase-form-body">
-        <section className="purchase-form-section" aria-labelledby="purchase-order-data-title">
+    <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy} aria-describedby="purchase-order-title-description">
+      <ModalHeader title={initial.id?"Editar orden":"Nueva orden de compra"} titleId="purchase-order-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="cart" description="Selecciona el proveedor y los artículos que necesitas."/>
+      <ModalForm onSubmit={handleSubmit(submit)} noValidate inert={busy}><ModalBody className="purchase-form-body">
+        <section className="purchase-form-section form-primary" aria-labelledby="purchase-order-data-title">
           <h3 className="purchase-form-heading" id="purchase-order-data-title">Datos de la orden</h3>
           <div className="form-grid purchase-order-meta-grid">
             <FormField label="Proveedor" error={errors.supplierId?.message}><Select autoFocus {...register("supplierId")}><option value="">{suppliers.length?"Selecciona un proveedor":"No hay proveedores activos"}</option>{suppliers.map(supplier=><option value={supplier.id} key={supplier.id}>{supplier.name}{supplier.taxId?" · "+supplier.taxId:""}</option>)}</Select></FormField>
@@ -568,7 +568,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items.message}</div>}
           {fields.length>0&&<div className="purchase-total"><span>Total estimado<small>{fields.length} {fields.length===1?"línea":"líneas"}</small></span><strong>{money(total)}</strong></div>}
         </section>
-      </div><ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0} loading={busy}>{busy?"Guardando…":"Guardar borrador"}</Button></ModalFooter></form>
+      </ModalBody><ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0} loading={busy}>{busy?"Guardando…":"Guardar borrador"}</Button></ModalFooter></ModalForm>
     </Dialog></div>
 
     {presentationTarget&&<PurchasePresentationDialog item={presentationTarget.item} close={()=>setPresentationTarget(null)} save={presentation=>{
@@ -594,7 +594,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
 
 function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:boolean;close:()=>void;save:(draft:SupplierDraft)=>void}){
   const{register,handleSubmit,formState:{errors}}=useForm<SupplierDraft>({defaultValues:initial,resolver:supplierResolver,mode:"onSubmit",reValidateMode:"onChange"});
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="supplier-title" aria-busy={busy}><ModalHeader title={initial.id?"Editar proveedor":"Nuevo proveedor"} titleId="supplier-title" onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={handleSubmit(save)} noValidate><div className="form-sections">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="supplier-title" aria-busy={busy} aria-describedby="supplier-title-description"><ModalHeader title={initial.id?"Editar proveedor":"Nuevo proveedor"} titleId="supplier-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="truck" description="Datos del proveedor para tus órdenes de compra."/><ModalForm onSubmit={handleSubmit(save)} noValidate><ModalBody className="form-sections">
     <FormSection icon="truck" title="Datos del proveedor">
     <FormField className="span-2" label="Nombre o razón social" error={errors.name?.message}><Input autoFocus {...register("name")} placeholder="Ej. Distribuidora Andina"/></FormField>
     <FormField label="RUC" optional error={errors.taxId?.message}><Input icon="badge" inputMode="numeric" maxLength={11} {...register("taxId")} placeholder="20123456789"/></FormField>
@@ -603,7 +603,7 @@ function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:bo
     <FormField label="Teléfono" optional><Input icon="phone" type="tel" {...register("phone")} placeholder="Ej. 987 654 321"/></FormField>
     <FormField label="Correo electrónico" optional error={errors.email?.message}><Input icon="mail" type="email" {...register("email")} placeholder="compras@proveedor.com"/></FormField>
     </FormSection>
-  </div><ModalFooter><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>;
+  </ModalBody><ModalFooter><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm></Dialog></div>;
 }
 
 function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,pending,currency,country,timezone,close,edit,changeStatus,approve,receive,cancel,viewReceipt,viewingReceiptId}:{order:PurchaseOrder;mode:"view"|"review";canManage:boolean;canApprove:boolean;canReceive:boolean;busy:boolean;/** Acción en curso: su botón muestra el gerundio y el spinner. */pending?:"approve"|"draft"|"pending_approval"|"cancelled";currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:"draft"|"pending_approval"|"cancelled")=>void;approve:()=>void;receive:()=>void;cancel:()=>void;viewReceipt:(id:string)=>void;viewingReceiptId:string}){

@@ -82,9 +82,9 @@ export function InventoryAdjustmentDialog({busy,close,save}:{busy:boolean;close:
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy} aria-describedby="inventory-adjustment-title-description">
 
-      <ModalHeader title="Registrar ajuste" titleId="inventory-adjustment-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title="Registrar ajuste" titleId="inventory-adjustment-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="stock" description="Indica el artículo, la cantidad y el motivo del ajuste."/>
       <ModalForm onSubmit={handleSubmit(submit)} noValidate>
         <ModalBody>
           <div className="inventory-adjustment-fields">

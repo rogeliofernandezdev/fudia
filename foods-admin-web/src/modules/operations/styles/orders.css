@@ -149,8 +149,8 @@
 }
 
 .order-row-icon.oc-whatsapp{
-  color:var(--digital-700);
-  background:var(--digital-100);
+  color:var(--chat-header);
+  background:var(--chat-outgoing);
 }
 
 .order-row-icon.oc-delivery,

@@ -36,7 +36,7 @@ test("cerrar exige botón explícito, bloquea doble envío y espera el API",asyn
   if(name==="react-hook-form")return{useForm:options=>{form=rhf.createFormControl(options);return {...form,formState:{errors:{}}}},useWatch:options=>form.control._getWatch(options.name)};
   if(name.endsWith("/tips"))return{TipClosingSection:"TipClosingSection"};
   if(name.endsWith("cash-schema"))return schema;
-  if(name==="@/design-system")return new Proxy({},{get:(_,key)=>String(key)});
+  if(name==="@/design-system")return new Proxy({},{get:(_,key)=>key==="ModalForm"?"form":String(key)});
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
   if(name.endsWith("cash-report-content"))return{CashReportContent:"CashReportContent"};
   if(name.endsWith("cash-api"))return{listCashExpenseCategories:async()=>({items:[]})};

@@ -13,7 +13,7 @@ const product={id:"agua",name:"Agua mineral",description:"",categoryId:null,cate
 function compile(path,resolve){
  const exports={};
  const source=readFileSync(new URL(path,root),"utf8");
- vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
+ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name.endsWith(".css")?{}:resolve(name)});
  return exports;
 }
 

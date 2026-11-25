@@ -1,4 +1,4 @@
-# Sistema de diseño administrativo — FUDIA DS 1.0
+# Sistema de diseño administrativo — FUDIA DS 1.1
 
 Este documento es la autoridad visual de `foods-admin-web` y no depende de
 documentos externos. La primera parte fija los fundamentos (tokens, tipografía,
@@ -12,6 +12,66 @@ reemplaza la identidad azul operativo + marino anterior: superficies blancas,
 fondo gris claro, sombras suaves, tipografía Inter, acción y selección en
 índigo corporativo y estados en superficies pastel. No se mantiene una segunda
 identidad: cualquier resto del sistema anterior es un defecto por corregir.
+
+## Homologación de composición — 2026-11-25
+
+FUDIA DS **1.1** completa la adaptación del video de referencia autorizada por
+el usuario: superficies blancas, composición limpia e índigo en lugar de los
+rellenos negros de interacción. Sustituye las decisiones anteriores de cabecera
+grafito y espaciado heredado. La matriz semántica pastel aprobada el 24 de
+noviembre sigue vigente; el índigo no sustituye colores de estados.
+
+- **Página:** 24 px arriba y a los lados, 32 px abajo. Hasta 820 px: 20 px
+  arriba y 16 px laterales. El shell y Plataforma consumen los mismos roles
+  `page-space`, `page-inset` y `page-bottom-space`.
+- **Navegación:** 224 px en escritorio, 210 px en escritorio estrecho y drawer
+  de hasta 320 px en móvil; enlaces de al menos 44 px. Las reglas base preceden
+  a las adaptaciones. El modo contraído alinea sus 78 px con el contenido.
+- **Formularios:** `ModalForm` no tiene padding ni scroll. `ModalBody`
+  posee el único scroll y 24 px laterales e inferiores; en móvil, 16 px.
+  En formularios deja 20 px tras la cabecera (16 px móvil y 8 px con teclado).
+  El header, cuerpo, resumen y footer comparten `modal-inset`. No anidar
+  contenedores que vuelvan a añadir sangría general. El pie es un hermano fijo del cuerpo,
+  sin sticky, márgenes negativos ni desplazamiento del formulario completo.
+- **Tablas:** cabecera índigo `table-header-background` (primary-700), texto
+  blanco `table-header-foreground`; las columnas fijas usan esos mismos roles.
+  Celdas a 16 px en escritorio, alineadas con los filtros, y 12 px en móvil.
+- **Composición de formularios:** la referencia guía la jerarquía y el ritmo.
+  El patrón aprobado a partir de la imagen tiene encabezado blanco, icono de
+  apoyo y explicación breve debajo del título. No utiliza encabezados oscuros
+  ni franjas sólidas de marca. El cuerpo y el pie permanecen claros. El grupo
+  principal usa `modal-primary-background` (primary-50), mientras que los grupos
+  secundarios continúan sobre blanco. El énfasis se completa con tipografía,
+  proximidad e iconos; no se reduce a añadir una caja gris. Los títulos
+  siempre preceden a sus campos, sin columnas laterales de encabezados.
+  Se conserva el orden, los grupos y la distribución propios de cada formulario;
+  la homologación corrige su espaciado, superficie, tipografía e iconos de apoyo.
+  Productos conserva su composición aprobada: imagen a
+  la izquierda, datos a la derecha y descripción visible. No se inventan
+  resúmenes para formularios vacíos.
+- **Combinación de color:** las familias se asignan a funciones mediante
+  `getIdentityTone` y se comparten entre el icono del encabezado y `FormSection`:
+  menta para caja, pagos y preparación; durazno para gastos y categorías;
+  celeste para clientes y reservas; violeta para productos, accesos e integraciones;
+  petróleo para contacto, proveedores y compras. El primer grupo de datos
+  toma una superficie clara de su familia; los siguientes mantienen fondo blanco
+  con título e icono de color. El prefijo de los importes usa índigo tenue.
+  Los textos y símbolos conservan contraste AA. Esta identidad no representa
+  un resultado: estados, avisos y acciones destructivas conservan sus familias
+  semánticas aprobadas, con etiqueta explícita.
+- **Jerarquía:** secciones de formulario de 16 px; grupos de campos con 16 px
+  de separación y secciones con 20–24 px. Mantener 40 px de control de escritorio
+  y 48 px táctiles; compactar la composición no reduce las áreas de interacción.
+- **Superficies:** indicadores del Dashboard blancos; el significado vive en
+  cifras, iconos y estados. Acciones de tabla sin cajas tintadas permanentes,
+  hover índigo tenue y foco visible. Sombras de acción discretas, sin halo índigo.
+  El contacto de un detalle se integra en su superficie, sin otra tarjeta.
+- **Plataforma:** cabecera blanca y navegación índigo tenue, con los mismos
+  campos, botones y márgenes que la administración.
+
+Chat público, billeteras, QR, PDF y colores semánticos conservan su identidad.
+La homologación se verifica en rutas reales y formularios de Gastos, Clientes,
+Compras/Proveedores, Productos y Usuarios/Roles, además de los componentes base.
 
 ## Dirección
 
@@ -27,7 +87,7 @@ tarea, no por la decoración.
   representa interacción y selección: acción principal, selección, foco y
   navegación activa. No decora: no es color de estado ni de fondo.
 - **Neutros de la especificación.** Superficies blancas, fondo general
-  `cloud-50 #F3F4F6`, grafito `ink-700 #374151` para encabezados de tabla.
+  `cloud-50 #F3F4F6`, grafito `ink-700 #374151` para texto general.
 - **Estados pastel.** Toda estado usa superficie pastel, texto oscuro de su
   familia e indicador de color. No existe la píldora sólida de la versión
   anterior; la etiqueta y el contexto completan el significado.
@@ -61,11 +121,12 @@ utilidades resuelvan a los mismos tokens: `bg-primary-600`, `text-ink-500`,
 | --- | --- | --- |
 | Superficie | `surface`, `cloud-25`, `cloud-50`, `cloud-100`, `cloud-150` | Paneles en blanco; fondo de página `cloud-50` (#F3F4F6); hover de superficies `cloud-25` (#F9FAFB); hundidos y deshabilitados en `cloud-100`; pista y estados neutros en `cloud-150` |
 | Líneas | `line`, `line-strong` | `line` (#E5E7EB) divisores y paneles; `line-strong` (#D1D5DB) bordes de campos |
-| Texto e iconos | `ink-950`, `ink-800`, `ink-700`, `ink-600`, `ink-500`, `ink-400`, `ink-300` | `ink-950` (#18181B) títulos e importes; `ink-700` (#374151) texto general y **encabezado grafito de tabla**; `ink-600` secundario; `ink-500` auxiliar; `ink-400` marcadores; `ink-300` iconos deshabilitados |
+| Texto e iconos | `ink-950`, `ink-800`, `ink-700`, `ink-600`, `ink-500`, `ink-400`, `ink-300` | `ink-950` (#18181B) títulos e importes; `ink-700` (#374151) texto general y datos secundarios; `ink-600` secundario; `ink-500` auxiliar; `ink-400` marcadores; `ink-300` iconos deshabilitados |
 | Índigo corporativo | `primary-25` … `primary-800` | `primary-600 #4654CD` acción, selección, foco y elemento activo; `primary-700` hover; `primary-800` pressed; `primary-50` fondos seleccionados |
 | Información | `info-50/100/200/500/600/800` | Semántica azul (#3B82F6): confirmado, en camino y hitos informativos; distinta del índigo de acción |
 | Éxito | `brand-50 … brand-800` | Verde de éxito (#10B981): confirmado, pagado, entregado, activo |
-| Violeta digital | `digital-50 … digital-700` | WhatsApp, IA/automatización e integraciones (#8B5CF6) |
+| Violeta digital | `digital-50 … digital-700` | IA/automatización e integraciones (#8B5CF6); nunca representa WhatsApp |
+| WhatsApp | `chat-header`, `chat-outgoing` | Identidad propia del canal (#008069 sobre #D9FDD3); nunca violeta ni índigo |
 | Petróleo | `teal-100/200/300/500/700` | Cuenta abierta y acento de identidad (#14B8A6) |
 | Celeste identidad | `sky-100/200/500/800` | Acento de identidad (categorías, hitos de cuenta); no comparte tono con la información |
 | Morado categórico | `purple-100/200/600` | Serie de gráfico y acento puntual; ya no es estado |
@@ -98,7 +159,8 @@ Reglas:
   derivados `*-soft` y `*-border` propios. Los valores reales del repositorio
   tienen prioridad sobre cualquier referencia externa.
 - **WhatsApp y Telegram.** Mantienen su iconografía de marca (`whatsapp`) y el
-  tono violeta digital; nunca se sustituyen por índigo.
+  color propio de la paleta `--chat-*` (verde `chat-header #008069` con fondo
+  suave `chat-outgoing #D9FDD3`): nunca violeta ni índigo.
 - **Logo de Fudia.** Se conserva sin cambios (`logo-mark.png`); el wordmark
   usa el índigo sobre superficie clara.
 
@@ -275,7 +337,9 @@ gestos, teclado o áreas seguras.
   borde `line-strong`, texto `ink-950`), `tonal` (`primary-50` con texto
   `primary-700`), `ghost` (transparente, texto `ink-700`), `link` (índigo,
   subrayado en hover), `danger` (`danger-500`), `danger-outline` (borde
-  `danger-200`, fondo `danger-50`) y `danger-subtle`. Tamaños: XS 28, SM 32,
+  `danger-200`, fondo `danger-50`) y `danger-subtle`. Las variantes `strong`
+  de `secondary` y `ghost` usan el sólido índigo `primary-600` con hover
+  `primary-700`: no existe superficie grafito en botones. Tamaños: XS 28, SM 32,
   MD (control) 40, LG 48. Peso 500–600, icono a la izquierda, foco de 2 px.
   `Button action` centraliza intenciones: `cancel` (neutro), `cancel-record`
   (rojo tenue), `back` (neutro), `continue` (índigo, flecha al final). En móvil
@@ -288,12 +352,19 @@ gestos, teclado o áreas seguras.
   y una secundaria. Sin eyebrow.
 - **Modales**: `Modal` con tamaños `sm` 480, `md` 640, `lg` 880 y `xl` 1040.
   Superficie blanca, radio `--radius-dialog`, sombra `--elevation-4`, overlay
-  negro al 40 % con desenfoque de 2 px. Cabecera blanca con título 18 px/600 en
-  tinta y X neutra de 32 px (44 px táctil en móvil), sin icono antes del
-  título. Cuerpo desplazable y pie fijo blanco con `Cancelar` antes de
-  `Guardar`, acciones contiguas a la derecha. En móvil, hoja inferior (radio
+  negro al 40 % con desenfoque de 2 px. Cabecera blanca con título oscuro 18 px/600
+  y X neutra; cierre de 32 px (44 px táctil en móvil). Los formularios tienen
+  un icono de tarea de 20 px sobre una superficie índigo tenue de 40 px;
+  contexto breve con `description` y cabecera de al menos 80 px, con divisor inferior.
+  El contexto se oculta con el teclado abierto para recuperar altura. Los detalles de lectura
+  conservan título y X, con cabecera de 64 px (56 px móvil).
+  Cuerpo blanco desplazable y pie fijo blanco con divisor superior.
+  `Cancelar` queda a la izquierda; alternativas y acción principal índigo a la
+  derecha, conservando su orden en el DOM. La intención se declara con
+  `Button action="cancel"`, sin inferirla del texto. En móvil, hoja inferior (radio
   `--radius-sheet`) o pantalla completa. Escape y el fondo nunca cierran un
   modal; con cambios sin guardar, cerrar pide confirmar el descarte.
+  Visor PDF y opciones del chat público mantienen sus superficies protegidas.
 - **Confirmaciones**: `ConfirmDialog` con icono semántico sobre superficie
   pastel, entrada sobria (escala 0.98, 180 ms) y confirmación destructiva roja.
 - **Pestañas** (`Tabs` compartido): la activa se reconoce por fondo índigo
@@ -301,11 +372,11 @@ gestos, teclado o áreas seguras.
   inferior de 3 px**; las inactivas son transparentes con indicador `line`.
   Cuerpo de 44 px en escritorio y 52 px en móvil, contadores indigo y tono de
   familia para carriles y canales (`TabTone`: `primary`, `info`, `orange`,
-  `green`, `violet`). Las franjas que filtran una lista larga usan la variante
+  `green`, `violet`, `whatsapp`). Las franjas que filtran una lista larga usan la variante
   chips (`ds-tabs--chips`): píldoras blancas con borde, activa en índigo pastel.
-- **Tablas**: contenedor blanco con radio de tarjeta; **encabezado grafito
-  `ink-700` (#374151) con texto blanco** de 12 px/500 y 40 px de alto,
-  decisión definitiva que reemplaza cualquier cabecera clara o azul anterior.
+- **Tablas**: contenedor blanco con radio de tarjeta; **encabezado índigo
+  `table-header-background` (primary-700) con texto blanco** de 12 px/500 y 40 px de alto,
+  decisión definitiva que reemplaza cualquier cabecera grafito anterior.
   Filas compactas de 48 px (56 px táctil), hover `primary-25`, seleccionadas
   `primary-50`, sin cebra ni bordes verticales, cifras tabulares, importes a
   la derecha y columna identificadora fija en móvil.
@@ -389,7 +460,8 @@ Matriz semántica (tono de `Status`):
 El color representa un significado compartido, no un identificador universal:
 ámbar es lo pendiente o en elaboración, azul información (confirmado, traslado),
 verde éxito confirmado, rojo cancelación o error, petróleo la cuenta abierta,
-violeta la oferta y el canal digital. Cuenta abierta (`teal`) no comparte tono
+violeta la oferta de despacho; el canal WhatsApp usa su verde propio
+(`tone-whatsapp`). Cuenta abierta (`teal`) no comparte tono
 con Confirmado (`blue`), ni Pagada (`green`) con Finalizada (`gray`).
 `tests/operational-status-standard.test.mjs` verifica la paleta exacta de cada
 tono (`cloud-100`, `info-bg`, `sky-100`, `violet-bg`, `success-bg`,
@@ -408,14 +480,14 @@ rojo sólido y el aviso dice «N con demora · M por vencer».
 - **Header**: blanco, borde inferior `line`, altura `--shell-header` (64/56),
   sticky, sin sombra. Buscador, selector de local, avisos y perfil conservan
   su comportamiento.
-- **Sidebar**: blanco con borde derecho `line`, 250 px expandido (210 px ≤1100,
-  drawer en ≤820). Ítems de 40 px con radio `--radius-tile`: texto `ink-600`,
+- **Sidebar**: blanco con borde derecho `line`, 224 px expandido (210 px ≤1100,
+  drawer en ≤820). Ítems de 44 px con radio `--radius-tile`: texto `ink-600`,
   hover `cloud-100`, **activo `primary-600` con texto e icono blancos**, y
   grupo activo `primary-50`/`primary-700`. Etiquetas de grupo 11 px/600
   `ink-500`. Contadores en `danger-600`. En móvil: drawer con overlay al 40 %,
   cierre accesible y restauración del foco.
-- **Header de tabla grafito**: toda tabla administrativa usa el encabezado
-  `ink-700` con texto blanco (decisión definitiva; los listados móviles
+- **Header de tabla índigo**: toda tabla administrativa usa el encabezado
+  `table-header-background` con texto blanco (decisión definitiva; los listados móviles
   derivados lo conservan).
 
 ## Especificaciones por pantalla
@@ -427,19 +499,19 @@ las reglas visuales compartidas vigentes con su ruta operativa:
 | --- | --- | --- |
 | Dashboard | `/dashboard` | Cifras protagonistas en `ink-950`, KPI con `StatCard` (28 px/600), señales operativas con chips de familia semántica y gráficos multicolor controlados (serie principal `primary-600`, categóricas teal/sky/morado/peach, histórico `ink-400`). |
 | Salón | `/dining-room` | Plano de mesas: tarjeta blanca, casetón apenas teñido (`primary-100` al 50 %) y el plato como único color pleno (ocupado `primary-600`, libre punteado). Estados de mesa según la matriz; zonas en chips (`cmd-chip`) fijos bajo la barra en móvil (`top: var(--shell-header)`). |
-| Pedidos | `/orders` | `DataTable` con encabezado grafito, pestañas de canal con tono de familia y detalle por capas (`DetailHero`/`DetailContact`/`Tabs`). |
+| Pedidos | `/orders` | `DataTable` con encabezado índigo, pestañas de canal con tono de familia (WhatsApp en su verde propio) y detalle por capas (`DetailHero`/`DetailContact`/`Tabs`). |
 | Cocina | `/kitchen` | Carriles según KDS (arriba), botones operativos de 48 px y temporizadores tabulares. |
 | Cobros (`/pos`, antes «Punto de venta») | `/pos` | Importes principales en negro suave, resumen financiero en superficie clara (`cloud-25`), desglose hundido, métodos de pago con círculos Yape/Plin y confirmación índigo; el detalle de consulta es de solo lectura y el cobro conserva pantalla completa. |
-| Caja | `/cash` | Turnos, pagos detectados, historial y gastos con estados de la matriz; importes a la derecha y encabezado grafito. |
+| Caja | `/cash` | Turnos, pagos detectados, historial y gastos con estados de la matriz; importes a la derecha y encabezado índigo. |
 | Ventas | `/sales` | Franja compacta del total sobre una superficie, periodos fijos en móvil bajo `--shell-header` y detalle por capas con pestañas en azul de familia. |
 | Mesas | `/tables` | Tarjetas QR con código negro (`qr-ink`) sobre blanco y zona de silencio intacta. |
 | Reservas | `/reservations` | Estados según la matriz (pendiente ámbar, confirmada información, sentada éxito, cancelada peligro). |
 | Delivery | `/delivery` | Pedidos, proveedores, tarifas y entregas fallidas con estados del despacho (violeta/oferta, información/traslado, éxito/entrega, peligro/cancelado). |
-| Carta y productos | `/products`, `/combos`, `/recipes`, `/availability` | Catálogo con encabezado grafito, filtros en chips y estados de disponibilidad (éxito/ámbar/peligro). |
-| Inventario y compras | `/inventory`, `/stock-ledger`, `/purchases` | Stock según la matriz (éxito/ámbar/peligro), cantidades a la derecha y encabezado grafito. |
+| Carta y productos | `/products`, `/combos`, `/recipes`, `/availability` | Catálogo con encabezado índigo, filtros en chips y estados de disponibilidad (éxito/ámbar/peligro). |
+| Inventario y compras | `/inventory`, `/stock-ledger`, `/purchases` | Stock según la matriz (éxito/ámbar/peligro), cantidades a la derecha y encabezado índigo. |
 | Clientes | `/customers` | Detalle de solo lectura con `DetailHero`, `DetailContact` y `DetailFacts`. |
 | Locales y Mi restaurante | `/locations`, `/settings/*` | Formularios por secciones con `FormSection` y mapa en el cuerpo desplazable. |
-| Usuarios y roles | `/settings/users` | Tabla con encabezado grafito y permisos con tiles de identidad. |
+| Usuarios y roles | `/settings/users` | Tabla con encabezado índigo y permisos con tiles de identidad. |
 | Facturación | `/receipts`, `/settings/billing` | Estados fiscales centralizados en `fiscalStatusView` (información/éxito/ámbar/peligro/neutro). |
 | Plataforma | `/platform/*` | Onboarding, planes, suscripción, impuestos y canales WhatsApp con topbar de marca y estados de suscripción de la matriz. |
 | Acceso | `/login` | Fondo gris claro, tarjeta blanca, franja de marca índigo y campos neutros. |

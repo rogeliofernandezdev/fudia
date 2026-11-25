@@ -1,6 +1,6 @@
 /* Editor de rol: identidad, accesos al menú y permisos de acción en un solo desplazamiento */
 .role-editor-modal{width:min(var(--size-680),calc(100vw - var(--size-32)));max-height:min(var(--size-860),calc(100dvh - var(--size-32)))}
-/* El form del modal es el único scroll y ya aporta el margen interior (24 px): el cuerpo no suma otro. */
+/* ModalBody posee el único scroll; formulario y pie no se desplazan. */
 .role-editor-modal form{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 .role-editor-body{display:flex;flex-direction:column;gap:var(--space-4)}
 
@@ -11,10 +11,10 @@
 .role-editor-information textarea{min-height:var(--control-height);height:var(--control-height);resize:none}
 
 /* ── Panel de permisos: barra fija arriba y grupos en lista, sin tarjetas anidadas ── */
-.role-editor-perms-panel{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);overflow:clip;background:var(--surface)}
+.role-editor-perms-panel{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);overflow:clip;background:var(--surface);flex:none}
 /* Chrome descuenta el padding del form al fijar: se compensa para pegar la barra al borde. */
 /* Misma barra en Menú y Acciones: pestañas y filtro en la primera fila, búsqueda a todo el ancho debajo. */
-.re-perm-tabs{position:sticky;top:calc(var(--space-6) * -1);z-index:var(--z-raised);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-2);padding:var(--space-2);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
+.re-perm-tabs{position:sticky;top:calc(var(--modal-body-space) * -1);z-index:var(--z-raised);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-2);padding:var(--space-2);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
 .re-perm-tabs>.ds-tabs{width:max-content;max-width:100%;justify-self:start}
 .re-perm-show{grid-column:2;grid-row:1;justify-self:end;width:auto}
 .re-perm-search{grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:var(--space-1-5);min-width:0;width:100%}
@@ -102,21 +102,18 @@
   .re-acc-items{columns:1}
 }
 @media(max-width:600px){
-  /* Móvil: tarea a pantalla completa como la Comanda; un solo desplazamiento (el del form)
+  /* Móvil: tarea a pantalla completa como la Comanda; un solo desplazamiento (el de ModalBody)
      y pestañas + filtro + búsqueda fijas arriba para ver y marcar los permisos sin listas anidadas. */
   .role-editor-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
   .role-editor-modal>header{padding-top:calc(var(--space-2) + var(--safe-area-top))}
-  .crud-modal.role-editor-modal>form:not(.modal-form){height:auto;flex:1 1 auto;min-height:0;padding-top:var(--space-4)}
-  .role-editor-body{flex:none;overflow:visible;padding:0}
   .role-editor-perms-panel{flex:none;overflow:clip}
-  .re-perm-tabs{position:sticky;top:calc(var(--space-4) * -1);z-index:var(--z-raised)}
+  .re-perm-tabs{position:sticky;top:calc(var(--modal-body-space) * -1);z-index:var(--z-raised);grid-template-columns:var(--size-112) minmax(0,1fr)}
   .re-perm-accordion{overflow:visible}
   .re-acc-header{padding-inline:var(--space-2)}
   .re-action-module .re-acc-heading{flex-wrap:wrap;gap:var(--space-1-5);padding:0}
   .re-action-module .re-acc-name{flex-basis:var(--size-120)}
   .re-action-module .re-acc-count{margin-inline-start:auto}
   .re-section-title{padding-inline:var(--space-2)}
-  .re-perm-tabs{grid-template-columns:var(--size-112) minmax(0,1fr)}
   .re-perm-tabs>.ds-tabs{grid-column:1/-1;width:100%}
   .re-perm-show{grid-column:1;grid-row:2;width:100%}
   .re-perm-search{grid-column:2;grid-row:2}

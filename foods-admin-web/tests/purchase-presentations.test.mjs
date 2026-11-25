@@ -23,7 +23,7 @@ function mount({items=combos,loading=false,error=false,manage=true,pending=false
   if(name==="react-dom")return{createPortal:tree=>tree};
   if(name==="@tanstack/react-query")return{useQuery:options=>{queries.push(options);return query},useQueryClient:()=>({setQueryData:(key,fn)=>writes.push(fn({items})),invalidateQueries:()=>writes.push("invalidate")}),useMutation:options=>({isPending:pending,isError:false,mutate:draft=>{mutations.push(draft);options.onSuccess?.({...draft,unitName:"Botella"})}})};
   if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organization},can:()=>manage})};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","IconButton","Input","Select","Dialog"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","IconButton","Input","Select","Dialog","ModalForm","ModalBody"].map(key=>[key,key==="ModalForm"?"form":key]));
   if(name==="../infrastructure/purchases-api")return{};
   return withPresentationContent(name);
  });

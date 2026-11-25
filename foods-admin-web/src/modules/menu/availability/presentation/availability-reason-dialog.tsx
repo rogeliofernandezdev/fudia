@@ -1,7 +1,7 @@
 "use client";
 import {useRef} from "react";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,Dialog,FormField,Input,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,Dialog,FormField,Input,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {availabilityReasonResolver} from "../domain/availability-reason-schema";
 import type {AvailabilityChange,AvailabilityReasonDraft,AvailabilityReasonOption} from "../domain/types";
 
@@ -20,11 +20,11 @@ export function AvailabilityReasonDialog({change,options,busy,close,save}:{chang
   try{await handleSubmit(async value=>{await save({reasonCode:value.reasonCode,reason:value.reasonCode==="other"?value.reason.trim():""});})();}finally{submitting.current=false;}
  }
  const title=change.kind==="quota"?"Ajustar cupo":"Agotar hoy";
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="availability-reason-title" aria-busy={locked}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="availability-reason-title" aria-busy={locked} aria-describedby="availability-reason-title-description">
 
-  <ModalHeader title={<>{change.item.name} · {title}</>} titleId="availability-reason-title" onClose={close} busy={locked} closeLabel="Cerrar"/>
-  <form onSubmit={event=>event.preventDefault()} noValidate>
-   <div className="form-grid">
+  <ModalHeader title={<>{change.item.name} · {title}</>} titleId="availability-reason-title" onClose={close} busy={locked} closeLabel="Cerrar" icon="availability" description="Indica el motivo del cambio de disponibilidad."/>
+  <ModalForm onSubmit={event=>event.preventDefault()} noValidate>
+   <ModalBody className="form-grid">
     {change.kind==="quota"&&<><FormField label="Cupo actual"><Input value={change.item.portionQuantity??"Sin registrar"} readOnly disabled/></FormField><FormField label="Nuevo cupo"><Input value={change.portionQuantity??""} readOnly disabled/></FormField></>}
     <FormField className="span-2" as="div" label="Motivo" error={errors.reasonCode?.message}>
      <div className="availability-reasons" role="radiogroup" aria-label="Motivo del cambio">
@@ -32,8 +32,8 @@ export function AvailabilityReasonDialog({change,options,busy,close,save}:{chang
      </div>
     </FormField>
     {other&&<FormField className="span-2" label="Detalle" error={errors.reason?.message}><Textarea autoFocus rows={2} maxLength={240} disabled={locked} {...register("reason")} placeholder="Cuéntanos qué pasó"/></FormField>}
-   </div>
-   <ModalFooter><Button kind="ghost" onClick={close} disabled={locked}>Cancelar</Button><Button onClick={submit} disabled={locked} loading={locked}>{locked?"Guardando…":"Guardar"}</Button></ModalFooter>
-  </form>
+   </ModalBody>
+   <ModalFooter><Button kind="ghost" onClick={close} disabled={locked} action="cancel">Cancelar</Button><Button onClick={submit} disabled={locked} loading={locked}>{locked?"Guardando…":"Guardar"}</Button></ModalFooter>
+  </ModalForm>
  </Dialog></div>;
 }

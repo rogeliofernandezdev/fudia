@@ -147,9 +147,9 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-refund-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-refund-title" aria-busy={busy} aria-describedby="pos-refund-title-description">
 
-    <ModalHeader title={<>Devolución · {payment.orderCode}</>} titleId="pos-refund-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+    <ModalHeader title={<>Devolución · {payment.orderCode}</>} titleId="pos-refund-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="undo" description="Indica el importe y el motivo de la devolución."/>
     <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <ModalBody className="pos-payment-body">
         <div className="pos-refund-source"><span className={"pos-payment-method"+(payment.affectsCash?" cash":"")}><Icon name={paymentMethodIcon(payment.affectsCash)} size={16}/></span><div><small>Pago disponible para devolver</small><strong>{formatMoney(max)}</strong><span>{payment.methodName} · {payment.cashRegisterName}</span></div></div>
@@ -168,7 +168,7 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
         </FormSection>
         {payment.affectsCash&&<div className="pos-refund-warning"><Icon name="alert" size={14}/><span>La devolución saldrá del efectivo esperado del turno que estás operando ahora.</span></div>}
       </ModalBody>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="danger" icon="undo" disabled={busy} loading={busy}>{busy?"Devolviendo…":"Confirmar devolución"}</Button></ModalFooter>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" kind="danger" icon="undo" disabled={busy} loading={busy}>{busy?"Devolviendo…":"Confirmar devolución"}</Button></ModalFooter>
     </ModalForm>
   </Dialog></div>;
 }

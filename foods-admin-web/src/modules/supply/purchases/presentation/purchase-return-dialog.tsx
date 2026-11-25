@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {DataTable} from "@/design-system/data-table";
 import {useState,type FormEvent} from "react";
-import {Button,FormField,Icon,Input,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,FormField,Icon,Input,Select,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {requiresWholeQuantity} from "../domain/purchase-totals";
@@ -37,11 +37,11 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
   save({idempotencyKey,purchaseReceiptId:receipt.id,kind,reason,notes,items});
  }
 
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-return-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-return-title" aria-busy={busy}>
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-return-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-return-title" aria-busy={busy} aria-describedby="purchase-return-title-description">
 
-  <ModalHeader title={<>{"Corregir o devolver recepción"} · {receipt.supplierName}</>} titleId="purchase-return-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-  <form onSubmit={submit} noValidate>
-   <div className="purchase-return-body" inert={busy}>
+  <ModalHeader title={<>{"Corregir o devolver recepción"} · {receipt.supplierName}</>} titleId="purchase-return-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="undo" description="Indica qué cantidades corregir o devolver y por qué."/>
+  <ModalForm onSubmit={submit} noValidate>
+   <ModalBody className="purchase-return-body" inert={busy}>
     <div className="form-grid">
      <FormField className="span-2" label="Tipo"><Select value={kind} onChange={e=>setKind(e.target.value as PurchaseReturnKind)}><option value="receipt_correction">Corrección de recepción · reabre pendiente en la OC</option><option value="supplier_return">Devolución a proveedor · mantiene la OC recibida</option></Select></FormField>
      <FormField className="span-2" label="Motivo" error={errors.reason}><Input autoFocus maxLength={160} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Ej. cantidad registrada por error / mercadería defectuosa"/></FormField>
@@ -55,8 +55,8 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
     </tr>)}</tbody></DataTable>
     {errors.items&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items}</div>}
     <FormField label="Notas" optional><Textarea rows={2} maxLength={500} value={notes} onChange={e=>setNotes(e.target.value)}/></FormField>
-   </div>
+   </ModalBody>
    <ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Procesando…":kind==="receipt_correction"?"Registrar corrección":"Registrar devolución"}</Button></ModalFooter>
-  </form>
+  </ModalForm>
  </Dialog></div>;
 }

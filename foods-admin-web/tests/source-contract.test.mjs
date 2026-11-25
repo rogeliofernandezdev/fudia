@@ -139,7 +139,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("resolver:inventoryAdjustmentResolver"),"El ajuste delega validación al resolver Zod");
   assert.ok(dialog.includes("Stock actual"),"El formulario muestra la existencia actual");
   assert.ok(dialog.includes("`Cantidad (${selected.unit})`"),"La unidad de inventario acompaña a la cantidad, sin un dato aparte");
-  assert.equal(/FormSection|ChoiceGroup|<ModalHeader[^>]* icon=/.test(dialog),false,"El ajuste agrupa por proximidad: sin secciones ni icono de título");
+  assert.equal(/FormSection|ChoiceGroup/.test(dialog),false,"El ajuste conserva sus grupos por proximidad, sin secciones adicionales");
   assert.ok(dialog.includes("<ModalForm")&&dialog.includes("<ModalBody>")&&dialog.includes("<Tabs "),"El ajuste usa los contenedores y pestañas compartidos");
   assert.ok(dialog.includes("Tipo de movimiento"),"El ajuste solicita entrada o salida");
   assert.ok(dialog.includes('value:"entry"'),"El ajuste permite entrada");

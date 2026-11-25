@@ -1,7 +1,7 @@
 /* Owner: Orders — datos de atención previos a la comanda compartida. */
 .manual-order-modal{display:flex;flex-direction:column;width:min(var(--size-580),calc(100vw - var(--size-32)));max-height:calc(100dvh - var(--size-40));background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--elevation-4);overflow:hidden;color:var(--ink-950)}
 .manual-order-form{display:flex;flex-direction:column;min-height:0}
-.manual-order-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;padding:var(--space-5) var(--space-6) var(--space-6)}
+.manual-order-body{overscroll-behavior:contain;min-height:0}
 /* Proximidad en lugar de títulos: tipo arriba, luego quién, dónde y extras. */
 .manual-order-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4);min-width:0;margin:0;padding:0;border:0}
 .manual-order-type{grid-column:1/-1;display:grid;gap:var(--space-1-5);margin-bottom:var(--space-1)}
@@ -23,7 +23,6 @@
 }
 @media(max-width:600px){
  .manual-order-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}
- .manual-order-body{padding:var(--space-4)}
  .manual-order-fields{grid-template-columns:minmax(0,1fr)}
  .manual-order-map .location-map-canvas{height:var(--size-176)}
  .manual-order-actions>.button{flex:1}

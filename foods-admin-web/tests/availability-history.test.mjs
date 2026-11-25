@@ -13,7 +13,7 @@ function compile(path,resolve=require){
 }
 function nodes(tree){const out=[];function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){out.push(node);visit(node.props?.children)}}visit(tree);return out;}
 function words(tree){if(Array.isArray(tree))return tree.map(words).join("");if(tree&&typeof tree==="object")return words(tree.props?.children);return typeof tree==="boolean"?"":String(tree??"");}
-const ds=Object.fromEntries(["Button","EmptyState","ErrorState","Dialog","FormField","Icon","IconButton","Input","Textarea","PageHeader","Pagination","SearchField","Select","Status","Modal","ModalBody"].map(name=>[name,name]));
+const ds=Object.fromEntries(["Button","EmptyState","ErrorState","Dialog","FormField","Icon","IconButton","Input","Textarea","PageHeader","Pagination","SearchField","Select","Status","Modal","ModalBody","ModalForm"].map(name=>[name,name==="ModalForm"?"form":name]));
 const resolver=compile("shared/forms/zod-resolver.ts");
 const schema=compile("modules/menu/availability/domain/availability-reason-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
 const regional=compile("shared/i18n/regional-format.ts");

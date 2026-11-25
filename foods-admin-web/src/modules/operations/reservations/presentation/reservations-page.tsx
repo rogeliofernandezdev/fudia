@@ -63,9 +63,9 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
   const eligibleTables=tables.filter(table=>table.id===initial.tableId||(table.active&&table.seats>=guests));
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy} aria-describedby="reservation-title-description">
 
-      <ModalHeader title={initial.id?"Editar reserva":"Nueva reserva"} titleId="reservation-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={initial.id?"Editar reserva":"Nueva reserva"} titleId="reservation-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="calendar" description="Coordina la fecha, el horario y las personas de la visita."/>
       <ModalForm onSubmit={handleSubmit(save)} noValidate>
         <ModalBody><div className="form-grid reservation-form-grid">
           <label>
@@ -113,7 +113,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
           </label>
         </div></ModalBody>
         <ModalFooter>
-          <Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>
+          <Button kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button>
           <Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button>
         </ModalFooter>
       </ModalForm>

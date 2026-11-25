@@ -3,7 +3,7 @@ import {Dialog} from "@/design-system/dialog";
 import {useMemo,useState} from "react";
 import dynamic from "next/dynamic";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,ErrorState,FormField,Icon,Input,Select,Skeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Icon,Input,Select,Skeleton,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {cashOperationResolver} from "../domain/cash-schema";
 import {availableCashCollaborators} from "../domain/collaborators";
 import {useSession} from "@/providers";
@@ -49,11 +49,11 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
   });
   const type=useWatch({control,name:"operationType"});
   const label=type==="deposit"?"Registrar depósito":type==="transfer"?"Transferir efectivo":"Registrar retiro";
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy} aria-describedby="cash-operation-title-description">
 
-    <ModalHeader title={<>{"Operación de caja"} · {shift.cashRegisterName}</>} titleId="cash-operation-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
-      <div className="cash-dialog-body">
+    <ModalHeader title={<>{"Operación de caja"} · {shift.cashRegisterName}</>} titleId="cash-operation-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="cash" description="Indica el importe y el motivo de la operación."/>
+    <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <ModalBody className="cash-dialog-body">
         <FormField label="Operación">
           <Select {...register("operationType")}>
             <option value="cash_pull">Retiro de efectivo</option>
@@ -77,8 +77,8 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Referencia adicional"/>
         </FormField>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>{type==="transfer"?"La salida y entrada se registrarán juntas en ambas cajas.":"La operación reducirá el efectivo esperado del turno."}</p>
-      </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||type==="transfer"&&!targets.length} loading={busy}>{busy?"Procesando…":label}</Button></ModalFooter>
-    </form>
+      </ModalBody>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" disabled={busy||type==="transfer"&&!targets.length} loading={busy}>{busy?"Procesando…":label}</Button></ModalFooter>
+    </ModalForm>
   </Dialog></div>;
 }

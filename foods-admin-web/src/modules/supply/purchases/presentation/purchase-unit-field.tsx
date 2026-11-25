@@ -2,7 +2,7 @@
 import {useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,IconButton,Input,Select,Skeleton,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,FormField,IconButton,Input,Select,Skeleton,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import {createInventoryUnit,listInventoryUnits} from "../infrastructure/inventory-units-api";
@@ -52,14 +52,14 @@ export function InventoryUnitDialog({close,save}:{close:()=>void;save:(unit:Inve
   if(!/^[a-z][a-z0-9_-]{0,31}$/.test(code)||!name||[...name].length>80){setValidation("Ingresa un nombre y un código de hasta 32 caracteres, sin espacios.");return}
   setValidation("");saving.current=true;mutation.mutate({code,name});
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="inventory-unit-title" aria-busy={mutation.isPending}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="inventory-unit-title" aria-busy={mutation.isPending} aria-describedby="inventory-unit-title-description">
 
-  <ModalHeader title="Nueva unidad" titleId="inventory-unit-title" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
-  <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
+  <ModalHeader title="Nueva unidad" titleId="inventory-unit-title" onClose={close} busy={mutation.isPending} closeLabel="Cerrar" icon="layers" description="Identifica cómo se mide el artículo."/>
+  <ModalForm onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><ModalBody className="form-grid">
    <FormField label="Nombre"><Input data-dialog-initial-focus value={draft.name} maxLength={80} disabled={mutation.isPending} onChange={event=>setDraft({...draft,name:event.target.value})}/></FormField>
    <FormField label="Código"><Input value={draft.code} maxLength={32} disabled={mutation.isPending} onChange={event=>setDraft({...draft,code:event.target.value})}/></FormField>
    {(validation||mutation.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message}</p>}
-  </div>
-  <ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  </ModalBody>
+  <ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm>
  </Dialog></div>;
 }

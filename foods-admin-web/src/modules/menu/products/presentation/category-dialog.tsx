@@ -1,7 +1,7 @@
 "use client";
 import {useRef} from "react";
 import {useForm} from "react-hook-form";
-import {Button,FormField,Input,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,FormField,Input,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import type {CategoryDraft} from "../domain/types";
 import {categoryResolver} from "../domain/product-schema";
@@ -17,13 +17,13 @@ export function CategoryDialog({draft,busy,close,save,error}:{draft:CategoryDraf
   try{await handleSubmit(values=>save({...values,productScope:draft.productScope,sortOrder:Number(values.sortOrder)}))()}
   finally{submitting.current=false}
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" aria-labelledby="category-title" aria-busy={locked}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" aria-labelledby="category-title" aria-busy={locked} aria-describedby="category-title-description">
 
-  <ModalHeader title={draft.id?"Editar categoría":"Nueva categoría"} titleId="category-title" onClose={close} busy={locked} closeLabel="Cerrar"/>
-  <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid" inert={busy}>
+  <ModalHeader title={draft.id?"Editar categoría":"Nueva categoría"} titleId="category-title" onClose={close} busy={locked} closeLabel="Cerrar" icon="layers" description="Organiza las categorías y su orden de aparición."/>
+  <ModalForm onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><ModalBody className="form-grid" inert={busy}>
    <FormField className="span-2" label="Nombre" error={errors.name?.message}><Input data-dialog-initial-focus maxLength={120} {...register("name")} placeholder="Ej. Bebidas"/></FormField>
    <FormField className="span-2" label="Orden de aparición" help="Menor número aparece primero en la carta." error={errors.sortOrder?.message}><Input type="number" min="0" inputMode="numeric" {...register("sortOrder")}/></FormField>
    {error&&<p className="field-error span-2" role="alert">{error}</p>}
-  </div><ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={locked}>Cancelar</Button><Button type="button" onClick={()=>void submit()} disabled={locked} loading={locked}>{locked?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  </ModalBody><ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={locked} action="cancel">Cancelar</Button><Button type="button" onClick={()=>void submit()} disabled={locked} loading={locked}>{locked?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm>
  </Dialog></div>;
 }

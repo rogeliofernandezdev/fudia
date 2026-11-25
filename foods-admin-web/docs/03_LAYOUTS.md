@@ -30,7 +30,7 @@ completa y pendientes: `tests/mobile-reference-device.test.mjs` y
 ## Plantillas de página
 
 Toda ruta usa una de estas plantillas. El contenedor `.content` define el
-padding (28/32 px en escritorio, 24/16 px desde 820 px) y el ancho máximo; las
+padding (24 px en escritorio, 20/16 px desde 820 px) y el ancho máximo; las
 páginas no agregan márgenes laterales propios.
 
 ### Gestión (listado)
@@ -207,15 +207,15 @@ de notificaciones quedará visible cuando exista una fuente remota real.
 ## Plantilla compartida de modal
 
 Autoridad visual: `02_DESIGN_SYSTEM.md`; contrato: `04_COMPONENTS.md`.
-Cabecera breve (título y X, sin icono), cuerpo desplazable, resumen inferior opcional
+Cabecera breve (título y X; icono de tarea en formularios), cuerpo desplazable, resumen inferior opcional
 y pie fijo con acciones autorizadas. Fecha y responsables van en el contexto del
 cuerpo; los estados acompañan los datos que describen. No se usa columna lateral
 de cuenta. Esto no impide rejillas de campos dentro de un formulario.
 
 Usar `ModalHeader` y `ModalFooter` en modales de contenido. Cabecera solo con
-título y X, sin icono ni información debajo del título. Botones contiguos a la
-derecha, Cancelar antes de Guardar, separación de 10 px. En móvil comparten
-fila cuando caben, repartiendo el ancho por igual. Si queda un botón solo en
+título, contexto breve e icono opcional de apoyo. Cancelar se sitúa a la izquierda;
+las alternativas y Guardar, a la derecha, con separación de 10 px. En móvil comparten
+fila cuando caben, manteniendo ambas intenciones reconocibles. Si queda un botón solo en
 su fila, llena todo el ancho útil; si se apilan, cada acción llena su fila.
 No dejar medias columnas vacías. Los grupos anidados usan `modal-action-layout`
 y `modal-action-subgroup`; la principal puede reservar fila con `modal-action-main`.

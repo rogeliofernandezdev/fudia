@@ -8,7 +8,7 @@
 .customer-detail{display:flex;flex-direction:column;width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)));overflow:hidden}
 .customer-detail>header>div{display:grid;gap:var(--space-1)}
 .customer-detail>header small{order:2}
-.customer-detail-body{display:grid;gap:var(--space-5);padding:var(--space-6);overflow-y:auto;align-content:start;background:var(--cloud-50)}
+.customer-detail-body{display:grid;gap:var(--space-5);padding:var(--modal-body-space) var(--modal-inset);overflow-y:auto;align-content:start;background:var(--cloud-50)}
 /* Contacto: documento y correo en una línea con punto medio; en móvil, uno por línea sin punto colgado. */
 .customer-contact-meta{display:flex;flex-wrap:wrap;gap:0 var(--space-2)}
 .customer-contact-meta>span{min-width:0;overflow-wrap:anywhere}

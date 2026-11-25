@@ -1,10 +1,10 @@
 "use client";
 import "./styles/tabs.css";
-import {useRef,type KeyboardEvent,type ReactNode} from "react";
+import {useEffect,useRef,type KeyboardEvent,type ReactNode} from "react";
 import {Icon,type IconName} from "./icons";
 
 /** Familia de color de una pestaña con significado propio (carril, canal). Sin tono, la pestaña usa el índigo de selección. */
-export type TabTone="primary"|"info"|"orange"|"green"|"violet";
+export type TabTone="primary"|"info"|"orange"|"green"|"violet"|"whatsapp";
 export type TabItem<T extends string>={value:T;label:string;count?:number;icon:IconName;tone?:TabTone};
 
 /**
@@ -22,6 +22,21 @@ export function TabsBar({children,action,sticky=false}:{children:ReactNode;actio
  */
 export function Tabs<T extends string>({items,value,onChange,label,className=""}:{items:TabItem<T>[];value:T;onChange:(value:T)=>void;label:string;className?:string}){
   const list=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const container=list.current;
+    if(!container)return;
+    const revealSelection=()=>{
+      const active=container.querySelector<HTMLElement>('[aria-selected="true"]');
+      if(!active)return;
+      const bounds=container.getBoundingClientRect(),tab=active.getBoundingClientRect();
+      if(tab.left<bounds.left)container.scrollLeft+=tab.left-bounds.left;
+      else if(tab.right>bounds.right)container.scrollLeft+=tab.right-bounds.right;
+    };
+    revealSelection();
+    const observer=new ResizeObserver(revealSelection);
+    observer.observe(container);
+    return ()=>observer.disconnect();
+  },[value,items.length]);
   const move=(event:KeyboardEvent<HTMLButtonElement>,index:number)=>{
     const last=items.length-1;
     const next=event.key==="ArrowRight"?(index===last?0:index+1):event.key==="ArrowLeft"?(index===0?last:index-1):event.key==="Home"?0:event.key==="End"?last:null;

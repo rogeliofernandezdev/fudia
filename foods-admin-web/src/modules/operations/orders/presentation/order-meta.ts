@@ -6,7 +6,7 @@ export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"s
 
 /** Color de identidad de cada canal en pestañas: Todos índigo, Salón azul información,
  * Recojo naranja, Delivery verde y WhatsApp violeta. */
-export const channelTones:Record<string,TabTone>={salon:"info",recojo:"orange",mostrador:"orange",delivery:"green",whatsapp:"violet"};
+export const channelTones:Record<string,TabTone>={salon:"info",recojo:"orange",mostrador:"orange",delivery:"green",whatsapp:"whatsapp"};
 export const channelTone=(channel:string):TabTone=>channelTones[channel]??"primary";
 
 /** Origen visible del pedido: la venta por mostrador se distingue dentro de Recojo en local. */

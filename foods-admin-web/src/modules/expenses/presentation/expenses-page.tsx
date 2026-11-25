@@ -5,7 +5,7 @@ import "./expenses.css";
 import {useState,type ReactNode} from "react";
 import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter,FormSection,ChoiceGroup,type IconName,DetailHero,DetailContact,DetailFacts} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter,FormSection,ChoiceGroup,type IconName,ModalForm,ModalBody,DetailHero,DetailContact,DetailFacts} from "@/design-system";
 import {useFeedback,useMoney,useSession,useSettings} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -80,7 +80,7 @@ function paymentIcon(option:{value:string;label:string}):IconName{
 
 function ExpenseEditor({draft,categories,paymentOptions,cashFromShift,busy,currencySymbol,close,save}:{draft:ExpenseDraft;categories:ExpenseCategory[];paymentOptions:Array<{value:string;label:string}>;cashFromShift:boolean;busy:boolean;currencySymbol:string;close:()=>void;save:(draft:ExpenseDraft)=>void}){
  const{register,handleSubmit,formState:{errors}}=useForm<ExpenseDraft>({defaultValues:draft,resolver:expenseResolver});
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-editor modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="expense-editor-title" aria-busy={busy}><ModalHeader title="Nuevo gasto" titleId="expense-editor-title" onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={handleSubmit(save)} noValidate><div className="form-sections">
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-editor modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="expense-editor-title" aria-busy={busy} aria-describedby="expense-editor-title-description"><ModalHeader title="Nuevo gasto" titleId="expense-editor-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="receipt" description="Registra el concepto, importe y medio de pago."/><ModalForm onSubmit={handleSubmit(save)} noValidate><ModalBody className="form-sections">
   <FormSection icon="receipt" title="Datos del gasto">
    <FormField label="Categoría" error={errors.categoryId?.message}><Select autoFocus {...register("categoryId")}><option value="">Selecciona una categoría</option>{categories.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</Select></FormField>
    <FormField label="Fecha" error={errors.businessDate?.message}><Input type="date" {...register("businessDate")}/></FormField>
@@ -96,7 +96,7 @@ function ExpenseEditor({draft,categories,paymentOptions,cashFromShift,busy,curre
   <FormSection icon="note" tone="neutral" title="Información adicional">
    <FormField className="span-2" label="Notas" optional error={errors.notes?.message}><Textarea rows={3} {...register("notes")} placeholder="Información adicional para el control interno"/></FormField>
   </FormSection>
- </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>;
+ </ModalBody><ModalFooter><Button kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm></Dialog></div>;
 }
 
 function ExpenseDetail({expense,paymentLabelText,currency,country,timezone,canVoid,close,requestVoid}:{expense:Expense;paymentLabelText:string;currency:string;country?:string|null;timezone?:string|null;canVoid:boolean;close:()=>void;requestVoid:()=>void}){
@@ -110,7 +110,7 @@ function VoidDialog({expense,busy,close,confirm}:{expense:Expense;busy:boolean;c
 
 function CategoryEditor({category,busy,close,save}:{category:ExpenseCategory|{id:"";name:string;active:true};busy:boolean;close:()=>void;save:(input:{id?:string;name:string})=>void}){
  const[name,setName]=useState(category.name);const valid=name.trim().length>0&&name.trim().length<=100;
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-category-editor modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="category-title" aria-busy={busy}><ModalHeader title={category.id?"Editar categoría":"Nueva categoría"} titleId="category-title" onClose={close} busy={busy} closeLabel="Cerrar"/><form onSubmit={e=>{e.preventDefault();if(valid&&!busy)save({id:category.id||undefined,name:name.trim()})}} noValidate><div className="expense-category-body"><FormField label="Nombre" help="Las categorías pertenecen a la empresa y pueden reutilizarse en cualquiera de sus locales."><Input autoFocus value={name} maxLength={100} onChange={e=>setName(e.target.value)} placeholder="Ej. Servicios, limpieza, mantenimiento"/></FormField></div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy||!valid} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>;
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal expense-category-editor modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="category-title" aria-busy={busy} aria-describedby="category-title-description"><ModalHeader title={category.id?"Editar categoría":"Nueva categoría"} titleId="category-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="layers" description="Agrupa los gastos para consultarlos por categoría."/><ModalForm onSubmit={e=>{e.preventDefault();if(valid&&!busy)save({id:category.id||undefined,name:name.trim()})}} noValidate><ModalBody className="expense-category-body"><FormField label="Nombre" help="Las categorías pertenecen a la empresa y pueden reutilizarse en cualquiera de sus locales."><Input autoFocus value={name} maxLength={100} onChange={e=>setName(e.target.value)} placeholder="Ej. Servicios, limpieza, mantenimiento"/></FormField></ModalBody><ModalFooter><Button kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" icon="check" disabled={busy||!valid} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm></Dialog></div>;
 }
 
 function paymentLabel(method:ExpensePaymentMethod,options:Array<{value:string;label:string}>){return options.find(option=>option.value===method)?.label??method}

@@ -1,7 +1,7 @@
 "use client";
 import {useRef,useState} from "react";
 import {useMutation,useQueryClient} from "@tanstack/react-query";
-import {Button,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import type {PurchaseInventoryOption,PurchasePresentation,PurchasePresentationDraft} from "../domain/types";
@@ -26,13 +26,13 @@ export function PurchasePresentationDialog({item,close,save}:{item:PurchaseInven
   if(contentError){setValidation(contentError);return}
   setValidation("");saving.current=true;mutation.mutate(row);
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-presentation-title" aria-busy={mutation.isPending}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-presentation-title" aria-busy={mutation.isPending} aria-describedby="purchase-presentation-title-description">
 
-  <ModalHeader title={<>Presentación de compra · {item.name}</>} titleId="purchase-presentation-title" onClose={close} busy={mutation.isPending||catalogBusy} closeLabel="Cerrar"/>
-  <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="purchase-item-section">
+  <ModalHeader title={<>Presentación de compra · {item.name}</>} titleId="purchase-presentation-title" onClose={close} busy={mutation.isPending||catalogBusy} closeLabel="Cerrar" icon="box" description="Define las presentaciones que usarás al comprar."/>
+  <ModalForm onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><ModalBody className="form-sections-flow">
    <PurchasePresentationsField unit={item.unit} value={rows} onChange={setRows} disabled={mutation.isPending} onBusyChange={setCatalogBusy} onUnitRuleChange={setUnitRule}/>
    <p className="field-help">Las compras anteriores y el stock no se modifican.</p>
    {(validation||mutation.isError)&&<p className="field-error" role="alert">{validation||mutation.error?.message}</p>}
-  </div><ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending||catalogBusy} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending||catalogBusy} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  </ModalBody><ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending||catalogBusy} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending||catalogBusy} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm>
  </Dialog></div>;
 }

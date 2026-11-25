@@ -1,14 +1,14 @@
 import type {ReactNode,Ref,ChangeEventHandler,FocusEventHandler} from "react";
 import {Icon,type IconName} from "./icons";
-import {IconTile,type IconTileTone} from "./icon-tile";
+import {IconTile,getIdentityTone,type IconTileTone} from "./icon-tile";
 
 /**
  * Bloque de formulario con título e icono tintado y una retícula de dos
  * columnas (una en móvil). Agrupa los campos por tema, como «Datos del gasto»
  * o «Medio de pago». `span-2` en un campo ocupa todo el ancho.
  */
-export function FormSection({icon,title,tone="primary",className="",bare=false,children}:{icon:IconName;title:string;tone?:IconTileTone;className?:string;/** Conserva la retícula propia del formulario (no envuelve los campos). */bare?:boolean;children:ReactNode}){
-  return <section className={["form-section",className].filter(Boolean).join(" ")}>
+export function FormSection({icon,title,tone=getIdentityTone(icon),className="",bare=false,children}:{icon:IconName;title:string;tone?:IconTileTone;className?:string;/** Conserva la retícula propia del formulario (no envuelve los campos). */bare?:boolean;children:ReactNode}){
+  return <section className={["form-section",className].filter(Boolean).join(" ")} data-tone={tone}>
     <h3 className="form-section-title"><IconTile name={icon} tone={tone} size="sm"/>{title}</h3>
     {bare?children:<div className="form-section-grid">{children}</div>}
   </section>;

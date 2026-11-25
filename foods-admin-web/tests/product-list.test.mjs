@@ -9,7 +9,7 @@ const require=createRequire(import.meta.url);
 const root=new URL("../src/",import.meta.url);
 function compile(path,resolve){
  const exports={};
- vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
+ vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>name.endsWith(".css")?{}:resolve(name)});
  return exports;
 }
 const regional=compile("shared/i18n/regional-format.ts",require);

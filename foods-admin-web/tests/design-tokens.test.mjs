@@ -29,7 +29,8 @@ test("la paleta operativa conserva contraste AA y una rampa índigo luminosa ord
     ["surface","danger-600"],["surface","danger-700"],["danger-600","danger-50"],["danger-600","danger-100"],
     ["brand-700","brand-100"],["surface","brand-700"],["ink-950","brand-600"],["ink-800","brand-600"],
     ["warning-600","warning-50"],["warning-800","warning-100"],["surface","danger-500"],["ink-950","warning-500"],
-    ["info-600","info-50"],["teal-700","teal-100"],["digital-700","digital-100"],["surface","ink-700"]]){
+    ["info-600","info-50"],["teal-700","teal-100"],["digital-700","digital-100"],["surface","ink-700"],
+    ["brand-800","brand-50"],["sky-800","sky-100"],["digital-700","digital-50"],["peach-700","peach-100"]]){
     const light=[luminance(color(fg)),luminance(color(bg))].sort((a,b)=>b-a);
     assert.ok((light[0]+.05)/(light[1]+.05)>=4.5,`${fg} sobre ${bg}`);
   }

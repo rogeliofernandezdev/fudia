@@ -21,9 +21,9 @@
 /* Indicadores del periodo: Ventas es la protagonista por tamaño; cada indicador lleva su tono tenue de identidad */
 .dash-kpis{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr));gap:var(--space-4);transition:opacity var(--duration-base)}
 .dash-kpi{display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-4) var(--space-5)}
-.dash-kpi.green{border-color:var(--brand-100);background:linear-gradient(160deg,color-mix(in srgb,var(--brand-100) 60%,var(--surface)),var(--surface) 70%)}
-.dash-kpi.blue{border-color:var(--primary-100);background:linear-gradient(160deg,color-mix(in srgb,var(--primary-100) 60%,var(--surface)),var(--surface) 70%)}
-.dash-kpi.violet{border-color:var(--digital-100);background:linear-gradient(160deg,color-mix(in srgb,var(--digital-100) 60%,var(--surface)),var(--surface) 70%)}
+.dash-kpi.green{border-color:var(--line);background:var(--surface)}
+.dash-kpi.blue{border-color:var(--line);background:var(--surface)}
+.dash-kpi.violet{border-color:var(--line);background:var(--surface)}
 .dash-kpi-head{display:flex;align-items:flex-start;gap:var(--space-2);min-width:0}
 .dash-kpi-icon{flex:none;width:var(--size-40);height:var(--size-40);margin-left:auto;border-radius:50%}
 .dash-kpi-head small{flex:0 1 auto;min-width:0;padding-top:var(--space-1);overflow:hidden;font-size:var(--font-size-sm);line-height:var(--line-height-tight);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap;color:var(--ink-700)}

@@ -19,6 +19,7 @@ import "@/design-system/styles/form-field.css";
 import "@/design-system/styles/remote-modal-skeleton.css";
 import "@/design-system/styles/full-screen-loader.css";
 import "@/design-system/styles/icon-tile.css";
+import "@/design-system/styles/image-drop-tile.css";
 import "@/design-system/styles/stat-card.css";
 import "@/design-system/styles/form-section.css";
 import "@/design-system/styles/detail-view.css";

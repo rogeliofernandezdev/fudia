@@ -74,7 +74,7 @@ test("el modal de categoría es compartido, valida, evita Enter y duplica cero p
   if(name==="react")return {useRef:value=>({current:value})};
   if(name==="react-hook-form")return {useForm:options=>{form=createFormControl(options);return {...form,formState:{errors:{},isSubmitting:false}}}};
   if(name==="../domain/product-schema")return schema;
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Dialog"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Dialog","ModalForm","ModalBody"].map(key=>[key,key==="ModalForm"?"form":key]));
   return require(name);
  });
  let savedDraft;

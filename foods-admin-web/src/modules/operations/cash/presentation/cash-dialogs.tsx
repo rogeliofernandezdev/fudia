@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import type {TipWorkspace} from "../../tips";
 import {CashReportContent} from "./cash-report-content";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,ErrorState,FormField,FormSection,Icon,Input,Select,Skeleton,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,FormSection,Icon,Input,Select,Skeleton,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline,ModalForm,ModalBody} from "@/design-system";
 import {useQuery} from "@tanstack/react-query";
 import {listCashExpenseCategories} from "../infrastructure/cash-api";
 import {cashExpenseResolver,cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
@@ -24,11 +24,11 @@ export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegis
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-register-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-register-title" aria-busy={busy} aria-describedby="cash-register-title-description">
 
-    <ModalHeader title={editing?"Editar caja":"Registrar caja"} titleId="cash-register-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
-      <div className="cash-dialog-body">
+    <ModalHeader title={editing?"Editar caja":"Registrar caja"} titleId="cash-register-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="register" description="Configura el nombre de la caja y las reglas del cierre."/>
+    <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <ModalBody className="cash-dialog-body">
         <p className="cash-dialog-intro">{editing?"Actualiza el nombre operativo de la caja. Su historial y turnos se conservarán.":"Crea una caja del local. Luego podrás iniciar y cerrar turnos sobre esta caja sin perder su historial."}</p>
         <FormSection icon="register" title="Datos de la caja" bare>
         <FormField label="Nombre de la caja" icon="register" error={errors.name?.message}>
@@ -42,9 +42,9 @@ export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegis
           <b>Cierre ciego<small>El cajero contará el efectivo sin ver el saldo esperado. Supervisores con permiso sí podrán consultarlo.</small></b>
         </label>
         </FormSection>
-      </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
-    </form>
+      </ModalBody>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
+    </ModalForm>
   </Dialog></div>;
 }
 
@@ -55,11 +55,11 @@ export function OpenCashShiftDialog({cashRegister,busy,close,save}:{cashRegister
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-open-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-open-title" aria-busy={busy} aria-describedby="cash-open-title-description">
 
-    <ModalHeader title={<>{"Iniciar turno"} · {cashRegister.name}</>} titleId="cash-open-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
-      <div className="cash-dialog-body">
+    <ModalHeader title={<>{"Iniciar turno"} · {cashRegister.name}</>} titleId="cash-open-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="cashShift" description="Revisa el efectivo inicial antes de operar."/>
+    <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <ModalBody className="cash-dialog-body">
         <p className="cash-dialog-intro">Estás iniciando un turno en <b>{cashRegister.name}</b>. Registra el efectivo inicial que quedará como base del arqueo.</p>
         <FormSection icon="cash" tone="brand" title="Fondo del turno" bare>
         <FormField label="Fondo inicial" error={errors.openingAmount?.message}>
@@ -69,9 +69,9 @@ export function OpenCashShiftDialog({cashRegister,busy,close,save}:{cashRegister
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Ej. Fondo recibido del turno anterior"/>
         </FormField>
         </FormSection>
-      </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Iniciando…":"Iniciar turno"}</Button></ModalFooter>
-    </form>
+      </ModalBody>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Iniciando…":"Iniciar turno"}</Button></ModalFooter>
+    </ModalForm>
   </Dialog></div>;
 }
 
@@ -89,12 +89,12 @@ function CashManualMovementDialog({type,busy,close,save}:{type:CashMovementType;
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-movement-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-movement-title" aria-busy={busy} aria-describedby="cash-movement-title-description">
 
-    <ModalHeader title={isIncome?"Registrar ingreso":"Registrar egreso"} titleId="cash-movement-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
+    <ModalHeader title={isIncome?"Registrar ingreso":"Registrar egreso"} titleId="cash-movement-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="cash" description="Indica el importe y el motivo del movimiento."/>
+    <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <input type="hidden" {...register("movementType")}/>
-      <div className="cash-dialog-body">
+      <ModalBody className="cash-dialog-body">
         <p className="cash-dialog-intro">{isIncome?"Registra efectivo que entra a la caja fuera de un cobro de venta.":"Registra efectivo que sale de caja y deja el motivo trazable."}</p>
         <FormSection icon={isIncome?"plus":"minus"} tone={isIncome?"brand":"peach"} title={isIncome?"Datos del ingreso":"Datos del egreso"} bare>
         <FormField label="Monto" error={errors.amount?.message}>
@@ -107,9 +107,9 @@ function CashManualMovementDialog({type,busy,close,save}:{type:CashMovementType;
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Referencia o detalle adicional"/>
         </FormField>
         </FormSection>
-      </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":isIncome?"Registrar ingreso":"Registrar egreso"}</Button></ModalFooter>
-    </form>
+      </ModalBody>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":isIncome?"Registrar ingreso":"Registrar egreso"}</Button></ModalFooter>
+    </ModalForm>
   </Dialog></div>;
 }
 
@@ -137,11 +137,11 @@ export function CloseCashShiftDialog({shift,report,tipWorkspace,busy,currency,fo
   const difference=Number.isFinite(counted)?counted-expected:0;
   const differenceTone=Math.abs(difference)<.005?"balanced":difference>0?"positive":"negative";
 
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy} aria-describedby="cash-close-title-description">
 
-    <ModalHeader title={<>{"Cerrar turno"} · {shift.cashRegisterName}</>} titleId="cash-close-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={event=>event.preventDefault()} onKeyDown={event=>{if(event.key==="Enter"&&(event.target as HTMLElement).tagName==="INPUT")event.preventDefault();}} noValidate inert={busy}>
-      <div className="cash-dialog-body">
+    <ModalHeader title={<>{"Cerrar turno"} · {shift.cashRegisterName}</>} titleId="cash-close-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="cashShift" description="Cuenta el efectivo y revisa el resultado del turno."/>
+    <ModalForm onSubmit={event=>event.preventDefault()} onKeyDown={event=>{if(event.key==="Enter"&&(event.target as HTMLElement).tagName==="INPUT")event.preventDefault();}} noValidate inert={busy}>
+      <ModalBody className="cash-dialog-body">
         {report&&<CashReportContent report={report} showTips={false}/>}
         {blind
           ?<div className="cash-blind-close-note"><Icon name="lock" size={16}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
@@ -179,9 +179,9 @@ export function CloseCashShiftDialog({shift,report,tipWorkspace,busy,currency,fo
         </FormField>
         </FormSection>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>Al cerrar el turno ya no se podrán registrar nuevos movimientos.</p>
-      </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="button" icon="lock" disabled={busy} onClick={()=>{if(busy||sending.current)return;sending.current=true;if(byDenomination)setValue("countedAmount",denominationTotal.toFixed(2));else setValue("counts",denominations.map(value=>({denomination:String(value),quantity:""})));void handleSubmit(async draft=>{try{if(draft.tipPayout&&Number(draft.tipPayout.amount)>Number(tipWorkspace?.available??0)){setError("tipPayout",{type:"validate",message:"El monto supera las propinas pendientes."});return;}await save({...draft,counts:byDenomination?draft.counts:[]});}finally{sending.current=false;}},()=>{sending.current=false;})().catch(()=>{sending.current=false;});}} loading={busy}>{busy?"Cerrando…":"Cerrar turno"}</Button></ModalFooter>
-    </form>
+      </ModalBody>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="button" icon="lock" disabled={busy} onClick={()=>{if(busy||sending.current)return;sending.current=true;if(byDenomination)setValue("countedAmount",denominationTotal.toFixed(2));else setValue("counts",denominations.map(value=>({denomination:String(value),quantity:""})));void handleSubmit(async draft=>{try{if(draft.tipPayout&&Number(draft.tipPayout.amount)>Number(tipWorkspace?.available??0)){setError("tipPayout",{type:"validate",message:"El monto supera las propinas pendientes."});return;}await save({...draft,counts:byDenomination?draft.counts:[]});}finally{sending.current=false;}},()=>{sending.current=false;})().catch(()=>{sending.current=false;});}} loading={busy}>{busy?"Cerrando…":"Cerrar turno"}</Button></ModalFooter>
+    </ModalForm>
   </Dialog></div>;
 }
 
@@ -242,11 +242,11 @@ function CashExpenseDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(
   });
   const items=categories.data?.items??[];
   const ready=!categories.isLoading&&!categories.isError&&items.length>0;
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-expense-title" aria-busy={busy}>
-    <ModalHeader title="Registrar gasto" titleId="cash-expense-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-expense-title" aria-busy={busy} aria-describedby="cash-expense-title-description">
+    <ModalHeader title="Registrar gasto" titleId="cash-expense-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="receipt" description="Registra el concepto y el importe del gasto."/>
+    <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <input type="hidden" {...register("movementType")}/>
-      <div className="cash-dialog-body">
+      <ModalBody className="cash-dialog-body">
         <p className="cash-dialog-intro">Sale del efectivo del turno y queda en Caja › Gastos.</p>
         {categories.isLoading?<div className="cash-expense-skeleton" role="status" aria-busy="true" aria-label="Cargando categorías"><Skeleton width="100%" height="var(--size-44)"/><Skeleton width="100%" height="var(--size-44)"/></div>
         :categories.isError?<ErrorState title="No pudimos cargar las categorías" text={categories.error.message} onRetry={()=>void categories.refetch()} retrying={categories.isFetching}/>
@@ -265,9 +265,9 @@ function CashExpenseDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(
             <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Referencia o detalle adicional"/>
           </FormField>
         </FormSection>}
-      </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!ready} loading={busy}>{busy?"Guardando…":"Registrar gasto"}</Button></ModalFooter>
-    </form>
+      </ModalBody>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" disabled={busy||!ready} loading={busy}>{busy?"Guardando…":"Registrar gasto"}</Button></ModalFooter>
+    </ModalForm>
   </Dialog></div>;
 }
 

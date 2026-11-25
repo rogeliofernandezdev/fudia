@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,IconButton,Input,Select,Skeleton,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,FormField,IconButton,Input,Select,Skeleton,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import type {PurchaseCombination,PurchasePresentationDraft} from "../domain/types";
@@ -103,14 +103,14 @@ export function PurchaseCombinationDialog({unit,unitName,close,save}:{unit:strin
   if(!existing){const stem=code;let suffix=2;while(types.some(item=>item.code===code)){const tail=`-${suffix++}`;code=stem.slice(0,32-tail.length)+tail}}
   setValidation("");saving.current=true;mutation.mutate({unit,code,name:existing?.name??normalizedName,isDefault:false});
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-combination-title" aria-busy={mutation.isPending}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-combination-title" aria-busy={mutation.isPending} aria-describedby="purchase-combination-title-description">
 
-  <ModalHeader title={<>{"Nueva presentación"} · {unitName}</>} titleId="purchase-combination-title" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
-  <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
+  <ModalHeader title={<>{"Nueva presentación"} · {unitName}</>} titleId="purchase-combination-title" onClose={close} busy={mutation.isPending} closeLabel="Cerrar" icon="box" description="Relaciona la presentación con su unidad de medida."/>
+  <ModalForm onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><ModalBody className="form-grid">
    <FormField label="Nombre" className="span-2"><Input data-dialog-initial-focus maxLength={80} value={name} disabled={mutation.isPending} onChange={event=>{setName(event.target.value);setValidation("")}}/></FormField>
    {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><Skeleton width="70%"/></div>}
    {catalog.isError&&<div className="span-2"><Button type="button" kind="secondary" icon="refresh" disabled={catalog.isFetching} onClick={()=>void catalog.refetch()}>Reintentar</Button></div>}
    {(validation||mutation.isError||catalog.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message||catalog.error?.message}</p>}
-  </div><ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  </ModalBody><ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm>
  </Dialog></div>;
 }

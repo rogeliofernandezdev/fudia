@@ -143,7 +143,7 @@
 .cash-close-modal{width:min(var(--size-960),100%);max-height:calc(100dvh - var(--size-48));display:flex;flex-direction:column;overflow:hidden}
 .cash-close-modal>header{flex-shrink:0}
 .cash-close-modal>form{display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
-.cash-close-modal .cash-dialog-body{min-height:0;overflow:auto;grid-auto-rows:max-content;align-content:start;padding-right:var(--space-2);scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--ink-400) var(--cloud-50);overscroll-behavior:contain}
+.cash-close-modal .cash-dialog-body{min-height:0;overflow:auto;grid-auto-rows:max-content;align-content:start;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--ink-400) var(--cloud-50);overscroll-behavior:contain}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar{width:var(--size-6)}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar-thumb{background:var(--ink-400);border-radius:var(--radius-control)}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar-track{background:var(--cloud-50)}

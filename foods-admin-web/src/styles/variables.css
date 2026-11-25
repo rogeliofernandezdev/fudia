@@ -138,14 +138,14 @@
   --teal-500: #14b8a6;
   --teal-700: #0f766e;
 
-  /* Acento celeste de identidad (categorías, iconos); no es estado. */
+  /* Acento celeste de identidad (personas, categorías e iconos); no es estado. */
   --sky-100: #e0f2fe;
   --sky-200: #c2dded;
   --sky-500: #0ea5e9;
   --sky-800: #075985;
 
-  /* Tintes decorativos: solo identidad de iconos (IconTile) en accesos, KPI,
-      canales y categorías. Nunca representan estados ni acciones. */
+  /* Tintes de identidad: iconos y superficies de grupos en accesos, KPI,
+      formularios, canales y categorías. Nunca representan estados ni acciones. */
   --peach-100: #fff0e6;
   --peach-700: #b4521d;
   --rose-100: #fdecf3;
@@ -485,7 +485,7 @@
   --elevation-up: 0 -8px 24px -10px var(--ink-950-alpha-12);
   --elevation-side: 12px 0 32px -14px var(--ink-950-alpha-12);
   --elevation-side-end: -12px 0 32px -14px var(--ink-950-alpha-12);
-  --elevation-primary: 0 1px 2px var(--primary-600-alpha-24), 0 6px 14px -6px var(--primary-600-alpha-48);
+  --elevation-primary: var(--elevation-1);
   --elevation-primary-soft: 0 10px 22px var(--primary-600-alpha-16);
   --elevation-selected: 0 0 0 1px var(--primary-600), 0 8px 18px -8px var(--primary-600-alpha-32);
   --ring-focus: 0 0 0 2px var(--primary-600-alpha-10), 0 0 0 4px var(--primary-600-alpha-16);
@@ -548,11 +548,31 @@
   --z-feedback: 140;
   --z-loader: 200;
 
+  /* Composición FUDIA 1.1: un único dueño de cada sangría. */
+  --page-inset: var(--space-6);
+  --page-space: var(--space-6);
+  --page-bottom-space: var(--space-8);
+  --section-space: var(--space-6);
+  --panel-inset: var(--space-5);
+  --modal-inset: var(--space-6);
+  --modal-body-space: var(--space-6);
+  --modal-header-background: var(--surface);
+  --modal-header-foreground: var(--ink-950);
+  --modal-header-line: var(--line);
+  --modal-header-focus: var(--primary-600);
+  --modal-form-background: var(--surface);
+  --modal-primary-background: var(--primary-50);
+  --modal-footer-background: var(--surface);
+  --modal-footer-line: var(--line);
+  --shell-sidebar-width: var(--size-224);
+  --table-header-background: var(--primary-700);
+  --table-header-foreground: var(--surface);
+
   /* Contratos de componentes */
   --control-height: var(--size-40);
   --table-row-height: var(--size-48);
   --table-header-height: var(--size-40);
-  --table-cell-padding-inline: var(--space-3);
+  --table-cell-padding-inline: var(--space-4);
   --font-size-control: var(--font-size-sm);
   --font-size-label: var(--font-size-xs);
   --modal-label-weight: var(--weight-semibold);
@@ -606,12 +626,22 @@ body {
   --kds-note-ink: var(--note-ink);
 }
 
+@media (width<=820px) {
+  :root {
+    --page-inset: var(--space-4);
+    --page-space: var(--space-5);
+  }
+}
+
 @media (width<440px) {
   :root { --toolbar-height: var(--size-112); }
 }
 
 @media (width<=600px) {
   :root {
+    --modal-inset: var(--space-4);
+    --modal-body-space: var(--space-4);
+    --panel-inset: var(--space-4);
     --control-height: var(--size-48);
     --table-row-height: var(--size-56);
     --table-header-height: var(--size-40);

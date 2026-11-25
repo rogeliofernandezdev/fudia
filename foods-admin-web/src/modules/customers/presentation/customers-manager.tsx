@@ -45,7 +45,7 @@ function CustomerDialog({initial,documentTypes,busy,close,save}:{initial:Custome
  const isCompany=documentType?documentType==="RUC":initial.customerType==="company";
  const submit=handleSubmit(values=>{values.customerType=isCompany?"company":"person";save(values)});
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true">
-  <ModalHeader title={initial.id?"Editar cliente":"Nuevo cliente"} onClose={close} busy={busy} closeLabel="Cerrar"/>
+  <ModalHeader title={initial.id?"Editar cliente":"Nuevo cliente"} onClose={close} busy={busy} closeLabel="Cerrar" icon="user" description="Identificación, contacto y dirección de entrega."/>
   <ModalForm onSubmit={submit} noValidate><ModalBody>
    <div className="form-sections-flow"><FormSection icon="user" title="Datos del cliente" bare><div className="form-grid customer-main-grid">
     <FormField label="Documento"><Select {...register("documentType")}>{documentTypes.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select></FormField>

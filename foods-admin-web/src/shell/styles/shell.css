@@ -1,3 +1,5 @@
+
+.sidebar{z-index:90;color:var(--ink-600);isolation:isolate;background:var(--surface);border-right:var(--stroke-1) solid var(--line);flex-direction:column;width:var(--shell-sidebar-width);height:100vh;height:100dvh;padding:var(--space-5) var(--space-3);transition:width var(--duration-base) var(--easing-out),padding var(--duration-base) var(--easing-out),transform var(--duration-base) var(--easing-out);display:flex;position:fixed;inset:0 auto 0 0;box-shadow:none}
 /* Owned styles extracted from the former global stylesheet.
  * Shell homologado (FUDIA DS 1.0): header blanco con borde inferior, sidebar blanco
  * con ítem activo índigo y drawer móvil con overlay accesible. */
@@ -5,7 +7,7 @@
 .topbar-identity{display:flex;align-items:center;gap:var(--space-3);min-width:0;max-width:var(--size-320);flex:0 1 auto}
 .topbar-company{min-width:0;max-width:var(--size-260);color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sidebar>a{padding:0 var(--space-2)}
-.admin-shell>main{min-height:100vh;margin-left:var(--size-250);container-type:inline-size;container-name:admin-main;transition:margin-left var(--duration-base) var(--easing-out)}
+.admin-shell>main{min-height:100vh;margin-left:var(--shell-sidebar-width);container-type:inline-size;container-name:admin-main;transition:margin-left var(--duration-base) var(--easing-out)}
 .topbar{border-bottom:var(--stroke-1) solid var(--line);z-index:10;background:var(--surface);justify-content:space-between;align-items:center;gap:var(--space-3);height:var(--shell-header);padding:0 var(--space-6);display:flex;position:sticky;top:0}
 .global-search{position:relative;border:var(--stroke-1) solid transparent;width:min(var(--size-420),36vw);height:var(--control-height);color:var(--ink-500);background:var(--cloud-100);border-radius:var(--radius-control);align-items:center;gap:var(--space-2);padding:0 var(--space-3);display:flex;transition:background var(--duration-fast),border-color var(--duration-fast),box-shadow var(--duration-fast)}
 @media (hover:hover) and (pointer:fine){.global-search:hover{background:var(--cloud-150)}}
@@ -42,13 +44,13 @@
 .sidebar nav{scrollbar-width:none;overscroll-behavior-y:contain;min-height:0;margin:var(--space-5) calc(var(--space-1) * -1) var(--space-3);padding:0 var(--space-1);overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 .sidebar nav section{margin-bottom:var(--space-3-5)}
 .sidebar nav section>small{color:var(--ink-500);letter-spacing:var(--letter-spacing-caps);padding:0 var(--space-2-5) var(--space-2);font-size:var(--font-size-2xs);font-weight:var(--weight-semibold);display:block}
-.sidebar nav a{color:var(--ink-600);border-radius:var(--radius-tile);grid-template-columns:var(--size-32) minmax(0,1fr) var(--size-22);align-items:center;gap:var(--space-2);min-height:var(--size-40);padding:0 var(--space-2);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);transition:color var(--duration-fast),background var(--duration-fast),box-shadow var(--duration-fast);display:grid;position:relative}
+.sidebar nav a{color:var(--ink-600);border-radius:var(--radius-tile);grid-template-columns:var(--size-32) minmax(0,1fr) var(--size-22);align-items:center;gap:var(--space-2);min-height:var(--size-44);padding:0 var(--space-2);font-size:var(--font-size-sm);font-weight:var(--weight-medium);transition:color var(--duration-fast),background var(--duration-fast),box-shadow var(--duration-fast);display:grid;position:relative}
 @media (hover:hover) and (pointer:fine){.sidebar nav a:hover{color:var(--ink-950);background:var(--cloud-100)}}
 .sidebar nav a.active{color:var(--surface);background:var(--primary-600)}
 .sidebar nav a.active:before{content:"";background:var(--primary-400);border-radius:0 var(--radius-chip) var(--radius-chip) 0;width:var(--size-3);height:var(--size-28);display:none;position:absolute;left:calc(var(--space-5) * -1)}
 .nav-icon{color:var(--ink-500);background:transparent;border-radius:var(--radius-tile);place-items:center;width:var(--size-32);height:var(--size-32);transition:color var(--duration-fast),background var(--duration-fast);display:grid}
 @media (hover:hover) and (pointer:fine){.sidebar nav a:hover .nav-icon{color:var(--ink-700);background:transparent}}
-.sidebar nav a.active .nav-icon{color:var(--surface);background:var(--surface-alpha-16)}
+.sidebar nav a.active .nav-icon{color:var(--surface);background:transparent}
 
 .sidebar nav a em{background:var(--danger-600);color:var(--surface);border-radius:var(--radius-control);justify-self:end;place-items:center;height:var(--size-20);font-size:var(--font-size-2xs);font-style:normal;display:grid}
 .sidebar-scrim{display:none}
@@ -59,4 +61,3 @@
 .sidebar nav a{min-height:var(--size-50)}
 .mobile-nav[aria-expanded=true]{color:var(--primary-700);background:var(--primary-100);border-radius:var(--radius-tile)}}
 @media (prefers-reduced-motion:reduce){.sidebar,.sidebar nav a,.nav-icon,.sidebar-scrim{transition:none!important;animation:none!important}}
-.sidebar{z-index:90;color:var(--ink-600);isolation:isolate;background:var(--surface);border-right:var(--stroke-1) solid var(--line);flex-direction:column;width:var(--size-250);height:100vh;height:100dvh;padding:var(--space-6) var(--space-5) var(--space-5);transition:width var(--duration-base) var(--easing-out),padding var(--duration-base) var(--easing-out),transform var(--duration-base) var(--easing-out);display:flex;position:fixed;inset:0 auto 0 0;box-shadow:none}

@@ -12,7 +12,7 @@
 .pagination-page:not(.active):active,.pagination-nav:active:not(:disabled){background:var(--primary-100)}
 .pagination-nav:disabled{cursor:not-allowed;color:var(--ink-400);background:var(--cloud-100);border-color:var(--line)}
 .standard-pagination.strong .pagination-nav{color:var(--surface);background:var(--primary-600);border-color:var(--primary-600)}
-.standard-pagination.strong .pagination-nav:disabled{color:var(--surface);background:var(--ink-700);border-color:var(--ink-400);border-style:dashed}
+.standard-pagination.strong .pagination-nav:disabled{color:var(--surface);background:var(--primary-700);border-color:var(--primary-300);border-style:dashed}
 .standard-pagination.compact{justify-content:center;min-height:var(--size-56);padding:var(--space-2) var(--space-3)}
 .standard-pagination.compact nav{justify-content:center;flex-wrap:wrap}
 .seats-input{width:var(--size-80)!important}

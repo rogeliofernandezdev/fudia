@@ -60,6 +60,15 @@ muestra al pasar el cursor o enfocar el contenedor. Formularios CRUD usan modal
 responsive, controles con la altura de `--control-height`, validación visible y
 estados de envío.
 
+## Composición compartida (FUDIA DS 1.1)
+
+Todo formulario modal, incluidos Caja, Gastos, Proveedores, Compras, Usuarios,
+Roles y categorías, usa `ModalForm` + `ModalBody` + `ModalFooter`. El cuerpo
+es el único dueño del padding y del scroll. Las clases de negocio definen
+su retícula, no otra sangría, altura máxima ni overflow. Los detalles independientes
+consumen `modal-body-space` y `modal-inset`. Tabla y columnas fijas usan los
+roles `table-header-background` y `table-header-foreground`, en índigo.
+
 ## Catálogo homologado
 
 Toda pantalla usa estas primitivas antes que cualquier solución local. Se
@@ -73,7 +82,8 @@ dentro de un módulo.
   Tabler directamente en un módulo.
 - `IconTile name tone size appearance` — icono sobre cuadrito tintado (`primary`, `brand`,
   `digital`, `teal`, `sky`, `peach`, `rose`, `warning`, `danger`, `navy`, `info`, `purple`,
-  `neutral`). Por defecto `appearance="soft"`; `vivid` rellena la familia con icono blanco
+  `whatsapp`, `neutral`). El tono `whatsapp` usa el verde propio del canal
+  (`chat-header`/`chat-outgoing`), nunca violeta. Por defecto `appearance="soft"`; `vivid` rellena la familia con icono blanco
   para acentos de Dashboard, hitos y flujos de Caja. No sustituye `Status` ni colorea botones.
 - `StatCard icon tone label value meta href attention` — indicador con flecha ↗
   hacia el detalle; agrupar con `.stat-grid`.
@@ -90,7 +100,7 @@ dentro de un módulo.
   (una en móvil); `sales-detail-content` relaciona las pestañas con su
   panel con las pastillas compartidas sobre una misma superficie `cloud-50`,
   sin otra tarjeta para el contenido. `sales-detail-facts` alinea etiquetas y valores en filas.
-  El contenedor mantiene `radius-card` (14 px); pista y selección heredan
+  El contenedor mantiene `radius-card` (16 px); pista y selección heredan
   `radius-pill` del componente compartido. Los paneles conservan sangría de 12 px.
   Las etiquetas tienen ancho natural en escritorio y tres columnas en móvil;
   no altera la navegación horizontal del resto de `Tabs`.
@@ -168,7 +178,7 @@ cierran un modal**; los únicos cierres son la X y la acción segura del pie.
 La X nunca queda fuera del alcance del teclado, ni siquiera durante la carga.
 Con el teclado virtual abierto en móvil (`(width<=600px) and (height<=560px)`,
 posible por `interactive-widget=resizes-content`) la hoja ocupa todo el alto,
-la cabecera se compacta a 52 px, el pie reduce su relleno y `modal-context` se
+la cabecera se compacta a 48 px, el pie reduce su relleno y `modal-context` se
 oculta; al cerrar el teclado todo vuelve a su tamaño.
 
 ```tsx
@@ -199,26 +209,35 @@ responsable ni estado dentro de la cabecera.
 
 `ModalHeader` es la cabecera reutilizable tanto de `Modal` como de detalles
 remotos que necesitan `Dialog` directamente. La cabecera reserva una fila para
-título y X. No acepta `subtitle` ni reserva una franja antes del cuerpo;
-solo 8 px separan el contenido de la cabecera. El título comunica crear/editar; el nombre del registro se
+título y X. `description` añade el contexto breve debajo del título, sin otra franja;
+el cuerpo deja 24 px en escritorio y 16 px en móvil. El título comunica crear/editar; el nombre del registro se
 integra en él cuando hace falta. `meta` y `details` se reservan para datos y
-controles útiles, fuera de la cabecera; las descripciones van en el cuerpo
+controles útiles, fuera de la cabecera; las explicaciones extensas van en el cuerpo
 desplazable. Un título de sección que repite la cabecera se elimina.
 En detalles operativos, responsables y fecha se ubican en el cuerpo. Cabecera
-azul `primary-700`, título blanco, cuerpo blanco y pie fijo `cloud-50`,
-con los mismos márgenes horizontales de 24/16 px. Padding vertical de 8 px y altura
-mínima de 52 px, no altura fija: los textos largos conservan su información.
-Icono primario blanco de 20 px, centrado en un espacio de 44 px sin recuadro.
-La X blanca de 20 px va sin recuadro ni contorno, fondo transparente y sin
-sombra, dentro de un área de clic de 44 px;
-no cambia de color con hover ni al guardar y mantiene foco blanco visible para teclado.
-Con `busy`, queda deshabilitada sin reducir su opacidad: la X sigue blanca,
+blanca, título oscuro y X neutra, cuerpo blanco y pie fijo blanco,
+con los mismos márgenes horizontales de 24/16 px. Padding vertical de 12 px y altura
+mínima de 64 px (56 px en móvil), no altura fija: los textos largos conservan su información.
+En formularios, la cabecera admite `icon` con el glifo de la tarea en una
+superficie tintada de 40 px mediante `IconTile`. `getIdentityTone` centraliza su
+familia (menta, durazno, celeste, violeta o petróleo); `iconTone` permite declarar
+otra identidad cuando corresponde. Se reutiliza la misma asignación en
+`FormSection`, cuyo primer grupo toma una superficie clara de esa familia.
+No se recolorean estados para conseguir variedad. Con explicación breve, reserva al menos 80 px;
+con teclado se compacta a 48 px y oculta esa explicación. El grupo de datos
+principal se distingue con una superficie neutra suave; las secciones restantes
+se separan por espacio, sin sumar otro padding sobre el gap. Las tres zonas
+mantienen divisores neutros, columnas y orden. No hay encabezado oscuro.
+Los detalles de lectura conservan título y X. La X neutra de 16 px va sin recuadro ni contorno,
+con área de clic de 32 px en escritorio y 44 px en táctil;
+mantiene foco índigo visible para teclado sobre el encabezado blanco.
+Con `busy`, queda deshabilitada sin reducir su opacidad: la X sigue visible,
 también en altas, ediciones y errores de carga. Las respuestas success/error y confirmaciones warning conservan su
 componente independiente y su semántica.
 
-`ModalFooter({children,note,status,statusLabel})` agrupa los botones contiguos
-a la derecha, con 10 px de separación y la acción principal al final. No usar
-`margin-right:auto` en Cancelar ni `space-between` entre las acciones. En móvil
+`ModalFooter({children,note,status,statusLabel})` coloca la salida a la izquierda
+cuando el botón declara `action="cancel"` y conserva alternativas y acción
+principal a la derecha, con 10 px entre ellas. El orden del DOM no cambia. En móvil
 las acciones adyacentes se reparten la fila por igual si caben. Un botón solo
 en su fila, incluido Cancelar, ocupa el 100 % del ancho útil; apilados, todos
 llenan su fila. Nunca reservar una media columna vacía. Los estados y notas usan otra fila
@@ -229,11 +248,9 @@ En móvil (≤600 px, viewport de referencia 427 × 933) las hojas ocupan el
 ancho completo y se anclan abajo: los módulos usan `width:100%` o
 `min(…,100%)`, nunca `calc(100vw - N)`, que deja tarjetas flotantes con
 márgenes de 8–14 px y descuadra el margen de 16 px. En pantalla completa el pie
-queda fijo abajo sin huecos: con `ModalForm`/`ModalBody` el cuerpo crece; un
-`form` heredado sin `modal-form` recibe `margin-bottom:auto` en el bloque previo
-al pie desde `modal.css`. Un `form` con `padding:0` propio debe usar `ModalForm`:
-el form heredado compensa su padding con márgenes negativos en el pie y lo saca
-16 px del modal.
+queda fijo abajo sin huecos: `ModalForm` distribuye el alto, `ModalBody` crece
+y desplaza el contenido y `ModalFooter` permanece visible. Todos los formularios
+usan este patrón; no hay compensaciones de padding ni márgenes negativos.
 
 `modal-action-layout` homologa pies con grupos anidados: ancho natural y
 acciones contiguas en escritorio; flex-wrap con reparto igual y crecimiento
@@ -410,7 +427,7 @@ Reglas:
   campos no repiten la marca `optional`.
 - `RouteMap({origin,destination,courier,label})` (`@/design-system/route-map`,
   Mapbox, carga diferida): mapa de seguimiento de un reparto, sin elegir puntos.
-  Marcadores circulares de 36 px con icono blanco: local `ink-700`,
+  Marcadores circulares de 36 px con icono blanco: local `primary-800`,
   entrega `brand-700` y repartidor `primary-600`. Ruta por calles (Directions)
   en `primary-600`; si no responde, línea recta. El encuadre solo cambia cuando
   aparece o desaparece un punto, y el repartidor se desliza 900 ms a su nueva
@@ -909,7 +926,7 @@ pastilla de estado ni formateador de dinero.
   accesible `label` y `aria-describedby` mientras está abierto; abre con hover
   de puntero fino, foco visible de teclado y toque o pulsación larga en táctil
   (sin el menú nativo de la imagen), y cierra con Escape o al tocar fuera. La
-  burbuja vive en un portal (`--z-tooltip`), fondo `ink-950`, texto `surface`,
+  burbuja vive en un portal (`--z-tooltip`), fondo `primary-800`, texto `surface`,
   ancho máximo 280 px o el viewport menos 16 px por lado; abre arriba y baja si
   no cabe (`placeTooltip`). El consumidor no renderiza `Tooltip` si no hay
   contenido. Las etiquetas de una línea usan `[data-tooltip]` y `TooltipLayer`,

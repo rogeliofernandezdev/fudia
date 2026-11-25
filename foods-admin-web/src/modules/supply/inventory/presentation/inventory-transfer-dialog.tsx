@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {useState} from "react";
 import {Controller,useFieldArray,useForm,useWatch} from "react-hook-form";
-import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea,ModalHeader,ModalFooter,FormSection,IconTile} from "@/design-system";
+import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea,ModalHeader,ModalFooter,FormSection,IconTile,ModalForm,ModalBody} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryTransferResolver} from "../domain/inventory-transfer-schema";
@@ -43,11 +43,11 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog onResponseClose={close} className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy} aria-describedby="inventory-transfer-title-description">
 
-      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-      <form onSubmit={handleSubmit(submit)} noValidate>
-        <div className="inventory-transfer-body">
+      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="transfer" description="Selecciona el destino y las cantidades a transferir."/>
+      <ModalForm onSubmit={handleSubmit(submit)} noValidate>
+        <ModalBody className="inventory-transfer-body">
           <FormSection icon="route" title="Ruta del traslado" bare>
           <div className="inventory-transfer-route">
             <div className="inventory-transfer-origin"><small>Origen</small><strong>{location?.name??"Local activo"}</strong></div>
@@ -91,9 +91,9 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
           </FormSection>
 
           {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
-        </div>
+        </ModalBody>
         <ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
-      </form>
+      </ModalForm>
     </Dialog>
   </div>;
 }

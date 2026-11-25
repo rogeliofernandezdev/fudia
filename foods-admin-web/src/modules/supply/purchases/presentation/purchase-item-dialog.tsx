@@ -3,7 +3,7 @@ import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery,useQueryClient} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,ErrorState,FormField,Icon,Input,Skeleton,Status,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Icon,Input,Skeleton,Status,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseInventoryItemResolver} from "../domain/purchase-schema";
@@ -157,12 +157,12 @@ export function PurchaseItemDialog({
   </section></>;
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog onResponseClose={close} className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={locked}>
+    <Dialog onResponseClose={close} className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={locked} aria-describedby="purchase-item-title-description">
 
-      <ModalHeader title={view.kind==="create"?"Nuevo artículo":view.kind==="link"?"Controlar con inventario":"Agregar artículo"} titleId="purchase-item-title" onClose={close} busy={locked||catalogBusy} closeLabel="Cerrar"/>
+      <ModalHeader title={view.kind==="create"?"Nuevo artículo":view.kind==="link"?"Controlar con inventario":"Agregar artículo"} titleId="purchase-item-title" onClose={close} busy={locked||catalogBusy} closeLabel="Cerrar" icon="box" description="Selecciona un artículo o completa sus datos de compra."/>
 
-      <form autoComplete="off" onSubmit={event=>event.preventDefault()} noValidate>
-        <div className="purchase-item-body" inert={busy}>
+      <ModalForm autoComplete="off" onSubmit={event=>event.preventDefault()} noValidate>
+        <ModalBody className="purchase-item-body" inert={busy}>
           {view.kind==="search"?<section className="purchase-item-section purchase-existing-section">
             <label className="purchase-existing-search">Buscar artículo
               <span className="ds-input-shell purchase-existing-search-control"><Icon name="search" size={16}/><Input autoFocus value={search} onChange={event=>setSearch(event.target.value)} placeholder="Escribe el nombre del producto o insumo"/></span>
@@ -231,7 +231,7 @@ export function PurchaseItemDialog({
             <div className="purchase-item-zero-note"><Icon name="lock" size={16}/><p><b>Conserva nombre, precio, categoría e historial</b>Desde ahora su stock se llevará con Compras e Inventario y empieza en 0: aparecerá «Agotado» hasta que confirmes una recepción o registres una entrada en Inventario.</p></div>
             {stockFields}
           </>}
-        </div>
+        </ModalBody>
         <ModalFooter>
           {!searching&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{validationMessage}</div>}
           {searching
@@ -239,7 +239,7 @@ export function PurchaseItemDialog({
             :<Button type="button" action="back" onClick={()=>setView({kind:"search"})} disabled={locked||catalogBusy}>Volver</Button>}
           {!searching&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy} loading={locked}>{locked?"Guardando…":view.kind==="link"?"Vincular y agregar":"Crear y agregar"}</Button>}
         </ModalFooter>
-      </form>
+      </ModalForm>
     </Dialog>
   </div>;
 }

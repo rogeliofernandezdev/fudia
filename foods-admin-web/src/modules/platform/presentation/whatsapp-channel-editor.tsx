@@ -53,8 +53,8 @@ export function WhatsAppChannelEditor({initial,existing,countries,usedCountries,
   if(existing&&(existing.phoneNumber!==value.phoneNumber||existing.provider!==draft.provider)){setConfirm({...value});return}
   onSave(draft.provider==="FUDIA_WEB"?{...value,phoneNumber:""}:value);
  };
- return <><div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={onClose} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={pending}>
-  <ModalHeader title={existing?"Editar canal":"Nuevo canal"} titleId="global-channel-title" onClose={onClose} busy={pending} closeLabel="Cerrar"/>
+ return <><div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={onClose} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={pending} aria-describedby="global-channel-title-description">
+  <ModalHeader title={existing?"Editar canal":"Nuevo canal"} titleId="global-channel-title" onClose={onClose} busy={pending} closeLabel="Cerrar" icon="chat" description="Configura el número y su proveedor de conexión."/>
   <ModalForm onSubmit={event=>{event.preventDefault();submit()}}>
    <ModalBody><div className="form-grid platform-channel-fields">
     {error&&<p className="field-error span-2" role="alert">{error}</p>}
@@ -78,7 +78,7 @@ export function WhatsAppChannelEditor({initial,existing,countries,usedCountries,
     <label className="switch-row span-2"><input type="checkbox" checked={draft.active} disabled={pending} onChange={e=>setDraft({...draft,active:e.target.checked})}/><span aria-hidden="true"/><b>Activar canal para este país</b></label>
     {existing&&<details className="whatsapp-history span-2"><summary>Historial de configuración</summary>{history.isLoading?<Skeleton className="whatsapp-history-placeholder"/>:history.isError?<ErrorState title="No pudimos cargar el historial" onRetry={()=>void history.refetch()}/>:!history.data?.items.length?<p>Aún no hay cambios registrados.</p>:<ol>{history.data.items.map((item,index)=><li key={`${item.createdAt}-${index}`}><time>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</time><p>{providers.find(provider=>provider.value===item.after.provider)?.label??"Configuración anterior"} · {item.after.phoneNumber??"Sin número"} · {item.after.active?"Activo":"Inactivo"}</p></li>)}</ol>}</details>}
    </div></ModalBody>
-   <ModalFooter><Button kind="ghost" disabled={pending} onClick={onClose}>Cancelar</Button><Button type="submit" disabled={pending||!providers.length} loading={pending}>{pending?"Guardando…":"Guardar"}</Button></ModalFooter>
+   <ModalFooter><Button kind="ghost" disabled={pending} onClick={onClose} action="cancel">Cancelar</Button><Button type="submit" disabled={pending||!providers.length} loading={pending}>{pending?"Guardando…":"Guardar"}</Button></ModalFooter>
   </ModalForm>
  </Dialog></div>
  <ConfirmDialog open={Boolean(confirm)} title="Cambiar canal del país" description={`Los QR impresos abrirán ${confirm?.provider==="FUDIA_WEB"?"el chat web del restaurante":confirm?.phoneNumber??value.phoneNumber} cuando el canal esté activo. Los chats y avisos anteriores conservarán su canal original; los pedidos permanecen intactos.`} tone="success" confirmLabel="Confirmar cambio" pending={pending} onCancel={()=>setConfirm(null)} onConfirm={()=>{if(confirm){onSave(confirm);setConfirm(null)}}}/>

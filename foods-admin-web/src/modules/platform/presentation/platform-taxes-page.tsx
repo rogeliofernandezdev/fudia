@@ -2,7 +2,7 @@
 import "./platform-taxes.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,InlineNotice,Input,ModalFooter,ModalHeader,PageHeader,RowActionButton,Status,TableSkeleton} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,InlineNotice,Input,ModalFooter,ModalHeader,PageHeader,RowActionButton,Status,TableSkeleton,ModalForm,ModalBody} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import {useFeedback} from "@/providers";
@@ -107,18 +107,18 @@ function RateDialog({regime,initial,busy,close,save}:{regime:Regime;initial:Rate
  const[error,setError]=useState("");
  const submit=()=>{const message=draftError(draft);setError(message);if(!message)save(draft)};
  const reach=regime.enrolledProfiles===1?"Se aplica a 1 empresa acogida.":`Se aplica a ${regime.enrolledProfiles} empresas acogidas.`;
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact tax-rate-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="tax-rate-title" aria-busy={busy}>
-  <ModalHeader title={draft.id?"Editar periodo":"Nuevo periodo"} titleId="tax-rate-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
-  <form onSubmit={event=>{event.preventDefault();submit()}} noValidate>
-   <div className="form-grid">
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact tax-rate-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="tax-rate-title" aria-busy={busy} aria-describedby="tax-rate-title-description">
+  <ModalHeader title={draft.id?"Editar periodo":"Nuevo periodo"} titleId="tax-rate-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="tax" description="Configura el porcentaje y su periodo de vigencia."/>
+  <ModalForm onSubmit={event=>{event.preventDefault();submit()}} noValidate>
+   <ModalBody className="form-grid">
     {error&&<p className="field-error span-2" role="alert">{error}</p>}
     <FormField className="span-2" label="Impuesto"><Input value={regime.name} readOnly tabIndex={-1}/></FormField>
     <FormField label="Desde"><Input type="date" value={draft.validFrom} onChange={e=>setDraft({...draft,validFrom:e.target.value})}/></FormField>
     <FormField label="Hasta" optional><Input type="date" value={draft.validUntil} onChange={e=>setDraft({...draft,validUntil:e.target.value})}/></FormField>
     <FormField className="span-2" label="IGV %" help="Total que sale en el comprobante (IGV + IPM)."><Input inputMode="decimal" value={draft.percent} onChange={e=>setDraft({...draft,percent:e.target.value})} placeholder="10.5"/></FormField>
     <FormField className="span-2" label="Base legal"><Input maxLength={120} value={draft.legalBasis} onChange={e=>setDraft({...draft,legalBasis:e.target.value})} placeholder="Ley 32387"/></FormField>
-   </div>
+   </ModalBody>
    <ModalFooter note={reach}><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
-  </form>
+  </ModalForm>
  </Dialog></div>;
 }

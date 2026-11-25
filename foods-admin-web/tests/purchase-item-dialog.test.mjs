@@ -44,7 +44,7 @@ function mount({save=async()=>{},busy=false,modules={},linkable=[],assignable=[]
   },useWatch:({name})=>formControl.getValues(name)};
   if(name==="@tanstack/react-query")return {useQuery:({queryKey})=>({data:{items:queryKey[0]==="purchase-linkable-products"?linkable:queryKey[0]==="purchase-assignable-items"?assignable:[]},isLoading:false,isError:false}),useQueryClient:()=>({invalidateQueries:()=>{}})};
   if(name==="@/providers/session-context")return {useSession:()=>({location:{country:"PE",name:"Miraflores"},modules})};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Textarea","Dialog","EmptyState","ErrorState","Skeleton","Status","ModalHeader","ModalFooter"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Textarea","Dialog","EmptyState","ErrorState","Skeleton","Status","ModalHeader","ModalFooter","ModalForm","ModalBody"].map(key=>[key,key==="ModalForm"?"form":key]));
   if(name==="../domain/linkable-product")return {linkableControlLabel:()=>"Usa cupo del día"};
   if(name==="../domain/purchase-schema")return schema;
   if(name==="./purchase-unit-field")return {PurchaseUnitField:"PurchaseUnitField"};

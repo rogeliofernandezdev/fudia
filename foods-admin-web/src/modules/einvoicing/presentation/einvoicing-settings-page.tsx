@@ -75,8 +75,8 @@ function LocationSeriesDialog({location,documentTypes,close}:{location:LocationS
  const[defaultDocument,setDefaultDocument]=useState<FiscalDocumentType>(location.defaultDocument);
  const save=useMutation({mutationFn:()=>saveLocationSettings(location.locationId,{defaultDocument,series}),onSuccess:()=>{void client.invalidateQueries({queryKey:["einvoicing-settings"]});void client.invalidateQueries({queryKey:["einvoicing-checkout"]});close();notify({tone:"success",title:"Series guardadas",message:`${location.name} ya tiene sus series de comprobantes.`})},onError:error=>notify({tone:"danger",title:"No se pudo guardar",message:error.message})});
  const busy=save.isPending;
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!busy)close()}} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="einvoicing-location-title">
-  <ModalHeader title={<>Series de comprobantes · {location.name}</>} titleId="einvoicing-location-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!busy)close()}} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="einvoicing-location-title" aria-describedby="einvoicing-location-title-description">
+  <ModalHeader title={<>Series de comprobantes · {location.name}</>} titleId="einvoicing-location-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="invoice" description="Configura las series que usará este local."/>
   <ModalForm onSubmit={event=>{event.preventDefault();if(!busy)save.mutate()}} noValidate inert={busy}>
    <ModalBody><div className="form-grid">
     {documentTypes.map(item=><FormField key={item.documentType} icon={false} label={`Serie de ${item.label.toLowerCase()}`} help={item.lastNumber>0?`Ya emitió ${item.lastNumber} comprobantes; no se puede cambiar.`:undefined}><Input readOnly={item.lastNumber>0} maxLength={8} value={series[item.documentType]??""} onChange={event=>setSeries({...series,[item.documentType]:event.target.value.toUpperCase()})} placeholder={item.suggested}/></FormField>)}
@@ -125,8 +125,8 @@ function CredentialsDialog({profile,providerLabel,close}:{profile:ProfileSetting
   try{const content=await readBase64(file);setValues(current=>({...current,[field.key]:content}));setFileNames(current=>({...current,[field.key]:file.name}));setError("")}
   catch(failure){setError(failure instanceof Error?failure.message:"No pudimos leer el archivo.")}
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!busy)close()}} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="einvoicing-credentials-title">
-  <ModalHeader title={<>{"Credenciales"} · {`${providerLabel} · ${profile.countryName}`}</>} titleId="einvoicing-credentials-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!busy)close()}} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="einvoicing-credentials-title" aria-describedby="einvoicing-credentials-title-description">
+  <ModalHeader title={<>{"Credenciales"} · {`${providerLabel} · ${profile.countryName}`}</>} titleId="einvoicing-credentials-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="key" description="Completa los datos de conexión con el proveedor."/>
   <ModalForm onSubmit={event=>{event.preventDefault();if(busy)return;if(missing.length){setError(`Completa: ${missing.map(field=>field.label).join(", ")}.`);return}save.mutate()}} noValidate inert={busy}>
    <ModalBody>
     <p className="pos-tip-help einvoicing-credentials-intro">Se guardan cifradas y nunca se vuelven a mostrar.{configured?" Deja un campo vacío para conservar el valor guardado.":""}</p>

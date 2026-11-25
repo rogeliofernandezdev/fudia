@@ -66,7 +66,7 @@ test("la estructura activa márgenes, acciones contiguas y una columna a 390 px 
  const rules=parse("styles/globals.css"),modal=parse("design-system/styles/modal.css");
  const value=(rule,prop)=>rule.nodes.find(node=>node.prop===prop)?.value;
  const desktop=(list,selector)=>list.find(rule=>rule.selector===selector&&rule.parent.type==="root");
-  assert.equal(value(desktop(modal,".modal-body"),"padding"),"var(--space-2) var(--space-6) var(--space-6)","el cuerpo usa el relleno del modal compartido");
+  assert.equal(value(desktop(modal,".modal-body"),"padding"),"var(--modal-body-space) var(--modal-inset)","el cuerpo usa el relleno del modal compartido");
  const footer=desktop(modal,".modal-footer,.crud-modal>footer,.crud-modal>form>footer");
  assert.equal(value(footer,"justify-content"),"flex-end");
  assert.equal(value(footer,"gap"),"var(--space-2-5)");

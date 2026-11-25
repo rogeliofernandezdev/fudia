@@ -5,9 +5,9 @@
 @keyframes route-map-pulse{50%{opacity:.55}}
 .route-map-unavailable{min-height:var(--size-96);display:flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-4);border:var(--stroke-1) dashed var(--line);border-radius:var(--radius-tile);background:var(--cloud-25);color:var(--ink-500);font-size:var(--font-size-sm);text-align:center}
 .route-map-unavailable p{margin:0}
-/* Marcadores: local en navy, entrega en verde de marca y repartidor en azul operativo, con icono blanco. */
+/* Marcadores: local en índigo profundo, entrega en verde de marca y repartidor en azul operativo, con icono blanco. */
 .route-map-marker{width:var(--size-36);height:var(--size-36);display:grid;place-items:center;border-radius:50%;border:var(--stroke-2) solid var(--surface);color:var(--surface);box-shadow:var(--elevation-2)}
-.route-map-marker.is-origin{background:var(--ink-700)}
+.route-map-marker.is-origin{background:var(--primary-800)}
 .route-map-marker.is-destination{background:var(--brand-700)}
 .route-map-marker.is-courier{background:var(--primary-600);z-index:1}
 @media(prefers-reduced-motion:reduce){.route-map-loading{animation:none}}

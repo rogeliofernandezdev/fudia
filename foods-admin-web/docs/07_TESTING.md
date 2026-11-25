@@ -145,10 +145,11 @@ La foto del catálogo acompaña al borrador sin formar parte del payload del ped
 No registra pedidos ni consume el API. La emulación
 comprueba geometría; tacto, teclado y chrome del navegador requieren teléfono real.
 
-`modal-standard.test.mjs` protege la cabecera solo con título y X (ningún
-modal pasa `icon` a `ModalHeader`, `Modal` ni `RemoteModalSkeleton`),
-contexto fuera del header, estado opcional real y acciones contiguas a la
-derecha con 10 px. Audita que los Dialog de contenido no dupliquen la cabecera
+`modal-standard.test.mjs` protege la cabecera con título y X y el icono
+opcional de tarea, decorativo y sin repetir el nombre accesible del diálogo,
+contexto breve asociado al diálogo accesible, metadatos fuera del header,
+estado opcional real y salida a la izquierda con confirmación a la derecha.
+Audita que los Dialog de contenido no dupliquen la cabecera
 ni el footer del formulario. Confirmaciones y respuestas quedan exceptuadas.
 `shared-ui-preview.mjs` comprueba esa geometría en escritorio, 390 px y altura
 reducida, incluyendo el pie visible al desplazar el cuerpo.
@@ -477,8 +478,8 @@ selección blanca, pista contrastada y contadores índigo con número blanco,
 acciones alineadas en `TabsBar`, iconos obligatorios de 16 px sin ocultar en móvil,
 navegación por teclado y foco itinerante,
 márgenes comunes de modal, área táctil de cierre y geometría móvil sin recorte.
-Protege la cabecera índigo `primary-700`, título/cierre blancos, padding vertical
-de 4 px y altura mínima de 52 px. Los helpers comprueban contraste AA y permiten
+Protege la cabecera blanca, título en tinta y cierre neutro, padding vertical
+de 12 px y altura mínima de 64 px (56 px en móvil); cuerpo y pie comparten `modal-inset`. Los helpers comprueban contraste AA y permiten
 que los encabezados largos crezcan sin recortar texto.
 La cabecera llega al borde superior y ocupa todo el ancho del modal, sin franja
 degradada ni elementos decorativos anteriores.
@@ -559,8 +560,8 @@ y `EmptyState` en Próximamente, texto sin recortar en Mi perfil y estados
 compartidos de carga, error con Reintentar y vacío en Reservas. En Compras la
 variante de 760 px vuelve a aplicarse (orden, artículo y recepción a pantalla
 completa, «Proveedor» en una columna, cuerpos a 16 px). Una guarda general
-falla si una regla base posterior anula un `@media` del mismo archivo; `.sidebar`
-de `shell.css` es la única excepción registrada y queda pendiente.
+falla si una regla base posterior anula un `@media` del mismo archivo, sin
+excepciones pendientes para Sidebar.
 
 La revisión manual se hace con sesión real: un iframe del mismo origen de
 427 × 933 dentro de una pestaña (comparte la cookie), animaciones desactivadas

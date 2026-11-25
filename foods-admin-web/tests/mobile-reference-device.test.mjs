@@ -26,7 +26,7 @@ test("la receta en pantalla completa fija su pie abajo y respeta 16 px",()=>{
  assert.doesNotMatch(page,/<form className="recipe-form"/);
  const body=rulesFor("modules/menu/recipes/presentation/recipes.css",".recipe-form-body");
  assert.equal(body.find(rule=>!rule.media)?.values.flex,"1 1 auto","sin crecer, el pie queda a media pantalla a 427 × 933");
- assert.equal(body.find(rule=>mobile(rule.media))?.values.padding,"var(--space-3) var(--space-4)");
+ assert.equal(body.find(rule=>mobile(rule.media))?.values.padding,undefined,"el margen móvil viene de ModalBody");
 });
 
 test("los controles compactos conservan 44 px en táctil y móvil",()=>{
@@ -51,7 +51,7 @@ test("Próximamente usa el retorno compartido mediante pageRoutes",()=>{
 test("Plataforma usa márgenes de 16 px, áreas de 44 px y Continuar compartido",()=>{
  const file="modules/platform/presentation/platform-shell.css";
  const narrow=selector=>rulesFor(file,selector).find(rule=>rule.media.includes("max-width:760px"))?.values;
- assert.equal(narrow(".platform-content").padding,"var(--space-6) var(--space-4) var(--space-11)");
+ assert.equal(narrow(".platform-content").padding,"var(--page-space) var(--page-inset) var(--page-bottom-space)");
  assert.equal(narrow(".platform-topbar").padding,"var(--space-2-5) var(--space-4)");
  assert.equal(narrow(".platform-nav a")["min-width"],"var(--control-height)");
  assert.equal(narrow(".platform-topbar .platform-exit")["min-width"],"var(--control-height)");
@@ -67,11 +67,16 @@ test("Mi perfil no recorta rol, empresa ni local en móvil",()=>{
  assert.equal(copy?.values["overflow-wrap"],"anywhere");
 });
 
-test("un form heredado de pantalla completa deja el pie abajo sin hueco",()=>{
- const grow=rulesFor("design-system/styles/modal.css",".crud-modal>form:not(.modal-form)>:has(+footer)");
- assert.equal(grow.length,1);
- assert.equal(grow[0].media,"","aplica a todos los tamaños: sin alto libre el margen automático vale 0");
- assert.equal(grow[0].values["margin-bottom"],"auto","Registrar caja e Iniciar turno dejaban 434–476 px vacíos bajo el pie");
+test("Caja mantiene cuerpo desplazable y pie fijo sin márgenes negativos",()=>{
+ const page=read("modules/operations/cash/presentation/cash-dialogs.tsx");
+ assert.match(page,/<ModalForm[^>]*>[\s\S]*?<ModalBody className="cash-dialog-body">/);
+ assert.doesNotMatch(page,/<form[\s>]/);
+ const body=rulesFor("design-system/styles/modal.css",".modal-body").find(rule=>!rule.media);
+ assert.equal(body.values.flex,"1 1 auto");
+ assert.equal(body.values["overflow-y"],"auto");
+ const footer=rulesFor("design-system/styles/modal.css",".modal-footer").find(rule=>!rule.media);
+ assert.equal(footer.values.flex,"none");
+ assert.equal(footer.values.margin,undefined);
 });
 
 test("las hojas móviles ocupan el ancho completo, sin tarjetas flotantes",()=>{
@@ -121,15 +126,14 @@ test("Compras aplica su variante móvil: pantalla completa, una columna y 16 px"
  const file="modules/supply/purchases/presentation/purchases.css";
  const narrow=selector=>rulesFor(file,selector).find(rule=>rule.media==="(max-width:760px)")?.values;
  assert.equal(narrow(".purchase-detail-body").padding,"var(--space-3) var(--space-4)");
- assert.equal(narrow(".purchase-form-body").padding,"var(--space-3) 0","el form heredado ya aporta 16 px");
- assert.equal(narrow(".purchase-item-body").padding,"var(--space-3) 0");
+ assert.equal(narrow(".purchase-form-body")?.padding,undefined,"ModalBody aporta la sangría compartida");
+ assert.equal(narrow(".purchase-item-body")?.padding,undefined);
  assert.equal(narrow(".purchase-order-meta-grid")["grid-template-columns"],"1fr");
 });
 
 // Guarda general: una regla base escrita después de su @media la anula en silencio
-// (Compras perdía pantalla completa, una columna y padding). `.sidebar` queda pendiente:
-// corregirla cambia el ancho del drawer (250 → min(320 px, 86vw)) y requiere aprobación.
-const knownCascadeDebt=new Set(["shell/styles/shell.css|.sidebar"]);
+// Compras y Sidebar ya ordenan la base antes de sus variantes; no hay excepciones.
+const knownCascadeDebt=new Set();
 test("ninguna variante @media queda anulada por una regla base posterior",async()=>{
  const {readdirSync}=await import("node:fs");
  const {join,relative}=await import("node:path");

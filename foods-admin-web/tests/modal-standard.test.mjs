@@ -10,7 +10,7 @@ import {detailComponents} from "./helpers/order-detail-fixture.mjs";
 
 const root=resolve("src");
 const read=file=>readFileSync(resolve(root,file),"utf8");
-const {ModalHeader,ModalFooter}=detailComponents();
+const {ModalHeader,ModalFooter,Modal}=detailComponents();
 const h=React.createElement;
 
 test("cabecera solo con título y cierre, sin icono; contexto siempre fuera",()=>{
@@ -24,15 +24,24 @@ test("cabecera solo con título y cierre, sin icono; contexto siempre fuera",()=
  assert.match(html,/aria-label="Cerrar"/);
 });
 
-test("ningún modal pasa un icono a la cabecera",()=>{
- const files=dir=>readdirSync(resolve(root,dir),{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?files(`${dir}/${entry.name}`):entry.name.endsWith(".tsx")?[`${dir}/${entry.name}`]:[]);
- const offenders=[];
- for(const file of files(".")){
-  const source=read(file);
-  for(const match of source.matchAll(/<(ModalHeader|Modal|RemoteModalSkeleton)\s[^>]*?\s(icon|iconSlot)=/g))offenders.push(`${file}: <${match[1]} ${match[2]}=`);
- }
- assert.deepEqual(offenders,[],"La cabecera de un modal solo lleva título y X");
- assert.doesNotMatch(read("design-system/modal.tsx"),/modal-title-icon|iconSlot/,"ModalHeader no dibuja ni acepta un icono de título");
+test("el icono de tarea es opcional, decorativo y conserva título y cierre accesibles",()=>{
+ const html=renderToStaticMarkup(h(ModalHeader,{title:"Nueva orden",icon:"cart",onClose:()=>{}}));
+ assert.match(html,/class="modal-heading has-icon"/);
+ assert.match(html,/class="modal-heading-icon" aria-hidden="true"/);
+ assert.match(html,/icon-tile tone-teal size-lg/,"la compra usa la misma familia de identidad del sistema");
+ assert.match(html,/<h2[^>]*>Nueva orden<\/h2>/);
+ assert.match(html,/aria-label="Cerrar"/);
+ assert.equal((html.match(/<svg\b/g)??[]).length,2,"icono de tarea y cierre, sin repetir el título");
+ assert.doesNotMatch(html,/modal-context|<p\b|<small\b/);
+});
+
+test("la explicación breve pertenece al encabezado y describe el diálogo accesible",()=>{
+ const html=renderToStaticMarkup(h(Modal,{title:"Nuevo cliente",description:"Identificación y contacto.",icon:"user",onClose:()=>{}},h("div",null,"Campos")));
+ const descriptionId=html.match(/aria-describedby="([^"]+)"/)[1];
+ const header=html.match(/<header\b[\s\S]*?<\/header>/)[0];
+ assert.ok(header.includes(`id="${descriptionId}"`));
+ assert.match(header,/Identificación y contacto\./);
+ assert.doesNotMatch(header,/Campos|Paso \d/);
 });
 
 test("formularios empiezan bajo la cabecera sin franja ni título repetidos",()=>{
@@ -57,16 +66,16 @@ test("pie admite el estado real y no lo inventa para formularios",()=>{
  assert.match(detail,/modal-footer-status/);assert.match(detail,/Cuenta abierta/);
 });
 
-test("acciones contiguas y pie neutro usan la única regla compartida",()=>{
+test("salir a la izquierda y confirmar a la derecha usa intención explícita",()=>{
  const rules=[];postcss.parse(read("design-system/styles/modal.css")).walkRules(rule=>rules.push(rule));
  const footer=rules.find(rule=>rule.parent.type==="root"&&rule.selectors.includes(".modal-footer"));
  const value=prop=>footer.nodes.find(node=>node.prop===prop)?.value;
  assert.equal(value("justify-content"),"flex-end");
  assert.equal(value("gap"),"var(--space-2-5)");
- assert.equal(value("background"),"var(--surface)","pie blanco sobre el modal blanco (FUDIA DS 1.0)");
- for(const rule of rules.filter(rule=>rule.selector.includes("footer")&&rule.selector.includes(".button"))){
-  assert.ok(!rule.nodes.some(node=>node.prop==="margin-right"&&node.value==="auto"),rule.selector);
- }
+ assert.equal(value("background"),"var(--modal-footer-background)","el pie comparte el tratamiento claro del encabezado");
+ const cancel=rules.find(rule=>rule.parent.type==="root"&&rule.selector===".modal-footer>[data-action=cancel]");
+ assert.equal(cancel.nodes.find(node=>node.prop==="margin-inline-end")?.value,"auto");
+ assert.ok(!rules.some(rule=>/Cancelar/.test(rule.selector)),"la posición no depende del idioma de la etiqueta");
 });
 
 test("diálogos de contenido no duplican header ni footer de formulario",()=>{

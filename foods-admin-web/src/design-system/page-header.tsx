@@ -29,7 +29,7 @@ export function Button({children,icon,kind="primary",action,appearance="default"
  const busy=loading||props["aria-busy"]===true||props["aria-busy"]==="true";
  const lead=busy&&(!glyph||!trailing)?<ButtonSpinner/>:glyph&&!trailing?<Icon name={glyph} size={18}/>:null;
  const trail=glyph&&trailing?busy?<ButtonSpinner/>:<Icon name={glyph} size={18}/>:null;
- return <button type={type} className={`button ${variant}${appearance==="strong"?" strong":""} ${className}`.trim()} disabled={disabled||busy} aria-busy={busy||undefined} {...props}>{lead}<span>{children}</span>{trail}</button>;
+ return <button type={type} className={`button ${variant}${appearance==="strong"?" strong":""} ${className}`.trim()} data-action={action} disabled={disabled||busy} aria-busy={busy||undefined} {...props}>{lead}<span>{children}</span>{trail}</button>;
 }
 export function IconButton({icon,label,accessibleLabel,iconSize=18,className="",type="button",...props}:{icon:IconName;label:string;accessibleLabel?:string;iconSize?:IconSize}&Omit<ButtonHTMLAttributes<HTMLButtonElement>,"aria-label">){return <button type={type} className={`ds-icon-button ${className}`.trim()} aria-label={accessibleLabel??label} data-tooltip={label} {...props}><Icon name={icon} size={iconSize}/></button>}
 type RowAction="view"|"review"|"charge"|"edit"|"activate"|"deactivate"|"cancel"|"remove";

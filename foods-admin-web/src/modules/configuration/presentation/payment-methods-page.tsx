@@ -81,8 +81,8 @@ function CashImpact({on}:{on:boolean}){return <Status tone={on?"blue":"gray"}>{o
 function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:PaymentMethodDraft;editing:boolean;busy:boolean;close:()=>void;save:(value:PaymentMethodDraft)=>void}){
  const{register,handleSubmit,setValue,formState:{errors}}=useForm<PaymentMethodDraft>({defaultValues:initial,resolver:paymentMethodResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const submit=handleSubmit(value=>save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim(),sortOrder:Number(value.sortOrder)}));
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-method-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
-  <ModalHeader title={editing?"Editar medio de pago":"Nuevo medio de pago"} titleId="payment-method-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-method-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-method-title" aria-describedby="payment-method-title-description">
+  <ModalHeader title={editing?"Editar medio de pago":"Nuevo medio de pago"} titleId="payment-method-title" onClose={close} busy={busy} closeLabel="Cerrar" icon="payment" description="Define las opciones de pago disponibles en tu negocio."/>
   <ModalForm onSubmit={submit} noValidate><ModalBody><div className="payment-method-form-body">
    <FormSection icon="payment" title="Datos del medio de pago" bare><div className="form-grid">
     <FormField label="Código interno" help={editing?"El código no se puede cambiar.":"Minúsculas, números, guion o guion bajo."} error={errors.code?.message}><Input data-dialog-initial-focus={!editing||undefined} readOnly={editing} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. voucher"/></FormField>
@@ -96,6 +96,6 @@ function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:Paym
     <label className="payment-method-toggle"><input type="checkbox" {...register("affectsCash")}/><span><b>Impacta Caja</b><small>Se considera movimiento físico de efectivo en cobros y devoluciones.</small></span></label>
    </div></FormSection>
    {errors.salesEnabled?.message&&<div className="payment-method-warning" role="alert">{errors.salesEnabled.message}</div>}
-  </div></ModalBody><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm>
+  </div></ModalBody><ModalFooter><Button kind="ghost" onClick={close} disabled={busy} action="cancel">Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm>
  </Dialog></div>
 }

@@ -7,7 +7,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Skeleton} from "@/design-system/skeleton";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,Select,PageHeader,RowActionButton,Status,Textarea,Tooltip,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,Icon,Input,Select,PageHeader,RowActionButton,Status,Textarea,Tooltip,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {compatibleMeasurementUnits,convertMeasurementQuantity,suggestedRecipeUnit} from "@/shared/units/measurement-unit";
 import {stockStatus} from "@/shared/stock-status";
 import {useFeedback,useSession} from "@/providers";
@@ -203,11 +203,11 @@ export function RecipesPage(){
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
-   <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
-    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar"/>
+   <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending} aria-describedby="recipe-modal-title-description">
+    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" icon="chefHat" description="Relaciona el plato con los insumos de su preparación."/>
 
     <ModalForm className="recipe-form" onSubmit={submit} noValidate>
-     <div className="recipe-form-body">
+     <ModalBody className="recipe-form-body">
       <section className="recipe-main-fields" aria-label="Datos de la receta">
        <label className="recipe-product-field">
         <span>Plato preparado</span>
@@ -337,10 +337,10 @@ export function RecipesPage(){
         })}
        </div>}
       </section>
-     </div>
+     </ModalBody>
 
      <ModalFooter className="recipe-form-footer">
-      <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
+      <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe} action="cancel">Cancelar</Button>
       <Button type="submit" icon="check" disabled={save.isPending||unitCatalog.isLoading||unitCatalog.isError||!units.length} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
      </ModalFooter>
     </ModalForm>

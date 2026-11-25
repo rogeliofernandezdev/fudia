@@ -15,6 +15,8 @@
 .icon-tile.tone-info{color:var(--info-600);background:var(--info-100)}
 .icon-tile.tone-purple{color:var(--purple-600);background:var(--purple-100)}
 .icon-tile.tone-neutral{color:var(--ink-700);background:var(--cloud-100)}
+/* Canal WhatsApp: verde propio de la paleta del chat (identidad protegida, nunca violeta). */
+.icon-tile.tone-whatsapp{color:var(--chat-header);background:var(--chat-outgoing)}
 /* Vivo: relleno sólido de la familia con icono siempre blanco (patrón blanco + color vivo). */
 .icon-tile.vivid.tone-primary{color:var(--surface);background:var(--primary-600)}
 .icon-tile.vivid.tone-brand{color:var(--surface);background:var(--brand-600)}
@@ -23,7 +25,7 @@
 .icon-tile.vivid.tone-teal{color:var(--surface);background:var(--teal-500)}
 .icon-tile.vivid.tone-sky{color:var(--surface);background:var(--sky-500)}
 .icon-tile.vivid.tone-warning{color:var(--surface);background:var(--warning-500)}
-.icon-tile.vivid.tone-navy{color:var(--surface);background:var(--ink-700)}
+.icon-tile.vivid.tone-navy{color:var(--surface);background:var(--primary-700)}
 .icon-tile.vivid.tone-info{color:var(--surface);background:var(--info-500)}
 .icon-tile.vivid.tone-purple{color:var(--surface);background:var(--purple-600)}
 .icon-tile.vivid.tone-neutral{color:var(--surface);background:var(--ink-500)}

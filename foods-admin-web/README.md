@@ -43,6 +43,10 @@ la anulación es rojo sólido. Cancelar dentro de esa confirmación sigue neutro
 Usar las intenciones compartidas de `Button`, sin colores locales. Continuar
 es índigo con flecha al final. Referencia: `docs/02_DESIGN_SYSTEM.md`.
 
+La composición sigue FUDIA DS 1.1: página a 24 px, cabeceras de tabla índigo
+y formularios con una sola sangría (`ModalForm` + `ModalBody` + `ModalFooter`).
+El cuerpo es el único scroll; header y acciones mantienen su alineación.
+
 ## Verificación
 
 Ejecutar `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.

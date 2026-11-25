@@ -65,9 +65,9 @@ export function InventorySettingsDialog({item,units,busy,close,save}:{
    if(error&&typeof error==="object"&&"code" in error&&error.code==="inventory_item_name_taken")setError("name",{type:"server",message:"Ya existe un artículo o producto con ese nombre. Elige otro nombre."},{shouldFocus:true});
   }finally{submitting.current=false;}
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-settings-title" aria-busy={locked}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-settings-title" aria-busy={locked} aria-describedby="inventory-settings-title-description">
 
-  <ModalHeader title="Editar artículo" titleId="inventory-settings-title" onClose={close} busy={locked} closeLabel="Cerrar"/>
+  <ModalHeader title="Editar artículo" titleId="inventory-settings-title" onClose={close} busy={locked} closeLabel="Cerrar" icon="box" description="Actualiza los datos del artículo y su control de stock."/>
   <ModalForm onSubmit={event=>event.preventDefault()} noValidate>
    <ModalBody>
     <FormSection icon="stock" title="Datos del artículo" bare><div className="form-grid">

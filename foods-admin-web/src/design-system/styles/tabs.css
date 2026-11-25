@@ -32,6 +32,10 @@
 .ds-tabs button.tone-violet>svg{color:var(--digital-500)}
 .ds-tabs button.tone-violet>b{background:var(--digital-500)}
 .ds-tabs button.tone-violet.active{color:var(--digital-700);background:var(--digital-50);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--digital-500)}
+/* Canal WhatsApp: verde propio de la paleta del chat (identidad protegida, nunca violeta). */
+.ds-tabs button.tone-whatsapp>svg{color:var(--chat-header)}
+.ds-tabs button.tone-whatsapp>b{background:var(--chat-header)}
+.ds-tabs button.tone-whatsapp.active{color:var(--chat-header);background:var(--chat-outgoing);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--chat-header)}
 /* Franjas de filtro fijas: chips (FilterChip de la especificación), no pestañas de
    navegación. Píldoras blancas con borde; activa en índigo pastel. */
 .ds-tabs--chips{gap:var(--space-2)}

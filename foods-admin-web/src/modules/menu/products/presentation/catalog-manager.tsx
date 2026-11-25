@@ -1,5 +1,8 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
+// Load the approved product layout before opening its lazy dialog.
+import "./product-wizard.css";
+import "@/design-system/styles/rich-text-editor.css";
 /* eslint-disable @next/next/no-img-element -- Catalog images can be tenant-uploaded URLs not known at build time. */
 import dynamic from "next/dynamic";
 import {useState} from "react";import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";import {Icon,type IconName} from "@/design-system/icons";import {Button,EmptyState,ErrorState,PageHeader,Pagination,RowActionButton,SearchField,Select,Status} from "@/design-system";import {Tag} from "@/design-system/page-header";import {ConfirmDialog} from "@/design-system/confirm-dialog";import {RemoteModalSkeleton} from "@/design-system/remote-modal-skeleton";import {useFeedback} from "@/providers/feedback-provider";import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";import {useSettings} from "@/providers/settings-context";import type {CategoryDraft,ProductDraft,QuantityControl} from "../domain/types";import {modifiersPayload,type ModifierGroupDraft} from "../domain/modifiers";import {createAllergen,deactivateCatalogItem,listAllergens,listAllCategories,listProducts,saveCategory as persistCategory,saveProduct as persistProduct,saveProductModifiers,setProductActive,setCategoryActive} from "../infrastructure/products-api";const ProductDialog=dynamic(()=>import("./product-dialog").then(module=>module.ProductDialog),{ssr:false});
