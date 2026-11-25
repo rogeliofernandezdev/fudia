@@ -47,7 +47,7 @@ test("Pedidos inicia en Todos y ofrece el catálogo operativo recibido del API",
 
 test("Pedidos muestra Por entregar durante el trayecto y conserva el estado real para las acciones",()=>{
  const tree=mount().render();
- const status=tree.find(node=>node.type==="Status");assert.equal(status.props.children,"Por entregar");assert.equal(status.props.tone,"purple");assert.equal(status.props.solid,true);
+ const status=tree.find(node=>node.type==="Status");assert.equal(status.props.children,"Por entregar");assert.equal(status.props.tone,"green");assert.equal(status.props.solid,undefined,"los estados son pastel con etiqueta (FUDIA DS 1.0)");
  assert.equal(tree.find(node=>node.type==="OrderDispatchActions").props.order.status,"en_camino");
  const delivered=mount({response:{...data,items:[{...order,status:"entregado",operationalStatus:"entregado"}]}}).render();
  assert.equal(delivered.find(node=>node.type==="Status").props.children,"Entregado");

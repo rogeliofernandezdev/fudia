@@ -1,6 +1,6 @@
 import {Icon,type IconName} from "./icons";
 
-export type IconTileTone="primary"|"brand"|"digital"|"teal"|"sky"|"peach"|"rose"|"warning"|"danger"|"navy"|"indigo"|"purple"|"neutral";
+export type IconTileTone="primary"|"brand"|"digital"|"teal"|"sky"|"peach"|"rose"|"warning"|"danger"|"navy"|"info"|"purple"|"neutral";
 type IconTileProps={name:IconName;size?:"sm"|"md"|"lg";className?:string;tone?:IconTileTone;appearance?:"soft"|"vivid"};
 
 /**

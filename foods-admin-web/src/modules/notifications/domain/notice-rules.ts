@@ -61,11 +61,11 @@ export function noticePaymentId(target:string|undefined,notice:Pick<StaffNotice,
  return notice.kind==="pay_detected"&&target===pageRoutes.cash&&notice.payNotificationId?notice.payNotificationId:null;
 }
 
-/** Tono del icono de cada aviso sin leer, alineado con la matriz de estados: listo = morado (Por entregar),
+/** Tono del icono de cada aviso sin leer, alineado con la matriz de estados: listo = verde (Por entregar),
  *  cuenta pedida y cuenta anterior sin cerrar = naranja tenue (Por cobrar), llamado = celeste; pedidos nuevos usan el índigo de la marca. */
-export type NoticeTone="primary"|"purple"|"peach"|"sky";
+export type NoticeTone="primary"|"brand"|"peach"|"sky";
 export function noticeTone(kind:StaffNotice["kind"]):NoticeTone{
- return kind==="order_ready"?"purple":kind==="bill_requested"||kind==="stale_account"||kind==="delivery_unassigned"||kind==="delivery_pickup_delayed"||kind==="pay_detected"?"peach":kind==="assistance_requested"?"sky":"primary";
+ return kind==="order_ready"?"brand":kind==="bill_requested"||kind==="stale_account"||kind==="delivery_unassigned"||kind==="delivery_pickup_delayed"||kind==="pay_detected"?"peach":kind==="assistance_requested"?"sky":"primary";
 }
 
 /** Avisos que llegaron después de la última lectura del feed y siguen sin leer, del más reciente al más antiguo. */

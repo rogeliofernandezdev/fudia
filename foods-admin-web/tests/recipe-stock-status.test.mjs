@@ -17,7 +17,7 @@ test("receta: los insumos muestran su estado de stock con la matriz aprobada",()
  const status=compile("src/shared/stock-status.ts");
  assert.deepEqual(Object.values(status.stockStatus(10,2)).slice(0,3),["ok","green","Saludable"]);
  assert.deepEqual(Object.values(status.stockStatus(2,2)).slice(0,3),["low","orange","Stock bajo"]);
- assert.deepEqual(Object.values(status.stockStatus(0,2)).slice(0,3),["out","gray","Sin stock"]);
+ assert.deepEqual(Object.values(status.stockStatus(0,2)).slice(0,3),["out","red","Sin stock"]);
  assert.equal(status.stockStatus(1.5,0).key,"ok","sin mínimo configurado no puede aparecer bajo");
  assert.equal(status.stockStatus(NaN,2).key,"out","dato inválido se trata como sin stock");
  const page=read("src/modules/menu/recipes/presentation/recipes-page.tsx");

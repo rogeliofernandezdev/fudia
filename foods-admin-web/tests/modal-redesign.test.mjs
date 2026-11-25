@@ -14,8 +14,8 @@ test("los paneles del pedido quedan remetidos bajo las pestañas sin cambiar su 
  assert.ok(mobile.nodes.some(node=>node.selector===".order-detail-panel"&&node.nodes.some(decl=>decl.prop==="padding-inline"&&decl.value==="var(--space-3)")),"12 px de sangría en móvil");
  assert.equal((renderDetail().match(/class="order-detail-panel"/g)??[]).length,2,"Productos y Seguimiento comparten la sangría; no hay pestaña Detalles");
  const dialog=read("modules/operations/orders/presentation/order-detail-dialog.tsx");
- assert.ok(dialog.includes('label:"Productos",icon:"dish",tone:"primary"'),"Productos en azul, como en venta y cobro");
- assert.ok(dialog.includes('label:"Seguimiento",icon:"route",tone:"indigo"'),"Seguimiento conserva el índigo");
+ assert.ok(dialog.includes('label:"Productos",icon:"dish",tone:"primary"'),"Productos en índigo, como en venta y cobro");
+ assert.ok(dialog.includes('label:"Seguimiento",icon:"route",tone:"info"'),"Seguimiento conserva la familia información");
  assert.match(dialog,/`modal-summary order-detail-totals is-band\$\{pending\?"":" is-paid"\}`/,"el importe principal es una franja a todo el ancho");
  assert.match(dialog,/\{breakdown&&<div className="modal-summary-lines">/,"sin delivery ni saldo no hay desglose que repita el total");
  assert.match(dialog,/<div className="order-detail-meta">/,"fecha y responsables en una línea");
@@ -52,7 +52,7 @@ test("cabecera breve, responsables en el cuerpo y estados junto a su informació
  assert.ok(html.indexOf('aria-label="Estado del pedido"')<html.indexOf('role="tablist"'),"el estado va antes de las pestañas");
  assert.match(html,/role="tablist" aria-label="Información del pedido"/);
  assert.ok(html.indexOf('class="order-attribution"')<html.indexOf('id="order-detail-products-title"'));
- assert.match(html,/status sky emphasized[^>]*><svg[^>]*class="[^"]*status-icon"/);
+ assert.match(html,/status teal emphasized[^>]*><svg[^>]*class="[^"]*status-icon"/);
  assert.match(html,/<\/svg>Cuenta abierta/);
  const loading=renderDetail({skeleton:true});
  assert.match(loading,/order-detail-hero/,"el skeleton reproduce la identidad del detalle");
@@ -67,14 +67,15 @@ test("cabecera breve, responsables en el cuerpo y estados junto a su informació
  assert.match(delivery,/class="order-detail-contact"/);
  assert.match(delivery,/href="tel:999123456"/);
 });
-test("cada estado del pedido tiene un tono propio y las preparaciones lo reutilizan",()=>{
+test("cada estado del pedido usa su familia semántica y las preparaciones la reutilizan",()=>{
  const {orderStatus,serviceStatusTone,accountTone}=detailComponents();
- const states={nuevo:"gray",confirmado:"blue",preparando:"orange",listo:"purple",en_camino:"navy",entregado:"green",cancelado:"red"};
+ // Matriz FUDIA DS 1.0: pendiente y preparación en ámbar, confirmado y en camino en
+ // información, por entregar y entregado en éxito, cancelado en peligro.
+ const states={nuevo:"orange",confirmado:"blue",preparando:"orange",listo:"green",en_camino:"blue",entregado:"green",cancelado:"red"};
  for(const [state,tone] of Object.entries(states))assert.equal(orderStatus(state).tone,tone);
- assert.equal(new Set(Object.values(states)).size,Object.keys(states).length);
  assert.equal(Object.values(states).includes("violet"),false,"el violeta identifica WhatsApp, no un estado");
  for(const state of ["preparando","listo","entregado","cancelado"])assert.equal(serviceStatusTone(state),states[state]);
- for(const state of ["pendiente","nuevo","confirmado"])assert.equal(serviceStatusTone(state),"blue","lo que espera cocina coincide con el carril índigo");
+ for(const state of ["pendiente","nuevo","confirmado"])assert.equal(serviceStatusTone(state),"blue","lo que espera cocina coincide con la familia información");
  assert.equal(serviceStatusTone("desconocido"),"gray");
  assert.equal(accountTone({...exampleOrder,completedAt:"2026-10-10"}),"gray");
 });
@@ -86,19 +87,19 @@ test("productos, notas y cuenta tienen límites propios y cantidades circulares 
  assert.match(html,/role="listitem"/);
  const consumptionEnd=html.indexOf('</section>',html.indexOf('class="order-detail-consumption"'));
  assert.ok(html.indexOf('class="modal-detail-notes')>consumptionEnd);
- assert.match(html,/class="status sky emphasized"/);
+ assert.match(html,/class="status teal emphasized"/);
  assert.doesNotMatch(html,/class="status gray outline"/);
- assert.match(html,/class="icon-tile tone-indigo vivid size-sm modal-item-state"/,"la línea pendiente lleva su icono índigo sólido");
+ assert.match(html,/class="icon-tile tone-info vivid size-sm modal-item-state"/,"la línea pendiente lleva su icono información sólido");
  assert.match(html,/class="modal-item-row has-state order-detail-line"/,"usa la línea con estado compartida con venta y cobro");
  assert.match(html,/class="order-service-state"[^>]*>Pendiente/);
  const quantityRule=css.match(/(?:^|\n)\.modal-item-quantity\{([^}]*)\}/)?.[1]??"";
  assert.doesNotMatch(quantityRule,/background|border-radius/,"la cantidad es texto, sin círculo de fondo");
- assert.match(quantityRule,/color:var\(--indigo-600\)/);
+ assert.match(quantityRule,/color:var\(--ink-700\)/);
  assert.doesNotMatch(quantityRule,/cursor|box-shadow|#[\da-f]+/i);
  assert.match(renderDetail({skeleton:true}),/--radius-pill/);
  assert.match(css,/\.modal-summary\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)[^}]*background:var\(--surface\)/);
  assert.match(css,/\.modal-workspace:has\(>\.modal-summary\)\+\.modal-footer\{background:var\(--surface\)\}/,"el pie de acciones comparte la superficie del resumen y conserva su línea");
- assert.match(css,/\.modal-summary-total\{[^}]*border-radius:var\(--radius-card\);background:var\(--primary-100\)/,"el importe principal es la única ficha tintada");
+ assert.match(css,/\.modal-summary-total\{[^}]*border-radius:var\(--radius-md\);background:var\(--cloud-25\)/,"el importe principal es la única ficha hundida, en negro suave");
  assert.match(css,/\.modal-summary-total\{width:max-content;max-width:100%;min-width:min\(100%,var\(--modal-summary-action-width\)\);justify-self:end/,"la ficha se ajusta al ancho de la acción principal");
  assert.match(css,/\.modal-workspace:has\(>\.modal-summary\)\+\.modal-footer \.button\.primary\{min-width:var\(--modal-summary-action-width\)\}/,"la acción principal comparte el ancho de la ficha");
  assert.doesNotMatch(css.match(/\.modal-summary-total\{([^}]*)\}/)?.[1]??"",/border-left/);
@@ -142,7 +143,7 @@ test("el resumen global es inferior en todos los tamaños y no usa vh estático"
  assert.doesNotMatch(read("modules/operations/orders/presentation/order-detail.css"),/\b\d+vh\b/);
 });
 test("la cuenta distingue abierta, por cobrar y pagada sin cambiar el estado del pedido",()=>{
- assert.match(renderDetail(),/status sky emphasized[^>]*><svg[\s\S]*?<\/svg>Cuenta abierta/);
+ assert.match(renderDetail(),/status teal emphasized[^>]*><svg[\s\S]*?<\/svg>Cuenta abierta/);
  assert.match(renderDetail({order:{...exampleOrder,billClosedAt:"2026-10-09T20:00:00-05:00"}}),/status orange emphasized[^>]*><svg[\s\S]*?<\/svg>Por cobrar/);
  assert.match(renderDetail({order:{...exampleOrder,accountState:"paid",paidAmount:"30",remainingAmount:"0"}}),/status green emphasized[^>]*><svg[\s\S]*?<\/svg>Pagada/);
  assert.match(renderDetail({order:{...exampleOrder,accountState:"paid",paidAmount:"30",remainingAmount:"0",completedAt:"2026-10-10T13:00:00-05:00"}}),/status gray emphasized[^>]*><svg[\s\S]*?<\/svg>Finalizada/);
@@ -155,26 +156,26 @@ test("resumen agrupado y estado de cuenta destacado sin recolorear los demás es
  assert.match(heading,/Resumen de cuenta[\s\S]*Cuenta abierta/);
  assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-1\) solid var\(--line\)/,'el resumen abre con la misma línea fina que las secciones');
  assert.match(css,/\.modal-summary-lines\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(global,/\.status.blue\{color:var\(--indigo-700\);background:var\(--indigo-100\)\}/);
+ assert.match(global,/\.status.blue\{color:var\(--info-fg\);background:var\(--info-bg\)\}/);
  assert.match(global,/\.status.sky\{color:var\(--sky-800\);background:var\(--sky-100\)\}/);
  assert.doesNotMatch(global,/\.status\.(?:blue|sky|violet)\.emphasized\{/);
  assert.match(css,/\.modal-summary\{grid-template-columns:minmax\(0,2fr\) minmax\(0,1fr\)/);
- assert.match(html,/class="status blue solid"[^>]*><i[^>]*><\/i>Confirmado/,"el estado del pedido en el detalle es sólido");assert.match(html,/class="order-service-state"[^>]*>Pendiente/);
+ assert.match(html,/class="status blue"[^>]*><i[^>]*><\/i>Confirmado/,"el estado del pedido en el detalle es pastel con etiqueta");assert.match(html,/class="order-service-state"[^>]*>Pendiente/);
  assert.doesNotMatch(heading,/<button|href=/);
 });
 test("el encabezado de productos no repite unidades y conserva cantidades por producto",()=>{
  const html=renderDetail();
  assert.doesNotMatch(html,/\b\d+ unidades?\b/);
  assert.equal((html.match(/class="modal-item-quantity order-detail-qty"/g)??[]).length,exampleOrder.items.length);
- assert.equal(detailComponents().accountTone(exampleOrder),"sky");
+ assert.equal(detailComponents().accountTone(exampleOrder),"teal");
 });
 test("los cuatro estados de cuenta tienen tonos distintos sin recolorear la preparación",()=>{
  const {accountTone,serviceStatusTone,orderStatus}=detailComponents();
  const states=[exampleOrder,{...exampleOrder,billClosedAt:"2026-10-10"},{...exampleOrder,accountState:"paid"},{...exampleOrder,accountState:"paid",completedAt:"2026-10-10"}];
- assert.deepEqual(states.map(accountTone),["sky","orange","green","gray"]);
+ assert.deepEqual(states.map(accountTone),["teal","orange","green","gray"]);
  assert.notEqual(accountTone(exampleOrder),orderStatus("confirmado").tone);
  assert.equal(new Set(states.map(accountTone)).size,4);
  assert.equal(serviceStatusTone("preparando"),"orange");
  assert.equal(serviceStatusTone("entregado"),"green","entregado siempre verde");
- assert.equal(serviceStatusTone("listo"),"purple","por entregar usa el morado de la referencia");
+ assert.equal(serviceStatusTone("listo"),"green","por entregar usa la familia éxito de la matriz");
 });

@@ -24,7 +24,7 @@ const render=props=>renderToStaticMarkup(React.createElement(Button,props,"Guard
 test("tokens de microinteracción: una sola respuesta de superficie, presión y opacidad",()=>{
  for(const name of ["--transition-surface","--transition-press","--press-scale","--press-scale-icon","--opacity-disabled","--opacity-busy"])assert.ok(tokens.has(name),name);
  const surface=resolveTokens("var(--transition-surface)");
- for(const property of ["background-color","border-color","color","box-shadow","opacity"])assert.match(surface,new RegExp(`\\b${property} 160ms cubic-bezier`),property);
+ for(const property of ["background-color","border-color","color","box-shadow","opacity"])assert.match(surface,new RegExp(`\\b${property} 120ms cubic-bezier`),property);
  assert.doesNotMatch(surface,/\btransform\b|\ball\b/,"La superficie no anima geometría");
  assert.equal(resolveTokens("var(--transition-press)"),"transform 120ms cubic-bezier(.23,1,.32,1)");
  assert.ok(Number(resolveTokens("var(--opacity-busy)"))>Number(resolveTokens("var(--opacity-disabled)")),"En curso se distingue de no disponible");

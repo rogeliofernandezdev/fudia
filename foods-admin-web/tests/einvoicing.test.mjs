@@ -48,7 +48,7 @@ test("Sin comprobante no envía nada y una boleta anónima no envía documento",
 test("todos los estados fiscales tienen etiqueta y tono central",()=>{
  for(const status of ["PENDING","SENDING","ACCEPTED","OBSERVED","REJECTED","ERROR","CANCELLED"]){
   const view=fiscal.fiscalStatusView[status];
-  assert.ok(view.label&&["sky","green","orange","red","gray"].includes(view.tone),status);
+  assert.ok(view.label&&["blue","green","orange","red","gray"].includes(view.tone),status);
  }
 });
 

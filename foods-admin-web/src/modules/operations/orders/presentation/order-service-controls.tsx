@@ -41,4 +41,4 @@ export function OrderAccountActions({order,onAdd,busy=false}:{order:TableAccount
 }
 
 export function accountLabel(order:TableAccount){return order.completedAt?"Finalizada":order.accountState==="paid"?"Pagada":order.billClosedAt?"Por cobrar":"Cuenta abierta"}
-export function accountTone(order:TableAccount):"sky"|"green"|"orange"|"gray"{return order.completedAt?"gray":order.accountState==="paid"?"green":order.billClosedAt?"orange":"sky"}
+export function accountTone(order:TableAccount):"teal"|"green"|"orange"|"gray"{return order.completedAt?"gray":order.accountState==="paid"?"green":order.billClosedAt?"orange":"teal"}

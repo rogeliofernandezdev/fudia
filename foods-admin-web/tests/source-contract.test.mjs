@@ -436,7 +436,7 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(kitchen.includes("kitchen-skeleton-items"),"El skeleton conserva líneas de productos");
   assert.ok(kitchen.includes('status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"'),"En preparación usa una olla humeante como señal visual");
   assert.ok(kitchen.includes('icon={next==="listo"?"check":"cookingPot"}'),"La acción Iniciar usa la misma metáfora de preparación");
-  assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
+  assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:16px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
   assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending)}'),"Por preparar usa azul sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa naranja sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready)}'),"Listo usa brand-600 como fondo");
@@ -458,7 +458,7 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(kitchen.includes('icon:"cookingPot",tone:"orange"'),"La pestaña móvil de En preparación usa el tono naranja del carril");
   const tabsCss=read("src/design-system/styles/tabs.css");
   assert.ok(tabsCss.includes(".ds-tabs button.tone-orange>b{background:var(--warning-500)}"),"El contador toma el color vivo de su pestaña");
-  assert.ok(tabsCss.includes(".ds-tabs button[class*=tone-].active{color:var(--ink-950)"),"La etiqueta activa queda en tinta oscura, nunca en color vivo");
+  assert.ok(tabsCss.includes(".ds-tabs button.tone-info.active{color:var(--info-600)")&&tabsCss.includes(".ds-tabs button.tone-orange.active{color:var(--warning-600)")&&tabsCss.includes(".ds-tabs button.tone-green.active{color:var(--brand-700)")&&tabsCss.includes(".ds-tabs button.tone-violet.active{color:var(--digital-700)"),"La etiqueta activa usa el oscuro legible de su familia, nunca el color vivo");
   assert.equal(css.includes("digital-"),false,"El violeta no aparece en Cocina: identifica WhatsApp");
   assert.equal(css.includes("#"),false,"Cocina no introduce colores hexadecimales directos");
   assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");

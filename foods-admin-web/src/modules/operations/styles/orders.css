@@ -39,7 +39,7 @@
   .orders-salon-link:hover{
     border-color:var(--primary-300);
     background:var(--primary-100);
-    color:var(--navigation-900);
+    color:var(--primary-800);
   }
 }
 
@@ -261,8 +261,8 @@
   gap:var(--space-3);
   min-height:var(--size-56);
   padding:0 var(--space-5);
-  background:var(--navigation-900);
-  border-bottom:var(--stroke-1) solid var(--surface-alpha-8);
+  background:var(--surface);
+  border-bottom:var(--stroke-1) solid var(--line);
   flex-shrink:0;
 }
 .comanda-back:active,.comanda-close:active{transform:scale(var(--press-scale-icon))}
@@ -272,22 +272,22 @@
   width:var(--control-height);
   height:var(--control-height);
   border-radius:var(--radius-control);
-  border:var(--stroke-1) solid var(--surface-alpha-16);
-  background:var(--surface-alpha-8);
-  color:var(--surface);
+  border:var(--stroke-1) solid transparent;
+  background:transparent;
+  color:var(--ink-600);
   flex-shrink:0;
   cursor:pointer;
   transition:var(--transition-surface),var(--transition-press);
 }
 @media (hover:hover) and (pointer:fine){
   .comanda-back:hover,.comanda-close:hover{
-    border-color:var(--surface-alpha-24);
-    background:var(--surface-alpha-8);
+    background:var(--cloud-100);
+    color:var(--ink-950);
   }
 }
 .comanda-title{display:grid;gap:var(--space-0-5);flex:1;min-width:0}
 .comanda-title small{
-  color:var(--navigation-text);
+  color:var(--ink-500);
   letter-spacing:var(--letter-spacing-caps);
   font-size:var(--font-size-label);
   font-weight:var(--weight-heavy);
@@ -298,7 +298,7 @@
   font-size:var(--font-size-md);
   font-weight:var(--weight-heavy);
   letter-spacing:var(--letter-spacing-snug);
-  color:var(--surface);
+  color:var(--ink-950);
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -1150,11 +1150,11 @@
     gap:var(--space-2-5);
     padding:var(--space-2) var(--space-2) var(--space-2) var(--space-4);
     border-radius:var(--radius-card);
-    background:var(--navigation-900);
-    color:var(--surface);
+    background:var(--surface);
+    color:var(--ink-950);
     box-shadow:var(--elevation-3);
   }
-  .comanda-bar.ready{background:var(--navigation-900)}
+  .comanda-bar.ready{background:var(--surface)}
   .comanda-bar-info{
     flex:1;
     display:flex;
@@ -1162,20 +1162,20 @@
     gap:var(--space-2);
     background:none;
     border:0;
-    color:var(--surface);
+    color:var(--ink-950);
     font-size:var(--font-size-sm);
-    font-weight:var(--weight-bold);
+    font-weight:var(--weight-semibold);
     min-height:var(--control-height);
   }
   .comanda-bar-info svg{margin-left:auto;transform:rotate(-90deg)}
   .comanda-bar-finish{
     padding:var(--space-2-5) var(--space-5);
     border:0;
-    border-radius:var(--radius-tile);
-    background:var(--surface);
-    color:var(--navigation-900);
+    border-radius:var(--radius-control);
+    background:var(--primary-600);
+    color:var(--surface);
     font-size:var(--font-size-sm);
-    font-weight:var(--weight-heavy);
+    font-weight:var(--weight-semibold);
     min-height:var(--control-height);
   }
 }

@@ -1,58 +1,63 @@
-/* Pestañas compartidas: pista contrastada, selección blanca y contadores índigo. */
+/* Pestañas compartidas (FUDIA DS 1.0, especificación definitiva): la pestaña activa se
+   reconoce por fondo índigo pastel, texto índigo oscuro e indicador inferior de 3 px.
+   Inactivas: transparentes con indicador neutral; hover con neutral-100.
+   Los contadores usan el color de identidad de su familia. */
 .ds-tabs-bar{display:flex;align-items:center;gap:var(--space-3);width:100%;min-width:0;margin-bottom:var(--space-4)}
 .ds-tabs-bar>:first-child{flex:0 1 auto;min-width:0;max-width:100%}
 .ds-tabs-actions{display:flex;flex:0 0 auto;align-items:center;justify-content:flex-end;gap:var(--space-2);margin-left:auto}
 .ds-tabs-actions>div{display:contents}
-.ds-tabs{display:inline-flex;min-width:0;max-width:100%;gap:var(--space-1);padding:var(--space-1);overflow-x:auto;border-radius:var(--radius-pill);background:var(--cloud-150);scroll-padding-inline:var(--space-1);overscroll-behavior-x:contain;scrollbar-width:none}
+.ds-tabs{display:inline-flex;min-width:0;max-width:100%;gap:var(--space-1);overflow-x:auto;scroll-padding-inline:var(--space-1);overscroll-behavior-x:contain;scrollbar-width:none}
 .ds-tabs::-webkit-scrollbar{display:none}
-.ds-tabs button{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:var(--space-2);min-width:max-content;min-height:var(--control-height);padding:0 var(--space-4);border:var(--stroke-1) solid transparent;border-radius:var(--radius-pill);background:transparent;color:var(--ink-600);font:inherit;font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;cursor:pointer;transition:background var(--duration-fast),color var(--duration-fast),border-color var(--duration-fast)}
-.ds-tabs button:active{background:var(--primary-200)}
-.ds-tabs button.active{color:var(--primary-700);border-color:var(--primary-300);background:var(--surface)}
+.ds-tabs button{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:var(--space-2);min-width:max-content;min-height:var(--size-44);padding:0 var(--space-4);border:0;border-radius:var(--radius-md) var(--radius-md) 0 0;background:transparent;color:var(--ink-600);font:inherit;font-size:var(--font-size-base);font-weight:var(--weight-medium);white-space:nowrap;cursor:pointer;box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--line);transition:background-color var(--duration-motion) var(--easing-out),color var(--duration-motion) var(--easing-out),box-shadow var(--duration-motion) var(--easing-out)}
+.ds-tabs button:active{background:var(--cloud-150)}
+.ds-tabs button.active{color:var(--primary-700);background:var(--primary-50);font-weight:var(--weight-semibold);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--primary-600)}
 .ds-tabs button:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--space-0-5) * -1)}
-.ds-tabs button svg{display:block;flex:none}
+.ds-tabs button svg{display:block;flex:none;color:var(--ink-500)}
+.ds-tabs button.active svg{color:var(--primary-600)}
 .ds-tabs b{display:grid;flex:none;place-items:center;min-width:var(--size-20);height:var(--size-20);padding:0 var(--space-1);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);color:var(--surface);background:var(--primary-600)}
-/* Pestañas con tono (carril de Cocina, canal de Pedidos): misma pista y selección blanca;
-   icono y contador toman el color vivo de su familia y la pestaña activa un borde tenue
-   de ese color con etiqueta oscura en negrita. Nunca texto de color vivo. */
+/* Pestañas con tono (carril de Cocina, canal de Pedidos): la activa toma la superficie
+   pastel de su familia y su indicador; icono y contador siempre en su color de identidad. */
 .ds-tabs button.tone-primary>svg{color:var(--primary-600)}
 .ds-tabs button.tone-primary>b{background:var(--primary-600)}
-.ds-tabs button.tone-primary.active{border-color:color-mix(in srgb,var(--primary-600) 45%,var(--surface))}
-.ds-tabs button.tone-indigo>svg{color:var(--indigo-600)}
-.ds-tabs button.tone-indigo>b{background:var(--indigo-600)}
-.ds-tabs button.tone-indigo.active{border-color:color-mix(in srgb,var(--indigo-600) 45%,var(--surface))}
+.ds-tabs button.tone-primary.active{color:var(--primary-700);background:var(--primary-50);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--primary-600)}
+.ds-tabs button.tone-info>svg{color:var(--info-500)}
+.ds-tabs button.tone-info>b{background:var(--info-500)}
+.ds-tabs button.tone-info.active{color:var(--info-600);background:var(--info-50);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--info-500)}
 .ds-tabs button.tone-orange>svg{color:var(--warning-500)}
 .ds-tabs button.tone-orange>b{background:var(--warning-500)}
-.ds-tabs button.tone-orange.active{border-color:color-mix(in srgb,var(--warning-500) 45%,var(--surface))}
+.ds-tabs button.tone-orange.active{color:var(--warning-600);background:var(--warning-50);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--warning-500)}
 .ds-tabs button.tone-green>svg{color:var(--brand-600)}
 .ds-tabs button.tone-green>b{background:var(--brand-600)}
-.ds-tabs button.tone-green.active{border-color:color-mix(in srgb,var(--brand-600) 45%,var(--surface))}
-.ds-tabs button.tone-purple>svg{color:var(--purple-600)}
-.ds-tabs button.tone-purple>b{background:var(--purple-600)}
-.ds-tabs button.tone-purple.active{border-color:color-mix(in srgb,var(--purple-600) 45%,var(--surface))}
+.ds-tabs button.tone-green.active{color:var(--brand-700);background:var(--brand-50);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--brand-600)}
 .ds-tabs button.tone-violet>svg{color:var(--digital-500)}
 .ds-tabs button.tone-violet>b{background:var(--digital-500)}
-.ds-tabs button.tone-violet.active{border-color:color-mix(in srgb,var(--digital-500) 45%,var(--surface))}
-.ds-tabs button[class*=tone-].active{color:var(--ink-950);font-weight:var(--weight-bold)}
-@media(hover:hover) and (pointer:fine){.ds-tabs button:not(.active):hover{color:var(--primary-700);background:var(--primary-200)}}
+.ds-tabs button.tone-violet.active{color:var(--digital-700);background:var(--digital-50);box-shadow:inset 0 calc(var(--stroke-3) * -1) 0 var(--digital-500)}
+/* Franjas de filtro fijas: chips (FilterChip de la especificación), no pestañas de
+   navegación. Píldoras blancas con borde; activa en índigo pastel. */
+.ds-tabs--chips{gap:var(--space-2)}
+.ds-tabs--chips button{min-height:var(--size-36);padding:0 var(--space-3);border:var(--stroke-1) solid var(--line-strong);border-radius:var(--radius-control);color:var(--ink-700);font-size:var(--font-size-sm);box-shadow:none}
+.ds-tabs--chips button.active{color:var(--primary-700);background:var(--primary-50);border-color:var(--primary-200);font-weight:var(--weight-semibold)}
+.ds-tabs--chips button svg{color:var(--ink-500)}
+.ds-tabs--chips button.active svg{color:var(--primary-600)}
+@media(hover:hover) and (pointer:fine){.ds-tabs button:not(.active):hover{color:var(--ink-700);background:var(--cloud-100)}.ds-tabs button.active:hover{background:var(--primary-100)}.ds-tabs--chips button:not(.active):hover{background:var(--cloud-25);box-shadow:none}.ds-tabs--chips button.active:hover{background:var(--primary-100)}}
 @media(width<=600px){
- .ds-tabs{display:flex;width:100%;scroll-snap-type:x mandatory}
- .ds-tabs button{flex:0 0 calc((100% - var(--space-1)) / 2);min-width:0;min-height:var(--size-44);gap:var(--space-1-5);padding:var(--space-1) var(--space-2);white-space:normal}
- /* Las palabras solo se parten con guion si no caben solas; nunca «Recepcione/s». */
- .ds-tabs button>span{min-width:0;overflow-wrap:break-word;hyphens:auto}
- /* Sin contadores en móvil: la etiqueta necesita el ancho y la lista ya muestra los registros. */
- .ds-tabs b{display:none}
- .ds-tabs button:nth-child(odd){scroll-snap-align:start;scroll-snap-stop:always}
- .ds-tabs button:only-child{flex-basis:100%}
- /* Completa el último par sin mostrar restos del grupo anterior. */
- .ds-tabs:has(>button:last-child:nth-child(odd):not(:only-child))::after{content:"";flex:0 0 calc((100% - var(--space-1)) / 2)}
- .ds-tabs-bar{flex-direction:column;align-items:stretch}
- .ds-tabs-bar>:first-child{flex:none;width:100%}
- .ds-tabs-actions{flex-wrap:wrap;width:100%;margin-left:0}
- .ds-tabs-actions .button{flex:1 1 var(--size-150);min-width:0;padding-inline:var(--space-3);white-space:normal}
- /* Pestañas que filtran una lista larga: la barra se disuelve para que la pista quede fija bajo
-    la barra superior (mismo patrón que las zonas del Salón) y las acciones sigan el scroll. */
- .ds-tabs-bar.is-sticky{display:contents}
- .ds-tabs-bar.is-sticky>.ds-tabs-sticky{position:sticky;top:var(--size-64);z-index:var(--z-raised);width:auto;margin:0 calc(var(--space-4) * -1) var(--space-1);padding:var(--space-2) var(--space-4);background:var(--cloud-50)}
- .ds-tabs-bar.is-sticky>.ds-tabs-actions{margin-bottom:var(--space-4)}
+  .ds-tabs{display:flex;width:100%;scroll-snap-type:x proximity}
+  .ds-tabs button{flex:0 0 auto;min-width:var(--size-84);min-height:var(--size-52);gap:var(--space-1-5);padding:var(--space-1) var(--space-3);font-size:var(--font-size-xs)}
+  /* Las palabras solo se parten con guion si no caben solas. */
+  .ds-tabs button>span{min-width:0;overflow-wrap:break-word;hyphens:auto}
+  /* Sin contadores en móvil: la etiqueta necesita el ancho y la lista ya muestra los registros. */
+  .ds-tabs b{display:none}
+  .ds-tabs button.active{background:var(--primary-50)}
+  .ds-tabs--chips{flex-wrap:wrap}
+  .ds-tabs--chips button{flex:1 1 auto;min-width:0;min-height:var(--size-44)}
+  .ds-tabs-bar{flex-direction:column;align-items:stretch}
+  .ds-tabs-bar>:first-child{flex:none;width:100%}
+  .ds-tabs-actions{flex-wrap:wrap;width:100%;margin-left:0}
+  .ds-tabs-actions .button{flex:1 1 var(--size-150);min-width:0;padding-inline:var(--space-3);white-space:normal}
+  /* Pestañas que filtran una lista larga: la barra se disuelve para que la pista quede fija bajo
+     la barra superior y las acciones sigan el scroll. */
+  .ds-tabs-bar.is-sticky{display:contents}
+  .ds-tabs-bar.is-sticky>.ds-tabs-sticky{position:sticky;top:var(--shell-header);z-index:var(--z-raised);width:auto;margin:0 calc(var(--space-4) * -1) var(--space-1);padding:var(--space-2) var(--space-4);background:var(--cloud-50)}
+  .ds-tabs-bar.is-sticky>.ds-tabs-actions{margin-bottom:var(--space-4)}
 }
 @media(prefers-reduced-motion:reduce){.ds-tabs button{transition:none}}

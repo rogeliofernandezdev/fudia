@@ -67,14 +67,13 @@ export function PageHeader({title,description,action,back,meta}:{title:string;de
  </header>;
 }
 /**
- * Estado con etiqueta explícita (docs/02_DESIGN_SYSTEM.md › niveles de estado):
- * suave por defecto (fondo tenue, texto oscuro y punto) para registros, compras, caja, cuenta y pago;
- * `solid` (relleno vivo y texto blanco) solo para estados operativos del pedido: Pedidos, Salón, Cobro y detalle.
+ * Estado con etiqueta explícita (FUDIA DS 1.0): superficie pastel de su familia semántica,
+ * indicador de color y texto oscuro. `emphasis` refuerza padding y peso sin cambiar la familia.
  */
-export function Status({tone="green",active,icon,emphasis=false,solid=false,children}:{tone?:"green"|"blue"|"sky"|"orange"|"red"|"violet"|"purple"|"gray"|"teal"|"navy";active?:boolean;icon?:IconName;emphasis?:boolean;solid?:boolean;children:React.ReactNode}){
+export function Status({tone="green",active,icon,emphasis=false,children}:{tone?:"green"|"blue"|"sky"|"orange"|"red"|"violet"|"purple"|"gray"|"teal"|"navy";active?:boolean;icon?:IconName;emphasis?:boolean;children:React.ReactNode}){
  const binary=active!==undefined;
  const glyph=binary?(active?"circleCheck":"circleMinus"):icon;
- return <span className={`status ${binary?(active?"green":"gray"):tone}${solid?" solid":""}${emphasis?" emphasized":""}`}>{glyph?<Icon name={glyph} size={emphasis?16:14} className="status-icon"/>:<i aria-hidden="true"/>}{children}</span>
+ return <span className={`status ${binary?(active?"green":"gray"):tone}${emphasis?" emphasized":""}`}>{glyph?<Icon name={glyph} size={emphasis?16:14} className="status-icon"/>:<i aria-hidden="true"/>}{children}</span>
 }
 /** Atributo o configuración (no es un estado): etiqueta neutra gris con icono, sin color semántico. */
 export function Tag({icon,children}:{icon?:IconName;children:React.ReactNode}){

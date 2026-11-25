@@ -104,8 +104,8 @@
 /* Tono de identidad por entidad: canal (como en Pedidos) y medio de pago (como en Cobros) en barras, arcos y muestras */
 .dash-tone-blue .dash-bar-track i,.dash-donut-swatch.dash-tone-blue{background:var(--primary-600)}
 .dash-donut-arc.dash-tone-blue{stroke:var(--primary-600)}
-.dash-tone-indigo .dash-bar-track i,.dash-donut-swatch.dash-tone-indigo{background:var(--indigo-600)}
-.dash-donut-arc.dash-tone-indigo{stroke:var(--indigo-600)}
+.dash-tone-indigo .dash-bar-track i,.dash-donut-swatch.dash-tone-indigo{background:var(--primary-600)}
+.dash-donut-arc.dash-tone-indigo{stroke:var(--primary-600)}
 .dash-tone-orange .dash-bar-track i,.dash-donut-swatch.dash-tone-orange{background:var(--warning-500)}
 .dash-donut-arc.dash-tone-orange{stroke:var(--warning-500)}
 .dash-tone-green .dash-bar-track i,.dash-donut-swatch.dash-tone-green{background:var(--brand-600)}
@@ -122,8 +122,8 @@
 .dash-donut-arc.dash-tone-rose{stroke:var(--rose-700)}
 .dash-tone-peach .dash-bar-track i,.dash-donut-swatch.dash-tone-peach{background:var(--peach-700)}
 .dash-donut-arc.dash-tone-peach{stroke:var(--peach-700)}
-.dash-tone-navy .dash-bar-track i,.dash-donut-swatch.dash-tone-navy{background:var(--navigation-900)}
-.dash-donut-arc.dash-tone-navy{stroke:var(--navigation-900)}
+.dash-tone-navy .dash-bar-track i,.dash-donut-swatch.dash-tone-navy{background:var(--ink-400)}
+.dash-donut-arc.dash-tone-navy{stroke:var(--ink-400)}
 .dash-tone-gray .dash-bar-track i,.dash-donut-swatch.dash-tone-gray{background:var(--ink-300)}
 .dash-donut-arc.dash-tone-gray{stroke:var(--ink-300)}
 /* Barras: la pista recorta una barra completa desplazada con transform; crecen al aparecer y al cambiar de valor */
@@ -185,10 +185,10 @@
 /* Cifras en píldora suave con el tono de su estado (tinte 100 + texto legible de la familia); sin estado, gris frío */
 .dash-area dd{margin:0;padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-pill);font-size:var(--font-size-sm);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);text-align:right;white-space:nowrap;color:var(--ink-800);background:var(--cloud-100)}
 .dash-area dd.primary{color:var(--primary-700);background:var(--primary-100)}
-.dash-area dd.indigo{color:var(--indigo-700);background:var(--indigo-100)}
+.dash-area dd.indigo{color:var(--info-600);background:var(--info-100)}
 .dash-area dd.orange{color:var(--warning-800);background:var(--warning-100)}
 .dash-area dd.green{color:var(--brand-700);background:var(--brand-100)}
-.dash-area dd.navy{color:var(--navigation-900);background:var(--cloud-150)}
+.dash-area dd.navy{color:var(--ink-700);background:var(--cloud-150)}
 .dash-area dd.purple{color:var(--purple-600);background:var(--purple-100)}
 
 /* Por revisar: pendientes de abastecimiento y disponibilidad, al pie del mismo panel */

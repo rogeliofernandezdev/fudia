@@ -146,11 +146,11 @@ export function DashboardView(){
   if(enabled("cocina"))areas.push({title:"Cocina",href:pageRoutes.kitchen,rows:[
     {label:"Por preparar",value:String(operations.kitchenConfirmed),tone:"indigo"},
     {label:"En preparación",value:String(operations.kitchenPreparing),tone:"orange"},
-    {label:"Por entregar",value:String(operations.readyOrders),tone:"purple"},
+    {label:"Por entregar",value:String(operations.readyOrders),tone:"green"},
   ]});
   if(enabled("delivery"))areas.push({title:"Delivery",href:pageRoutes.delivery,rows:[
     {label:"Por despachar",value:String(operations.deliveryPending),tone:"orange"},
-    {label:"En camino",value:String(operations.deliveryInTransit),tone:"navy"},
+    {label:"En camino",value:String(operations.deliveryInTransit),tone:"indigo"},
   ]});
   if(enabled("caja"))areas.push({title:"Caja",href:pageRoutes.cash,rows:[
     {label:"Turnos abiertos",value:`${operations.openCashShifts} de ${operations.activeCashRegisters}`},

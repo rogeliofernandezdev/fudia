@@ -26,14 +26,14 @@ La autoridad visual exclusiva de este proyecto es
 - La presentación no construye URLs ni interpreta DTO crudos.
 - Inputs y tablas provienen del design system.
 - Los estados usan `Status` y la matriz obligatoria «Colores de operación:
-  pedido, preparación y cuenta» de `docs/02_DESIGN_SYSTEM.md`, en tres niveles
-  (2026-11-05): `Status solid` solo para estados operativos del pedido, `Status`
-  suave por defecto para registros, cuenta y pago, y `Tag` neutro para atributos.
-  Sin colores locales por pantalla.
-  Cuenta abierta (`sky`) no comparte tono con Confirmado (`blue`), ni Pagada
-  (`green`) con Finalizada (`gray`). Reutilizar `orderStatus`, `serviceStatusTone`
-  y `accountTone`; cualquier cambio semántico requiere aprobación y actualizar
-  juntos documentación, tokens, mapeos y pruebas.
+  pedido, preparación y cuenta» de `docs/02_DESIGN_SYSTEM.md` (FUDIA DS 1.0,
+  aprobada 2026-11-24): una sola variante pastel por tono — fondo tenue de su
+  familia, texto oscuro e indicador de color; `Tag` neutro para atributos; sin
+  píldoras sólidas ni colores locales por pantalla. Cuenta abierta (`teal`) no
+  comparte tono con Confirmado (`blue`), ni Pagada (`green`) con Finalizada
+  (`gray`). Reutilizar `orderStatus`, `serviceStatusTone` y `accountTone`;
+  cualquier cambio semántico requiere aprobación y actualizar juntos
+  documentación, tokens, mapeos y pruebas.
 - Todo catálogo de negocio se obtiene del API.
 - Cada selector CSS se declara una sola vez por contexto. No reescribir una
   clase en bloques posteriores ni depender de la cascada para corregirla;

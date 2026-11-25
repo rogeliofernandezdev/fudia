@@ -72,9 +72,9 @@ dentro de un módulo.
 - `Icon name` — set único de Tabler (monocromo, trazo 1.75); nunca importar
   Tabler directamente en un módulo.
 - `IconTile name tone size appearance` — icono sobre cuadrito tintado (`primary`, `brand`,
-  `digital`, `teal`, `sky`, `peach`, `rose`, `warning`, `danger`, `neutral`). Por
-  defecto `appearance="soft"`; `vivid` admite `primary`, `brand` y `danger` para
-  acentos de Dashboard y flujos de Caja. No sustituye `Status` ni colorea botones.
+  `digital`, `teal`, `sky`, `peach`, `rose`, `warning`, `danger`, `navy`, `info`, `purple`,
+  `neutral`). Por defecto `appearance="soft"`; `vivid` rellena la familia con icono blanco
+  para acentos de Dashboard, hitos y flujos de Caja. No sustituye `Status` ni colorea botones.
 - `StatCard icon tone label value meta href attention` — indicador con flecha ↗
   hacia el detalle; agrupar con `.stat-grid`.
 - `Input icon` — campo con icono al inicio (correo, teléfono, dirección,
@@ -101,25 +101,28 @@ dentro de un módulo.
 `Button kind`:
 
 `appearance="strong"` conserva la intención y aumenta contraste en el panel de
-reparto: primario azul, secundario marino, neutro oscuro y destructivo con
+reparto: primario índigo, secundario índigo, neutro oscuro y destructivo con
 contorno rojo legible. No aplica colores locales ni cambia la apariencia por
 defecto de otras pantallas. Deshabilitados conservan `disabled`, su relleno y
 un contorno discontinuo, con motivo visible en el flujo. La variante se define
 en `globals.css` y se documenta en el sistema visual.
 
-`Pagination` permite omitir `onSize` cuando el tamaño de página es fijo: no
+`Pagination` permite omitir `onSize` cuando el tamaño de página es fija: no
 muestra el selector «Filas». Conserva rango, total y navegación accesible.
-`appearance="strong"` presenta Anterior/Siguiente en marino, también con
+`appearance="strong"` presenta Anterior/Siguiente en índigo, también con
 etiqueta y borde discontinuo cuando están deshabilitados; el valor predeterminado
 de otras pantallas se conserva.
 
 | Variante | Uso | Apariencia |
 | --- | --- | --- |
-| `primary` | La única acción dominante de la superficie | Sólido `primary-600`, realce teñido |
-| `secondary` | Consultas como «Ver resumen de pago», alternativas, «Reintentar», «Limpiar filtros», «Editar» | Blanco, texto `primary-700`, borde `primary-200` |
-| `ghost` | Salir sin guardar («Cancelar»), «Anterior», acciones neutras | Blanco, texto `ink-700`, borde `line` |
-| `danger` | Solo el botón que confirma dentro de `ConfirmDialog` | Sólido rojo vivo `danger-500` con texto blanco; hover `danger-600` |
-| `danger-outline` | Disparadores destructivos: Cancelar pedido u orden, Anular, Cerrar turno, Quitar acceso | Fondo `danger-50`, texto `danger`, borde `danger-200`; hover `danger-100` / `danger` / `danger-600` |
+| `primary` | La única acción dominante de la superficie | Sólido índigo `primary-600` con texto blanco; hover `primary-700`, pressed `primary-800` |
+| `secondary` | Consultas como «Ver resumen de pago», alternativas, «Reintentar», «Limpiar filtros», «Editar» | Blanco, texto `ink-950`, borde `line-strong`; hover `cloud-25` |
+| `tonal` | Acciones de apoyo («Asignar colaborador», «Agregar observación») | Fondo `primary-50`, texto `primary-700`; hover `primary-100` |
+| `ghost` | Salir sin guardar («Cancelar»), «Anterior», acciones neutras | Transparente, texto `ink-700`; hover `cloud-100` |
+| `link` | Ver historial y accesos en línea | Texto `primary-600`, subrayado en hover |
+| `danger` | Solo el botón que confirma dentro de `ConfirmDialog` | Sólido `danger-500` con texto blanco; hover `danger-600` |
+| `danger-outline` | Disparadores destructivos: Cancelar pedido u orden, Anular, Cerrar turno, Quitar acceso | Fondo `danger-50`, texto `danger`, borde `danger-200`; hover `danger-100` |
+| `danger-subtle` | Rechazos y salidas destructivas tenues | Fondo `danger-50`, texto `danger`; hover `danger-100` |
 
 - No existe botón verde: el verde comunica un estado ya confirmado.
 - `Button action` centraliza acciones repetidas: `cancel` → neutro con X;
@@ -303,11 +306,11 @@ En los detalles con resumen, el pie de acciones comparte la superficie blanca
 del resumen y conserva su línea fina superior sobre los botones.
 La cabecera del resumen agrupa título y estado, con separador inferior. Los
 importes secundarios se distribuyen en columnas equilibradas (cifras seminegrita)
-y el saldo en una ficha tintada `primary-100` con radio de tarjeta, también en móvil. A 390 px
+y el saldo en una ficha hundida `cloud-25` con radio compacto, también en móvil. A 390 px
 Subtotal, Pagado y Saldo pendiente se mantienen en una fila.
 `Status({icon,emphasis})` permite reforzar un estado de lectura sin hacerlo
-parecer una acción: icono de la familia existente y peso 700. Cuenta abierta usa
-`sky` destacado: fondo tenue `sky-100`, texto e icono `sky-800`, sin sombra ni hover.
+parecer una acción: icono de la familia existente y peso 600. Cuenta abierta usa
+`teal` destacado: fondo tenue `teal-bg`, texto e icono `teal-fg`, sin sombra ni hover.
 Por cobrar usa ámbar, Pagada verde y Finalizada gris (`ink-800`/`cloud-150` con énfasis).
 Todos los estados usan fondos tenues, sin variantes sólidas. Los estados de preparación y los estados binarios no cambian.
 La paleta y asignación obligatorias se consultan únicamente en la
@@ -336,7 +339,7 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
 
 Detalle de Menús y combos (patrón de Detalle de pedido): `Dialog` `size-md` con `ModalHeader` (título = nombre del menú, sin icono, franja ni subtítulo) y `ModalWorkspace`. Arriba, el `Status` real (Activo, Inactivo o «Fuera de fecha») y una línea con icono `calendar` de cuándo se vende («Se vende el …» o días · desde · hasta), con la descripción si existe. «Platos y opciones» (`h3` de 16 px) es una `ModalItemList`: cada parte lleva su `IconTile` (`sm`, mismo tono e icono que en el editor), el nombre de la parte en 12 px y sus platos en 14 px separados por «·», con el costo extra si aplica. El resumen fijo «Resumen del menú» muestra Partes y Opciones, con el Precio como importe principal. Es de lectura: sin `ModalFooter`; la X es el único cierre. No repite reglas de elección («Obligatorio · elige 1»). Error con `ModalError`; la carga usa `Skeleton` con la misma geometría.
-La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera marino. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
+La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
 el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos
@@ -407,7 +410,7 @@ Reglas:
   campos no repiten la marca `optional`.
 - `RouteMap({origin,destination,courier,label})` (`@/design-system/route-map`,
   Mapbox, carga diferida): mapa de seguimiento de un reparto, sin elegir puntos.
-  Marcadores circulares de 36 px con icono blanco: local `navigation-900`,
+  Marcadores circulares de 36 px con icono blanco: local `ink-700`,
   entrega `brand-700` y repartidor `primary-600`. Ruta por calles (Directions)
   en `primary-600`; si no responde, línea recta. El encuadre solo cambia cuando
   aparece o desaparece un punto, y el repartidor se desliza 900 ms a su nueva
@@ -564,7 +567,7 @@ icono tiene un solo significado en toda la aplicación (ver
   Cabecera oscura, filas alternas, estados con texto e icono y acciones
   homogéneas. Las acciones por fila son botones de
   icono con la altura de `--control-height`, nombre accesible y tooltip; editar
-  usa azul operativo; activar/desactivar usa el interruptor de estado.
+  usa índigo operativo; activar/desactivar usa el interruptor de estado.
   Cancelar y quitar mantienen el rojo semántico. No se presentan como
   enlaces de texto. La columna
   de acciones centra el grupo completo y cada pictograma se centra ópticamente en
@@ -892,10 +895,11 @@ pastilla de estado ni formateador de dinero.
 - `Tabs({items,value,onChange,label})`: control segmentado con `role="tablist"`,
   foco itinerante y flechas/Inicio/Fin; icono obligatorio y contador opcional por pestaña; 44 px en
   móvil. Reemplaza `.catalog-tabs` y variantes por módulo.
-- `Status({tone})`: píldora suave tintada, sin borde, para preparación/pedido y cuenta.
-  Tonos `green` (listo/activo/éxito), `blue` (confirmado), `sky` (cuenta abierta), `orange`
-  (advertencia/por resolver), `red` (error/cancelación), `violet` (preparación/digital),
-  `teal` (entregado) y `gray` (nuevo/neutro/finalizada).
+- `Status({tone})`: píldora pastel de su familia, sin borde, para preparación/pedido y cuenta.
+  Tonos `green` (éxito: por entregar, entregado, pagado, activo), `blue` (información:
+  confirmado, en camino, emitiendo), `teal` (cuenta abierta), `orange` (pendiente de
+  validación, en preparación, por cobrar), `red` (error/cancelación/sin stock),
+  `violet` (oferta/digital) y `gray` (neutro/finalizada).
   Reemplaza pastillas propias de cada módulo. La matriz oficial de pedido,
   preparación y cuenta está en `02_DESIGN_SYSTEM.md`; no se sobrescribe por pantalla.
 - `useMoney()`: importe con símbolo, posición y decimales de la empresa y
@@ -961,7 +965,7 @@ y glifos de 20 px; el icono primario no tiene fondo y la X tampoco lleva contorn
 sin relleno, sombra ni cambio de color con hover. Las notas del pie tienen
 una fila propia, por encima de las acciones. Se preservan los tamaños,
 el cierre explícito y los contratos de foco/respuesta. No hay franja de marca
-en los modales: la cabecera marino ocupa el ancho y el borde superior completos.
+en los modales: la cabecera blanca ocupa el ancho y el borde superior completos.
 
 En móvil el fondo no añade padding superior a un panel de `100dvh`: eso recortaba
 el pie de los modales completos. Las hojas compactas dejan margen superior seguro;

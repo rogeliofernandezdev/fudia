@@ -12,7 +12,7 @@ const types={".js":"text/javascript",".mjs":"text/javascript",".css":"text/css",
 const server=createServer(async(req,res)=>{
  try{
   const path=new URL(req.url,"http://localhost").pathname;
-  if(path==="/"){res.setHeader("content-type","text/html; charset=utf-8");res.end('<!doctype html><html lang="es" style="--font-jakarta:Arial"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PdfViewer · prueba aislada</title><link rel="stylesheet" href="/bundle.css"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>');return;}
+  if(path==="/"){res.setHeader("content-type","text/html; charset=utf-8");res.end('<!doctype html><html lang="es" style="--font-inter:Arial"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>PdfViewer · prueba aislada</title><link rel="stylesheet" href="/bundle.css"></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>');return;}
   const base=path.startsWith("/bundle")?output:resolve(root,"public");
   const file=resolve(base,"."+path);if(!file.startsWith(base+sep))throw new Error("invalid path");
   res.setHeader("content-type",types[extname(file)]??"application/octet-stream");res.end(await readFile(file));

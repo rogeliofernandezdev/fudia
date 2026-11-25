@@ -17,8 +17,8 @@ const serviceLook:Record<string,{icon:IconName;tone:IconTileTone}>={
   nuevo:{icon:"clock",tone:"neutral"},
   confirmado:{icon:"send",tone:"primary"},
   preparando:{icon:"flame",tone:"warning"},
-  listo:{icon:"bell",tone:"purple"},
-  en_camino:{icon:"motorbike",tone:"navy"},
+  listo:{icon:"bell",tone:"brand"},
+  en_camino:{icon:"motorbike",tone:"info"},
   entregado:{icon:"check",tone:"brand"},
 };
 

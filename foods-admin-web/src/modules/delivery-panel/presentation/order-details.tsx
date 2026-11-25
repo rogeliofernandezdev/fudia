@@ -26,7 +26,7 @@ export function OrderDetails({order,courier}:{order:PanelOrder;courier:CourierPo
   return <>
     <ol className="partner-panel-route">
       {!delivered&&<li className="partner-panel-stop is-linked is-pickup">
-        <span className="partner-panel-stop-mark"><IconTile name="store" tone="indigo" appearance="vivid"/></span>
+        <span className="partner-panel-stop-mark"><IconTile name="store" tone="info" appearance="vivid"/></span>
         <div className="partner-panel-stop-copy">
           <p className="partner-panel-stop-label">Recoge en</p>
           <b>{order.locationName}</b>

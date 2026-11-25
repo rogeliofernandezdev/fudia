@@ -63,7 +63,7 @@ test("acciones contiguas y pie neutro usan la única regla compartida",()=>{
  const value=prop=>footer.nodes.find(node=>node.prop===prop)?.value;
  assert.equal(value("justify-content"),"flex-end");
  assert.equal(value("gap"),"var(--space-2-5)");
- assert.equal(value("background"),"var(--cloud-50)");
+ assert.equal(value("background"),"var(--surface)","pie blanco sobre el modal blanco (FUDIA DS 1.0)");
  for(const rule of rules.filter(rule=>rule.selector.includes("footer")&&rule.selector.includes(".button"))){
   assert.ok(!rule.nodes.some(node=>node.prop==="margin-right"&&node.value==="auto"),rule.selector);
  }

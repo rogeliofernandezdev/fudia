@@ -85,7 +85,7 @@ export const dismissPayNotification=async(...args)=>{record('dismiss',args);retu
 const cssDir=resolve(root,".next/static/css");
 const css=(await Promise.all((await readdir(cssDir)).filter(name=>name.endsWith(".css")).map(name=>readFile(resolve(cssDir,name),"utf8")))).join("\n")+"\n"+await readFile(resolve(out,"bundle.css"),"utf8");
 if(!css.includes(".pay-provider-logo"))throw new Error("Build first: the production CSS must include the payment styles.");
-const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
+const font=css.match(/@font-face\{[^}]*font-family:Inter;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
 if(!font)throw new Error("Build first to load the production font.");
 const fontData=await readFile(resolve(root,".next/static/media",font));
 createServer(async(req,res)=>{
@@ -94,5 +94,5 @@ createServer(async(req,res)=>{
  if(url.pathname==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(fontData);return;}
  if(["/brands/yape.png","/brands/plin.png"].includes(url.pathname)){res.setHeader("content-type","image/png");res.end(await readFile(resolve(root,"public",url.pathname.slice(1))));return;}
  res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pagos detectados · prueba local</title><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pagos detectados · prueba local</title><style>${css}@font-face{font-family:Inter;font-weight:200 800;src:url(/font.woff2)}:root{--font-inter:"Inter"}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);
 }).listen(5198,"127.0.0.1",()=>console.log("Pagos QA: http://127.0.0.1:5198 (?table&provider=plin&case=long|empty|orders-error|orders-loading|methods-error|detail-error|associated|paid|over)"));

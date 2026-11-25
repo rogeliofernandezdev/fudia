@@ -3,8 +3,8 @@ import "./styles/tabs.css";
 import {useRef,type KeyboardEvent,type ReactNode} from "react";
 import {Icon,type IconName} from "./icons";
 
-/** Familia de color de una pestaña con significado propio (carril, canal). Sin tono, la pestaña usa el azul de selección. */
-export type TabTone="primary"|"indigo"|"orange"|"purple"|"green"|"violet";
+/** Familia de color de una pestaña con significado propio (carril, canal). Sin tono, la pestaña usa el índigo de selección. */
+export type TabTone="primary"|"info"|"orange"|"green"|"violet";
 export type TabItem<T extends string>={value:T;label:string;count?:number;icon:IconName;tone?:TabTone};
 
 /**

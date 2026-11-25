@@ -11,9 +11,9 @@ import {applyPlateStatus,isTrackedPlate,plateProgress,type PlateStatus} from "..
 import {listKitchenTickets,updateKitchenItemStatus,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
 
 const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName;tone:TabTone}>= [
-  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock",tone:"indigo"},
+  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock",tone:"info"},
   {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot",tone:"orange"},
-  {status:"listo",label:"POR ENTREGAR",shortLabel:"Por entregar",description:"Esperando entrega",icon:"bell",tone:"purple"},
+  {status:"listo",label:"POR ENTREGAR",shortLabel:"Por entregar",description:"Esperando entrega",icon:"bell",tone:"green"},
 ];
 
 /** Icono por área de preparación; las áreas y sus nombres llegan del API. */

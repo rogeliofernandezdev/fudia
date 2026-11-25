@@ -100,7 +100,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
         <div className="order-detail-content">
           <section className="order-detail-hero" aria-label="Resumen del pedido">
             <div className="order-detail-identity">
-              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone} solid>{meta.label}</Status></div></div>
+              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></div>
               {/* Fecha y responsables comparten una línea; bajan a la siguiente solo si no caben. */}
               <div className="order-detail-meta">
                 <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>
@@ -130,7 +130,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
 
           <Tabs className="order-detail-tabs" label="Información del pedido" value={tab} onChange={setTab} items={[
             {value:"products",label:"Productos",icon:"dish",tone:"primary",count:items.length},
-            {value:"tracking",label:"Seguimiento",icon:"route",tone:"indigo"},
+            {value:"tracking",label:"Seguimiento",icon:"route",tone:"info"},
           ]}/>
 
           <div className="order-detail-panel" role="tabpanel" aria-labelledby="order-detail-products-title" hidden={tab!=="products"}>
@@ -254,3 +254,4 @@ export function OrderDetailSkeleton({variant,close,preview}:{variant:OrderDetail
     </ModalFooter>
   </>;
 }
+

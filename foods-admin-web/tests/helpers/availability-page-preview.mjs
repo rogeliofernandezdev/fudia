@@ -47,13 +47,13 @@ function load(path){
 const {ProductAvailabilityManager}=load("modules/menu/availability/presentation/product-availability-manager");
 const css=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n").replaceAll(".availability-",".availability-previous-")+"\n"+readFileSync(resolve(root,"src/modules/menu/availability/presentation/product-availability.css"),"utf8");
 assert.match(css,/availability-quota-editor/);
-const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];assert.ok(font);
+const font=css.match(/@font-face\{[^}]*font-family:Inter;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];assert.ok(font);
 const output=resolve(process.argv[2]&&!process.argv[2].startsWith("--")?process.argv[2]:".cache/availability-preview");mkdirSync(output,{recursive:true});
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  mode=new URL(req.url,"http://localhost").searchParams.get("mode")??"normal";
  const markup=renderToStaticMarkup(React.createElement(ProductAvailabilityManager));
- res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}${css}.availability-preview{padding:32px;max-width:1600px;margin:auto}@media(width<=600px){.availability-preview{padding:16px}}</style></head><body><main class="availability-preview">${markup}</main></body></html>`);
+ res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@font-face{font-family:Inter;font-weight:200 800;src:url(/font.woff2)}:root{--font-inter:"Inter"}${css}.availability-preview{padding:32px;max-width:1600px;margin:auto}@media(width<=600px){.availability-preview{padding:16px}}</style></head><body><main class="availability-preview">${markup}</main></body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 if(process.argv.includes("--serve")){console.log(`Availability QA: http://127.0.0.1:${server.address().port} (sin API ni escrituras)`);await new Promise(()=>{});}

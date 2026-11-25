@@ -1,5 +1,5 @@
 /* MoneyInput, NumberStepper e InlineNotice. */
-.money-input{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;height:var(--control-height);overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);transition:border-color var(--duration-fast),box-shadow var(--duration-fast)}
+.money-input{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:stretch;height:var(--control-height);overflow:hidden;border:var(--stroke-1) solid var(--line-strong);border-radius:var(--radius-control);background:var(--surface);transition:border-color var(--duration-fast),box-shadow var(--duration-fast)}
 .money-input.suffix{grid-template-columns:minmax(0,1fr) auto}
 .money-input>span{display:grid;place-items:center;min-width:var(--size-40);padding:0 var(--space-2-5);color:var(--ink-500);background:var(--cloud-50);font-size:var(--font-size-control);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums}
 .money-input:not(.suffix)>span{border-right:var(--stroke-1) solid var(--line)}

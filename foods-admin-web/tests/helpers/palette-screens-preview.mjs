@@ -50,7 +50,7 @@ const dashboardTree=load(resolve(root,"src/modules/dashboard/presentation/dashbo
 function find(node,className){if(Array.isArray(node)){for(const child of node){const match=find(child,className);if(match)return match;}}else if(node&&typeof node==="object"){if(node.props?.className===className)return node;return find(node.props?.children,className);}return null;}
 const css=["styles/variables.css","styles/globals.css","design-system/styles/icon-tile.css","design-system/styles/stat-card.css","design-system/styles/table-actions.css","modules/dashboard/presentation/dashboard.css","modules/operations/cash/presentation/cash.css"].map(file=>readFileSync(resolve(root,"src",file),"utf8").replace(/^@import[^;]+;/gm,"")).join("\n");
 const fontCss=readdirSync(resolve(root,".next/static/css")).filter(file=>file.endsWith(".css")).map(file=>readFileSync(resolve(root,".next/static/css",file),"utf8")).join("\n");
-const font=fontCss.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
+const font=fontCss.match(/@font-face\{[^}]*font-family:Inter;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
 if(!font)throw new Error("Run a build once to provide the production font.");
 const noop=()=>{};
 function specimen(params){
@@ -63,5 +63,5 @@ function specimen(params){
 createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  const params=new URL(req.url,"http://localhost").searchParams;
- res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>FudIA · acentos en Dashboard y Caja</title><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}main{max-width:var(--size-1440);margin:auto;padding:var(--space-6)}.preview-note{margin:0 0 var(--space-5);font-size:var(--font-size-xs);color:var(--ink-500)}main>.dash-kpis{margin-bottom:var(--space-8)}.dash-enter{animation:none}@media(width<=600px){main{padding:var(--space-3)}}</style></head><body>${specimen(params)}</body></html>`);
+ res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>FudIA · acentos en Dashboard y Caja</title><style>${css}@font-face{font-family:Inter;font-weight:200 800;src:url(/font.woff2)}:root{--font-inter:"Inter"}main{max-width:var(--size-1440);margin:auto;padding:var(--space-6)}.preview-note{margin:0 0 var(--space-5);font-size:var(--font-size-xs);color:var(--ink-500)}main>.dash-kpis{margin-bottom:var(--space-8)}.dash-enter{animation:none}@media(width<=600px){main{padding:var(--space-3)}}</style></head><body>${specimen(params)}</body></html>`);
 }).listen(5198,"127.0.0.1",()=>console.log("Palette screens QA: http://127.0.0.1:5198/ (?cash&single, ?long, ?blind, ?mode=loading|error|empty|idle|inactive|restricted|readonly)"));

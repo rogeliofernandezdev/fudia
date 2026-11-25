@@ -21,7 +21,7 @@ test("los botones móviles comparten radio de píldora sin cambiar la geometría
  assert.equal(declaration(css,".button","border-radius"),"var(--radius-control)");
  assert.equal(declaration(css,".button","border-radius","(width<=600px)"),"var(--radius-pill)");
  const modal=sheet("design-system/styles/modal.css");
- assert.equal(declaration(modal,".modal-close","border-radius"),"var(--radius-control)");
+ assert.equal(declaration(modal,".modal-close","border-radius"),"var(--radius-md)");
  for(const [file,selector] of [["modules/menu/availability/presentation/product-availability.css",".availability-actions .button"]])assert.equal(declaration(sheet(file),selector,"border-radius"),undefined,"el módulo hereda la forma del botón compartido");
 });
 test("franjas de lectura igualan etiqueta y valor y alinean la fecha al extremo derecho",()=>{
@@ -55,17 +55,17 @@ test("Productos y Mesas usan Tabs; no conservan implementación ni CSS de pesta�
  }
  assert.doesNotMatch(read("styles/globals.css"),/\.catalog-tabs(?!-row)/);
 });
-test("pestañas compartidas con pista contrastada, selección blanca y contadores índigo",()=>{
+test("pestañas compartidas con fondo pastel activo, indicador de 3 px y contadores índigo",()=>{
  const css=sheet("design-system/styles/tabs.css");
- assert.equal(declaration(css,".ds-tabs button","min-height"),"var(--control-height)");
- assert.equal(declaration(css,".ds-tabs button.active","background"),"var(--surface)");
+ assert.equal(declaration(css,".ds-tabs button","min-height"),"var(--size-44)","cuerpo de 44 px en escritorio");
+ assert.equal(declaration(css,".ds-tabs button.active","background"),"var(--primary-50)","la activa se reconoce por el fondo índigo pastel");
  assert.equal(declaration(css,".ds-tabs button.active","color"),"var(--primary-700)");
+ assert.match(declaration(css,".ds-tabs button.active","box-shadow"),/inset 0 calc\(var\(--stroke-3\) \* -1\) 0 var\(--primary-600\)/,"indicador inferior de 3 px");
+ assert.match(declaration(css,".ds-tabs button","box-shadow"),/inset 0 calc\(var\(--stroke-3\) \* -1\) 0 var\(--line\)/,"la inactiva marca la base neutral");
  assert.equal(declaration(css,".ds-tabs b","background"),"var(--primary-600)");
  assert.equal(declaration(css,".ds-tabs b","color"),"var(--surface)");
- assert.equal(declaration(css,".ds-tabs","background"),"var(--cloud-150)");
- assert.equal(declaration(css,".ds-tabs","padding"),"var(--space-1)");
- assert.equal(declaration(css,".ds-tabs","border-radius"),"var(--radius-pill)");
- assert.equal(declaration(css,".ds-tabs button","border-radius"),"var(--radius-pill)");
+ assert.equal(declaration(css,".ds-tabs","background"),undefined,"sin pista: las pestañas van directamente sobre la superficie");
+ assert.equal(declaration(css,".ds-tabs","padding"),undefined);
  assert.doesNotMatch(declaration(css,".ds-tabs button","transition"),/transform|all/);
  assert.equal(declaration(css,".ds-tabs","overscroll-behavior-x"),"contain");
 });
@@ -97,47 +97,47 @@ test("filtros de listas largas quedan fijos en móvil bajo la barra superior",()
  const tabs=sheet("design-system/styles/tabs.css");
  assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky","display","(width<=600px)"),"contents");
  assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky>.ds-tabs-sticky","position","(width<=600px)"),"sticky");
- assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky>.ds-tabs-sticky","top","(width<=600px)"),"var(--size-64)");
+ assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky>.ds-tabs-sticky","top","(width<=600px)"),"var(--shell-header)");
  assert.match(read("modules/operations/orders/presentation/orders-manager.tsx"),/<TabsBar sticky action=/);
  for(const file of ["operations/cash/presentation/cash-page.tsx","menu/products/presentation/catalog-manager.tsx"])assert.doesNotMatch(read(`modules/${file}`),/<TabsBar sticky/,"las pestañas de secciones no se fijan");
  const sales=sheet("modules/sales/presentation/sales.css");
  assert.equal(declaration(sales,".sales-periods","position","(max-width:600px)"),"sticky");
- assert.equal(declaration(sales,".sales-periods","top","(max-width:600px)"),"var(--size-64)");
+ assert.equal(declaration(sales,".sales-periods","top","(max-width:600px)"),"var(--shell-header)");
  assert.equal(declaration(sales,".sales-panel","overflow","(max-width:600px)"),"clip");
  assert.equal(declaration(sheet("design-system/styles/data-table.css"),".table-wrap","isolation"),"isolate");
 });
-test("pestañas móviles muestran pares completos con ajuste por grupo y etiquetas largas sin recorte",()=>{
+test("pestañas móviles se desplazan en su contenedor con etiquetas largas sin recorte",()=>{
  const css=sheet("design-system/styles/tabs.css");
- assert.equal(declaration(css,".ds-tabs button","flex","(width<=600px)"),"0 0 calc((100% - var(--space-1)) / 2)");
- assert.equal(declaration(css,".ds-tabs","scroll-snap-type","(width<=600px)"),"x mandatory");
- assert.equal(declaration(css,".ds-tabs button:nth-child(odd)","scroll-snap-align","(width<=600px)"),"start");
+ assert.equal(declaration(css,".ds-tabs button","flex","(width<=600px)"),"0 0 auto");
+ assert.equal(declaration(css,".ds-tabs button","min-width","(width<=600px)"),"var(--size-84)","ancho mínimo orientativo de la especificación");
+ assert.equal(declaration(css,".ds-tabs button","min-height","(width<=600px)"),"var(--size-52)","cuerpo de 52 px en móvil");
+ assert.equal(declaration(css,".ds-tabs","scroll-snap-type","(width<=600px)"),"x proximity");
  assert.equal(declaration(css,".ds-tabs button>span","overflow-wrap","(width<=600px)"),"break-word");
  assert.equal(declaration(css,".ds-tabs button>span","hyphens","(width<=600px)"),"auto");
  assert.equal(declaration(css,".ds-tabs b","display","(width<=600px)"),"none","sin contadores en pestañas móviles");
  assert.equal(declaration(css,".ds-tabs b","display"),"grid","escritorio conserva los contadores");
- assert.equal(declaration(css,".ds-tabs:has(>button:last-child:nth-child(odd):not(:only-child))::after","flex","(width<=600px)"),"0 0 calc((100% - var(--space-1)) / 2)");
- assert.equal(declaration(css,".ds-tabs button","min-height","(width<=600px)"),"var(--size-44)");
  assert.equal(declaration(css,".ds-tabs button","min-width"),"max-content");
  assert.equal(declaration(css,".ds-tabs","overflow-x"),"auto");
  assert.equal(declaration(css,".ds-tabs","scrollbar-width"),"none");
  assert.equal(declaration(css,".ds-tabs button:focus-visible","outline"),"var(--stroke-2) solid var(--primary-600)");
 });
-test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todos los tamaños",()=>{
+test("cabecera, cuerpo y pie comparten margen y el cierre conserva su tamaño en todos los tamaños",()=>{
  const css=sheet("design-system/styles/modal.css");
  assert.equal(declaration(css,".crud-modal>header","padding"),"var(--space-1) var(--space-6)");
  assert.equal(declaration(css,".crud-modal>header","min-height"),"var(--size-52)","cabecera compacta de 52 px");
- assert.equal(declaration(css,".crud-modal>header","background"),"var(--navigation-900)");
+ assert.equal(declaration(css,".crud-modal>header","background"),"var(--surface)","cabecera blanca (FUDIA DS 1.0)");
  assert.doesNotMatch(read("design-system/styles/modal.css"),/modal-accent/);
  assert.doesNotMatch(read("design-system/modal.tsx"),/modal-accent/);
- assert.equal(declaration(css,".crud-modal>header h2","color"),"var(--surface)");
- assert.equal(declaration(css,".modal-close","color"),"var(--surface)");
- assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--surface)");
+ assert.equal(declaration(css,".crud-modal>header h2","color"),"var(--ink-950)");
+ assert.equal(declaration(css,".modal-close","color"),"var(--ink-600)");
+ assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--primary-600)");
  assert.equal(declaration(css,".modal-body","padding"),"var(--space-2) var(--space-6) var(--space-6)");
  assert.equal(declaration(css,".modal-footer","padding"),"var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom))");
- for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-44)");
+ for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-32)","cierre de 32 px en escritorio (especificación)");
+ for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop,"(width<=600px)"),"var(--size-44)","área táctil de 44 px en móvil");
  assert.equal(declaration(css,".modal-footer>.modal-footer-note","flex-basis"),"100%");
 });
-test("la cabecera marina solo lleva título y X blanca directa, sin icono ni caja",()=>{
+test("la cabecera blanca solo lleva título y X neutra directa, sin icono ni caja",()=>{
  const css=sheet("design-system/styles/modal.css");
  let titleIcon=false;css.walkRules(rule=>{if(/modal-title-icon|has-icon/.test(rule.selector))titleIcon=true;});
  assert.equal(titleIcon,false,"ningún modal reserva un icono antes del título");
@@ -146,11 +146,11 @@ test("la cabecera marina solo lleva título y X blanca directa, sin icono ni caj
  let closeFrame=false;css.walkRules(rule=>{if(rule.selector.includes("modal-close::before"))closeFrame=true;});
  assert.equal(closeFrame,false,"la X no lleva recuadro");
  for(const selector of [".crud-modal>header>button>svg"]){
-  for(const prop of ["width","height"])assert.equal(declaration(css,selector,prop),"var(--size-20)");
+  for(const prop of ["width","height"])assert.equal(declaration(css,selector,prop),"var(--size-16)","icono de cierre de 16 px");
  }
- assert.equal(declaration(css,".modal-close:hover:not(:disabled)","background","(hover:hover) and (pointer:fine)"),undefined);
+ assert.equal(declaration(css,".modal-close:hover:not(:disabled)","background","(hover:hover) and (pointer:fine)"),undefined,"la X no cambia de color con hover");
  assert.doesNotMatch(declaration(css,".modal-close","transition"),/background|color/);
- assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--surface)");
+ assert.equal(declaration(css,".modal-close:focus-visible","outline"),"var(--stroke-2) solid var(--primary-600)");
 });
 
 test("al guardar la X permanece blanca y opaca, y Producto no altera márgenes del modal",()=>{

@@ -2,9 +2,9 @@ import type {IconName} from "@/design-system";
 import type {CheckoutOptions,FiscalDocumentRef,FiscalDraft,FiscalRequest,FiscalStatus} from "./types";
 
 /** Central mapping of fiscal document states: tone from the state matrix and a business label. */
-export const fiscalStatusView:Record<FiscalStatus,{tone:"sky"|"green"|"orange"|"red"|"gray";label:string}>={
- PENDING:{tone:"sky",label:"Emitiendo"},
- SENDING:{tone:"sky",label:"Emitiendo"},
+export const fiscalStatusView:Record<FiscalStatus,{tone:"blue"|"green"|"orange"|"red"|"gray";label:string}>={
+ PENDING:{tone:"blue",label:"Emitiendo"},
+ SENDING:{tone:"blue",label:"Emitiendo"},
  ACCEPTED:{tone:"green",label:"Aceptado"},
  OBSERVED:{tone:"orange",label:"Observado"},
  REJECTED:{tone:"red",label:"Rechazado"},

@@ -84,7 +84,7 @@
     la lista (patrón de las zonas del Salón); búsqueda, fechas y total siguen el scroll. `clip` no crea
     contenedor de scroll, así el panel conserva su recorte sin anular el `sticky`. */
  .sales-panel{overflow:clip}
- .sales-periods{position:sticky;top:var(--size-64);z-index:var(--z-raised);flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--space-3) var(--space-4) var(--space-2);scroll-padding-inline:var(--space-4);background:var(--surface);box-shadow:0 var(--stroke-1) 0 var(--cloud-100)}
+ .sales-periods{position:sticky;top:var(--shell-header);z-index:var(--z-raised);flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--space-3) var(--space-4) var(--space-2);scroll-padding-inline:var(--space-4);background:var(--surface);box-shadow:0 var(--stroke-1) 0 var(--cloud-100)}
  .sales-period-summary{padding-inline:var(--space-4)}
  /* Columna fija: 12 px de relleno + tile de 34 px y su separación + código completo, sin tocar el borde. */
  .sales-table-wrap .sales-table :is(th,td):first-child{min-width:var(--size-200);max-width:var(--size-208)}

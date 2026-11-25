@@ -43,7 +43,7 @@ export function DispatchWorkspace({orders,receivedAt,renderOrder}:{orders:PanelO
   const tabs=[
     {value:"all" as const,label:"Despacho",icon:"route" as const,tone:"primary" as const,count:active.length},
     {value:"unassigned" as const,label:"Por asignar",icon:"userCheck" as const,tone:"orange" as const,count:unassigned},
-    {value:"on_route" as const,label:"En camino",icon:"motorbike" as const,tone:"indigo" as const,count:active.filter(order=>order.stage==="picked_up").length},
+    {value:"on_route" as const,label:"En camino",icon:"motorbike" as const,tone:"info" as const,count:active.filter(order=>order.stage==="picked_up").length},
     {value:"delivered" as const,label:"Entregados",icon:"circleCheck" as const,tone:"green" as const,count:orders.length-active.length},
   ];
   const currentToken=selected?.token;

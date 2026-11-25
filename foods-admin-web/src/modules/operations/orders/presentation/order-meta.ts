@@ -4,9 +4,9 @@ import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 /** Owner: operations/orders — presentación compartida por Pedidos y Salón. */
 export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
 
-/** Color de identidad de cada canal en pestañas, con la misma combinación viva aprobada:
- * azul Todos, índigo Salón, naranja Recojo, verde Delivery y violeta WhatsApp. */
-export const channelTones:Record<string,TabTone>={salon:"indigo",recojo:"orange",mostrador:"orange",delivery:"green",whatsapp:"violet"};
+/** Color de identidad de cada canal en pestañas: Todos índigo, Salón azul información,
+ * Recojo naranja, Delivery verde y WhatsApp violeta. */
+export const channelTones:Record<string,TabTone>={salon:"info",recojo:"orange",mostrador:"orange",delivery:"green",whatsapp:"violet"};
 export const channelTone=(channel:string):TabTone=>channelTones[channel]??"primary";
 
 /** Origen visible del pedido: la venta por mostrador se distingue dentro de Recojo en local. */
@@ -15,14 +15,16 @@ export const originLabel=(origin?:string)=>origin==="counter"?"Mostrador":"";
 /** Tipo de atención del canal guardado: un pedido QR por WhatsApp se atiende en Salón. */
 export const serviceChannel=(channel:string)=>channel==="whatsapp"?"salon":channel==="mostrador"?"recojo":channel;
 
-export type OrderStatusTone="green"|"blue"|"orange"|"purple"|"gray"|"navy"|"red";
-/** Preparando = naranja y Por entregar = morado, como los carriles de Cocina; Entregado siempre verde; el violeta queda para WhatsApp. */
+export type OrderStatusTone="green"|"blue"|"orange"|"gray"|"red";
+/** Matriz FUDIA DS 1.0: nuevo y preparando en ámbar (pendiente de validación / en elaboración),
+ * confirmado y en camino en azul información, por entregar y entregado en verde éxito,
+ * cancelado en rojo. La etiqueta y el contexto distinguen los flujos. */
 export const statusMeta:Record<string,{label:string;tone:OrderStatusTone}>={
-  nuevo:{label:"Nuevo",tone:"gray"},
+  nuevo:{label:"Nuevo",tone:"orange"},
   confirmado:{label:"Confirmado",tone:"blue"},
   preparando:{label:"Preparando",tone:"orange"},
-  listo:{label:"Por entregar",tone:"purple"},
-  en_camino:{label:"En camino",tone:"navy"},
+  listo:{label:"Por entregar",tone:"green"},
+  en_camino:{label:"En camino",tone:"blue"},
   entregado:{label:"Entregado",tone:"green"},
   cancelado:{label:"Cancelado",tone:"red"},
 };
@@ -30,7 +32,7 @@ export const orderStatus=(status:string)=>statusMeta[status]??{label:status,tone
 
 /** Los nombres de preparación siguen viniendo del API; solo se centraliza su tono. */
 export function serviceStatusTone(status:string):OrderStatusTone{
-  return status==="preparando"?"orange":status==="listo"?"purple":status==="entregado"?"green":status==="cancelado"?"red":["pendiente","nuevo","confirmado"].includes(status)?"blue":"gray";
+  return status==="preparando"?"orange":status==="listo"?"green":status==="entregado"?"green":status==="cancelado"?"red":["pendiente","nuevo","confirmado"].includes(status)?"blue":"gray";
 }
 
 /** Estado de preparación de una línea: el común si todas coinciden; si no, lo que más falta (preparando > pendiente > listo). Sin preparaciones, el del pedido. */
@@ -43,12 +45,12 @@ export function lineServiceStatus(statuses:string[],fallback:string){
   return statuses.find(status=>status==="listo")??statuses[0];
 }
 
-const stateTiles:Record<OrderStatusTone,IconTileTone>={orange:"warning",purple:"purple",green:"brand",blue:"indigo",red:"danger",gray:"neutral",navy:"navy"};
+const stateTiles:Record<OrderStatusTone,IconTileTone>={orange:"warning",green:"brand",blue:"info",red:"danger",gray:"neutral"};
 /** Icono sólido de la línea: misma familia que su `Status`, glifo blanco. */
 export function serviceStateLook(status:string):{icon:IconName;tone:IconTileTone}{
   const icon:IconName=status==="preparando"?"flame":status==="listo"?"bell":status==="entregado"?"check":status==="cancelado"?"cancel":status==="en_camino"?"motorbike":"clock";
-  // Por entregar morado y Entregado verde (decisión 2026-11-05), igual que su `Status`.
-  return {icon,tone:status==="en_camino"?"navy":stateTiles[serviceStatusTone(status)]};
+  // En camino e ítems pendientes comparten la familia información (matriz FUDIA DS 1.0).
+  return {icon,tone:status==="en_camino"?"info":stateTiles[serviceStatusTone(status)]};
 }
 
 /** Estado mostrado en una línea de producto (pedido, venta, cobro): icono, etiqueta y destino de sus preparaciones reales. */
@@ -89,3 +91,4 @@ export function isEditableOrder(order:{status:string;paidAmount?:string}){
 export function tableTitle(tableName?:string){
   return tableName?(/^mesa\b/i.test(tableName)?tableName:`Mesa ${tableName}`):"Mesa";
 }
+

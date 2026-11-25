@@ -81,23 +81,24 @@
 .pos-payment-modal>.modal-form{overflow:hidden}
 .pos-payment-body{display:grid;grid-auto-rows:max-content;align-content:start;gap:var(--space-3-5)}
 
-/* Cobro en dos paneles: a la izquierda el visor oscuro con importe y resultado; a la derecha la captura. */
+/* Cobro en dos paneles (FUDIA DS 1.0): resumen financiero en superficie clara con
+   importe protagonista en tinta y desglose hundido; a la derecha la captura. */
 .pos-payment-body.pos-checkout{grid-template-columns:var(--size-300) minmax(0,1fr);grid-auto-rows:auto;align-content:stretch;gap:0;padding:0;overflow:hidden}
-.pos-checkout-summary{display:flex;flex-direction:column;gap:var(--space-5);min-height:0;padding:var(--space-7) var(--space-6);background:var(--navigation-900);color:var(--surface)}
+.pos-checkout-summary{display:flex;flex-direction:column;gap:var(--space-5);min-height:0;padding:var(--space-7) var(--space-6);background:var(--cloud-25);color:var(--ink-950);border-right:var(--stroke-1) solid var(--line)}
 .pos-checkout-due{display:grid;gap:var(--space-1-5)}
-.pos-checkout-due>span{color:var(--navigation-text);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
-.pos-checkout-due>strong{color:var(--surface);font-size:var(--font-size-4xl);font-weight:var(--weight-heavy);line-height:var(--line-height-tight);letter-spacing:var(--letter-spacing-tight);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.pos-checkout-due>small{color:var(--navigation-text);font-size:var(--font-size-sm);line-height:var(--line-height-snug);font-variant-numeric:tabular-nums}
-.pos-checkout-result{display:grid;gap:var(--space-1);padding:var(--space-4);border-radius:var(--radius-tile);background:var(--navigation-950);color:var(--surface);transition:background var(--duration-fast),color var(--duration-fast)}
-.pos-checkout-result>span{color:var(--navigation-text);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
+.pos-checkout-due>span{color:var(--ink-500);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
+.pos-checkout-due>strong{color:var(--ink-950);font-size:var(--font-size-4xl);font-weight:var(--weight-heavy);line-height:var(--line-height-tight);letter-spacing:var(--letter-spacing-tight);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.pos-checkout-due>small{color:var(--ink-500);font-size:var(--font-size-sm);line-height:var(--line-height-snug);font-variant-numeric:tabular-nums}
+.pos-checkout-result{display:grid;gap:var(--space-1);padding:var(--space-4);border-radius:var(--radius-tile);background:var(--surface);color:var(--ink-950);box-shadow:var(--ring-line);transition:background var(--duration-fast),color var(--duration-fast)}
+.pos-checkout-result>span{color:var(--ink-500);font-size:var(--font-size-sm);font-weight:var(--weight-semibold)}
 .pos-checkout-result>strong{font-size:var(--font-size-2xl);font-weight:var(--weight-heavy);line-height:var(--line-height-tight);font-variant-numeric:tabular-nums}
 .pos-checkout-result.ready{background:var(--brand-100);color:var(--brand-800)}
 .pos-checkout-result.short{background:var(--warning-100);color:var(--warning-800)}
 .pos-checkout-result:is(.ready,.short)>span{color:inherit}
-.pos-checkout-meta{display:grid;gap:var(--space-2-5);margin-top:auto;padding-top:var(--space-4);border-top:var(--stroke-1) solid var(--surface-alpha-16)}
-.pos-checkout-meta>p{display:flex;align-items:center;gap:var(--space-2);min-width:0;margin:0;color:var(--navigation-text);font-size:var(--font-size-sm)}
+.pos-checkout-meta{display:grid;gap:var(--space-2-5);margin-top:auto;padding-top:var(--space-4);border-top:var(--stroke-1) solid var(--line)}
+.pos-checkout-meta>p{display:flex;align-items:center;gap:var(--space-2);min-width:0;margin:0;color:var(--ink-500);font-size:var(--font-size-sm)}
 .pos-checkout-meta>p>svg{flex:none}
-.pos-checkout-meta b{color:var(--surface);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
+.pos-checkout-meta b{color:var(--ink-950);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
 .pos-checkout-main{display:grid;align-content:start;gap:var(--space-6);min-height:0;padding:var(--space-6);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .pos-checkout-options{display:grid;gap:var(--space-2-5)}
 .pos-checkout-options>.form-disclosure{margin-top:0}

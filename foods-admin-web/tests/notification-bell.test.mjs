@@ -71,7 +71,7 @@ test("avisos: Salón y Pedidos abren el detalle del pedido; POS solo cobra la cu
 });
 
 test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
- assert.equal(rules.noticeTone("order_ready"),"purple","pedido por entregar usa el morado de su estado");
+ assert.equal(rules.noticeTone("order_ready"),"brand","pedido por entregar usa la familia éxito de su estado");
  assert.equal(rules.noticeTone("bill_requested"),"peach");
  assert.equal(rules.noticeTone("assistance_requested"),"sky");
  assert.equal(rules.noticeTone("stale_account"),"peach");
@@ -98,7 +98,7 @@ test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
  assert.match(css,/@media \(prefers-reduced-motion:reduce\)\{[^}]*\.notification-toast\{animation:none/);
 });
 
-test("avisos: lista continua, cabecera azul marino y pago como movimiento",()=>{
+test("avisos: lista continua, cabecera blanca y pago como movimiento",()=>{
  assert.deepEqual({...rules.noticePaymentSummary({kind:"pay_detected",title:"Pago recibido por Yape",detail:"S/ 1.00 · Rosa Quispe"})},{provider:"yape",wallet:"Yape",amount:"S/ 1.00",title:"Rosa Quispe"},"quien pagó es el título y el monto va aparte");
  assert.deepEqual({...rules.noticePaymentSummary({kind:"pay_detected",title:"Pago recibido por Plin",detail:"S/ 5.50"})},{provider:"plin",wallet:"Plin",amount:"S/ 5.50",title:"Pago recibido"},"sin remitente el título es «Pago recibido»");
  assert.equal(rules.noticePaymentSummary({kind:"order_ready",title:"Mesa 4 · listo para entregar",detail:"Cocina"}),null);
@@ -108,7 +108,7 @@ test("avisos: lista continua, cabecera azul marino y pago como movimiento",()=>{
  assert.match(bell,/<strong className="notification-amount">\{payment\.amount\}<\/strong>/,"el monto del pago va a la derecha");
  assert.match(bell,/\{origin&&`\$\{origin\} · `\}<time dateTime=\{item\.createdAt\}>/,"«Yape · hace 5 min» bajo el título");
  const css=read("src/modules/notifications/presentation/notification-bell.css");
- assert.match(css,/\.notification-head\{[^}]*background:var\(--navigation-900\)\}/,"cabecera azul marino como los modales");
+ assert.match(css,/\.notification-head\{[^}]*background:var\(--surface\)\}/,"cabecera blanca como los modales (FUDIA DS 1.0)");
  assert.match(css,/\.notification-item\[data-read=false\] \.notification-amount\{color:var\(--primary-600\)\}/,"monto azul mientras no se lee");
  assert.match(css,/\.notification-list li\+li\{border-top:var\(--stroke-1\) solid var\(--line\)\}/,"avisos separados por línea fina, no tarjetas sueltas");
  assert.match(css,/\.notification-list\{[^}]*scrollbar-width:thin/,"barra de desplazamiento fina");

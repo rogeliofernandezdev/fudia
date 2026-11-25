@@ -77,7 +77,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>
-      <td><Status tone={meta.tone} solid>{meta.label}</Status></td>
+      <td><Status tone={meta.tone}>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total table-amount">{money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/><OrderDispatchActions order={o} busy={list.isPlaceholderData||advance.isPending||cancel.isPending}/></div></td>

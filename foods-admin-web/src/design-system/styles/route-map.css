@@ -7,7 +7,7 @@
 .route-map-unavailable p{margin:0}
 /* Marcadores: local en navy, entrega en verde de marca y repartidor en azul operativo, con icono blanco. */
 .route-map-marker{width:var(--size-36);height:var(--size-36);display:grid;place-items:center;border-radius:50%;border:var(--stroke-2) solid var(--surface);color:var(--surface);box-shadow:var(--elevation-2)}
-.route-map-marker.is-origin{background:var(--navigation-900)}
+.route-map-marker.is-origin{background:var(--ink-700)}
 .route-map-marker.is-destination{background:var(--brand-700)}
 .route-map-marker.is-courier{background:var(--primary-600);z-index:1}
 @media(prefers-reduced-motion:reduce){.route-map-loading{animation:none}}

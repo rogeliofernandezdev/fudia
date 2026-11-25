@@ -35,7 +35,7 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.match(page,/formatTableOccupation\(t\.occupiedSince,clock\)/);
  assert.match(page,/setInterval\(\(\)=>setClock\(Date\.now\(\)\),30000\)/);
  assert.match(page,/floor\.isError&&!floor\.data/);
- assert.match(page,/<Status tone=\{meta\.tone\} emphasis solid>\{meta\.label\}<\/Status>/,"estado operativo destacado y sólido con la variante compartida");
+ assert.match(page,/<Status tone=\{meta\.tone\} emphasis>\{meta\.label\}<\/Status>/,"estado operativo destacado con la variante compartida pastel");
  assert.match(page,/<Status tone="green" emphasis>Libre<\/Status>/,"Libre usa el estado positivo compartido aprobado");
  assert.doesNotMatch(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.doesNotMatch(page,/className="salon-table-order-status"/);
@@ -66,10 +66,10 @@ test("paleta de salón: acento Cobalto aprobado y color semántico solo en estad
  assert.match(css,/\.salon-table:not\(:disabled\):hover\{border-color:color-mix\(in srgb, var\(--primary-600\) 27\.5%, var\(--line\)\)\}/,"el borde se aviva al pasar el cursor");
  assert.doesNotMatch(css,/\.salon-table[^{]*::before/,"sin bandas ni filetes superiores en las tarjetas");
  assert.doesNotMatch(css,/\.salon-overview-stats[^{]*::before/,"la tira de resumen tampoco lleva filete superior");
- assert.match(css,/\.salon-table-go\{[^}]*background:var\(--cloud-100\);color:var\(--navigation-900\)/,"el disco del pie es neutro en la ocupada: su único círculo vivo es el plato");
- assert.match(css,/\.salon-table\.free \.salon-table-go\{background:color-mix\(in srgb, var\(--primary-700\) 50%, var\(--navigation-900\)\);color:var\(--surface\)\}/,"«Abrir mesa» lleva disco macizo azul profundo desde el reposo");
+ assert.match(css,/\.salon-table-go\{[^}]*background:var\(--cloud-100\);color:var\(--ink-700\)/,"el disco del pie es neutro en la ocupada: su único círculo vivo es el plato");
+ assert.match(css,/\.salon-table\.free \.salon-table-go\{background:var\(--primary-600\);color:var\(--surface\)\}/,"«Abrir mesa» lleva disco macizo azul profundo desde el reposo");
  assert.match(css,/\.salon-table\.free:hover \.salon-table-go\{background:var\(--primary-700\)\}/,"el disco libre se aviva en primary-700 al hover");
- assert.match(css,/\.salon-table-open\{color:color-mix\(in srgb, var\(--primary-700\) 50%, var\(--navigation-900\)\)/,"«Abrir mesa» en azul profundo");
+ assert.match(css,/\.salon-table-open\{color:var\(--primary-700\)/,"«Abrir mesa» en índigo profundo");
  assert.match(css,/\.salon-grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(max\(var\(--size-212\),calc\(\(100% - var\(--space-4\) \* 3\) \/ 4\)\),1fr\)\)/,"como máximo cuatro mesas por fila");
  assert.match(css,/\.salon-overview-stats\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)[^}]*gap:var\(--space-3\)/,"el resumen es un tablero de cuatro tarjetas iguales");
  assert.match(css,/\.salon-overview-stats>div\{[^}]*border:var\(--stroke-1\) solid var\(--line\);[^}]*border-radius:var\(--radius-card\);[^}]*box-shadow:var\(--elevation-1\)/,"cada indicador es una tarjeta con el mismo borde, radio y elevación");

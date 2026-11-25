@@ -33,7 +33,7 @@ test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría c
  assert.equal(values(".admin-auth-actions").gap,"4px");
  assert.equal(values(".admin-auth-actions")["margin-top"],"0");
  assert.equal(values(".admin-auth-submit")["margin-top"],undefined);
- assert.equal(values(".admin-auth-submit")["border-radius"],"6px");
+ assert.equal(values(".admin-auth-submit")["border-radius"],"10px");
  assert.equal(values(".admin-auth-field button").height,"var(--control-height)");
  assert.equal(values(".admin-auth-field button").width,"var(--control-height)");
  assert.equal(values(".admin-auth-footer")["font-size"],"12px");
@@ -121,7 +121,7 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  assert.equal(values(".admin-auth-card")["grid-template-columns"],undefined);
  assert.equal(values(".admin-auth-brand").background,"var(--surface)");
  assert.equal(values(".admin-auth-heading h1")["font-size"],"22px");
- assert.equal(values(".admin-auth-heading h1")["font-weight"],"700");
+ assert.equal(values(".admin-auth-heading h1")["font-weight"],"600","peso semibold de la especificación");
  assert.equal(values(".admin-auth-heading")["text-align"],"center");
  assert.equal(values(".admin-auth-help").color,"var(--ink-600)");
  assert.equal(values(".admin-auth-help")["font-weight"],"500");

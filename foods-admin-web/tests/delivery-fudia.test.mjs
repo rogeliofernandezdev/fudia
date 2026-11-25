@@ -19,11 +19,11 @@ const rules=compile("src/modules/notifications/domain/notice-rules.ts");
 test("Delivery Fudia: cada estado del despacho tiene etiqueta y tono suave de la matriz",()=>{
  assert.deepEqual(Object.keys(status.dispatchStatusMeta).sort(),["accepted","cancelled","delivered","own","picked_up","searching","unassigned"]);
  assert.equal(status.dispatchStatusMeta.delivered.label,"Entregado por la central");
- assert.equal(status.dispatchStatusMeta.picked_up.tone,"green","«Recogido» conserva su tono aprobado");
+ assert.equal(status.dispatchStatusMeta.picked_up.tone,"blue","«Recogido» comparte la familia información de En camino (matriz FUDIA DS 1.0)");
  assert.equal(status.dispatchStatusMeta.unassigned.label,"Sin central");
  assert.equal(status.dispatchStatusMeta.unassigned.tone,"orange");
  assert.equal(status.dispatchStatusMeta.searching.tone,"violet");
- assert.ok(!Object.values(status.dispatchStatusMeta).some(meta=>meta.tone==="red"),"sin rojo: ningún estado del despacho es un error");
+ assert.equal(status.dispatchStatusMeta.cancelled.tone,"red","cancelado es peligro en la matriz FUDIA DS 1.0");
  assert.equal(status.isDispatchStatus("accepted"),true);
  assert.equal(status.isDispatchStatus(""),false);
  assert.equal(status.isDispatchStatus(undefined),false);

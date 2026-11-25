@@ -13,7 +13,7 @@ import {AvailabilityReasonDialog} from "./availability-reason-dialog";
 import {AvailabilityHistoryDialog} from "./availability-history-dialog";
 
 const labels:Record<AvailabilityStatus,string>={available:"Disponible",low:"Pocas unidades",sold_out:"Agotado",unavailable:"Fuera de horario"};
-const tones:Record<AvailabilityStatus,"green"|"orange"|"gray">={available:"green",low:"orange",sold_out:"gray",unavailable:"gray"};
+const tones:Record<AvailabilityStatus,"green"|"orange"|"red"|"gray">={available:"green",low:"orange",sold_out:"red",unavailable:"gray"};
 
 export function ProductAvailabilityManager(){
  const client=useQueryClient();

@@ -15,9 +15,9 @@ import {listReservations,saveReservation,setReservationStatus} from "../infrastr
 
 const columns=["Cliente","Fecha y hora","Personas","Duración","Mesa","Estado","Acciones"];
 const blank:ReservationDraft={customerName:"",customerPhone:"",startsAt:"",guests:"2",durationMinutes:"90",tableId:"",notes:""};
-const statusMeta:Record<ReservationStatus,{label:string;tone:"green"|"blue"|"orange"|"gray"}>={
+const statusMeta:Record<ReservationStatus,{label:string;tone:"green"|"blue"|"orange"|"red"|"gray"}>={
   pending:{label:"Pendiente",tone:"orange"},confirmed:{label:"Confirmada",tone:"blue"},seated:{label:"Sentada",tone:"green"},
-  cancelled:{label:"Cancelada",tone:"gray"},no_show:{label:"No asistió",tone:"gray"},
+  cancelled:{label:"Cancelada",tone:"red"},no_show:{label:"No asistió",tone:"gray"},
 };
 function toLocalInput(value:string){
   const d=new Date(value);if(Number.isNaN(d.getTime()))return"";

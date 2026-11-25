@@ -138,7 +138,7 @@ bloqueo de clics repetidos, progreso en la acción elegida y aviso «sin enviar 
 El botón secundario tiene fondo `primary-200`, borde `primary-600` y texto
 `primary-700`; el hover usa `primary-300`/`primary-800` para conservar contraste AA.
 Comprueba los iconos de portapapeles/envío, radios completos en las acciones
-móviles y cabecera blanca sobre marino sin quedar cubierta por el scrim abierto.
+móviles y cabecera blanca sin quedar cubierta por el scrim abierto.
 Incluye resumen móvil abierto, notas, opciones de combos, nombres largos y
 ausencia de imagen; comprueba cantidades de 44 px, foco sin recortar y pie visible.
 La foto del catálogo acompaña al borrador sin formar parte del payload del pedido.
@@ -252,7 +252,7 @@ consulta de historial sin permiso de escritura.
 
 Después de `npm run build`, ejecutar desde `foods-admin-web`
 `node tests/helpers/availability-page-preview.mjs .next/availability-page-preview`.
-El helper renderiza el componente real y las primitivas compartidas con Plus Jakarta Sans
+El helper renderiza el componente real y las primitivas compartidas con Inter
 y CSS compilado del build. Sustituye las consultas por datos ilustrativos
 aislados; no consulta ni modifica datos de restaurantes. Usa Playwright y las
 variables opcionales `FOODS_PLAYWRIGHT_PATH`/`FOODS_BROWSER_PATH` para las rutas
@@ -484,7 +484,7 @@ La cabecera llega al borde superior y ocupa todo el ancho del modal, sin franja
 degradada ni elementos decorativos anteriores.
 
 La comprobación visual aislada `tests/helpers/shared-ui-preview.mjs` renderiza las
-primitivas React reales con sus CSS y Plus Jakarta Sans del build, usando datos ilustrativos.
+primitivas React reales con sus CSS y Inter del build, usando datos ilustrativos.
 No consulta ni modifica datos de restaurantes. Con Playwright disponible y, si
 hace falta, `FOODS_PLAYWRIGHT_PATH`/`FOODS_BROWSER_PATH` apuntando a sus instalaciones
 locales, ejecutar `node tests/helpers/shared-ui-preview.mjs .next/shared-ui-preview`.
@@ -523,7 +523,7 @@ su contraste mínimo 4.5:1 y su correspondencia con la
 Después de `npm run build`, ejecutar
 `node tests/helpers/order-modal-preview.mjs .next/order-modal-preview` para
 generar capturas y `geometry.json` del componente real con datos ilustrativos,
-Plus Jakarta Sans del build y CSS fuente de los mismos componentes. Para comprobar también
+Inter del build y CSS fuente de los mismos componentes. Para comprobar también
 interacciones con los estilos compilados, definir `FOODS_PREVIEW_COMPILED_CSS=1`:
 ambos helpers cargarán conjuntamente los CSS del build. Es una comprobación aislada
 de composición, no una captura de una ruta autenticada ni garantía del orden de navegación.

@@ -74,7 +74,7 @@ test("formulario hereda valores regulares sin cambiar controles fuera del modal"
 });
 
 test("totales principales y estados conservan su énfasis; no hay cliente/mesa en detalles",()=>{
- assert.equal(declarations(shared.find(rule=>rule.selector===".modal-summary-total strong"))["font-weight"],"var(--weight-bold)");
+ assert.equal(declarations(shared.find(rule=>rule.selector===".modal-summary-total strong"))["font-weight"],"var(--weight-semibold)","el importe protagonista usa el peso semibold de la especificación");
  assert.match(read("modules/sales/presentation/sale-detail-dialog.tsx"),/className="modal-summary-total"/);
  assert.equal(declarations(rules("modules/operations/cash/presentation/cash-report.css").find(rule=>rule.selector===".cash-report-amounts dd"))["font-weight"],"var(--weight-bold)");
  for(const file of ["modules/sales/presentation/sale-detail-dialog.tsx","modules/operations/pos/presentation/pos-page.tsx"]){

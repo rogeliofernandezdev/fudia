@@ -1,11 +1,12 @@
 /* Table CSS owned by the design system; all values use shared tokens. */
 /* Hide legacy duplicate cards until all modules have adopted DataTable. */
 .management-cards{display:none}
-/* Tablas: cabecera marino en caja normal, filas compactas de 48 px (56 px en
-   táctil), sin cebra y con cifras tabulares. El azul queda para las acciones. */
+/* Tablas: encabezado grafito (#374151, decisión definitiva de la especificación) con texto
+   blanco de 12 px / 500, filas compactas, sin cebra y con cifras tabulares. El índigo queda
+   para las acciones. */
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
-table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--navigation-900)}
-th{height:var(--table-header-height);padding:0 var(--table-cell-padding-inline);color:var(--surface);background:transparent;text-align:left;font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--ink-700)}
+th{height:var(--table-header-height);padding:0 var(--table-cell-padding-inline);color:var(--surface);background:transparent;text-align:left;font-size:var(--font-size-label);font-weight:var(--weight-medium)}
 td{height:var(--table-row-height);padding:0 var(--table-cell-padding-inline);border-top:var(--stroke-1) solid var(--line);color:var(--ink-600);font-size:var(--font-size-control)}
 td:first-child{color:var(--ink-950);font-weight:var(--weight-semibold)}
 td small{display:block;margin-top:var(--space-0-5);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
@@ -73,12 +74,12 @@ tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon
   .panel .table-wrap:not(.data-table-viewport){width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain}
   .panel .table-wrap:not(.data-table-viewport)>table{width:max-content;min-width:100%}
   .panel .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
-  .panel .table-wrap:not(.data-table-viewport)>table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--navigation-900)}
+  .panel .table-wrap:not(.data-table-viewport)>table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--ink-700)}
   .panel .table-wrap:not(.data-table-viewport)>table tbody td:first-child{background:var(--surface)}
   .data-table{width:max-content;min-width:100%}
   .data-table :is(th,td){padding-inline:var(--space-3)}
   .data-table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
-  .data-table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--navigation-900)}
+  .data-table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--ink-700)}
   .data-table tbody td:first-child{background:var(--surface)}
   .management .data-table td:first-child{min-width:var(--size-190);max-width:var(--size-220)}
   .data-table td:first-child b{display:inline-block;vertical-align:middle;max-width:var(--size-120);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -87,7 +88,7 @@ tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon
   .data-table th:last-child,.data-table td:last-child{min-width:var(--size-116)}
   /* `stickyActions` (2026-11-21): Acciones fija a la derecha con la misma línea que la columna fija de la izquierda. */
   .data-table--sticky-actions :is(th,td):last-child{position:sticky;inset-inline-end:0;z-index:var(--z-raised);border-inline-start:var(--stroke-1) solid var(--line)}
-  .data-table--sticky-actions thead th:last-child{z-index:calc(var(--z-raised) + 1);background:var(--navigation-900)}
+  .data-table--sticky-actions thead th:last-child{z-index:calc(var(--z-raised) + 1);background:var(--ink-700)}
   .data-table--sticky-actions tbody td:last-child{background:var(--surface)}
   .data-table-hint{display:flex;align-items:center;gap:var(--space-2);margin:0;padding:var(--space-2) var(--space-3);background:var(--primary-50);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
   .data-table-hint>span:first-child{flex:none;color:var(--primary-700);font-size:var(--font-size-md);font-weight:var(--weight-bold)}

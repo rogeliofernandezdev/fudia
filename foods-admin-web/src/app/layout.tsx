@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 // Shared table styles are registered once, including for legacy native tables.
 import "@/design-system/styles/data-table.css";
@@ -24,7 +24,7 @@ import "@/design-system/styles/form-section.css";
 import "@/design-system/styles/detail-view.css";
 import "@/design-system/styles/tooltip.css";
 import {Providers} from "@/providers/providers";
-const jakarta=Plus_Jakarta_Sans({subsets:["latin"],variable:"--font-jakarta",display:"swap"});
+const inter=Inter({subsets:["latin"],variable:"--font-inter",display:"swap"});
 export const metadata:Metadata={title:{default:"FudIA · Gestión de restaurantes",template:"%s · FudIA"},description:"Administración integral de restaurantes"};
-export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",interactiveWidget:"resizes-content",themeColor:"#052352"};
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="es" suppressHydrationWarning><body className={jakarta.variable}><Providers>{children}</Providers></body></html>}
+export const viewport:Viewport={width:"device-width",initialScale:1,viewportFit:"cover",interactiveWidget:"resizes-content",themeColor:"#ffffff"};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="es" suppressHydrationWarning><body className={inter.variable}><Providers>{children}</Providers></body></html>}

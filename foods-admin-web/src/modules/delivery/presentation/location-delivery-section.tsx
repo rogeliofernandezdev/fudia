@@ -81,7 +81,7 @@ function DeliveryLinkPanel({locationId,locationName,editable,disabled}:{location
 
 async function createDeliveryQr(url:string){
   const QRCode=await loadQRCode();
-  return QRCode.toDataURL(url,{width:480,margin:4,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}});
+  return QRCode.toDataURL(url,{width:480,margin:4,color:{dark:readCssToken("--qr-ink"),light:readCssToken("--surface")}});
 }
 
 /** Descarga la misma imagen del QR que se muestra, con el nombre del local. */

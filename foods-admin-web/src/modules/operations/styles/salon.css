@@ -42,7 +42,7 @@
   font-weight:var(--weight-semibold);
 }
 
-.salon-overview-stats .free dt{color:var(--navigation-900)}
+.salon-overview-stats .free dt{color:var(--ink-700)}
 .salon-overview-stats .occupied dt{color:var(--primary-700)}
 
 .salon-overview-stats dd{
@@ -152,7 +152,7 @@
 .salon-table-caption{display:inline-flex;align-items:center;gap:var(--space-1);max-width:100%;padding:0 var(--space-3);overflow:hidden;color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold);white-space:nowrap}
 .salon-table-caption>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .salon-table.free .salon-table-caption{color:var(--ink-500)}
-.salon-table-qr{position:absolute;right:calc(var(--space-1-5) * -1);bottom:calc(var(--space-1) * -1);display:grid;place-items:center;width:var(--size-26);height:var(--size-26);border:var(--stroke-2) solid var(--surface);border-radius:50%;background:var(--navigation-900);color:var(--surface)}
+.salon-table-qr{position:absolute;right:calc(var(--space-1-5) * -1);bottom:calc(var(--space-1) * -1);display:grid;place-items:center;width:var(--size-26);height:var(--size-26);border:var(--stroke-2) solid var(--surface);border-radius:50%;background:var(--ink-700);color:var(--surface)}
 
 /* Pie sin banda: importe y tiempo abierta, o «Abrir mesa». El disco del pie es
    macizo en la libre (azul marino profundo, icono blanco) y neutro en la ocupada,
@@ -161,12 +161,12 @@
 .salon-table-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
 .salon-table-amount{min-width:0;display:grid;gap:var(--space-0-5)}
 .salon-table-total{color:var(--ink-950);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);white-space:nowrap}
-.salon-table-open{color:color-mix(in srgb, var(--primary-700) 50%, var(--navigation-900));font-size:var(--font-size-base);font-weight:var(--weight-bold);line-height:var(--line-height-tight)}
+.salon-table-open{color:var(--primary-700);font-size:var(--font-size-base);font-weight:var(--weight-semibold);line-height:var(--line-height-tight)}
 /* Tiempo de ocupación: neutro; más de un día abierta pasa a advertencia. */
 .salon-table-elapsed{color:var(--ink-500);font-size:var(--font-size-label)}
 .salon-table-elapsed.is-stale{color:var(--warning-800);font-weight:var(--weight-semibold)}
-.salon-table-go{display:grid;place-items:center;flex:none;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-pill);background:var(--cloud-100);color:var(--navigation-900);transition:var(--transition-surface)}
-.salon-table.free .salon-table-go{background:color-mix(in srgb, var(--primary-700) 50%, var(--navigation-900));color:var(--surface)}
+.salon-table-go{display:grid;place-items:center;flex:none;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-pill);background:var(--cloud-100);color:var(--ink-700);transition:var(--transition-surface)}
+.salon-table.free .salon-table-go{background:var(--primary-600);color:var(--surface)}
 @media (hover:hover) and (pointer:fine){
   .salon-table.occupied:hover .salon-table-go{background:var(--cloud-150)}
   .salon-table.free:hover .salon-table-go{background:var(--primary-700)}
@@ -206,7 +206,7 @@
 
   .salon-controls .salon-zones{
     position:sticky;
-    top:var(--size-64);
+    top:var(--shell-header);
     /* Sobre las tarjetas, pero debajo de la barra superior y su selector de empresa/local. */
     z-index:var(--z-raised);
     margin:0 calc(var(--space-4) * -1) var(--space-2);

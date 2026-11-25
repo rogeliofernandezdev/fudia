@@ -139,12 +139,13 @@ confirma el descarte si hay líneas. Detalle completo en `02_DESIGN_SYSTEM.md`
 
 El login conserva una sola tarjeta centrada y el orden original en todos los
 anchos: logo, formulario y mensaje «Mesas, pedidos y cocina en un solo lugar».
-El fondo usa `navigation-900`, con iluminación discreta de `primary-600`;
-la tarjeta y la cabecera de marca permanecen blancas, sin línea divisoria entre
-logo y formulario. Conserva la franja verde/azul de marca. Los campos blancos
-usan iconos simples de 20 px, sin otra superficie detrás, y el foco compartido.
-La acción única «Ingresar» usa azul `primary-600`, llave de acceso de 20 px y geometría
-pill en móvil. El copyright externo usa `navigation-text` sobre el fondo marino.
+El fondo usa el gris claro `cloud-50` (FUDIA DS 1.0, sin degradados); la
+tarjeta y la cabecera de marca permanecen blancas, sin línea divisoria entre
+logo y formulario. Conserva la franja de marca en índigo `primary-600`. Los
+campos blancos usan iconos simples de 20 px, sin otra superficie detrás, y el
+foco compartido. La acción única «Ingresar» usa índigo `primary-600`, llave
+de acceso de 20 px y geometría pill en móvil. El copyright externo usa
+`ink-500` sobre el fondo claro.
 En viewport bajo conserva scroll
 de página y acceso a la acción. No añade panel lateral, títulos decorativos,
 selección de empresa/local/rol ni indicadores operativos ficticios.

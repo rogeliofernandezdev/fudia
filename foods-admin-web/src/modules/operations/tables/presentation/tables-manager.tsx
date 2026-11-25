@@ -105,7 +105,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
 
  useEffect(()=>{
    if(canvasRef.current&&qrUrl){
-     void loadQRCode().then(QRCode=>canvasRef.current&&QRCode.toCanvas(canvasRef.current,qrUrl,{width:240,margin:2,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
+     void loadQRCode().then(QRCode=>canvasRef.current&&QRCode.toCanvas(canvasRef.current,qrUrl,{width:240,margin:2,color:{dark:readCssToken("--qr-ink"),light:readCssToken("--surface")}},(err)=>{
        if(err){console.error(err);return}
        const canvas=canvasRef.current;if(!canvas)return;
        const ctx=canvas.getContext("2d");if(!ctx)return;
@@ -195,7 +195,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    void loadQRCode().then(QRCode=>printable.forEach(t=>{
      const canvas=canvasRefs.current[t.id];
      if(canvas){
-       QRCode.toCanvas(canvas,`${origin}${publicConciergePath(t.qrToken)}`,{width:200,margin:1,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
+       QRCode.toCanvas(canvas,`${origin}${publicConciergePath(t.qrToken)}`,{width:200,margin:1,color:{dark:readCssToken("--qr-ink"),light:readCssToken("--surface")}},(err)=>{
          if(err){console.error(err);return}
          // Superponer el logo en el centro del QR
          const ctx=canvas.getContext("2d");if(!ctx)return;

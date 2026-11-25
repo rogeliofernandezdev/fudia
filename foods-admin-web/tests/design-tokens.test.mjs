@@ -9,26 +9,27 @@ const read=file=>readFileSync(new URL(file,root),"utf8");
 function files(dir){return readdirSync(new URL(dir+"/",root),{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?files(`${dir}/${entry.name}`):[`${dir}/${entry.name}`]);}
 const sourceFiles=files("src");
 
-test("los acentos coinciden con las muestras RGB registradas del PNG de referencia",()=>{
+test("los acentos coinciden con el registro de paleta aprobada (FUDIA DS 1.0)",()=>{
   const reference=JSON.parse(read("docs/visual-references/hero-dashboard-palette.json"));
   for(const sample of reference.samples){
     assert.equal(resolveTokens(`var(--${sample.token})`).toUpperCase(),sample.hex,sample.region);
     assert.ok(sample.alpha>=250);
   }
-  assert.equal(resolveTokens("var(--amount-paid)"),resolveTokens("var(--brand-600)"),"Los importes pagados usan el verde exacto de la referencia");
+  assert.equal(resolveTokens("var(--amount-paid)"),resolveTokens("var(--brand-600)"),"Los importes pagados usan el verde exacto de la especificación");
 });
 
-test("la paleta operativa conserva contraste AA y una rampa azul luminosa ordenada",()=>{
+test("la paleta operativa conserva contraste AA y una rampa índigo luminosa ordenada",()=>{
   const luminance=value=>value.slice(1).match(/../g).map(v=>parseInt(v,16)/255)
     .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4)
     .reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
   const color=name=>resolveTokens(`var(--${name})`);
   const ramp=[25,50,100,200,300,400,500,600,700,800].map(step=>luminance(color(`primary-${step}`)));
   ramp.slice(1).forEach((value,index)=>assert.ok(value<ramp[index],"Cada paso debe ser más oscuro"));
-  for(const [fg,bg] of [["surface","primary-600"],["surface","primary-700"],["primary-700","primary-100"],["primary-700","primary-200"],["navigation-text","navigation-900"],
+  for(const [fg,bg] of [["surface","primary-600"],["surface","primary-700"],["primary-700","primary-100"],["primary-700","primary-200"],
     ["surface","danger-600"],["surface","danger-700"],["danger-600","danger-50"],["danger-600","danger-100"],
     ["brand-700","brand-100"],["surface","brand-700"],["ink-950","brand-600"],["ink-800","brand-600"],
-    ["warning-600","warning-50"],["warning-800","warning-100"],["ink-950","danger-500"],["ink-950","warning-500"]]){
+    ["warning-600","warning-50"],["warning-800","warning-100"],["surface","danger-500"],["ink-950","warning-500"],
+    ["info-600","info-50"],["teal-700","teal-100"],["digital-700","digital-100"],["surface","ink-700"]]){
     const light=[luminance(color(fg)),luminance(color(bg))].sort((a,b)=>b-a);
     assert.ok((light[0]+.05)/(light[1]+.05)>=4.5,`${fg} sobre ${bg}`);
   }
@@ -60,7 +61,7 @@ test("los estilos consumen la paleta y escalas sin volver a escribir valores de 
 
 test("todos los tokens usados existen y sus dependencias no forman ciclos",()=>{
   const names=new Set();tokenAst.walkDecls(d=>names.add(d.prop));
-  const external=new Set(["--font-jakarta","--font-geist-mono"]);
+  const external=new Set(["--font-inter","--font-geist-mono"]);
   for(const file of sourceFiles.filter(file=>/\.(css|tsx|ts)$/.test(file))){
     for(const match of read(file).matchAll(/(?:var\(|readCssToken\(")(--[\w-]+)/g)){
       assert.ok(names.has(match[1])||external.has(match[1]),`${file}: ${match[1]}`);
@@ -84,15 +85,16 @@ test("editar los tokens base actualiza acciones, alias y transparencias comparti
   assert.equal(resolveTokens(headerGap,changed),"18px");
 });
 
-test("los controles conservan la altura táctil y el modal conserva Scale Punch elástico",()=>{
-  assert.equal(resolveTokens("var(--control-height)"),"38px");
+test("los controles conservan la altura táctil y las confirmaciones entran sin rebotes",()=>{
+  assert.equal(resolveTokens("var(--control-height)"),"40px");
   const mobileRoot=tokenAst.nodes.find(n=>n.type==="atrule"&&n.params==="(width<=600px)"&&n.nodes.some(r=>r.selectors?.includes(":root")));
   assert.ok(mobileRoot);
   const control=mobileRoot.nodes.find(n=>n.selectors?.includes(":root")).nodes.find(n=>n.prop==="--control-height");
-  assert.equal(resolveTokens(control.value),"44px");
-  assert.equal(resolveTokens("var(--motion-dialog-duration)"),"520ms");
+  assert.equal(resolveTokens(control.value),"48px");
+  assert.equal(resolveTokens("var(--motion-dialog-duration)"),"180ms");
   assert.equal(resolveTokens("var(--motion-dialog-easing)"),"cubic-bezier(.23,1,.32,1)");
   const css=read("src/design-system/styles/confirm-dialog.css");
   assert.match(css,/@media\(prefers-reduced-motion:no-preference\)/);
-  assert.match(css,/42%\{opacity:1;transform:scale\(1\.06\)\}/);
+  assert.match(css,/from\{opacity:0;transform:scale\(\.98\)\}/);
+  assert.doesNotMatch(css,/scale\(1\.0\d\)/,"Sin rebotes ni overshoot en confirmaciones (FUDIA DS 1.0)");
 });

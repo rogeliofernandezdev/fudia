@@ -17,61 +17,46 @@ function luminance(hex){
   .map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);
  return values[0]*.2126+values[1]*.7152+values[2]*.0722;
 }
-// Niveles de estado (2026-11-05): suave por defecto (registros, compras, caja, cuenta y pago)
-// y sólido solo para los estados operativos del pedido.
+// Matriz FUDIA DS 1.0 (aprobada 2026-11-24): estados en superficies pastel con texto
+// oscuro e indicador de su familia. No existe la variante sólida; los atributos usan `Tag`.
 const soft=[
- ["gray","cloud-100","#f0f2f8","ink-500","#59617c"],
- ["blue","indigo-100","#eef0ff","indigo-700","#3946b8"],
+ ["gray","cloud-100","#f4f5f7","ink-600","#4b5563"],
+ ["blue","info-bg","#eff6ff","info-fg","#1d4ed8"],
  ["sky","sky-100","#e0f2fe","sky-800","#075985"],
- ["violet","digital-100","#f2ecff","digital-700","#5421a8"],
- ["purple","purple-100","#f2e6f8","purple-600","#681a92"],
- ["green","brand-100","#e3f8e9","brand-800","#055e2b"],
- ["orange","warning-100","#fff0d8","warning-800","#744000"],
- ["teal","teal-100","#e6f5f7","teal-700","#0b6b78"],
- ["red","danger-50","#fff2ef","danger-700","#9f2115"],
- ["gray emphasis","cloud-150","#e9ecf4","ink-800","#222842"],
-];
-const solid=[
- ["gray","ink-500","#59617c"],["blue","indigo-600","#4654cd"],["sky","sky-500","#0ea5e9"],
- ["violet","digital-500","#7c3aed"],["purple","purple-600","#681a92"],["green","brand-600","#03c056"],
- ["orange","warning-500","#fd9f0a"],["teal","teal-500","#0e9aab"],["red","danger-500","#fd3622"],
- ["navy","navigation-900","#052352"],
+ ["violet","violet-bg","#f5f3ff","violet-fg","#6d28d9"],
+ ["green","success-bg","#ecfdf5","success-fg","#047857"],
+ ["orange","warning-bg","#fffbeb","warning-fg","#92400e"],
+ ["teal","teal-bg","#f0fdfa","teal-fg","#0f766e"],
+ ["red","danger-bg","#fef2f2","danger-fg","#b91c1c"],
+ ["gray emphasis","cloud-150","#e3e5e9","ink-800","#1f2937"],
 ];
 for(const [tone,bgToken,bg,fgToken,fg] of soft){
- test(`Status suave ${tone}: fondo tenue, texto oscuro y contraste 4.5:1`,()=>{
+ test(`Status suave ${tone}: superficie pastel, texto oscuro y contraste 4.5:1`,()=>{
   const selector=tone==="green"?".status":tone==="gray emphasis"?".status.gray.emphasized":`.status.${tone}`;
   const rule=rules.get(selector);
-  assert.equal(rule.get("background"),`var(--${bgToken})`);
-  assert.equal(rule.get("color"),`var(--${fgToken})`);
+  assert.equal(rule.get("background"),`var(--${bgToken})`,`${tone} usa el alias semántico de fondo`);
+  assert.equal(rule.get("color"),`var(--${fgToken})`,`${tone} usa el alias semántico de texto`);
   assert.equal(resolveTokens(rule.get("background")),bg);
   assert.equal(resolveTokens(rule.get("color")),fg);
   assert.ok((luminance(bg)+.05)/(luminance(fg)+.05)>=4.5);
  });
 }
-for(const [tone,bgToken,bg] of solid){
- test(`Status sólido ${tone}: relleno vivo con texto blanco`,()=>{
-  const rule=rules.get(`.status.solid.${tone}`);
-  assert.equal(rule.get("background"),`var(--${bgToken})`);
-  assert.equal(resolveTokens(rule.get("background")),bg);
- });
-}
-test("solo la variante sólida usa texto blanco; los atributos usan la etiqueta neutra",()=>{
- assert.equal(rules.get(".status.solid").get("color"),"var(--surface)");
- assert.equal(rules.get(".status.solid.gray.emphasized").get("color"),"var(--surface)","el gris enfatizado sólido (Salón «Nuevo») no hereda tinta oscura");
- assert.equal(rules.get(".status.solid i,.status.solid .status-icon").get("color"),"var(--surface)");
+test("no existe la variante sólida; el indicador acompaña al texto y los atributos usan la etiqueta neutra",()=>{
+ for(const selector of rules.keys())assert.doesNotMatch(selector,/\.status\.solid|\.status\.(purple|navy)/,`Regla legacy sin dueño: ${selector}`);
  assert.equal(rules.get(".tag").get("background"),"var(--cloud-100)");
  assert.equal(rules.get(".tag").get("color"),"var(--ink-700)");
  const source=read("../src/design-system/page-header.tsx");
- assert.match(source,/solid=false/,"Status es suave salvo que la pantalla pida `solid`");
- const solidUsers=["../src/modules/operations/orders/presentation/orders-manager.tsx","../src/modules/operations/orders/presentation/order-detail-dialog.tsx","../src/modules/operations/salon/presentation/salon-manager.tsx"];
- for(const file of solidUsers)assert.match(read(file),/<Status [^>]*solid/,`${file} marca el estado operativo como sólido`);
+ assert.doesNotMatch(source,/solid/,"Status ya no expone variante sólida: todos los estados son pastel con etiqueta");
+ for(const file of ["../src/modules/operations/orders/presentation/orders-manager.tsx","../src/modules/operations/orders/presentation/order-detail-dialog.tsx","../src/modules/operations/salon/presentation/salon-manager.tsx","../src/modules/delivery-panel/presentation/courier-panel.tsx"]){
+  assert.doesNotMatch(read(file),/<Status [^>]*solid/,`${file} no marca estados como sólidos`);
+ }
  assert.doesNotMatch(read("../src/modules/operations/pos/presentation/pos-page.tsx"),/<Status [^>]*solid/,"Cobros muestra solo el estado de cobro; la preparación vive en Pedidos");
  assert.doesNotMatch(read("../src/modules/menu/products/presentation/catalog-manager.tsx"),/<Status tone=\{p\.quantityControl/,"el control de cantidad es atributo, no estado");
 });
 test("la documentación canónica conserva la paleta exacta del componente",()=>{
  const standard=read("../docs/02_DESIGN_SYSTEM.md");
- for(const [,bgToken,bg] of solid)assert.ok(standard.includes(`\`${bgToken}\` · \`${bg.toUpperCase()}\``),bgToken);
- assert.match(standard,/\| Cuenta \| Cuenta abierta \| `sky`/);
+ for(const [,bgToken,bg] of soft)assert.ok(standard.includes(`\`${bgToken}\``)||standard.includes(bg.toUpperCase()),bgToken);
+ assert.match(standard,/\| Cuenta \| Cuenta abierta \| `teal`/);
  assert.match(standard,/\| Pedido \| Confirmado \| `blue`/);
- assert.notEqual(tokens.get("--sky-500"),tokens.get("--indigo-600"));
+ assert.notEqual(tokens.get("--teal-500"),tokens.get("--info-500"),"La cuenta abierta (petróleo) no comparte tono con Confirmado (información)");
 });

@@ -126,7 +126,7 @@ test("panel de reparto: enlaces de llamada e indicaciones solo con datos válido
 
 test("panel de reparto: etapas con etiqueta de una línea y tonos de la matriz, sin rojo",()=>{
  assert.deepEqual(Object.keys(panel.stageMeta).sort(),["accepted","delivered","offer","picked_up"]);
- assert.deepEqual(Object.values(panel.stageMeta).map(meta=>meta.tone),["orange","blue","navy","green"]);
+ assert.deepEqual(Object.values(panel.stageMeta).map(meta=>meta.tone),["orange","blue","blue","green"]);
  for(const meta of Object.values(panel.stageMeta))assert.ok(meta.label.length<=12,meta.label);
 });
 

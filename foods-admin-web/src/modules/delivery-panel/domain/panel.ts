@@ -1,17 +1,17 @@
 import type {IconName} from "@/design-system";
 import type {CourierAction,PanelAction,PanelOrder,PanelOutcome,PanelStage,PickupAlert} from "./types";
 
-type Tone="orange"|"blue"|"navy"|"green";
+type Tone="orange"|"blue"|"green";
 
 /**
  * Etapa del reparto para la central (`Status` suave, registro): naranja = espera
- * su respuesta; azul = asignado, por recoger; navy = en camino, como el pedido;
+ * su respuesta; azul = asignado, por recoger y en camino (información);
  * verde = entregado. Misma semántica que la matriz de Delivery Fudia.
  */
 export const stageMeta:Record<PanelStage,{label:string;tone:Tone;icon:IconName}>={
   offer:{label:"Nuevo",tone:"orange",icon:"bell"},
   accepted:{label:"Por recoger",tone:"blue",icon:"store"},
-  picked_up:{label:"En camino",tone:"navy",icon:"motorbike"},
+  picked_up:{label:"En camino",tone:"blue",icon:"motorbike"},
   delivered:{label:"Entregado",tone:"green",icon:"circleCheck"},
 };
 

@@ -26,11 +26,11 @@ test("venta muestra el estado real de cada plato: pendiente índigo y entregado 
  const itemId=data.order.items[0].id;
  const tile=services=>mount({data:{...data,order:{...data.order,serviceItems:services}}}).find(node=>node.type==="IconTile"&&node.props.className==="modal-item-state");
  const pending=tile([{id:"s",orderItemId:itemId,status:"confirmado",statusLabel:"Pendiente",destinationLabel:"Cocina"}]);
- assert.equal(pending.props.name,"clock");assert.equal(pending.props.tone,"indigo");
+ assert.equal(pending.props.name,"clock");assert.equal(pending.props.tone,"info");
  const delivered=tile([{id:"s",orderItemId:itemId,status:"entregado",statusLabel:"Entregado",destinationLabel:"Cocina"}]);
  assert.equal(delivered.props.name,"check","entregado lleva un solo check");assert.equal(delivered.props.tone,"brand","entregado es verde, nunca petróleo");
  const ready=tile([{id:"s",orderItemId:itemId,status:"listo",statusLabel:"Por entregar",destinationLabel:"Cocina"}]);
- assert.equal(ready.props.name,"bell","por entregar lleva campanita");assert.equal(ready.props.tone,"purple");
+ assert.equal(ready.props.name,"bell","por entregar lleva campanita");assert.equal(ready.props.tone,"brand");
 });
 
 test("fechas PostgreSQL con offset de horas conservan el instante y la zona del local",()=>{

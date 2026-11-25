@@ -66,11 +66,11 @@ createRoot(document.getElementById('root')).render(<QueryClientProvider client={
 const cssFiles=["src/styles/variables.css","src/styles/globals.css","src/modules/concierge-web/presentation/restaurant-chat.css","src/design-system/styles/route-map.css"];
 const css=(await Promise.all(cssFiles.map(path=>readFile(resolve(root,path),"utf8")))).join("\n").replace(/^@import[^;]+;/gm,"");
 const builtCss=(await Promise.all((await readdir(resolve(root,".next/static/css"))).filter(name=>name.endsWith(".css")).map(name=>readFile(resolve(root,".next/static/css",name),"utf8")))).join("\n");
-const font=builtCss.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
+const font=builtCss.match(/@font-face\{[^}]*font-family:Inter;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
 if(!font)throw new Error("Build the frontend first to use its real font.");
 const fontBytes=await readFile(resolve(root,".next/static/media",font));
 createServer(async(req,res)=>{
  if(req.url==="/bundle.js"){res.setHeader("content-type","text/javascript");res.end(await readFile(resolve(out,"bundle.js")));return;}
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(fontBytes);return;}
- res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resumen del chat · Prueba local</title><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}body{margin:0}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);
+ res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Resumen del chat · Prueba local</title><style>${css}@font-face{font-family:Inter;font-weight:200 800;src:url(/font.woff2)}:root{--font-inter:"Inter"}body{margin:0}</style></head><body><div id="root"></div><script src="/bundle.js"></script></body></html>`);
 }).listen(5199,"127.0.0.1",()=>console.log("Chat QA: http://127.0.0.1:5199 (?case=draft|unquoted|pickup|table|tracking)"));
