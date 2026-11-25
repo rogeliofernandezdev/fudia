@@ -86,7 +86,7 @@ export function DispatchWorkspace({orders,receivedAt,renderOrder}:{orders:PanelO
         <section className="panel dispatch-board" aria-labelledby="dispatch-board-title" ref={list} tabIndex={-1}>
           <header>
             <div><h2 id="dispatch-board-title">{filter==="delivered"?"Entregados recientes":"Pedidos de reparto"}</h2><p>{filter==="delivered"?"Consulta los repartos completados recientemente.":"Acepta pedidos y asigna al responsable de cada entrega."}</p></div>
-            <span className="partner-panel-count" aria-label={`${filtered.length} pedidos`}>{filtered.length}</span>
+            <span className="partner-panel-count" data-empty={filtered.length===0||undefined} aria-label={`${filtered.length} pedidos`}>{filtered.length}</span>
           </header>
           <div className="dispatch-filters">
             <SearchField label="Buscar pedidos o motorizados" placeholder="Buscar pedido, cliente o motorizado" value={search} onChange={event=>{setSearch(event.target.value);resetWindow()}}/>

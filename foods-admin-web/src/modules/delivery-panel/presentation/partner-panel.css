@@ -38,7 +38,9 @@
 .partner-panel-banner.is-danger{background:var(--danger-50);color:var(--danger-600)}
 
 /* Pedidos dentro del panel: filas separadas por filete, nunca tarjetas anidadas. */
-.partner-panel-count{min-width:var(--size-24);height:var(--size-24);padding-inline:var(--space-1-5);display:grid;place-items:center;border-radius:var(--radius-pill);background:var(--primary-600);color:var(--surface);font-size:var(--font-size-xs);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
+.partner-panel-count{min-width:var(--size-24);height:var(--size-24);padding-inline:var(--space-1-5);display:grid;place-items:center;border-radius:var(--radius-pill);border:var(--stroke-1) solid var(--line);background:var(--surface);color:var(--ink-600);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums}
+/* Contador neutro como en las pestañas (2026-11-25); sin registros, solo la cifra tenue. */
+.partner-panel-count[data-empty]{border-color:transparent;background:transparent;color:var(--ink-400)}
 .partner-panel-cards{display:grid;padding:0 var(--space-5) var(--space-5)}
 .partner-panel-card{display:grid;gap:var(--space-4);padding:var(--space-4) 0}
 .partner-panel-cards>.partner-panel-card+.partner-panel-card{border-top:var(--stroke-1) solid var(--cloud-100)}

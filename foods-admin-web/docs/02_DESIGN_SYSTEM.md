@@ -269,7 +269,9 @@ El movimiento comunica un cambio de estado, nunca adorna.
   neutros (2026-11-25, como en la referencia): píldora blanca con borde `line` y
   cifra `ink-600`; sin registros, solo la cifra `ink-400`; en la pestaña activa,
   `primary-100` con cifra `primary-700`. El color del canal o carril vive solo en el
-  icono; Cocina conserva su contador en el color del carril (se lee a distancia);
+  icono; Cocina conserva su contador en el color del carril (se lee a distancia). El mismo
+  contador neutro rige los encabezados de lista con cifra (panel de reparto); quedan
+  fuera la campana de avisos y su «N nuevos» (rojo aprobado) y el contador del carrito;
   en móvil (≤600 px) los contadores se ocultan en todas las pestañas para dejar
   el ancho a la etiqueta, que solo se parte con guion si una palabra no cabe sola.
   En móvil: altura mínima de 44 px y dos pestañas completas por grupo, del mismo

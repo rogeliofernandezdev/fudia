@@ -241,7 +241,7 @@ export function PartnerPanel(){
       {panel.isError&&<p className="partner-panel-banner is-danger" role="alert"><Icon name="alert" size={18}/>Sin conexión con Fudia. Los pedidos pueden estar desactualizados; reintentando…</p>}
       <DispatchWorkspace orders={orders} receivedAt={panel.dataUpdatedAt} renderOrder={card}/>
       {failed.length>0&&<section className="panel partner-panel-section" aria-labelledby="partner-panel-failed">
-        <header><h2 id="partner-panel-failed">Entregas fallidas</h2><span className="partner-panel-count">{failed.length}</span></header>
+        <header><h2 id="partner-panel-failed">Entregas fallidas</h2><span className="partner-panel-count" data-empty={failed.length===0||undefined}>{failed.length}</span></header>
         <div className="partner-panel-cards">{failed.map(item=><FailedCard key={`${item.orderCode}-${item.registeredAt}`} item={item}/>)}</div>
       </section>}
     </div>
