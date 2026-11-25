@@ -142,10 +142,10 @@ export function CloseCashShiftDialog({shift,report,tipWorkspace,busy,currency,fo
     <ModalHeader title={<>{"Cerrar turno"} · {shift.cashRegisterName}</>} titleId="cash-close-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
     <form onSubmit={event=>event.preventDefault()} onKeyDown={event=>{if(event.key==="Enter"&&(event.target as HTMLElement).tagName==="INPUT")event.preventDefault();}} noValidate inert={busy}>
       <div className="cash-dialog-body">
-        {report&&<CashReportContent report={report} showTips={false}/>}
+        {report&&<CashReportContent report={report} showTips={false} showCashAmounts={false}/>}
         {blind
           ?<div className="cash-blind-close-note"><Icon name="lock" size={16}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
-          :!report&&<section className="cash-close-summary">
+          :<section className="cash-close-summary" aria-label="Efectivo esperado del turno">
             <div><small>Fondo inicial</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
             <div className="income"><small><span className="cash-flow-sign" aria-hidden="true">+ </span><Icon name="arrowDownRight" size={14}/>Ingresos</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
             <div className="expense"><small><span className="cash-flow-sign" aria-hidden="true">− </span><Icon name="arrowUpRight" size={14}/>Egresos</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>

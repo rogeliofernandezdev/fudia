@@ -2,13 +2,14 @@ import {DataTable} from "@/design-system/data-table";
 import {cashReportFormat,cashMovementSource} from "../domain/report-format";
 import type {CashShiftReport} from "../domain/types";
 
-export function CashReportContent({report,showTips=true}:{report:CashShiftReport;showTips?:boolean}){
+/** `showCashAmounts={false}` en Cerrar turno: egresos y esperado ya los muestra el resumen del cierre, así que la franja deja solo lo cobrado. */
+export function CashReportContent({report,showTips=true,showCashAmounts=true}:{report:CashShiftReport;showTips?:boolean;showCashAmounts?:boolean}){
  const f=cashReportFormat(report),shift=report.shift;
  const expenses=shift.movements?.filter(item=>item.movementType==="expense"&&item.sourceType!=="tip_payout")??[];
  const incomes=shift.movements?.filter(item=>item.movementType==="income"&&item.sourceType!=="cash_sale"&&item.sourceType!=="cash_tip")??[];
  return <section className="cash-report-content" aria-label="Resumen detallado del turno">
   <dl className="cash-report-identity"><div><dt>Empresa / local</dt><dd>{report.organizationName} · {report.locationName}</dd></div><div><dt>Encargado de caja</dt><dd>{shift.openedByName}</dd></div><div><dt>Caja</dt><dd>{shift.cashRegisterName}</dd></div><div><dt>Día operativo</dt><dd>{f.day(shift.businessDate)}</dd></div><div><dt>Apertura</dt><dd><time dateTime={shift.openedAt}>{f.date(shift.openedAt)}</time></dd></div>{shift.closedAt&&<><div><dt>Cierre</dt><dd><time dateTime={shift.closedAt}>{f.date(shift.closedAt)}</time></dd></div><div><dt>Cerrado por</dt><dd>{shift.closedByName}</dd></div></>}</dl>
-  <dl className="cash-report-amounts"><div><dt>Cobrado en el turno</dt><dd>{f.money(report.collectedAmount)}</dd></div><div><dt>Egresos de efectivo</dt><dd>{f.money(shift.expenseAmount)}</dd></div><div><dt>Efectivo esperado</dt><dd>{f.money(shift.closingExpectedAmount??shift.expectedAmount)}</dd></div></dl>
+  <dl className={`cash-report-amounts${showCashAmounts?"":" is-collected-only"}`}><div><dt>Cobrado en el turno</dt><dd>{f.money(report.collectedAmount)}</dd></div>{showCashAmounts&&<><div><dt>Egresos de efectivo</dt><dd>{f.money(shift.expenseAmount)}</dd></div><div><dt>Efectivo esperado</dt><dd>{f.money(shift.closingExpectedAmount??shift.expectedAmount)}</dd></div></>}</dl>
   <details className="cash-report-section" open><summary>Productos vendidos <span>{report.sales.length} líneas</span></summary><p>Detalle de los pedidos con cobros en este turno. En pagos parciales, el valor de los productos no equivale al importe cobrado.</p>
    <ReportTable headers={["Fecha y hora","Pedido / mesa","Producto","Cantidad","Precio unitario","Importe"]} empty="No hay productos de pedidos cobrados en este turno.">{report.sales.map(item=><tr key={item.id}><td><time dateTime={item.createdAt}>{f.date(item.createdAt)}</time></td><td><b>{item.orderCode}</b><small>{item.customer}</small>{item.waiterName&&<small>Mozo: {item.waiterName}</small>}</td><td><b>{item.name}</b>{item.details&&<small>{item.details}</small>}</td><td>{f.quantity(item.quantity)}</td><td>{f.money(item.unitPrice)}</td><td>{f.money(item.total)}</td></tr>)}</ReportTable>
   </details>

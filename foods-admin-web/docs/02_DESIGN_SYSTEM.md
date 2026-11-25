@@ -1222,8 +1222,11 @@ importes y presenta el informe después de confirmar.
 
 Composición del formulario de cierre (aprobada 2026-11-25, misma estructura con
 más aire y color): cabecera de 56 px; 24 px de aire bajo la cabecera y 20 px
-entre bloques. Si se muestra el resumen breve (`cash-close-summary`), es una
-ficha con borde: etiquetas 12 px / 600 en caja normal, cifras 16 px / 700,
+entre bloques. El cierre ciego no muestra importes (solo «Cierre ciego activo»);
+el cierre normal muestra siempre el resumen breve (`cash-close-summary`) justo
+antes del conteo, y la franja del informe de arriba deja solo «Cobrado en el
+turno» (`CashReportContent showCashAmounts={false}`) para no repetir egresos ni
+esperado. El resumen es una ficha con borde: etiquetas 12 px / 600 en caja normal, cifras 16 px / 700,
 Ingresos y Egresos con flecha verde y roja, y «Efectivo esperado» como única
 franja sólida `primary-600` con cifra blanca 22 px / 800; en ≤760 px pasa a filas
 etiqueta/valor con «+ Ingresos» en `brand-700` y «− Egresos» en `danger-600`.

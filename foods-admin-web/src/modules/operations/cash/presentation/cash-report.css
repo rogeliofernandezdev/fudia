@@ -3,6 +3,9 @@
 .cash-report-identity>div{min-width:0;display:grid;gap:var(--space-1)}
 .cash-report-identity dd{margin:0}
 .cash-report-amounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3);padding:var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--primary-100);margin:0}
+/* Cerrar turno: solo «Cobrado en el turno» (egresos y esperado están en el resumen del cierre), en una fila. */
+.cash-report-amounts.is-collected-only{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.cash-report-amounts.is-collected-only dd{margin:0}
 .cash-report-amounts dd{margin:var(--space-1) 0 0;font-size:var(--font-size-lg);font-weight:var(--weight-bold);color:var(--primary-700);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .cash-report-section{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);min-width:0;overflow:hidden}
 .cash-report-section summary{padding:var(--space-3);min-height:var(--control-height);cursor:pointer;font-weight:var(--weight-semibold);overflow-wrap:anywhere}

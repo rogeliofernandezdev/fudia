@@ -49,3 +49,12 @@ test("Pedidos: canal en su color de dominio y total tachado si el pedido se canc
   assert.match(css,/\.order-table-total\.is-cancelled\{[^}]*text-decoration:line-through/);
   assert.match(read("src/modules/operations/orders/presentation/orders-manager.tsx"),/o\.status==="cancelado"\?" is-cancelled":""/);
 });
+
+test("Cerrar turno: el cierre ciego oculta los importes y el normal siempre muestra el resumen, sin repetirlo en el informe",()=>{
+  const source=read("src/modules/operations/cash/presentation/cash-dialogs.tsx");
+  assert.match(source,/\{blind\s*\?<div className="cash-blind-close-note">[\s\S]*?:<section className="cash-close-summary"/);
+  assert.doesNotMatch(source,/!report&&<section className="cash-close-summary"/,"con informe también se ve el resumen");
+  assert.match(source,/<CashReportContent report=\{report\} showTips=\{false\} showCashAmounts=\{false\}\/>/);
+  const report=read("src/modules/operations/cash/presentation/cash-report-content.tsx");
+  assert.match(report,/\{showCashAmounts&&<><div><dt>Egresos de efectivo<\/dt>/);
+});
