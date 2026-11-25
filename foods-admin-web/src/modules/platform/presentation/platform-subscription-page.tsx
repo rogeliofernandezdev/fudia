@@ -105,7 +105,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
 
   <section className="panel subscription-history">
    <header><div><small>Historial</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
-   {current.payments.length?<DataTable label="Historial de pagos de suscripción"><thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Proveedor</th><th>Referencia</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></DataTable>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
+   {current.payments.length?<DataTable label="Historial de pagos de suscripción"><thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Proveedor</th><th>Referencia</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b className="table-amount">{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></DataTable>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
   </section>
  </>;
 }

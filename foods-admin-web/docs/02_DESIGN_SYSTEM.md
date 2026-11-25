@@ -2026,6 +2026,28 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 
 ## Tablas y paginación
 
+- Densidad compartida (2026-11-24): filas de 48 px y cabecera de 36 px en
+  escritorio, con padding horizontal de 12 px y la misma tipografía. En móvil
+  (≤600 px) o puntero táctil se conservan filas de 56 px, cabecera de 40 px y
+  acciones de al menos 44 px. Las alturas son mínimas: las filas crecen si el
+  contenido ocupa varias líneas. `table-row-height`, `table-header-height` y
+  `table-cell-padding-inline` gobiernan la densidad y los skeletons; no se
+  reduce la legibilidad ni el área táctil para compactar.
+- Jerarquía global de `DataTable` (aprobada 2026-11-24): datos en peso regular,
+  identidad principal e importes relevantes en seminegrita (600), metadatos y
+  líneas secundarias en regular (400). Los tokens `table-cell-weight`,
+  `table-primary-weight`, `table-amount-weight` y `table-secondary-weight` son
+  la fuente compartida; no se recuperan negritas por pantalla. La primera celda
+  aporta la identidad por defecto; `table-primary` permite identificarla en otra
+  columna y `table-amount` marca importes relevantes. `Status`, acciones y
+  controles conservan sus pesos y variantes aprobados.
+- Los tiles `row-icon` puramente decorativos se omiten cuando la celda ya tiene
+  identidad textual. Se conservan fotos, iconos con etiqueta accesible o rol
+  informativo y `data-table-icon="informative"`; las acciones no se ocultan.
+  Sin tile, los datos secundarios se alinean con el nombre. Si el canal de un
+  pedido se oculta en móvil, su etiqueta textual pasa bajo el cliente o mesa:
+  quitar el icono no puede hacer perder ese dato. Esta regla vive en el CSS
+  compartido y se aplica a todos los listados `DataTable`.
 - Cabecera en marino `navigation-900` con texto blanco en caja normal
   (12 px / 600, sin mayúsculas ni tracking), así el azul `primary-600` queda solo
   para acciones. Sin filas alternas: las filas se separan con una línea fina
@@ -2047,7 +2069,7 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 - Escala tipográfica única para todas las tablas, definida en
   `src/design-system/styles/data-table.css` y los tokens, nunca sobrescrita por módulo: cabecera y líneas secundarias usan
   `--font-size-label` (12 px); celdas, paginación y controles usan
-  `--font-size-control` (13 px en escritorio). La cabecera conserva peso 800.
+  `--font-size-control` (13 px en escritorio). La cabecera conserva peso 600.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
   muestra páginas, elipsis, anterior y siguiente con estado activo inequívoco.
 - Toda tabla de gestión incluye paginación, incluida la de categorías.
@@ -3318,7 +3340,10 @@ PostgreSQL para mantener compatibilidad durante el despliegue.
 
 ## Entrega del pedido y cuenta de mesa
 
-- El filtro de estado de Pedidos (2026-11-20) ofrece «Todos los estados», «Abiertos» y solo los estados que tienen pedidos en el canal y la búsqueda actuales, en el orden del catálogo del API; el estado elegido se conserva aunque quede sin pedidos. Nunca lista estados sin registros.
+- El filtro de estado de Pedidos (2026-11-24) comienza en «Todos» y ofrece solo los estados operativos con pedidos en el canal y la búsqueda actuales, en el orden del catálogo del API; el estado elegido se conserva aunque quede sin pedidos. No incluye agrupaciones «Abiertos», «En curso» ni «Pendientes». Los contadores por canal respetan la búsqueda y el estado, independientemente de la pestaña elegida. Los pedidos aún por entregar aparecen primero, y luego los entregados y cancelados; cada grupo se ordena del más reciente al más antiguo. La cuenta y el cobro se gestionan por separado.
+- En esa tabla se usa `operationalStatus`, proyectado por el backend: un delivery con estado logístico `en_camino` sigue como «Por entregar» hasta que lo recibe el cliente. «En camino» queda en el detalle del reparto. Se conserva el estado original para sus acciones y transiciones; no se marca «Entregado» al salir del local ni al cobrar.
+- En mesa, «Entregado» exige la entrega de todos los productos al comensal, confirmada por el mozo. La cuenta puede seguir abierta o por cobrar; la mesa se libera cuando se cierra la cuenta, está pagada y todos los productos están entregados.
+- En mesa, «Entregado» exige la entrega de todos los productos al comensal, confirmada por el mozo. La cuenta puede seguir abierta o por cobrar; la mesa se libera cuando se cierra la cuenta, está pagada y todos los productos están entregados.
 - Salón/Pedidos distinguen preparación y cuenta sin códigos técnicos ni instrucciones redundantes. El destino y estado de cada producto se presentan en una fila compacta y alineada; el estado se omite cuando repite el del pedido (ver detalle compartido).
 - El pie muestra un único botón primario «Confirmar entrega» para todo el pedido cuando todos los productos pendientes están por entregar. No se muestran botones de entrega individuales: destino y estado de cada producto son datos de lectura. Cocina/Barra preparan; el mozo confirma todo con una acción. Las rondas adicionales incluyen solo productos aún sin entregar y no repiten las entregas anteriores. No se muestran modales exitosos en estas transiciones operativas.
 - «Agregar productos» reutiliza la comanda con solo líneas nuevas y aparece únicamente con cuenta Abierta. «Cerrar cuenta» es primaria y aparece solo después de entregar todos los productos de todas las rondas. Después se muestra el enlace a cobro solo con entrega completa, permiso y saldo; no se ofrecen más consumos ni reapertura.

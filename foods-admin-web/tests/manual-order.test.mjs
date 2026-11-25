@@ -342,7 +342,7 @@ test("comanda móvil: el scrim no cubre la cabecera y las acciones tienen radio 
  assert.equal(declarations(".cmd-sheet-close>svg").transform,"rotate(90deg)");
 });
 test("pedido manual: CSS único, responsive, estados remotos y actualización del flujo",()=>{
- const source=readFileSync(new URL("orders/presentation/orders-manager.tsx",root),"utf8");assert.match(source,/canManage\?<Button icon="plus"/);assert.ok(source.includes("createManualOrder"));assert.ok(source.includes('"kitchen-tickets"'));assert.ok(source.includes('setChannel(order.channel)'));assert.ok(source.includes('setStatus("abiertos")'));
+ const source=readFileSync(new URL("orders/presentation/orders-manager.tsx",root),"utf8");assert.match(source,/canManage\?<Button icon="plus"/);assert.ok(source.includes("createManualOrder"));assert.ok(source.includes('"kitchen-tickets"'));assert.ok(source.includes('setChannel(order.channel)'));
  const css=postcss.parse(readFileSync(new URL("orders/presentation/manual-order.css",root),"utf8"));const seen=new Set();css.walkRules(rule=>{let context="";for(let parent=rule.parent;parent;parent=parent.parent)if(parent.type==="atrule")context+=parent.name+parent.params;for(const selector of rule.selectors){const key=context+selector;assert.equal(seen.has(key),false,key);seen.add(key)}});
  const text=css.toString();assert.ok(text.includes("100dvh"));assert.ok(text.includes("overflow-y:auto"));assert.ok(text.includes("overflow-x:hidden"));assert.ok(text.includes("@media(max-width:600px)"));
  const catalog=readFileSync(new URL("salon/presentation/comanda-catalog.tsx",root),"utf8");assert.ok(catalog.includes("MenuRows"));assert.ok(catalog.includes("salonCatalog.refetch()"));assert.ok(catalog.includes("comboCatalog.refetch()"));

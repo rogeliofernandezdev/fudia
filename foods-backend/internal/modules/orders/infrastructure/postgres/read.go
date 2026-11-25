@@ -8,30 +8,37 @@ import (
 	"strings"
 )
 
-// listOrderSQL pone primero los pedidos abiertos y luego los más recientes. Debe
-// coincidir literalmente con el índice de expresión orders_list_order_idx
-// (migración 000109); TestListOrderMatchesIndex lo comprueba.
-const listOrderSQL = `CASE WHEN status='cancelado' OR completed_at IS NOT NULL OR (status='entregado' AND channel<>'salon') THEN 1 ELSE 0 END, created_at DESC`
+// El orden depende del estado operativo, no de la cuenta. La expresión coincide
+// con orders_operational_list_idx (000146), también para la paginación del historial.
+const listOrderSQL = `CASE WHEN status IN ('entregado','cancelado') THEN 1 ELSE 0 END, created_at DESC`
+
+// "abiertos" y "en_camino" se aceptan para clientes anteriores. La bandeja nueva
+// filtra estados operativos; Por entregar también incluye los repartos en camino.
+func listStatusSQL(parameter string) string {
+	return `(` + parameter + `='' OR (` + parameter + `='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=` + parameter + ` OR (` + parameter + `='listo' AND status='en_camino'))`
+}
 
 func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (application.Page, error) {
 	out := application.Page{Page: f.Page, PageSize: f.Size}
 	page, size, q, channel, status := f.Page, f.Size, strings.TrimSpace(f.Query), f.Channel, f.Status
 	// scopeWhere es búsqueda + canal; el estado se suma aparte para saber qué estados existen en ese alcance.
 	scopeWhere := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4 OR ($4 IN ('recojo','mostrador') AND channel IN ('recojo','mostrador')) OR ($4='salon' AND channel='whatsapp'))`
-	where := scopeWhere + ` AND ($5='' OR ($5='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=$5)`
+	where := scopeWhere + ` AND ` + listStatusSQL("$5")
 	// Estados con al menos un pedido para la búsqueda y el canal actuales: una sonda EXISTS por estado del
 	// catálogo usa el índice (organización, local, estado) sin recorrer todo el historial.
 	catalog := make([]string, 0, len(domain.Statuses))
 	for _, option := range domain.Statuses {
-		catalog = append(catalog, option["value"])
+		if option["value"] != "en_camino" {
+			catalog = append(catalog, option["value"])
+		}
 	}
 	// Las cinco lecturas son independientes y van en un pgx.Batch: una ida y vuelta
 	// en vez de cinco (Pedidos refresca el listado cada 10 s) y la misma instantánea.
 	batch := &pgx.Batch{}
 	batch.Queue(`SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status)
 	batch.Queue(`SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY `+listOrderSQL+` LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
-	batch.Queue(`SELECT st FROM unnest($5::text[]) st WHERE EXISTS(SELECT 1 FROM orders WHERE `+scopeWhere+` AND status=st)`, s.OrganizationID, s.LocationID, q, channel, catalog)
-	batch.Queue(`SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL)) GROUP BY channel`, s.OrganizationID, s.LocationID)
+	batch.Queue(`SELECT st FROM unnest($5::text[]) st WHERE EXISTS(SELECT 1 FROM orders WHERE `+scopeWhere+` AND (status=st OR (st='listo' AND status='en_camino')))`, s.OrganizationID, s.LocationID, q, channel, catalog)
+	batch.Queue(`SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND `+listStatusSQL("$4")+` GROUP BY channel`, s.OrganizationID, s.LocationID, q, status)
 	batch.Queue(`
 		SELECT p.currency_symbol
 		FROM locations l

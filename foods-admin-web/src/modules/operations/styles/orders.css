@@ -127,6 +127,7 @@
 }
 
 .orders-table td:first-child .order-mobile-registered{display:none}
+.orders-table td:first-child .order-mobile-channel{display:none}
 /* Venta por mostrador: en móvil la columna Canal se oculta y el origen baja bajo el cliente. */
 .orders-table td:first-child .order-mobile-origin{display:none}
 
@@ -138,7 +139,7 @@
 .order-registered{
   color:var(--ink-600);
   font-size:var(--font-size-label);
-  font-weight:var(--weight-semibold);
+  font-weight:var(--table-secondary-weight);
   white-space:nowrap;
 }
 
@@ -164,7 +165,7 @@
   gap:var(--space-0-5);
   color:var(--ink-600);
   font-size:var(--font-size-label);
-  font-weight:var(--weight-semibold);
+  font-weight:var(--table-secondary-weight);
 }
 
 /* Origen del pedido bajo su tipo de atención (QR de mesa por WhatsApp). */
@@ -1212,7 +1213,7 @@
   }
 
   /* Pedidos conserva 4 columnas operativas visibles por desplazamiento:
-     Canal se identifica con su icono y Registrado se muestra en Pedido.
+     Canal y Registrado se muestran como texto bajo el cliente o la mesa.
      Nunca se comprime la tabla para encajar todas las celdas. */
   .orders-panel .table-wrap{
     max-width:100%;
@@ -1253,6 +1254,7 @@
   }
 
   .orders-table td:first-child .order-mobile-registered{display:block;max-width:none;white-space:normal;overflow-wrap:normal;word-break:normal}
+  .orders-table td:first-child .order-mobile-channel{display:block}
   .orders-table td:first-child .order-mobile-origin{display:block}
   .orders-table .order-mobile-registered time{display:block;white-space:normal;overflow-wrap:normal;word-break:normal;line-height:var(--line-height-snug)}
 

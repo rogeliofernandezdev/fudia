@@ -128,7 +128,7 @@ export function CombosPage(){
         <DataTable label="Listado de menús y combos" containerClassName="hover-scroll"><thead><tr><th>Menú o combo</th><th>Precio</th><th title="Entrada, plato principal, bebida o postre">Partes del menú</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
           {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
             <td><span className={`row-icon r${index%3}`}><Icon name="menu" size={18}/></span><b>{item.name}</b></td>
-            <td><b>{money(item.price)}</b></td>
+            <td><b className="table-amount">{money(item.price)}</b></td>
             <td>{item.groupCount} {item.groupCount===1?"parte":"partes"}</td>
             <td>{item.active&&item.outsideDates?<Status tone="gray">Fuera de fecha</Status>:<Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status>}</td>
             <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/>{canManage&&<><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></>}</div></td>

@@ -1,5 +1,5 @@
 .customers-panel .toolbar label,.customers-panel .toolbar select{flex:1;min-width:0}
-.customers-panel .doc-beside,.customers-panel td:first-child .doc-beside{display:inline;margin:0 0 0 var(--space-2);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.customers-panel .doc-beside,.customers-panel td:first-child .doc-beside{display:inline;margin:0 0 0 var(--space-2);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--table-secondary-weight)}
 .customer-modal{width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)))}
 .customer-main-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}
 .customer-main-grid>.customer-field-full{grid-column:1/-1}

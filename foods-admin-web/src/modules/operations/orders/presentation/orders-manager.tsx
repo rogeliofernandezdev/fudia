@@ -26,7 +26,7 @@ const columns=["Pedido","Canal","Estado","Registrado","Total","Acciones"];
 
 export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const money=useMoney();const{can,location}=useSession();const canManage=can("orders.manage");
- const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(10);
+ const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[channel,setChannel]=useState("");const[status,setStatus]=useState("");const[page,setPage]=useState(1);const[size,setSize]=useState(10);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
  useOrderDeepLink(initialOrderId,setDetailId);
  const[creating,setCreating]=useState(false);
@@ -34,19 +34,19 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:context=>listOrders({q:debouncedQ,channel,status,page,pageSize:size},context?.signal),placeholderData:keepPreviousData,meta:{live:["orders","kitchen","payments","delivery"],poll:10_000}});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId),meta:{live:["orders","kitchen","payments","delivery"],poll:query=>(query.state.data as {completedAt?:string|null}|undefined)?.completedAt?false:10000}});
  const invalidate=()=>Promise.all(["orders","order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability","products","sales","staff-notices"].map(key=>qc.invalidateQueries({queryKey:[key]})));
- const create=useMutation({mutationFn:(draft:ManualOrderDraft)=>createManualOrder(draft),onSuccess:order=>{setCreating(false);setChannel(order.channel);setStatus("abiertos");setQ("");setPage(1);invalidate();notify({tone:"success",title:"Pedido registrado",message:"El pedido fue enviado a Cocina. Puedes seguir su avance en Pedidos y registrar el cobro en Cobros."})},onError:error=>{void qc.invalidateQueries({queryKey:["order-catalog"]});void qc.invalidateQueries({queryKey:["order-combo"]});notify({tone:"danger",title:"No se pudo registrar el pedido",message:error.message})}});
+ const create=useMutation({mutationFn:(draft:ManualOrderDraft)=>createManualOrder(draft),onSuccess:order=>{setCreating(false);setChannel(order.channel);setStatus("");setQ("");setPage(1);invalidate();notify({tone:"success",title:"Pedido registrado",message:"El pedido fue enviado a Cocina. Puedes seguir su avance en Pedidos y registrar el cobro en Cobros."})},onError:error=>{void qc.invalidateQueries({queryKey:["order-catalog"]});void qc.invalidateQueries({queryKey:["order-combo"]});notify({tone:"danger",title:"No se pudo registrar el pedido",message:error.message})}});
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>v.status==="confirmado"?sendOrder(v.id):updateOrderStatus(v.id,v.status),onSuccess:order=>{const refresh=invalidate();if(order.channel!=="salon"||order.status!=="entregado")notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."});return refresh},onError:e=>notify({tone:"danger",title:"No se pudo actualizar el pedido",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>updateOrderStatus(o.id,"cancelado"),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar el pedido",message:e.message})});
  const append=useMutation({mutationFn:(draft:Draft)=>addOrderConsumption(adding!.order.id,draft,adding!.requestKey),onSuccess:order=>{setAdding(null);setDetailId(order.id);invalidate()},onError:error=>notify({tone:"danger",title:"No se pudieron agregar los productos",message:error.message})});
  const addProducts=(order:Order)=>{setAdding({order,requestKey:crypto.randomUUID(),draft:{channel:"salon",tableId:order.tableId,customerName:order.customerName,customerPhone:"",address:"",reference:"",notes:"",deliveryFee:"0",lines:[]}});setDetailId(null)};
  const items=list.data?.items??[];const counts=list.data?.channelCounts??{};const channelOptions=list.data?.channelOptions??[];
  const channelLabel=(v:string)=>channelOptions.find(o=>o.value===v)?.label??v;
- const showChannelCounts=status==="abiertos";
- const openTotal=Object.values(counts).reduce((a,b)=>a+b,0);
- const tabs=[{value:"",label:"Todos",icon:"receipt" as const,tone:channelTone(""),count:showChannelCounts?openTotal:undefined},...channelOptions.map(o=>({value:o.value,label:o.label,icon:channelIcons[o.value]??"receipt",tone:channelTone(o.value),count:showChannelCounts?counts[o.value]??0:undefined}))];
+ const showChannelCounts=Boolean(list.data)&&!list.isError;
+ const filteredTotal=Object.values(counts).reduce((a,b)=>a+b,0);
+ const tabs=[{value:"",label:"Todos",icon:"receipt" as const,tone:channelTone(""),count:showChannelCounts?filteredTotal:undefined},...channelOptions.map(o=>({value:o.value,label:o.label,icon:channelIcons[o.value]??"receipt",tone:channelTone(o.value),count:showChannelCounts?counts[o.value]??0:undefined}))];
  const pickChannel=(v:string)=>{setChannel(v);setPage(1)};
- const hasActiveFilters=Boolean(q||channel||status!=="abiertos");
- const clearFilters=()=>{setQ("");setChannel("");setStatus("abiertos");setPage(1)};
+ const hasActiveFilters=Boolean(q||channel||status);
+ const clearFilters=()=>{setQ("");setChannel("");setStatus("");setPage(1)};
  const loading=detail.isLoading;
  const closeDetail=()=>setDetailId(null);
  return <div className="orders-page-shell"><PageHeader title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." />
@@ -57,28 +57,29 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  <section className="panel management standardized-management orders-panel" aria-busy={list.isFetching&&list.isPlaceholderData}>
   <div className="toolbar">
    <SearchField label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar cliente, mesa o teléfono"/>
-   <Select chip aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select>
+   <Select chip aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select>
    {hasActiveFilters&&<Button kind="ghost" icon="close" onClick={clearFilters}>Limpiar filtros</Button>}
   </div>
   {list.isPending?<TableSkeleton columns={columns} label="Cargando pedidos"/>
   :list.isError?<ErrorState title="No pudimos cargar los pedidos" text={list.error.message} onRetry={()=>list.refetch()} retrying={list.isFetching}/>
-  :!items.length?<EmptyState icon={hasActiveFilters?"search":"receipt"} title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos abiertos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
+  :!items.length?<EmptyState icon={hasActiveFilters?"search":"receipt"} title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
   :<DataTable label="Listado de pedidos" containerClassName="hover-scroll" className="orders-table">
      <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
-     <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const service=serviceChannel(o.channel);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={`orders-row${index%2?" alternate":""}`} key={o.id} onClick={event=>{if(!(event.target as HTMLElement).closest("button,a"))setDetailId(o.id)}}>
+     <tbody>{items.map((o,index)=>{const meta=orderStatus(o.operationalStatus??o.status);const service=serviceChannel(o.channel);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={`orders-row${index%2?" alternate":""}`} key={o.id} onClick={event=>{if(!(event.target as HTMLElement).closest("button,a"))setDetailId(o.id)}}>
       <td>
        <span className={"row-icon order-row-icon oc-"+service}><Icon name={channelIcons[service]??"receipt"} size={18}/></span>
        <b>{subject}</b>
        {secondary&&<small>{secondary}</small>}
        {service==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
        {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
+       {o.origin!=="counter"&&<small className="order-mobile-channel">{channelLabel(service)}{o.channel==="whatsapp"?" · vía WhatsApp":""}</small>}
        {o.origin==="counter"&&<small className="order-mobile-origin">{originLabel(o.origin)}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>
       <td><Status tone={meta.tone} solid>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
-      <td><b className="order-table-total">{money(o.total)}</b></td>
+      <td><b className="order-table-total table-amount">{money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/><OrderDispatchActions order={o} busy={list.isPlaceholderData||advance.isPending||cancel.isPending}/></div></td>
      </tr>})}</tbody>
    </DataTable>}

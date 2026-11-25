@@ -1,0 +1,169 @@
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<div id="fudia-order-preview" aria-label="Propuesta visual de Pedidos de FudIA">
+  <style>
+    #fudia-order-preview{color-scheme:light;--fp-blue:#0052fc;--fp-navy:#052352;--fp-bg:#f4f7fd;--fp-paper:#fff;--fp-line:#e1e7f2;--fp-ink:#172a46;--fp-muted:#5c6d84;--fp-row:66px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;line-height:1.5;color:var(--fp-ink)}
+    #fudia-order-preview *{box-sizing:border-box}
+    #fudia-order-preview button,#fudia-order-preview input,#fudia-order-preview select{font:inherit}
+    #fudia-order-preview button{cursor:pointer}
+    #fudia-order-preview button:focus-visible,#fudia-order-preview input:focus-visible,#fudia-order-preview select:focus-visible,#fudia-order-preview summary:focus-visible{outline:3px solid #99b6ff;outline-offset:3px}
+    #fudia-order-preview [hidden]{display:none!important}
+    #fudia-order-preview .fp-shell{display:grid;grid-template-columns:188px minmax(0,1fr);background:var(--fp-bg);min-height:735px;border:1px solid var(--fp-line);border-radius:12px;overflow:clip}
+    #fudia-order-preview .fp-sidebar{background:var(--fp-navy);color:#d1dcef;padding:24px 12px 14px;display:flex;flex-direction:column;gap:22px}
+    #fudia-order-preview .fp-brand{font-size:25px;font-weight:800;letter-spacing:-.9px;color:white;padding:0 12px;display:flex;align-items:center;gap:9px}
+    #fudia-order-preview .fp-brand i{width:24px;height:24px;color:#9ebfff}
+    #fudia-order-preview .fp-nav-group{display:grid;gap:3px}
+    #fudia-order-preview .fp-nav-title{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#b5c7e2;margin:0 12px 8px;font-weight:600}
+    #fudia-order-preview .fp-nav{display:flex;gap:10px;align-items:center;min-height:36px;padding:7px 11px;border-radius:6px;white-space:nowrap}
+    #fudia-order-preview .fp-nav svg{width:16px;height:16px;flex:none;opacity:.9}
+    #fudia-order-preview .fp-nav.active{color:white;background:var(--fp-blue);font-weight:700}
+    #fudia-order-preview .fp-sidebar details{margin-top:3px}
+    #fudia-order-preview .fp-sidebar summary{list-style:none;min-height:36px;display:flex;align-items:center;justify-content:space-between;padding:7px 11px;cursor:pointer}
+    #fudia-order-preview .fp-sidebar summary::-webkit-details-marker{display:none}
+    #fudia-order-preview .fp-sidebar summary svg{width:14px;height:14px}
+    #fudia-order-preview .fp-sidebar details[open] summary svg{transform:rotate(180deg)}
+    #fudia-order-preview .fp-sidebar-foot{margin-top:auto;padding:14px 12px 0;border-top:1px solid #29466e;font-size:11px;color:#b5c7e2}
+    #fudia-order-preview .fp-workspace{min-width:0;position:relative}
+    #fudia-order-preview .fp-topbar{height:64px;background:var(--fp-paper);border-bottom:1px solid var(--fp-line);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 24px}
+    #fudia-order-preview .fp-context{display:flex;align-items:center;gap:9px;min-width:0}
+    #fudia-order-preview .fp-context svg{width:16px;height:16px;color:var(--fp-muted)}
+    #fudia-order-preview .fp-context strong{font-size:12px;font-weight:700}
+    #fudia-order-preview .fp-divider{color:#a4b1c5}
+    #fudia-order-preview .fp-local{font-size:12px;color:var(--fp-muted)}
+    #fudia-order-preview .fp-account{display:flex;align-items:center;gap:12px}
+    #fudia-order-preview .fp-icon-button{display:inline-flex;justify-content:center;align-items:center;min-width:36px;min-height:36px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--fp-muted);padding:6px}
+    #fudia-order-preview .fp-icon-button:hover{background:#edf2fc;color:var(--fp-blue)}
+    #fudia-order-preview .fp-icon-button svg{width:17px;height:17px}
+    #fudia-order-preview .fp-avatar{width:30px;height:30px;display:grid;place-items:center;background:#eaf0ff;color:#0043cf;border-radius:50%;font-size:11px;font-weight:700}
+    #fudia-order-preview .fp-account-name{font-size:11px;color:var(--fp-muted)}
+    #fudia-order-preview .fp-main{padding:28px 24px 20px}
+    #fudia-order-preview .fp-page-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+    #fudia-order-preview h1{font-size:25px;line-height:1.25;letter-spacing:-.7px;font-weight:800;margin:0 0 7px}
+    #fudia-order-preview .fp-subtitle{color:var(--fp-muted);font-size:12px;margin:0}
+    #fudia-order-preview .fp-button{min-height:40px;padding:9px 14px;border-radius:6px;border:1px solid var(--fp-line);background:var(--fp-paper);color:var(--fp-ink);font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
+    #fudia-order-preview .fp-button svg{width:16px;height:16px}
+    #fudia-order-preview .fp-button.primary{background:var(--fp-blue);border-color:var(--fp-blue);color:white}
+    #fudia-order-preview .fp-button.primary:hover{background:#0043cf}
+    #fudia-order-preview .fp-button:disabled{color:#728199;background:#f4f7fd;cursor:default}
+    #fudia-order-preview .fp-tabs{display:flex;align-items:center;gap:21px;border-bottom:1px solid var(--fp-line);margin-bottom:20px;flex-wrap:wrap}
+    #fudia-order-preview .fp-tab{display:flex;align-items:center;gap:7px;min-height:42px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--fp-muted);padding:0 1px 12px;font-size:12px;white-space:nowrap}
+    #fudia-order-preview .fp-tab[aria-pressed=true]{border-bottom-color:var(--fp-blue);color:var(--fp-blue);font-weight:700}
+    #fudia-order-preview .fp-count{font-size:10px;min-width:20px;text-align:center;padding:1px 5px;background:#eaf0ff;color:#405d8b;border-radius:4px;font-weight:600;font-variant-numeric:tabular-nums}
+    #fudia-order-preview .fp-tab[aria-pressed=true] .fp-count{color:#0043cf}
+    #fudia-order-preview .fp-list{background:var(--fp-paper);border:1px solid var(--fp-line);border-radius:9px}
+    #fudia-order-preview .fp-filters{padding:14px;display:grid;grid-template-columns:minmax(0,1fr) 148px;gap:12px}
+    #fudia-order-preview .fp-search{position:relative;display:flex;align-items:center}
+    #fudia-order-preview .fp-search svg{width:16px;height:16px;position:absolute;left:12px;color:var(--fp-muted);pointer-events:none}
+    #fudia-order-preview input,#fudia-order-preview select{height:40px;border:1px solid var(--fp-line);border-radius:5px;background:var(--fp-paper);color:var(--fp-ink);padding:8px 11px;width:100%;min-width:0}
+    #fudia-order-preview .fp-search input{padding-left:36px}
+    #fudia-order-preview input::placeholder{color:var(--fp-muted)}
+    #fudia-order-preview table{border-collapse:collapse;width:100%;table-layout:fixed}
+    #fudia-order-preview th{background:var(--fp-navy);color:var(--fp-paper);text-align:left;padding:12px 14px;font-size:12px;font-weight:600;border-block:1px solid var(--fp-navy)}
+    #fudia-order-preview td{padding:11px 14px;height:var(--fp-row);border-bottom:1px solid #edf0f6;font-size:12px;vertical-align:middle;overflow-wrap:anywhere}
+    #fudia-order-preview tbody tr:last-child td{border-bottom:0}
+    #fudia-order-preview tbody tr:hover{background:#f8faff}
+    #fudia-order-preview .fp-subject{font-weight:700;display:block}
+    #fudia-order-preview .fp-secondary{font-size:10px;color:var(--fp-muted);display:block;margin-top:3px}
+    #fudia-order-preview .fp-channel{color:var(--fp-muted);font-size:11px}
+    #fudia-order-preview .fp-status{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;color:#fff;background:#5f647d;font-size:10px;font-weight:700;white-space:nowrap}
+    #fudia-order-preview .fp-status:before{content:'';width:4px;height:4px;background:white;border-radius:50%;flex:none}
+    #fudia-order-preview .fp-status.ready{background:#681a92}
+    #fudia-order-preview .fp-money{text-align:right;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+    #fudia-order-preview .fp-row-action{text-align:right}
+    #fudia-order-preview .fp-row-action .fp-icon-button{border-color:#e1e7f2;color:#0043cf;background:white}
+    #fudia-order-preview .fp-time{color:var(--fp-muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    #fudia-order-preview .fp-pagination{border-top:1px solid var(--fp-line);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--fp-muted);font-size:11px}
+    #fudia-order-preview .fp-pages{display:flex;align-items:center;gap:6px}
+    #fudia-order-preview .fp-pages span{padding:3px 9px;background:#eaf0ff;color:#0043cf;border-radius:4px;font-weight:700}
+    #fudia-order-preview .fp-empty{padding:56px 18px;text-align:center;color:var(--fp-muted);font-size:12px}
+    #fudia-order-preview .fp-empty strong{display:block;color:var(--fp-ink);font-size:14px;margin-bottom:5px}
+    #fudia-order-preview .fp-mobile-menu{display:none}
+    #fudia-order-preview .fp-bottom-note{margin-top:15px;font-size:10px;color:var(--fp-muted);display:flex;align-items:center;gap:6px}
+    #fudia-order-preview .fp-bottom-note svg{width:13px;height:13px}
+    #fudia-order-preview .fp-modal-backdrop{position:absolute;inset:0;background:#05235270;display:flex;align-items:flex-start;justify-content:center;padding:80px 20px 20px;z-index:5}
+    #fudia-order-preview .fp-modal{width:min(100%,400px);background:white;border-radius:10px;overflow:hidden;box-shadow:0 16px 40px #05235233}
+    #fudia-order-preview .fp-modal-head{background:var(--fp-navy);color:white;display:flex;align-items:center;justify-content:space-between;padding:15px 20px;gap:12px}
+    #fudia-order-preview .fp-modal-head h2{font-size:17px;margin:0;font-weight:700}
+    #fudia-order-preview .fp-modal-head button{color:white}
+    #fudia-order-preview .fp-modal-body{padding:22px;display:grid;gap:18px}
+    #fudia-order-preview .fp-modal-body label{display:grid;gap:7px;font-size:12px;font-weight:600}
+    #fudia-order-preview .fp-modal-body dl{margin:0;display:grid;gap:14px}
+    #fudia-order-preview .fp-modal-body dl div{display:flex;justify-content:space-between;gap:16px}
+    #fudia-order-preview .fp-modal-body dt{color:var(--fp-muted)}
+    #fudia-order-preview .fp-modal-body dd{margin:0;font-weight:600}
+    #fudia-order-preview .fp-modal-foot{border-top:1px solid var(--fp-line);padding:14px 20px;display:flex;justify-content:flex-end}
+    @media(max-width:800px){#fudia-order-preview .fp-shell{grid-template-columns:160px minmax(0,1fr)}#fudia-order-preview .fp-topbar{padding:0 18px}#fudia-order-preview .fp-main{padding:24px 18px}#fudia-order-preview .fp-tabs{gap:15px}#fudia-order-preview .fp-account-name{display:none}#fudia-order-preview th,#fudia-order-preview td{padding-left:10px;padding-right:10px}#fudia-order-preview .fp-time-col{display:none}}
+    @media(max-width:600px){#fudia-order-preview .fp-shell{display:block;min-height:0}#fudia-order-preview .fp-sidebar{display:none}#fudia-order-preview .fp-shell.menu-open .fp-sidebar{display:flex}#fudia-order-preview .fp-mobile-menu{display:inline-flex}#fudia-order-preview .fp-topbar{height:60px;padding:0 14px}#fudia-order-preview .fp-context{gap:7px}#fudia-order-preview .fp-context>svg,#fudia-order-preview .fp-divider{display:none}#fudia-order-preview .fp-context strong{font-size:11px}#fudia-order-preview .fp-local{font-size:10px}#fudia-order-preview .fp-account{gap:4px}#fudia-order-preview .fp-main{padding:23px 14px 18px}#fudia-order-preview h1{font-size:23px}#fudia-order-preview .fp-page-header{gap:10px;margin-bottom:19px;align-items:flex-start}#fudia-order-preview .fp-subtitle{font-size:11px;max-width:180px}#fudia-order-preview .fp-page-header .fp-button{font-size:11px;padding:10px;min-height:44px}#fudia-order-preview .fp-tabs{gap:14px;justify-content:space-between;margin-bottom:16px}#fudia-order-preview .fp-tab{font-size:11px;gap:4px;min-height:44px;padding-bottom:10px}#fudia-order-preview .fp-count{font-size:9px;min-width:16px;padding:1px 4px}#fudia-order-preview .fp-filters{grid-template-columns:1fr;padding:12px;gap:9px}#fudia-order-preview input,#fudia-order-preview select{font-size:16px;min-height:44px}#fudia-order-preview thead{display:none}#fudia-order-preview table,#fudia-order-preview tbody{display:block}#fudia-order-preview tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 10px;position:relative;padding:15px 58px 15px 14px;border-top:1px solid var(--fp-line)}#fudia-order-preview td{display:block;height:auto;border:0;padding:0;font-size:12px}#fudia-order-preview .fp-subject-col{grid-column:1/-1}#fudia-order-preview .fp-status-col{grid-column:1;grid-row:2}#fudia-order-preview .fp-channel-col{grid-column:1;grid-row:3}#fudia-order-preview .fp-money{grid-column:2;grid-row:2}#fudia-order-preview .fp-row-action{position:absolute;right:9px;top:22px}#fudia-order-preview .fp-icon-button{min-width:44px;min-height:44px}#fudia-order-preview .fp-pagination{padding:10px 12px}#fudia-order-preview .fp-modal-backdrop{padding-top:34px}#fudia-order-preview .fp-bottom-note{font-size:10px}}
+  </style>
+  <div class="fp-shell">
+    <aside class="fp-sidebar" aria-label="Navegación principal">
+      <div class="fp-brand"><i data-lucide="utensils" aria-hidden="true"></i>fudIA</div>
+      <nav aria-label="Módulos">
+        <div class="fp-nav-group"><p class="fp-nav-title">Control</p><div class="fp-nav"><i data-lucide="layout-dashboard" aria-hidden="true"></i>Dashboard</div><div class="fp-nav"><i data-lucide="chart-no-axes-combined" aria-hidden="true"></i>Ventas</div><div class="fp-nav"><i data-lucide="receipt-text" aria-hidden="true"></i>Comprobantes</div></div>
+        <div class="fp-nav-group" style="margin-top:24px"><p class="fp-nav-title">Operación</p><div class="fp-nav"><i data-lucide="wallet" aria-hidden="true"></i>Cobros</div><div class="fp-nav active" aria-current="page"><i data-lucide="clipboard-list" aria-hidden="true"></i>Pedidos</div><div class="fp-nav"><i data-lucide="armchair" aria-hidden="true"></i>Salón</div><div class="fp-nav"><i data-lucide="chef-hat" aria-hidden="true"></i>Cocina</div><div class="fp-nav"><i data-lucide="layout-grid" aria-hidden="true"></i>Mesas y zonas</div><div class="fp-nav"><i data-lucide="clock-3" aria-hidden="true"></i>Caja y turnos</div><div class="fp-nav"><i data-lucide="calendar-days" aria-hidden="true"></i>Reservas</div></div>
+        <div style="margin-top:20px">
+          <details><summary>Carta y producción<i data-lucide="chevron-down" aria-hidden="true"></i></summary><div class="fp-nav">Carta y productos</div><div class="fp-nav">Disponibilidad</div><div class="fp-nav">Menús y combos</div><div class="fp-nav">Recetas</div></details>
+          <details><summary>Abastecimiento<i data-lucide="chevron-down" aria-hidden="true"></i></summary><div class="fp-nav">Inventario</div><div class="fp-nav">Kardex</div><div class="fp-nav">Compras</div></details>
+          <details><summary>Negocio<i data-lucide="chevron-down" aria-hidden="true"></i></summary><div class="fp-nav">Clientes</div><div class="fp-nav">Locales</div></details>
+          <details><summary>Configuración<i data-lucide="chevron-down" aria-hidden="true"></i></summary><div class="fp-nav">Mi restaurante</div><div class="fp-nav">Fiscal y moneda</div><div class="fp-nav">Medios de pago</div><div class="fp-nav">Usuarios y roles</div><div class="fp-nav">Facturación</div></details>
+        </div>
+      </nav>
+      <div class="fp-sidebar-foot">Gestión de restaurantes</div>
+    </aside>
+    <div class="fp-workspace">
+      <header class="fp-topbar">
+        <div class="fp-context"><button class="fp-icon-button fp-mobile-menu" aria-label="Abrir navegación" aria-expanded="false"><i data-lucide="menu" aria-hidden="true"></i></button><i data-lucide="store" aria-hidden="true"></i><strong>Mi restaurante</strong><span class="fp-divider">/</span><span class="fp-local">Local Central</span></div>
+        <div class="fp-account"><span class="fp-account-name">Administrador</span><div class="fp-avatar" aria-label="Miguel">MI</div></div>
+      </header>
+      <main class="fp-main">
+        <div class="fp-page-header"><div><h1>Pedidos</h1><p class="fp-subtitle">Gestiona la atención de cada pedido.</p></div><button class="fp-button primary" data-new><i data-lucide="plus" aria-hidden="true"></i>Nuevo pedido</button></div>
+        <div class="fp-tabs" role="group" aria-label="Filtrar por canal">
+          <button class="fp-tab" data-channel="Todos" aria-pressed="true">Todos<span class="fp-count">6</span></button><button class="fp-tab" data-channel="Salón" aria-pressed="false">Salón<span class="fp-count">2</span></button><button class="fp-tab" data-channel="Recojo" aria-pressed="false">Recojo<span class="fp-count">1</span></button><button class="fp-tab" data-channel="Delivery" aria-pressed="false">Delivery<span class="fp-count">3</span></button>
+        </div>
+        <section class="fp-list" aria-label="Listado de pedidos">
+          <div class="fp-filters"><label class="fp-search"><span hidden>Buscar pedidos</span><i data-lucide="search" aria-hidden="true"></i><input type="search" placeholder="Buscar cliente o mesa" aria-label="Buscar cliente o mesa"></label><select aria-label="Filtrar por estado"><option value="all">Abiertos</option><option value="new">Nuevo</option><option value="ready">Por entregar</option></select></div>
+          <table><colgroup><col style="width:31%"><col style="width:13%"><col style="width:19%"><col class="fp-time-col" style="width:12%"><col style="width:15%"><col style="width:10%"></colgroup><thead><tr><th>Pedido</th><th>Canal</th><th>Estado</th><th class="fp-time-col">Registrado</th><th style="text-align:right">Total</th><th><span hidden>Acciones</span></th></tr></thead><tbody></tbody></table>
+          <div class="fp-empty" hidden><strong>Sin coincidencias</strong>Prueba otro nombre o cambia los filtros.</div>
+          <footer class="fp-pagination"><span data-count aria-live="polite">6 pedidos</span><div class="fp-pages"><button class="fp-icon-button" disabled aria-label="Página anterior"><i data-lucide="chevron-left" aria-hidden="true"></i></button><span aria-label="Página 1">1</span><button class="fp-icon-button" disabled aria-label="Página siguiente"><i data-lucide="chevron-right" aria-hidden="true"></i></button></div></footer>
+        </section>
+        <div class="fp-bottom-note"><i data-lucide="info" aria-hidden="true"></i>Datos de ejemplo</div>
+      </main>
+      <div class="fp-modal-backdrop" hidden><section class="fp-modal" role="dialog" aria-modal="true" aria-labelledby="fp-dialog-title"><header class="fp-modal-head"><h2 id="fp-dialog-title">Detalle del pedido</h2><button class="fp-icon-button" data-close aria-label="Cerrar"><i data-lucide="x" aria-hidden="true"></i></button></header><div class="fp-modal-body"></div><footer class="fp-modal-foot"><button class="fp-button" data-close>Cerrar</button></footer></section></div>
+    </div>
+  </div>
+  <script>
+    (()=>{
+      const root=document.getElementById('fudia-order-preview');
+      const orders=[{name:'Mesa 1',note:'Mozo: Miguel',channel:'Salón',status:'ready',time:'12:49',total:20},{name:'Lucía Ramírez',note:'',channel:'Delivery',status:'new',time:'12:43',total:62},{name:'Carlos Mendoza',note:'',channel:'Recojo',status:'new',time:'12:38',total:48},{name:'Ana Torres',note:'',channel:'Delivery',status:'ready',time:'12:32',total:36},{name:'Mesa 4',note:'Mozo: Miguel',channel:'Salón',status:'new',time:'12:26',total:22},{name:'Diego Salazar',note:'',channel:'Delivery',status:'new',time:'12:20',total:28}];
+      const query=root.querySelector('input[type=search]'),status=root.querySelector('select'),tbody=root.querySelector('tbody'),modal=root.querySelector('.fp-modal-backdrop'),body=root.querySelector('.fp-modal-body');
+      let channel='Todos',opener=null;
+      const saved=window.openai?.widgetState;
+      function normalize(text){return text.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+      function money(value){return 'S/ '+value.toFixed(2)}
+      function render(){
+        const items=orders.filter(o=>(channel==='Todos'||o.channel===channel)&&(status.value==='all'||o.status===status.value)&&normalize(o.name).includes(normalize(query.value)));
+        tbody.innerHTML=items.map(o=>`<tr><td class="fp-subject-col"><span class="fp-subject">${o.name}</span>${o.note?`<span class="fp-secondary">${o.note}</span>`:''}</td><td class="fp-channel-col"><span class="fp-channel">${o.channel}</span></td><td class="fp-status-col"><span class="fp-status ${o.status==='ready'?'ready':''}">${o.status==='ready'?'Por entregar':'Nuevo'}</span></td><td class="fp-time-col"><span class="fp-time">${o.time}</span></td><td class="fp-money">${money(o.total)}</td><td class="fp-row-action"><button class="fp-icon-button" data-detail="${orders.indexOf(o)}" aria-label="Ver detalle de ${o.name}"><i data-lucide="eye" aria-hidden="true"></i></button></td></tr>`).join('');
+        root.querySelector('.fp-empty').hidden=items.length!==0;
+        root.querySelector('table').hidden=items.length===0;
+        root.querySelector('[data-count]').textContent=items.length+' '+(items.length===1?'pedido':'pedidos');
+        root.querySelectorAll('[data-channel]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.channel===channel)));
+        if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}});
+      }
+      function persist(){window.openai?.setWidgetState?.({modelContent:{vista:'Propuesta de Pedidos FudIA',canal:channel},privateContent:{query:query.value,status:status.value}})?.catch(()=>{})}
+      function applySaved(value){if(!value)return;const p=value.privateContent||{};const c=value.modelContent?.canal;channel=['Todos','Salón','Recojo','Delivery'].includes(c)?c:'Todos';query.value=typeof p.query==='string'?p.query:'';status.value=['all','new','ready'].includes(p.status)?p.status:'all';render()}
+      function close(){modal.hidden=true;opener?.focus()}
+      function open(title,content,trigger){opener=trigger;root.querySelector('#fp-dialog-title').textContent=title;body.innerHTML=content;modal.hidden=false;modal.querySelector('[data-close]').focus()}
+      root.addEventListener('click',event=>{
+        const tab=event.target.closest('[data-channel]');if(tab){channel=tab.dataset.channel;render();persist()}
+        const detail=event.target.closest('[data-detail]');if(detail){const o=orders[Number(detail.dataset.detail)];open(o.name,`<dl><div><dt>Canal</dt><dd>${o.channel}</dd></div><div><dt>Estado</dt><dd><span class="fp-status ${o.status==='ready'?'ready':''}">${o.status==='ready'?'Por entregar':'Nuevo'}</span></dd></div><div><dt>Registrado</dt><dd>Hoy, ${o.time}</dd></div><div><dt>Total</dt><dd>${money(o.total)}</dd></div></dl>`,detail)}
+        if(event.target.closest('[data-close]')||event.target===modal)close();
+        const create=event.target.closest('[data-new]');if(create)open('Nuevo pedido','<label>Canal<select><option>Salón</option><option>Recojo en local</option><option>Delivery</option></select></label><label>Cliente o mesa<input placeholder="Nombre o mesa"></label><p class="fp-subtitle">Vista de ejemplo · No se registrarán cambios.</p>',create);
+        const menu=event.target.closest('.fp-mobile-menu');if(menu){const opened=root.querySelector('.fp-shell').classList.toggle('menu-open');menu.setAttribute('aria-expanded',String(opened))}
+      });
+      root.addEventListener('keydown',event=>{if(modal.hidden)return;if(event.key==='Escape')close();if(event.key==='Tab'){const targets=[...modal.querySelectorAll('button,input,select')].filter(el=>!el.disabled),first=targets[0],last=targets[targets.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}});
+      query.addEventListener('input',()=>{render();persist()});status.addEventListener('change',()=>{render();persist()});
+      window.addEventListener('openai:set_globals',event=>{if(event.detail?.globals?.widgetState)applySaved(event.detail.globals.widgetState)});
+      render();applySaved(saved);
+      if(globalThis.Tweak){const design={density:'Cómoda'};const tweak=new Tweak({container:root,onChange:()=>root.style.setProperty('--fp-row',design.density==='Compacta'?'54px':'66px')});tweak.addSelect(design,'density',{label:'Densidad de filas',options:['Cómoda','Compacta']})}
+    })();
+  </script>
+</div>

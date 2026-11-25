@@ -176,9 +176,9 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
           return <tr className={index%2?"alternate":""} key={item.id}>
             <td><span className="pos-order-identity"><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><span className="pos-order-copy"><b>{subject}</b>{item.origin==="counter"?<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>:subject!==item.code&&<small className="pos-order-reference">{item.code}</small>}</span></span></td>
             <td><span className="pos-channel-cell"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span></td>
-            <td className="pos-money"><b>{money(Number(item.total))}</b></td>
-            <td className="pos-money">{money(Number(item.paidAmount))}</td>
-            <td className="pos-money"><strong className="pos-balance">{money(Number(item.remainingAmount))}</strong></td>
+            <td className="pos-money"><b className="table-amount">{money(Number(item.total))}</b></td>
+            <td className="pos-money table-amount">{money(Number(item.paidAmount))}</td>
+            <td className="pos-money"><strong className="pos-balance table-amount">{money(Number(item.remainingAmount))}</strong></td>
             <td><Status tone={meta.tone}>{meta.label}</Status></td>
             <td>{actionsFor(item)}</td>
           </tr>;

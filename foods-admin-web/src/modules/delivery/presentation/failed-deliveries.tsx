@@ -31,10 +31,10 @@ export function FailedDeliveries(){
           <td><div className="delivery-board-order"><b>{item.orderCode}</b><small>{date(item.registeredAt)}</small></div></td>
           <td><div className="delivery-board-customer"><b>{item.customerName||"Sin nombre"}</b><small>{item.address||"Dirección por confirmar"}</small></div></td>
           <td><div className="delivery-board-owner"><b>{item.partnerName}</b>{item.courierName&&<small><Icon name="motorbike" size={14}/>{item.courierName}</small>}</div></td>
-          <td className="tabular">{money(item,item.foodAmount)}</td>
-          <td className="tabular">{money(item,item.courierReimbursement)}</td>
-          <td className="tabular">{money(item,item.partnerShare)}</td>
-          <td className="tabular">{money(item,item.fudiaShare)}</td>
+          <td className="tabular table-amount">{money(item,item.foodAmount)}</td>
+          <td className="tabular table-amount">{money(item,item.courierReimbursement)}</td>
+          <td className="tabular table-amount">{money(item,item.partnerShare)}</td>
+          <td className="tabular table-amount">{money(item,item.fudiaShare)}</td>
           <td><div className="delivery-failed-share">{share(item)}{notes(item)}</div></td>
         </tr>)}
       </tbody></DataTable>}

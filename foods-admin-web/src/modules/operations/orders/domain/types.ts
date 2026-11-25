@@ -28,6 +28,8 @@ export type Order={
   /** "counter" en la venta por mostrador (se atiende como Recojo en local). */
   origin?:"standard"|"counter";
   status:string;completedAt?:string;billClosedAt?:string;accountState?:"open"|"awaiting_payment"|"paid";serviceItems?:ServiceItem[];
+  /** Estado operativo del listado, independiente del avance del reparto. */
+  operationalStatus?:string;
   customerId:string;
   customerName:string;
   customerPhone:string;

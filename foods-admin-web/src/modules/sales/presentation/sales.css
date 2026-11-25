@@ -17,7 +17,7 @@
 .sales-period-summary>small{color:var(--ink-500);font-size:var(--font-size-sm)}
 .sales-period-summary>small b{color:var(--ink-800);font-weight:var(--weight-semibold)}
 .sales-summary-skeleton{display:block;width:var(--size-150);height:var(--size-22);border-radius:var(--radius-chip);background:linear-gradient(90deg,var(--cloud-100) 20%,var(--primary-25) 42%,var(--cloud-100) 64%) 0 0/220% 100%;animation:shimmer var(--duration-ambient-long) ease-in-out infinite}
-.sales-skeleton td{height:var(--size-60)}
+.sales-skeleton td{height:var(--table-row-height)}
 .sales-skeleton i,.sales-skeleton b,.sales-skeleton span{display:block;background:linear-gradient(90deg,var(--cloud-100),var(--primary-25),var(--cloud-100));background-size:200% 100%;animation:sales-shimmer var(--duration-ambient) infinite}
 .sales-skeleton td>i{width:var(--size-72);height:var(--size-10);border-radius:var(--radius-control)}
 .sales-skeleton-name{align-items:center;gap:var(--space-2-5);display:flex}

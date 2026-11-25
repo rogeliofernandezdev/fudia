@@ -37,7 +37,7 @@
 .pos-order-identity>.row-icon{margin-right:0}
 .pos-order-copy{display:grid;gap:var(--space-0-5);min-width:0;line-height:var(--line-height-snug)}
 .pos-order-copy>small{margin:0}
-.pos-channel-cell{display:inline-flex;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold);white-space:nowrap}
+.pos-channel-cell{display:inline-flex;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--table-secondary-weight);white-space:nowrap}
 .pos-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-2)}
 /* Venta por mostrador: número del pedido y productos bajo el cliente, en una línea. */
 .pos-counter-items{display:block;max-width:var(--size-260);overflow:hidden;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-medium);text-overflow:ellipsis;white-space:nowrap}

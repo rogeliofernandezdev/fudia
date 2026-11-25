@@ -40,7 +40,7 @@ export function FiscalDocumentsPage(){
      <td><span className={`row-icon r${i%3}`}><Icon name={item.documentType==="invoice"?"invoice":"receipt"} size={18}/></span><b>{item.number}</b><small>{item.label} · {item.orderCode}</small></td>
      <td>{day(item.issueDate)}</td>
      <td>{item.customerName||"Cliente sin identificar"}<small>{item.customerDocument}</small></td>
-     <td><b>{money(Number(item.total))}</b></td>
+     <td><b className="table-amount">{money(Number(item.total))}</b></td>
      <td><FiscalStatus status={item.status}/></td>
      <td><div className="table-actions"><RowActionButton action="view" onClick={()=>setDetailId(item.id)}/></div></td>
     </tr>)}</tbody></DataTable>}

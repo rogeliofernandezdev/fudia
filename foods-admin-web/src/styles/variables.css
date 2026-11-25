@@ -398,6 +398,11 @@
   --weight-semibold: 600;
   --weight-bold: 700;
   --weight-heavy: 800;
+  /* Jerarquía compartida de tablas: identidad e importes, datos y metadatos. */
+  --table-primary-weight: var(--weight-semibold);
+  --table-amount-weight: var(--weight-semibold);
+  --table-cell-weight: var(--weight-regular);
+  --table-secondary-weight: var(--weight-regular);
   --line-height-zero: 0;
   --line-height-none: 1;
   --line-height-tight: 1.2;
@@ -500,6 +505,9 @@
 
   /* Contratos de componentes */
   --control-height: var(--size-38);
+  --table-row-height: var(--size-48);
+  --table-header-height: var(--size-36);
+  --table-cell-padding-inline: var(--space-3);
   --font-size-control: var(--font-size-sm);
   --font-size-label: var(--font-size-xs);
   --modal-label-weight: var(--weight-semibold);
@@ -571,6 +579,8 @@ body {
 
   :root {
     --control-height: var(--size-44);
+    --table-row-height: var(--size-56);
+    --table-header-height: var(--size-40);
     --font-size-control: var(--font-size-md);
   }
 }
@@ -582,6 +592,8 @@ body {
 @media (any-pointer:coarse) {
   :root {
     --control-height: var(--size-44);
+    --table-row-height: var(--size-56);
+    --table-header-height: var(--size-40);
     --font-size-control: var(--font-size-md);
   }
 }

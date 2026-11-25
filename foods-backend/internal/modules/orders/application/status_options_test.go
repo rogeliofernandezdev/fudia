@@ -22,3 +22,16 @@ func TestPresentStatusOptionsKeepsCatalogOrderAndSelection(t *testing.T) {
 		t.Fatalf("abiertos is not a catalog status: %v", got)
 	}
 }
+
+func TestPresentStatusOptionsGroupsShippingUnderReady(t *testing.T) {
+	for _, selected := range []string{"", "listo", "en_camino"} {
+		options := PresentStatusOptions(map[string]bool{"en_camino": true, "nuevo": false}, selected)
+		if len(options) != 1 || options[0]["value"] != "listo" || options[0]["label"] != "Por entregar" {
+			t.Fatalf("shipping stays pending delivery without a duplicate option: %+v", options)
+		}
+	}
+	options := PresentStatusOptions(map[string]bool{"listo": true, "en_camino": true, "entregado": true}, "")
+	if len(options) != 2 || options[0]["value"] != "listo" || options[1]["value"] != "entregado" {
+		t.Fatalf("ready and shipping must share one operational option: %+v", options)
+	}
+}

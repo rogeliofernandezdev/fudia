@@ -32,17 +32,19 @@ type Order struct {
 	Code    string `json:"code"`
 	Channel string `json:"channel"`
 	// Origin es "counter" para la venta por mostrador y "standard" en otro caso.
-	Origin        string             `json:"origin"`
-	Status        string             `json:"status"`
-	CompletedAt   string             `json:"completedAt,omitempty"`
-	BillClosedAt  string             `json:"billClosedAt,omitempty"`
-	AccountState  string             `json:"accountState"`
-	ServiceItems  []OrderServiceItem `json:"serviceItems,omitempty"`
-	CustomerID    string             `json:"customerId"`
-	CustomerName  string             `json:"customerName"`
-	CustomerPhone string             `json:"customerPhone"`
-	Address       string             `json:"address"`
-	Reference     string             `json:"reference"`
+	Origin string `json:"origin"`
+	Status string `json:"status"`
+	// OperationalStatus es la proyección del listado; el reparto conserva Status.
+	OperationalStatus string             `json:"operationalStatus,omitempty"`
+	CompletedAt       string             `json:"completedAt,omitempty"`
+	BillClosedAt      string             `json:"billClosedAt,omitempty"`
+	AccountState      string             `json:"accountState"`
+	ServiceItems      []OrderServiceItem `json:"serviceItems,omitempty"`
+	CustomerID        string             `json:"customerId"`
+	CustomerName      string             `json:"customerName"`
+	CustomerPhone     string             `json:"customerPhone"`
+	Address           string             `json:"address"`
+	Reference         string             `json:"reference"`
 	// Punto de entrega fijado por WhatsApp (Concierge); nil si no hay pin.
 	DeliveryLatitude   *float64 `json:"deliveryLatitude"`
 	DeliveryLongitude  *float64 `json:"deliveryLongitude"`
@@ -218,6 +220,16 @@ type KitchenTicket struct {
 }
 
 var Statuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Por entregar"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
+
+// OperationalOrderStatus separa la atención del seguimiento logístico: durante
+// el trayecto el pedido sigue por entregar; Entregado exige recepción del cliente.
+func OperationalOrderStatus(status string) string {
+	if status == "en_camino" {
+		return "listo"
+	}
+	return status
+}
+
 var Transitions = map[string][]string{
 	"nuevo":      {"confirmado", "cancelado"},
 	"confirmado": {"cancelado"},

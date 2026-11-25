@@ -1,5 +1,22 @@
 # API
 
+## Bandeja de Pedidos
+
+La bandeja inicia en «Todos» (sin `status`). El catálogo de estados operativos
+no incluye «Abiertos» ni agrupaciones adicionales. `listo` («Por entregar»)
+incluye los deliveries `en_camino`: cada fila publica `operationalStatus`
+para la columna y conserva `status` para las acciones y el detalle del reparto.
+Solo la recepción del cliente pasa el delivery a «Entregado»; la salida del
+local y el cobro mantienen sus transiciones actuales. Los filtros antiguos
+`abiertos` y `en_camino` siguen aceptándose por compatibilidad.
+
+Los conteos por canal respetan búsqueda y estado, pero abarcan todos los
+canales antes de paginar. Los estados disponibles respetan búsqueda y canal,
+más el elegido aunque no tenga coincidencias. Primero se listan pedidos por
+atender y después entregados/cancelados; cada grupo va por fecha descendente,
+sin depender del cierre de cuenta ni del pago. La migración 000146 agrega
+el índice de ese orden sin retirar el anterior durante el despliegue gradual.
+
 ## Adiciones a delivery y recojo de Concierge
 
 `POST /v1/integrations/concierge/{token}/delivery-orders` acepta `orderId` y

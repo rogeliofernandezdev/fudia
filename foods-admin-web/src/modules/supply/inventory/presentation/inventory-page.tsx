@@ -111,7 +111,7 @@ export function InventoryPage(){
        <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:6})}</b></td>
        <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:6})}</b></td>
        <td>{formatRegionalNumber(Number(item.averageUnitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
-       <td><b>{formatRegionalNumber(Number(item.stockValue),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
+       <td><b className="table-amount">{formatRegionalNumber(Number(item.stockValue),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td>{item.active?<Status tone={meta.tone}>{meta.label}</Status>:<Status active={false}>Inactivo</Status>}</td>
        <td>{canManage?<div className="table-actions"><RowActionButton action="edit" label="Editar artículo" onClick={()=>setSettingsItem(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name} en este local`} onClick={()=>setStatusTarget(item)}/></div>:null}</td>
       </tr>;

@@ -22,11 +22,11 @@ export type OrdersQuery={
 export function listOrders(query:OrdersQuery,signal?:AbortSignal){
   const params=new URLSearchParams({
     q:query.q,
-    channel:query.channel,
-    status:query.status,
     page:String(query.page),
     pageSize:String(query.pageSize),
   });
+  if(query.channel)params.set("channel",query.channel);
+  if(query.status)params.set("status",query.status);
   return apiFetch<OrdersResponse>(`orders?${params.toString()}`,{signal});
 }
 

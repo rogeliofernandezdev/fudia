@@ -83,8 +83,8 @@ export function PayNotificationsPanel({dateTime}:Props){
           const meta=payStatusMeta[item.status];
           return <tr className={index%2?"alternate":""} key={item.id}>
             <td><PayProviderTag provider={item.provider} appearance="circle"/></td>
-            <td className="pay-notification-sender"><strong>{item.senderName||"Sin remitente"}</strong>{item.operationNumber&&<small>Operación {item.operationNumber}</small>}</td>
-            <td className="pay-amount">{money(item.amount)}</td>
+            <td className="pay-notification-sender"><strong className="table-primary">{item.senderName||"Sin remitente"}</strong>{item.operationNumber&&<small>Operación {item.operationNumber}</small>}</td>
+            <td className="pay-amount table-amount">{money(item.amount)}</td>
             <td className="pay-notification-received"><time dateTime={item.occurredAt}>{dateTime(item.occurredAt,"date")}<small>{dateTime(item.occurredAt,"time")}</small></time></td>
             <td><Status tone={meta.tone} icon={item.status==="associated"?"circleCheck":undefined}>{meta.label}</Status></td>
             <td><div className="table-actions">
