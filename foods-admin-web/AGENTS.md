@@ -27,8 +27,8 @@ La autoridad visual exclusiva de este proyecto es
 - Inputs y tablas provienen del design system.
 - Los estados usan `Status` y la matriz obligatoria «Colores de operación:
   pedido, preparación y cuenta» de `docs/02_DESIGN_SYSTEM.md`, en tres niveles
-  (2026-11-05): `Status solid` solo para estados operativos del pedido (Salón,
-  Cobro y cabecera del detalle; la tabla de Pedidos usa suave desde 2026-11-25),
+  (2026-11-05): `Status solid` solo para el estado operativo de la cabecera del
+  detalle del pedido (la tabla de Pedidos y las mesas de Salón usan suave desde 2026-11-25),
   `Status` suave por defecto para registros, cuenta y pago, y `Tag` neutro para atributos.
   Sin colores locales por pantalla.
   Cuenta abierta (`sky`) no comparte tono con Confirmado (`blue`), ni Pagada

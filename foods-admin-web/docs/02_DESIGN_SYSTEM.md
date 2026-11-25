@@ -645,17 +645,18 @@ Reglas de aplicación:
 - Reutilizar `Status` y los tokens de `src/styles/variables.css`; no crear badges
   propios, colores hexadecimales locales ni mapeos distintos por pantalla.
 - Tres niveles (aprobado 2026-11-05, equilibrio como la referencia): **sólido**
-  (`<Status solid>`: relleno vivo, texto e icono blancos) solo para estados operativos
-  del pedido en Salón, Cobro y el estado de la cabecera del detalle; **suave**
+  (`<Status solid>`: relleno vivo, texto e icono blancos) solo para el estado operativo
+  de la cabecera del detalle del pedido (un único estado por superficie); **suave**
   (por defecto: fondo tenue, texto oscuro y punto de su familia) para registros
   —activo/inactivo, compras, inventario, caja y turnos, plataforma— y para cuenta y
   pago; **neutro** (`Tag`: gris con icono, sin color semántico) para atributos o
   configuración que no son estados, como el control de cantidad. El verde vivo queda
   reservado a lo operativo; una fila de catálogo no lleva más de un color suave.
-- Tabla de Pedidos (2026-11-25): el estado de cada fila es **suave**, no sólido. Diez
-  píldoras sólidas por página saturaban la lista frente al canal y el total; la
-  familia de color de cada estado no cambia. Salón, Cobro y la cabecera del detalle
-  conservan el sólido.
+- Listas de pedidos (2026-11-25): el estado de cada fila de Pedidos y de cada mesa de
+  Salón es **suave**, no sólido. Diez píldoras sólidas por página saturaban la lista,
+  y en Salón competían con el plato, que debe ser el único color pleno de la mesa
+  ocupada. La familia de color de cada estado no cambia. Solo la cabecera del detalle
+  del pedido conserva el sólido (Cobro no muestra estados de preparación).
 - Equilibrio por pantalla (crítica 2026-11-05, referencia Zillo): en Salón el
   casetón de la mesa apenas se tiñe (`primary-100` al 50 %, aprobado en vivo el
   2026-11-13) y el único color pleno de la mesa ocupada es el plato; en
@@ -1126,8 +1127,8 @@ de la grilla, con **como máximo cuatro por fila** (dos en móvil). De arriba ab
 
 - **Quién o dónde:** el cliente o la familia del pedido; sin nombre, la zona; si
   tampoco hay zona, la capacidad. No se repite «Mesa 1»: el plato ya identifica la
-  mesa. A la derecha, en la misma línea, el `Status` de la matriz (`emphasis`,
-  13 px). Si no caben (tarjeta angosta o estado largo como «Por
+  mesa. A la derecha, en la misma línea, el `Status` suave de la matriz (`emphasis`,
+  13 px; sin `solid` desde 2026-11-25). Si no caben (tarjeta angosta o estado largo como «Por
   entregar»), el estado baja a la línea siguiente: nunca recorta el nombre por
   debajo de 96 px.
 - **El plato** (`salon-table-plate`, 88 px; 64 px en móvil) sobre un escenario
