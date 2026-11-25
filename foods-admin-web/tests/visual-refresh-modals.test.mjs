@@ -42,13 +42,13 @@ test("Cerrar turno: esperado en franja azul sólida y diferencia con píldora po
 });
 
 test("Pedidos: canal con icono en su color (moto para Delivery) y total tachado si el pedido se cancela",()=>{
-  const css=read("src/modules/operations/styles/orders.css");
+  const css=read("src/modules/operations/orders/presentation/order-channel.css")+read("src/modules/operations/styles/orders.css");
   assert.match(css,/\.order-channel-name\.tone-indigo>svg\{color:var\(--indigo-600\)\}/);
   assert.match(css,/\.order-channel-name\.tone-orange>svg\{color:var\(--warning-500\)\}/);
   assert.match(css,/\.order-channel-name\.tone-green>svg\{color:var\(--brand-600\)\}/);
   assert.match(css,/\.order-table-total\.is-cancelled\{[^}]*text-decoration:line-through/);
   const source=read("src/modules/operations/orders/presentation/orders-manager.tsx");
-  assert.match(source,/className=\{`order-channel-name tone-\$\{channelTone\(service\)\}`\}/);
+  assert.match(read("src/modules/operations/orders/presentation/order-channel.tsx"),/className=\{`order-channel-name tone-\$\{channelTone\(service\)\}`\}/);
   assert.match(source,/o\.status==="cancelado"\?" is-cancelled":""/);
   assert.match(read("src/modules/operations/orders/presentation/order-meta.ts"),/delivery:"motorbike"/);
 });

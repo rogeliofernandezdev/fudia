@@ -7,6 +7,7 @@ import {Button,DataTable,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,P
 import {deliveredDocument,ticketNoticeFor} from "@/modules/einvoicing";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {getPOSCollectionAccess,refundPayment,type Payment,type RefundDraft} from "@/modules/operations/pos";
+import {OrderChannel} from "@/modules/operations/orders";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {getSaleDetail,listSales} from "../infrastructure/sales-api";
@@ -17,7 +18,6 @@ const PaymentTicketDialog=dynamic(()=>import("./payment-ticket-dialog").then(mod
 const RefundDialog=dynamic(()=>import("@/modules/operations/pos").then(module=>module.RefundDialog),{ssr:false});
 const FiscalPrintDialog=dynamic(()=>import("@/modules/einvoicing").then(module=>module.FiscalPrintDialog),{ssr:false});
 
-const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
 const paymentMethodsLabel=(sale:Sale)=>(sale.paymentMethods??[]).join(" · ")||"—";
 
 export function SalesPage(){
@@ -128,7 +128,7 @@ function SalesPeriodSummary({period,range,loading,error,count,amount,money,day}:
 function SalesResults({items,money,date,view}:{items:Sale[];money:(value:string|number)=>string;date:(value:string)=>string;view:(id:string)=>void}){
   const action=(sale:Sale)=><div className="standard-actions"><RowActionButton action="view" label={`Ver detalle de la venta ${sale.code}`} onClick={()=>view(sale.id)}/></div>;
   return <>
-    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(sale=><tr className="sales-row" key={sale.id} onClick={()=>view(sale.id)}><td><span className="sales-order-code"><span className="row-icon"><Icon name="receipt" size={18}/></span><b>{sale.code}</b></span></td><td><b className="sales-customer table-primary">{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small className="sales-customer-name">{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td><time dateTime={sale.paidAt??sale.createdAt}>{date(sale.paidAt??sale.createdAt)}</time></td><td><b className="sales-row-total tabular table-amount">{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td onClick={event=>event.stopPropagation()}>{action(sale)}</td></tr>)}</tbody></DataTable>
+    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map(sale=><tr className="sales-row" key={sale.id} onClick={()=>view(sale.id)}><td><span className="sales-order-code"><span className="row-icon"><Icon name="receipt" size={18}/></span><b>{sale.code}</b></span></td><td><b className="sales-customer table-primary">{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small className="sales-customer-name">{sale.customerName}</small>:null}</td><td><OrderChannel channel={sale.channel}/></td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td><time dateTime={sale.paidAt??sale.createdAt}>{date(sale.paidAt??sale.createdAt)}</time></td><td><b className="sales-row-total tabular table-amount">{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td onClick={event=>event.stopPropagation()}>{action(sale)}</td></tr>)}</tbody></DataTable>
   </>;
 }
 

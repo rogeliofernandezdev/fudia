@@ -14,8 +14,9 @@ test("pedidos: las pestañas son tipos de atención y WhatsApp QR se agrupa en S
  assert.equal(meta.serviceChannel("mostrador"),"recojo");
  for(const channel of ["salon","recojo","delivery"])assert.equal(meta.serviceChannel(channel),channel);
  const manager=read("orders-manager.tsx");
- assert.ok(manager.includes("channelLabel(service)"),"la columna Canal muestra el tipo de atención");
- assert.ok(manager.includes('o.channel==="whatsapp"&&<small className="order-channel-origin">'),"el origen WhatsApp queda como dato secundario");
+ assert.ok(manager.includes("<OrderChannel channel={o.channel} origin={o.origin} label={channelLabel(service)}/>"),"la columna Canal muestra el tipo de atención con el componente compartido");
+ const channel=read("order-channel.tsx");
+ assert.ok(channel.includes('channel==="whatsapp"&&<small className="order-channel-origin">'),"el origen WhatsApp queda como dato secundario");
  assert.ok(manager.includes('service==="salon"&&<small className="order-staff">'),"los pedidos QR de mesa también muestran el mozo");
 });
 
@@ -24,9 +25,17 @@ test("pedidos: la venta por mostrador conserva su origen también en móvil",()=
  assert.equal(meta.originLabel("counter"),"Mostrador");
  assert.equal(meta.originLabel("standard"),"");
  const manager=read("orders-manager.tsx");
- assert.ok(manager.includes('o.origin==="counter"&&<small className="order-channel-origin">'),"columna Canal en escritorio");
+ assert.ok(read("order-channel.tsx").includes('origin==="counter"&&<small className="order-channel-origin">'),"columna Canal en escritorio");
  assert.ok(manager.includes('o.origin==="counter"&&<small className="order-mobile-origin">'),"línea bajo el cliente en móvil");
  const css=readFileSync(new URL("../../styles/orders.css",root),"utf8");
  assert.match(css,/\.orders-table td:first-child \.order-mobile-origin\{display:none\}/);
  assert.match(css.slice(css.indexOf("@media (max-width:700px)")),/\.orders-table td:first-child \.order-mobile-origin\{display:block\}/);
+});
+
+test("Pedidos, Ventas y Cobros muestran el canal con el mismo componente",()=>{
+ const src=new URL("../src/modules/",import.meta.url);
+ const file=path=>readFileSync(new URL(path,src),"utf8");
+ assert.ok(file("sales/presentation/sales-page.tsx").includes("<OrderChannel channel={sale.channel}/>"));
+ assert.ok(file("operations/pos/presentation/pos-page.tsx").includes("<OrderChannel channel={item.channel} origin={item.origin}/>"));
+ assert.match(file("operations/orders/index.ts"),/export \{OrderChannel\} from "\.\/presentation\/order-channel";/);
 });

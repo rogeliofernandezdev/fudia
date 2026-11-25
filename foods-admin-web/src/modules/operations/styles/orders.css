@@ -160,41 +160,6 @@
   background:var(--cloud-100);
 }
 
-.order-channel-cell{
-  display:grid;
-  gap:var(--space-0-5);
-  color:var(--ink-600);
-  font-size:var(--font-size-label);
-  font-weight:var(--table-secondary-weight);
-}
-
-/* Canal con su icono en el color de dominio (2026-11-25), el mismo de las pestañas de
-   canal: Salón índigo, Recojo naranja, Delivery verde. El texto sigue neutro. */
-.order-channel-name{
-  display:inline-flex;
-  align-items:center;
-  gap:var(--space-1-5);
-  color:var(--ink-700);
-  font-size:var(--font-size-control);
-}
-
-.order-channel-name>svg{flex:none}
-.order-channel-name.tone-indigo>svg{color:var(--indigo-600)}
-.order-channel-name.tone-orange>svg{color:var(--warning-500)}
-.order-channel-name.tone-green>svg{color:var(--brand-600)}
-.order-channel-name.tone-violet>svg{color:var(--digital-500)}
-.order-channel-name.tone-primary>svg{color:var(--primary-600)}
-
-/* Origen del pedido bajo su tipo de atención (QR de mesa por WhatsApp). */
-.order-channel-origin{
-  display:inline-flex;
-  align-items:center;
-  gap:var(--space-1);
-  color:var(--ink-500);
-  font-size:var(--font-size-label);
-  font-weight:var(--weight-regular);
-}
-
 .order-table-total{
   color:var(--ink-950);
   font-variant-numeric:tabular-nums;

@@ -2496,7 +2496,8 @@ Recojo | Delivery. «Mostrador» es Recojo y un pedido QR por WhatsApp es Salón
 (ocupa mesa), así que no tienen pestaña propia. En el listado el tipo de
 atención se representa una sola vez con icono: el avatar de la columna Pedido
 (`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). El avatar de la primera celda queda oculto por la regla de iconos decorativos;
-el color de canal vive en la columna Canal (2026-11-25): icono de 16 px en el tono
+el color de canal vive en la columna Canal, con el mismo componente `OrderChannel`
+(`@/modules/operations/orders`) en Pedidos, Ventas y Cobros (2026-11-25): icono de 16 px en el tono
 de las pestañas de canal (Salón `indigo-600`, Recojo `warning-500`, Delivery
 `brand-600` con icono de moto, nunca camión) junto al texto en `ink-700`. El total
 de un pedido cancelado se muestra tachado en `ink-500`; la matriz de estados no
