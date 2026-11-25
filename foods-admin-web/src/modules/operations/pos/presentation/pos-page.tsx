@@ -1,7 +1,7 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
 import {canChargeAccount,canCollectOrder} from "../../orders/domain/service-flow";
-import {lineServiceState,originLabel} from "../../orders/presentation/order-meta";
+import {lineServiceState} from "../../orders/presentation/order-meta";
 import {OrderChannel} from "../../orders/presentation/order-channel";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
@@ -191,7 +191,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         const subject=item.tableName||item.customerName||item.code;
         return <article key={item.id}>
           <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b>{item.origin==="counter"?<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>:subject!==item.code&&<small className="pos-order-reference">{item.code}</small>}</div><Status tone={meta.tone}>{meta.label}</Status></header>
-          <div className="pos-card-channel"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/><span>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span></div>
+          <div className="pos-card-channel"><OrderChannel channel={item.channel} origin={item.origin}/></div>
           <dl><div><dt>Total</dt><dd>{money(Number(item.total))}</dd></div><div><dt>Pagado</dt><dd>{money(Number(item.paidAmount))}</dd></div><div className="remaining"><dt>Saldo</dt><dd>{money(Number(item.remainingAmount))}</dd></div></dl>
           <footer>{actionsFor(item)}</footer>
         </article>;

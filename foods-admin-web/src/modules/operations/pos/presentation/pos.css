@@ -46,7 +46,8 @@
 .pos-order-cards>article{position:relative}
 .pos-order-cards article>header{grid-template-columns:var(--size-38) minmax(0,1fr) auto}
 .pos-order-cards header .status{align-self:start}
-.pos-card-channel{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1-5);width:fit-content;margin-top:var(--space-3);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
+/* Tarjeta móvil: el canal usa el mismo OrderChannel que las tablas. */
+.pos-card-channel{width:fit-content;margin-top:var(--space-3)}
 .pos-order-cards dl{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:var(--space-3)}
 .pos-order-cards dl div{min-width:0}
 .pos-order-cards dl .remaining{background:var(--primary-50)}

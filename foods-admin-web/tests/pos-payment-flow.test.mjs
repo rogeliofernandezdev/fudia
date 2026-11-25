@@ -45,6 +45,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name.endsWith("collection-shift"))return compile("../domain/collection-shift.ts",require);
   if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("order-meta"))return orderMetaExports;
+  if(name.endsWith("order-channel"))return{OrderChannel:"OrderChannel"};
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
   if(name==="@/modules/einvoicing")return{useCheckoutOptions:()=>({isLoading:false,isFetchedAfterMount:true,data:undefined}),fiscalStatusView:{ACCEPTED:{label:"Aceptado"},PENDING:{label:"Emitiendo"}}};
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
@@ -387,7 +388,7 @@ test("venta por mostrador: la bandeja muestra origen, número y productos sin re
  const counter={id:"counter-1",code:"PED-7A9A049D",channel:"recojo",origin:"counter",status:"confirmado",customerName:"Ana",tableName:"",itemsText:"2 × Ceviche, 1 × Chicha",total:"55",paidAmount:"0",remainingAmount:"55",paymentStatus:"pending",createdAt:"2026-11-02T12:00:00Z"};
  const view=mountPage({initialOrderId:"",listed:[counter]});
  const text=JSON.stringify(nodes(view.tree).map(node=>node.props?.children).filter(child=>typeof child==="string"||Array.isArray(child)));
- assert.ok(text.includes("Mostrador"),"origen «Mostrador»");
+ assert.ok(nodes(view.tree).some(node=>node.type==="OrderChannel"&&node.props.channel==="recojo"&&node.props.origin==="counter"),"origen «Mostrador» con el canal compartido");
  assert.ok(text.includes("PED-7A9A049D · 2 × Ceviche, 1 × Chicha"),"número del pedido y productos");
  assert.equal(nodes(view.tree).some(node=>node.type==="Status"&&node.props.children==="Confirmado"),false,"la preparación se sigue en Pedidos, no en Cobros");
  const charge=nodes(view.tree).find(node=>node.type==="RowActionButton"&&node.props.action==="charge");

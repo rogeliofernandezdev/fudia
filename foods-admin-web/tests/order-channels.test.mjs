@@ -36,6 +36,8 @@ test("Pedidos, Ventas y Cobros muestran el canal con el mismo componente",()=>{
  const src=new URL("../src/modules/",import.meta.url);
  const file=path=>readFileSync(new URL(path,src),"utf8");
  assert.ok(file("sales/presentation/sales-page.tsx").includes("<OrderChannel channel={sale.channel}/>"));
- assert.ok(file("operations/pos/presentation/pos-page.tsx").includes("<OrderChannel channel={item.channel} origin={item.origin}/>"));
+ const pos=file("operations/pos/presentation/pos-page.tsx");
+ assert.ok(pos.includes("<td><OrderChannel channel={item.channel} origin={item.origin}/></td>"),"tabla de Cobros");
+ assert.ok(pos.includes('<div className="pos-card-channel"><OrderChannel channel={item.channel} origin={item.origin}/></div>'),"tarjetas móviles de Cobros");
  assert.match(file("operations/orders/index.ts"),/export \{OrderChannel\} from "\.\/presentation\/order-channel";/);
 });
