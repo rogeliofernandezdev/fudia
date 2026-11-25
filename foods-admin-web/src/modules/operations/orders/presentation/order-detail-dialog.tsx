@@ -100,7 +100,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
         <div className="order-detail-content">
           <section className="order-detail-hero" aria-label="Resumen del pedido">
             <div className="order-detail-identity">
-              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone} solid>{meta.label}</Status></div></div>
+              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></div>
               {/* Fecha y responsables comparten una línea; bajan a la siguiente solo si no caben. */}
               <div className="order-detail-meta">
                 <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>

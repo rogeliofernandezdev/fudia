@@ -92,7 +92,7 @@ export function CourierPanel({token}:{token:string}){
     {toggle}
     {view.isError&&<p className="partner-panel-banner is-danger" role="alert"><Icon name="alert" size={18}/>Sin conexión con Fudia. El pedido puede estar desactualizado; reintentando…</p>}
     <article className="panel" aria-label={`Pedido ${order.orderCode}`}>
-      <header><div><h2 className="partner-panel-code">{order.orderCode}</h2><small>{order.organizationName}</small></div><Status tone={meta.tone} icon={meta.icon} solid>{meta.label}</Status></header>
+      <header><div><h2 className="partner-panel-code">{order.orderCode}</h2><small>{order.organizationName}</small></div><Status tone={meta.tone} icon={meta.icon}>{meta.label}</Status></header>
       <div className="partner-panel-sheet-body">
         {order.issueReportedAt&&<InlineNotice tone="warning" title="Avisamos a tu central y al cliente"/>}
         <OrderDetails order={order} courier={location.position}/>

@@ -645,18 +645,20 @@ Reglas de aplicación:
 - Reutilizar `Status` y los tokens de `src/styles/variables.css`; no crear badges
   propios, colores hexadecimales locales ni mapeos distintos por pantalla.
 - Tres niveles (aprobado 2026-11-05, equilibrio como la referencia): **sólido**
-  (`<Status solid>`: relleno vivo, texto e icono blancos) solo para el estado operativo
-  de la cabecera del detalle del pedido (un único estado por superficie); **suave**
+  (`<Status solid>`: relleno vivo, texto e icono blancos): desde 2026-11-25 ninguna
+  pantalla lo usa para los estados del pedido; queda como variante del componente; **suave**
   (por defecto: fondo tenue, texto oscuro y punto de su familia) para registros
   —activo/inactivo, compras, inventario, caja y turnos, plataforma— y para cuenta y
   pago; **neutro** (`Tag`: gris con icono, sin color semántico) para atributos o
   configuración que no son estados, como el control de cantidad. El verde vivo queda
   reservado a lo operativo; una fila de catálogo no lleva más de un color suave.
-- Listas de pedidos (2026-11-25): el estado de cada fila de Pedidos y de cada mesa de
-  Salón es **suave**, no sólido. Diez píldoras sólidas por página saturaban la lista,
-  y en Salón competían con el plato, que debe ser el único color pleno de la mesa
-  ocupada. La familia de color de cada estado no cambia. Solo la cabecera del detalle
-  del pedido conserva el sólido (Cobro no muestra estados de preparación).
+- Estados del pedido en suave en todas las pantallas (2026-11-25): filas de Pedidos,
+  mesas de Salón, cabecera del detalle del pedido y panel del motorizado. Diez
+  píldoras sólidas por página saturaban la lista, y en Salón competían con el plato,
+  que debe ser el único color pleno de la mesa ocupada. La familia de color de cada
+  estado no cambia. Siguen en color pleno las piezas que no son píldoras de estado:
+  cabeceras de carril de Cocina, hitos del seguimiento (`IconTile vivid`), iconos de
+  estado por línea de producto, contadores de pestañas y gráficos del Dashboard.
 - Equilibrio por pantalla (crítica 2026-11-05, referencia Zillo): en Salón el
   casetón de la mesa apenas se tiñe (`primary-100` al 50 %, aprobado en vivo el
   2026-11-13) y el único color pleno de la mesa ocupada es el plato; en
