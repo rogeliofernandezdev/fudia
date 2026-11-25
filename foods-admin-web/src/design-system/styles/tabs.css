@@ -34,6 +34,8 @@
 .ds-tabs button.tone-violet.active{border-color:color-mix(in srgb,var(--digital-500) 45%,var(--surface))}
 .ds-tabs button[class*=tone-].active{color:var(--ink-950);font-weight:var(--weight-bold)}
 @media(hover:hover) and (pointer:fine){.ds-tabs button:not(.active):hover{color:var(--primary-700);background:var(--primary-200)}}
+/* Etiqueta corta opcional: solo en móvil reemplaza a la completa. */
+.ds-tab-label-short{display:none}
 @media(width<=600px){
  .ds-tabs{display:flex;width:100%;scroll-snap-type:x mandatory}
  .ds-tabs button{flex:0 0 calc((100% - var(--space-1)) / 2);min-width:0;min-height:var(--size-44);gap:var(--space-1-5);padding:var(--space-1) var(--space-2);white-space:normal}
@@ -41,6 +43,8 @@
  .ds-tabs button>span{min-width:0;overflow-wrap:break-word;hyphens:auto}
  /* Sin contadores en móvil: la etiqueta necesita el ancho y la lista ya muestra los registros. */
  .ds-tabs b{display:none}
+ .ds-tab-label-long{display:none}
+ .ds-tab-label-short{display:inline}
  .ds-tabs button:nth-child(odd){scroll-snap-align:start;scroll-snap-stop:always}
  .ds-tabs button:only-child{flex-basis:100%}
  /* Completa el último par sin mostrar restos del grupo anterior. */

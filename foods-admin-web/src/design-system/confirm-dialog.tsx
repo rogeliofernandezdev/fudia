@@ -40,8 +40,8 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
         {note&&<p className="confirm-note">{note}</p>}
       </div>}
       <footer className="confirm-actions">
-        <Button kind="ghost" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</Button>
-        <Button kind={tone==="danger"?"danger":"primary"} disabled={pending||confirmDisabled} loading={pending} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</Button>
+        <Button kind="ghost" icon="close" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</Button>
+        <Button kind={tone==="danger"?"danger":"primary"} icon={tone==="danger"?"circleSlash":"check"} disabled={pending||confirmDisabled} loading={pending} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</Button>
       </footer>
     </Dialog>
   </div>;

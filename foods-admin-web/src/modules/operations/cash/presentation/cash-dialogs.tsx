@@ -147,17 +147,17 @@ export function CloseCashShiftDialog({shift,report,tipWorkspace,busy,currency,fo
           ?<div className="cash-blind-close-note"><Icon name="lock" size={16}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
           :!report&&<section className="cash-close-summary">
             <div><small>Fondo inicial</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
-            <div><small>Ingresos</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
-            <div><small>Egresos</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
+            <div className="income"><small><span className="cash-flow-sign" aria-hidden="true">+ </span><Icon name="arrowDownRight" size={14}/>Ingresos</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
+            <div className="expense"><small><span className="cash-flow-sign" aria-hidden="true">− </span><Icon name="arrowUpRight" size={14}/>Egresos</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
             <div className="expected"><small>Efectivo esperado</small><strong>{formatMoney(expected)}</strong></div>
           </section>}
 
         {tipWorkspace&&<TipClosingSection workspace={tipWorkspace} value={tipPayout} onChange={value=>setValue("tipPayout",value,{shouldValidate:Boolean(errors.tipPayout)})} busy={busy} error={errors.tipPayout?.message} formatMoney={formatMoney}/>}
-        <FormSection icon="cash" tone="brand" title="Conteo de efectivo" bare>
+        <FormSection icon="cash" tone="brand" appearance="vivid" title="Conteo de efectivo" bare>
         <p className="tip-help">Cuenta únicamente el efectivo de la operación. Mantén las propinas separadas de este conteo.</p>
-        <Tabs className="cash-count-mode" label="Modo de conteo" value={byDenomination?"denominations":"total"} onChange={value=>setByDenomination(value==="denominations")} items={[{value:"total",label:"Monto total",icon:"cash"},{value:"denominations",label:"Por denominaciones",icon:"wallet"}]}/>
+        <Tabs className="cash-count-mode" label="Modo de conteo" value={byDenomination?"denominations":"total"} onChange={value=>setByDenomination(value==="denominations")} items={[{value:"total",label:"Monto total",icon:"cash"},{value:"denominations",label:"Por denominaciones",shortLabel:"Denominaciones",icon:"wallet"}]}/>
 
-        {!byDenomination?<FormField label="Efectivo contado" error={errors.countedAmount?.message}>
+        {!byDenomination?<FormField className="numeric-value" label="Efectivo contado" error={errors.countedAmount?.message}>
           <Input autoFocus type="number" min="0" step="0.01" inputMode="decimal" {...register("countedAmount")} placeholder="0.00"/>
         </FormField>:<section className="cash-denomination-count">
           <header><div><small>Conteo</small><b>Billetes y monedas</b></div><strong>{formatMoney(denominationTotal)}</strong></header>
@@ -173,11 +173,10 @@ export function CloseCashShiftDialog({shift,report,tipWorkspace,busy,currency,fo
         {!blind&&Number.isFinite(counted)&&counted>=0&&<div className={"cash-close-difference "+differenceTone}><span><small>Diferencia</small><b>{difference>0?"+":""}{formatMoney(difference)}</b></span><em>{differenceTone==="balanced"?"Caja cuadrada":differenceTone==="positive"?"Sobrante":"Faltante"}</em></div>}
 
         </FormSection>
-        <FormSection icon="note" tone="neutral" title="Observación" bare>
+        {/* Un solo campo: sin título de sección que repita su etiqueta. */}
         <FormField label="Observación" optional error={errors.note?.message}>
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Explica cualquier diferencia si corresponde"/>
         </FormField>
-        </FormSection>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>Al cerrar el turno ya no se podrán registrar nuevos movimientos.</p>
       </div>
       <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="button" icon="lock" disabled={busy} onClick={()=>{if(busy||sending.current)return;sending.current=true;if(byDenomination)setValue("countedAmount",denominationTotal.toFixed(2));else setValue("counts",denominations.map(value=>({denomination:String(value),quantity:""})));void handleSubmit(async draft=>{try{if(draft.tipPayout&&Number(draft.tipPayout.amount)>Number(tipWorkspace?.available??0)){setError("tipPayout",{type:"validate",message:"El monto supera las propinas pendientes."});return;}await save({...draft,counts:byDenomination?draft.counts:[]});}finally{sending.current=false;}},()=>{sending.current=false;})().catch(()=>{sending.current=false;});}} loading={busy}>{busy?"Cerrando…":"Cerrar turno"}</Button></ModalFooter>

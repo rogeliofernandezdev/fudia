@@ -141,30 +141,40 @@
 .cash-team-member .button{padding:0 var(--space-2)}
 
 .cash-close-modal{width:min(var(--size-960),100%);max-height:calc(100dvh - var(--size-48));display:flex;flex-direction:column;overflow:hidden}
-.cash-close-modal>header{flex-shrink:0}
+.cash-close-modal>header{flex-shrink:0;min-height:var(--size-56)}
 .cash-close-modal>form{display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
-.cash-close-modal .cash-dialog-body{min-height:0;overflow:auto;grid-auto-rows:max-content;align-content:start;padding-right:var(--space-2);scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--ink-400) var(--cloud-50);overscroll-behavior:contain}
+.cash-close-modal .cash-dialog-body{min-height:0;overflow:auto;grid-auto-rows:max-content;align-content:start;gap:var(--space-5);padding-top:var(--space-4);padding-right:var(--space-2);scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--ink-400) var(--cloud-50);overscroll-behavior:contain}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar{width:var(--size-6)}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar-thumb{background:var(--ink-400);border-radius:var(--radius-control)}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar-track{background:var(--cloud-50)}
-.cash-close-modal form>footer{flex-shrink:0}
-.cash-close-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-radius:var(--radius-tile);background:var(--cloud-50);overflow:hidden}
-.cash-close-summary>div{display:grid;gap:var(--space-1);padding:var(--space-3) var(--space-3)}
+.cash-close-modal form>footer{flex-shrink:0;background:var(--surface)}
+/* Cerrar turno (2026-11-25): ficha con borde, etiquetas en caja normal y cifras 16/700; el esperado es la única franja azul sólida. */
+.cash-close-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);overflow:hidden}
+.cash-close-summary>div{display:grid;gap:var(--space-1-5);padding:var(--space-3-5) var(--space-4)}
 .cash-close-summary>div+div{border-left:var(--stroke-1) solid var(--line)}
-.cash-close-summary small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
-.cash-close-summary b{font-size:var(--font-size-label);font-variant-numeric:tabular-nums}
-.cash-close-summary .expected{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-left:0;border-top:var(--stroke-1) solid var(--line);background:var(--primary-100)}
-.cash-close-summary .expected small{color:var(--primary-700)}
-.cash-close-summary .expected strong{font-size:var(--font-size-md);font-variant-numeric:tabular-nums}
-.cash-close-difference{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2-5) var(--space-3);border-radius:var(--radius-tile);background:var(--cloud-50)}
+.cash-close-summary small{display:flex;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.cash-close-summary .income svg{color:var(--brand-600)}
+.cash-close-summary .expense svg{color:var(--danger-500)}
+.cash-flow-sign{display:none}
+.cash-close-summary b{color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
+.cash-close-summary .expected{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;border-left:0;border-top:0;background:var(--primary-600)}
+.cash-close-summary .expected small{color:var(--surface);font-size:var(--font-size-sm);font-weight:var(--weight-bold)}
+.cash-close-summary .expected strong{color:var(--surface);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums}
+/* Diferencia: ficha tenue con la cifra protagonista y una píldora sólida con el resultado. */
+.cash-close-difference{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3-5) var(--space-4);border-radius:var(--radius-card)}
 .cash-close-difference>span{display:grid;gap:var(--space-1)}
-.cash-close-difference small{font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps);color:var(--ink-400)}
-.cash-close-difference b{font-size:var(--font-size-sm);font-variant-numeric:tabular-nums}
-.cash-close-difference em{font-size:var(--font-size-label);font-style:normal;font-weight:var(--weight-heavy)}
+.cash-close-difference small{font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.cash-close-difference b{font-size:var(--font-size-xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight)}
+.cash-close-difference em{padding:var(--space-1) var(--space-3);border-radius:var(--radius-pill);color:var(--surface);font-size:var(--font-size-label);font-style:normal;font-weight:var(--weight-bold);white-space:nowrap}
 .cash-close-difference.balanced{color:var(--brand-700);background:var(--brand-100)}
+.cash-close-difference.balanced em{background:var(--brand-600)}
 .cash-close-difference.positive{color:var(--primary-700);background:var(--primary-100)}
-.cash-close-difference.negative{color:var(--danger);background:var(--primary-50)}
-.cash-close-warning{display:flex;align-items:flex-start;gap:var(--space-2);margin:0;color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
+.cash-close-difference.positive em{background:var(--primary-600)}
+.cash-close-difference.negative{color:var(--danger-600);background:var(--danger-50)}
+.cash-close-difference.negative em{background:var(--danger-500)}
+/* Aviso accionable: banda crema con icono ámbar. */
+.cash-close-warning{display:flex;align-items:center;gap:var(--space-2-5);margin:0;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-tile);background:var(--warning-100);color:var(--warning-600);font-size:var(--font-size-sm);font-weight:var(--weight-medium);line-height:var(--line-height-normal)}
+.cash-close-warning>svg{flex:none}
 
 .cash-detail-modal{display:flex;flex-direction:column;width:min(var(--size-940),calc(100vw - var(--size-32)));max-height:min(var(--size-820),calc(100dvh - var(--size-32)));overflow:hidden}
 .cash-detail-body{display:grid;align-content:start;gap:var(--space-5);background:var(--surface)}
@@ -209,11 +219,17 @@
  .cash-modal:not(.cash-close-modal),.crud-modal.cash-detail-modal{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
  .cash-detail-modal .modal-summary-lines{grid-template-columns:repeat(2,minmax(0,1fr))}
  .cash-close-summary{grid-template-columns:1fr}
+ .cash-close-summary>div:not(.expected){display:flex;align-items:baseline;justify-content:space-between;padding:var(--space-2-5) var(--space-3-5);background:var(--cloud-25)}
+ .cash-close-summary small>svg{display:none}
+ .cash-flow-sign{display:inline}
+ .cash-close-summary .income b{color:var(--brand-700)}
+ .cash-close-summary .expense b{color:var(--danger-600)}
+ .cash-close-summary .expected strong{font-size:var(--font-size-lg)}
  .cash-denomination-count>div{grid-template-columns:1fr}
  .cash-denomination-count label:nth-child(odd){border-right:0}
  .cash-denomination-count label:nth-child(n+2){border-top:var(--stroke-1) solid var(--line)}
  .cash-team-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
- .cash-close-summary>div+div{border-left:0;border-top:var(--stroke-1) solid var(--line)}
+ .cash-close-summary>div+div{border-left:0}
  .cash-close-summary .expected{grid-column:auto}
 }
 @media(max-width:600px){

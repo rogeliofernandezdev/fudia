@@ -7,9 +7,9 @@ import {IconTile,type IconTileTone} from "./icon-tile";
  * columnas (una en móvil). Agrupa los campos por tema, como «Datos del gasto»
  * o «Medio de pago». `span-2` en un campo ocupa todo el ancho.
  */
-export function FormSection({icon,title,tone="primary",className="",bare=false,children}:{icon:IconName;title:string;tone?:IconTileTone;className?:string;/** Conserva la retícula propia del formulario (no envuelve los campos). */bare?:boolean;children:ReactNode}){
-  return <section className={["form-section",className].filter(Boolean).join(" ")}>
-    <h3 className="form-section-title"><IconTile name={icon} tone={tone} size="sm"/>{title}</h3>
+export function FormSection({icon,title,tone="primary",appearance="soft",className="",bare=false,children}:{icon:IconName;title:string;tone?:IconTileTone;/** `vivid` (2026-11-25, Caja y formularios con tabla): icono sólido, título de 16 px y línea fina debajo. */appearance?:"soft"|"vivid";className?:string;/** Conserva la retícula propia del formulario (no envuelve los campos). */bare?:boolean;children:ReactNode}){
+  return <section className={["form-section",appearance==="vivid"?"is-vivid":"",className].filter(Boolean).join(" ")}>
+    <h3 className="form-section-title"><IconTile name={icon} tone={tone} appearance={appearance} size="sm"/>{title}</h3>
     {bare?children:<div className="form-section-grid">{children}</div>}
   </section>;
 }

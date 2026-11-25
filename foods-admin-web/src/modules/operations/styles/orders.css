@@ -143,9 +143,11 @@
   white-space:nowrap;
 }
 
+/* Canal en su color de dominio (2026-11-25), igual que las pestañas de canal:
+   Salón índigo, Recojo naranja, Delivery verde, WhatsApp violeta; mostrador neutro. */
 .order-row-icon.oc-salon{
-  color:var(--primary-700);
-  background:var(--primary-100);
+  color:var(--indigo-700);
+  background:var(--indigo-100);
 }
 
 .order-row-icon.oc-whatsapp{
@@ -153,9 +155,17 @@
   background:var(--digital-100);
 }
 
-.order-row-icon.oc-delivery,
-.order-row-icon.oc-mostrador,
+.order-row-icon.oc-delivery{
+  color:var(--brand-700);
+  background:var(--brand-100);
+}
+
 .order-row-icon.oc-recojo{
+  color:var(--warning-600);
+  background:var(--warning-100);
+}
+
+.order-row-icon.oc-mostrador{
   color:var(--ink-600);
   background:var(--cloud-100);
 }
@@ -184,6 +194,12 @@
   font-size:var(--font-size-control);
   font-weight:var(--weight-bold);
   font-variant-numeric:tabular-nums;
+}
+
+/* Pedido cancelado: el total no se cobra; se lee tachado y en gris. */
+.order-table-total.is-cancelled{
+  color:var(--ink-500);
+  text-decoration:line-through;
 }
 
 .orders-table-actions{

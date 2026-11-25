@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {useState} from "react";
 import {Controller,useFieldArray,useForm,useWatch} from "react-hook-form";
-import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea,ModalHeader,ModalFooter,FormSection,IconTile} from "@/design-system";
+import {Button,FormField,Icon,IconButton,Input,Select,Textarea,ModalHeader,ModalFooter,FormSection,IconTile} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryTransferResolver} from "../domain/inventory-transfer-schema";
@@ -48,10 +48,10 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
       <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="inventory-transfer-body">
-          <FormSection icon="route" title="Ruta del traslado" bare>
+          <FormSection icon="route" appearance="vivid" title="Ruta del traslado" bare>
           <div className="inventory-transfer-route">
-            <div className="inventory-transfer-origin"><small>Origen</small><strong>{location?.name??"Local activo"}</strong></div>
-            <span className="inventory-transfer-arrow" aria-hidden="true"><Icon name="chevron" size={16}/></span>
+            <div className="inventory-transfer-origin"><small>Origen</small><strong><Icon name="store" size={16}/><span>{location?.name??"Local activo"}</span></strong></div>
+            <span className="inventory-transfer-arrow" aria-hidden="true"><span><Icon name="chevron" size={16}/></span></span>
             <FormField label="Local destino" error={errors.toLocationId?.message}>
               <Select autoFocus {...register("toLocationId")}>
                 <option value="">{destinations.length?"Selecciona destino":"No hay otros locales activos"}</option>
@@ -63,20 +63,20 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
 
           <section className="inventory-transfer-lines" aria-labelledby="inventory-transfer-lines-title">
             <div className="inventory-transfer-lines-head">
-              <h3 id="inventory-transfer-lines-title" className="form-section-title"><IconTile name="stock" tone="brand" size="sm"/>Artículos a transferir</h3>
+              <h3 id="inventory-transfer-lines-title" className="form-section-title"><IconTile name="stock" tone="brand" appearance="vivid" size="sm"/>Artículos a transferir</h3>
               <Button type="button" kind="secondary" icon="plus" onClick={add} disabled={busy||lines.some(line=>!line?.inventoryItemId)}>Agregar artículo</Button>
             </div>
             {fields.length>0&&<div className="table-wrap"><table className="inventory-transfer-table">
-              <thead><tr><th>Artículo</th><th>Disponible</th><th>Cantidad</th><th><span className="sr-only">Acciones</span></th></tr></thead>
+              <thead><tr><th>Artículo</th><th className="inventory-transfer-available-head">Disponible</th><th>Cantidad</th><th><span className="sr-only">Acciones</span></th></tr></thead>
               <tbody>{fields.map((field,index)=>{
                 const line=lines[index];
                 const item=line?.inventoryItemId?picked[line.inventoryItemId]:undefined;
                 const lineErrors=errors.items?.[index];
                 return <tr key={field.id} className={lineErrors?"has-error":""}>
                   <td><Controller control={control} name={`items.${index}.inventoryItemId`} render={({field:lookup})=><InventoryItemLookup ariaLabel="Artículo" value={item??null} invalid={Boolean(lineErrors?.inventoryItemId)} disabled={busy} excludeIds={selectedIds.filter(id=>id!==lookup.value)} onChange={option=>{if(option)setPicked(current=>({...current,[option.id]:option}));lookup.onChange(option?.id??"")}}/>}/>{lineErrors?.inventoryItemId?.message&&<small className="field-error">{lineErrors.inventoryItemId.message}</small>}</td>
-                  <td className="inventory-transfer-available">{item?amount(item.quantity)+" "+item.unit:"—"}</td>
-                  <td><div className="inventory-transfer-quantity"><Input type="number" min="0.001" step="0.001" inputMode="decimal" placeholder="0" aria-label={"Cantidad"+(item?" en "+item.unit:"")} aria-invalid={Boolean(lineErrors?.quantity)} {...register(`items.${index}.quantity`)}/><span>{item?.unit}</span></div>{item&&<small className="inventory-transfer-hint">Disponible {amount(item.quantity)} {item.unit}</small>}{lineErrors?.quantity?.message&&<small className="field-error">{lineErrors.quantity.message}</small>}</td>
-                  <td><div className="table-actions"><RowActionButton action="remove" label="Quitar artículo" onClick={()=>remove(index)} disabled={busy||fields.length===1}/></div></td>
+                  <td className="inventory-transfer-available">{item?<>{amount(item.quantity)} <span>{item.unit}</span></>:"—"}</td>
+                  <td><span className="ds-input-shell inventory-transfer-quantity"><Input type="number" min="0.001" step="0.001" inputMode="decimal" placeholder="0" aria-label={"Cantidad"+(item?" en "+item.unit:"")} aria-invalid={Boolean(lineErrors?.quantity)} {...register(`items.${index}.quantity`)}/>{item&&<span>{item.unit}</span>}</span>{item&&<small className="inventory-transfer-hint">Disponible {amount(item.quantity)} {item.unit}</small>}{lineErrors?.quantity?.message&&<small className="field-error">{lineErrors.quantity.message}</small>}</td>
+                  <td><div className="table-actions"><IconButton icon="trash" label="Quitar artículo" className="danger" onClick={()=>remove(index)} disabled={busy||fields.length===1}/></div></td>
                 </tr>;
               })}</tbody>
             </table></div>}
@@ -84,11 +84,10 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
             {errors.items?.message&&<small className="field-error" role="alert">{errors.items.message}</small>}
           </section>
 
-          <FormSection icon="note" tone="neutral" title="Nota" bare>
+          {/* Un solo campo: sin título de sección que repita su etiqueta. */}
           <FormField label="Nota" optional error={errors.notes?.message}>
-            <Textarea rows={2} maxLength={500} placeholder="Motivo o referencia del traslado" {...register("notes")}/>
+            <Textarea rows={3} maxLength={500} placeholder="Motivo o referencia del traslado" {...register("notes")}/>
           </FormField>
-          </FormSection>
 
           {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>

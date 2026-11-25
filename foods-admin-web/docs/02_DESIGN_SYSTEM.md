@@ -272,7 +272,9 @@ El movimiento comunica un cambio de estado, nunca adorna.
   En móvil: altura mínima de 44 px y dos pestañas completas por grupo, del mismo
   ancho. Desplazamiento horizontal con ajuste al inicio de cada par, sin fragmentos
   de pestañas vecinas. Si el número es impar, la última queda sola en su grupo.
-  Etiquetas largas pueden envolver; nunca truncarlas. No convertir la selección en un CTA sólido.
+  Etiquetas largas pueden envolver; nunca truncarlas. Si una etiqueta se partiría en
+  dos líneas en móvil, `TabItem.shortLabel` da su versión de una línea solo para
+  ≤600 px («Por denominaciones» → «Denominaciones» en Cerrar turno). No convertir la selección en un CTA sólido.
   Pestañas con significado propio llevan `tone` (`TabTone`, solo la combinación viva
   aprobada: `primary` `#0052FC`, `indigo` `#4654CD`, `orange` `#FD9F0A`, `green`
   `#03C056`, `violet` `#7C3AED`; no se agregan otros): conservan pista y selección
@@ -351,8 +353,8 @@ archivo, así que cambiar un dibujo no toca las pantallas. No se importan
 iconos de Tabler (ni de otra librería) directamente en los módulos.
 `IconSize` limita los tamaños: 14 junto a texto de 12–13 px, 16 en chips,
 pestañas y pasos de cantidad, 18 en acciones y botones (por defecto en
-`Button` e `IconButton`), 20 en navegación, 24 en estados vacíos, 28 en el
-interruptor de estado.
+`Button` e `IconButton`), 20 en navegación y 24 en estados vacíos. El
+interruptor de estado ya no es un icono: es un switch dibujado (ver «Tablas»).
 
 El set es **monocromo**: el trazo hereda `currentColor` (`--icon-line`,
 `ink-800`, en superficies neutras). El color de identidad no va en el trazo:
@@ -539,6 +541,12 @@ de página en `03_LAYOUTS.md`. Resumen:
   en móvil. Entre secciones hay una línea fina `line`. `bare` conserva la
   retícula propia del formulario. Contenedores: `form-sections` (con relleno
   del cuerpo) o `form-sections-flow` (dentro de `ModalBody`).
+- **`FormSection appearance="vivid"`** (aprobado 2026-11-25 para Caja y
+  formularios con tabla): `IconTile` sólido de 32 px (`primary`, `brand` o
+  `danger`), título 16 px / 700 `ink-950`, línea fina `line` bajo el título y
+  14 px hasta los campos. Una sección con un solo campo no lleva título: la
+  etiqueta del campo basta («Observación», «Nota»). Mantiene la altura única de
+  control (38 px en escritorio).
 - **`ChoiceGroup`** reemplaza al select en elecciones únicas de hasta 5
   opciones (medio de pago, tipo de atención): botones de `--control-height` con
   icono; el elegido en `primary-50` con borde `primary-600`. Son radios nativos
@@ -1212,6 +1220,20 @@ de identidad/importes se apilan y las tablas tienen scroll horizontal controlado
 las acciones mantienen 44 px. El cierre ciego conserva el conteo sin revelar
 importes y presenta el informe después de confirmar.
 
+Composición del formulario de cierre (aprobada 2026-11-25, misma estructura con
+más aire y color): cabecera de 56 px; 24 px de aire bajo la cabecera y 20 px
+entre bloques. Si se muestra el resumen breve (`cash-close-summary`), es una
+ficha con borde: etiquetas 12 px / 600 en caja normal, cifras 16 px / 700,
+Ingresos y Egresos con flecha verde y roja, y «Efectivo esperado» como única
+franja sólida `primary-600` con cifra blanca 22 px / 800; en ≤760 px pasa a filas
+etiqueta/valor con «+ Ingresos» en `brand-700` y «− Egresos» en `danger-600`.
+«Conteo de efectivo» usa `FormSection appearance="vivid"`; el efectivo contado
+es `numeric-value` (16 px / 700). «Diferencia» es una ficha tenue con la cifra
+22 px / 800 y una píldora sólida blanca: Caja cuadrada `brand-600`, Sobrante
+`primary-600`, Faltante `danger-500` (fondos `brand-100`, `primary-100`,
+`danger-50`). «Observación» va sin título de sección. El aviso final es una banda
+`warning-100` con texto e icono `warning-600`. El pie es blanco.
+
 El modal de cierre limita su altura al viewport dinámico, incluidos los márgenes
 del fondo. Cabecera y pie con «Cerrar turno» siempre permanecen visibles;
 solo el contenido se desplaza, con barra visible cuando hay desborde. No envía
@@ -1853,9 +1875,12 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
 - Estados con texto e icono; nunca solo color. Activo/Activa usa un check
   circular verde; Inactivo/Inactiva usa un signo menos circular neutro. Se
   construyen con `Status active={...}` para compartir semántica y geometría.
-  Activar/Desactivar se maneja con un interruptor: verde (`brand-700`) y perilla
-  derecha cuando el registro está activo; rojo (`danger-600`) y perilla izquierda
-  cuando está inactivo.
+  Activar/Desactivar se maneja con un switch dibujado (`RowActionButton`
+  `activate`/`deactivate`, 2026-11-25): pista de 40 × 24 px y perilla blanca de
+  20 px; encendido en verde `brand-600` con la perilla a la derecha, apagado en
+  gris neutro `ink-300` con la perilla a la izquierda. Apagado no es rojo:
+  desactivar no es un error. Con el switch apagado, la identidad de la fila
+  (primera celda) baja a `ink-500`.
   El tooltip indica la acción siguiente y el nombre accesible identifica el
   registro sin cambiar al alternar el estado. La desactivación conserva su
   confirmación. Check y símbolo de prohibición no se usan como estas acciones.
@@ -2461,7 +2486,12 @@ Las pestañas de Pedidos son tipos de atención, no orígenes: Todos | Salón |
 Recojo | Delivery. «Mostrador» es Recojo y un pedido QR por WhatsApp es Salón
 (ocupa mesa), así que no tienen pestaña propia. En el listado el tipo de
 atención se representa una sola vez con icono: el avatar de la columna Pedido
-(`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). La
+(`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). Tonos del avatar
+por canal (2026-11-25), los mismos de las pestañas de canal: Salón índigo
+(`indigo-100`/`indigo-700`), Recojo naranja (`warning-100`/`warning-600`),
+Delivery verde (`brand-100`/`brand-700`), WhatsApp violeta (`digital-100`/
+`digital-700`) y mostrador neutro. El total de un pedido cancelado se muestra
+tachado en `ink-500`; la matriz de estados no cambia. La
 columna Canal muestra solo el texto y, si el pedido llegó por el QR de WhatsApp,
 una segunda línea discreta «vía WhatsApp» (`order-channel-origin`, icono
 `share` de 14 px, `ink-500`). Los pedidos QR también muestran su mozo. La

@@ -73,7 +73,7 @@ test("todos los tokens usados existen y sus dependencias no forman ciclos",()=>{
 
 test("editar los tokens base actualiza acciones, alias y transparencias compartidas",()=>{
   const changed=new Map(tokens);
-  changed.set("--primary-600","#123456");changed.set("--brand-700","#234567");changed.set("--danger-600","#345678");changed.set("--space-3","18px");
+  changed.set("--primary-600","#123456");changed.set("--brand-700","#234567");changed.set("--danger-600","#345678");changed.set("--space-3-5","18px");
   assert.equal(resolveTokens("var(--action-pay)",changed),"#123456");
   assert.equal(resolveTokens("var(--primary-600)",changed),"#123456");
   assert.equal(resolveTokens("var(--brand-700)",changed),"#234567");

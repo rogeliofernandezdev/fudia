@@ -179,7 +179,7 @@ oculta; al cerrar el teclado todo vuelve a su tamaño.
 
 | Tipo | Cuándo | Tamaño | Cierre y pie | Móvil |
 | --- | --- | --- | --- | --- |
-| `ConfirmDialog` | Desactivar, cancelar, anular, eliminar, descartar, quitar acceso | 400 | «Cancelar» (foco inicial) y confirmación `danger` o `primary` | Tarjeta centrada |
+| `ConfirmDialog` | Desactivar, cancelar, anular, eliminar, descartar, quitar acceso | 440 | «Cancelar» con X (foco inicial) y confirmación `danger` (icono prohibido) o `primary` (check), sobre una línea fina | Tarjeta centrada |
 | Formulario | Altas y ediciones | `sm` hasta 4 campos · `md` hasta 2 columnas · `lg` secciones o líneas · `xl` tablas o asistentes | X y «Cancelar» (`ModalCancel`), principal «Guardar» | `sm`/`md` hoja inferior; `lg`/`xl` pantalla completa |
 | Detalle | Consultar un registro | `md` o `lg` | Solo la X. Pie opcional para la acción del flujo; destructivas con `danger-outline` y `ConfirmDialog` | Pantalla completa (`lg`) u hoja |
 | Vista previa | Ticket, QR, informe PDF | `sm` o `xl` | «Descargar» secundaria, «Imprimir» primaria | Igual que su tamaño |
@@ -540,7 +540,12 @@ icono tiene un solo significado en toda la aplicación (ver
 - `ConfirmDialog`: requerido antes de desactivar o ejecutar una acción sensible;
   muestra el registro afectado, acción segura y estado pendiente. Su presentación
   es compacta: icono y título en una misma fila, centrados verticalmente, seguidos
-  del mensaje directo y acciones, sin recuadros internos ni divisores. El icono
+  del mensaje directo y acciones, sin recuadros internos. Medidas (2026-11-25):
+  tarjeta de 440 px con 28 px de relleno (24/20 en móvil), icono sólido de 48 px,
+  título 18 px / 700, 20 px hasta el mensaje, mensaje de 14 px `ink-700` y el
+  registro afectado directo en la frase («Usuario: **Lucía Mendoza**», nombre
+  16 px / 700), nunca en un contenedor gris. Las acciones van tras una línea fina
+  `line` con 20 px de aire y conservan la altura única de control. El icono
   conserva su tamaño y el título puede partirse en líneas sin desplazarlo. `description` admite texto o JSX para destacar únicamente el
   nombre con `<strong>` dentro de una frase. Productos y categorías preguntan
   «¿Deseas desactivar el producto/la categoría “nombre”?», sin explicaciones
@@ -706,6 +711,19 @@ promedio es obligatorio, y el backend repite esa validación. Las salidas no
 muestran el campo. El cuerpo de Transferir usa `grid-auto-rows:max-content`
 para que, al desplazarse, ninguna sección se comprima.
 
+Transferir a otro local (aprobado 2026-11-25, misma estructura con más aire):
+cuerpo con 24 px de relleno y 24 px entre secciones (20/16 en móvil). «Ruta del
+traslado» usa `FormSection appearance="vivid"` (azul) y «Artículos a transferir»
+el mismo título con `IconTile` verde sólido y línea fina bajo la fila del título
+y «Agregar artículo». El origen muestra el icono del local en `cloud-50` y la
+flecha va en un círculo `primary-100` de 32 px. La tabla vive en una ficha con
+borde y radio de tarjeta: cabecera marino de 40 px, celdas de 12 × 14 px,
+«Disponible» a la derecha con la unidad en `ink-500`, la unidad dentro del campo
+de cantidad (`ds-input-shell` de 120 px) y «Quitar artículo» con papelera en rojo
+tenue (`IconButton danger`). «Nota» va sin título de sección. En móvil
+«Disponible» se oculta y baja como ayuda bajo la cantidad, y «Agregar artículo»
+pasa debajo de la tabla, a todo el ancho y en píldora.
+
 ### Registrar ajuste
 
 Formulario corto sin `FormSection` ni títulos de sección (aprobado
@@ -723,9 +741,11 @@ en móvil), agrupados por proximidad:
 3. **Motivo** y **Cantidad** en la misma fila; **Costo unitario** (`MoneyInput`
    con el símbolo de la moneda) solo en entradas.
 4. **Observación** con `optional`, a todo el ancho.
-5. **Stock resultante** en una franja `primary-50` de una línea (valor en
-   negrita y la operación «12 + 2» a la derecha), igual para entradas y
-   salidas: sin verde ni ámbar, porque no es un estado ni una alerta.
+5. **Stock resultante** en una ficha `primary-100` con radio de tarjeta
+   (2026-11-25, como «Diferencia» en Cerrar turno): etiqueta 12 px / 600 y
+   valor 22 px / 800 en `primary-700`, la operación «12 + 2» a la derecha, igual
+   para entradas y salidas: sin verde ni ámbar, porque no es un estado ni una
+   alerta.
 
 ## Niveles de inventario
 
