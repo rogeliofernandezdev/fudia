@@ -14,7 +14,9 @@
 .cash-report-table{max-height:var(--size-480);overflow:auto}
 .cash-report-table table{min-width:var(--size-900);width:100%}
 .cash-report-table td{white-space:normal;vertical-align:top;overflow-wrap:anywhere}
+/* La última columna es siempre el importe: cabecera y celda alineadas a la derecha, como en todas las tablas. */
 .cash-report-table td:last-child{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.cash-report-table th:last-child{text-align:right}
 .cash-report-table td small{display:block;color:var(--ink-600);margin-top:var(--space-1)}
 .cash-report-methods{display:flex;gap:var(--space-3);padding:var(--space-3);flex-wrap:wrap}
 @media(max-width:600px){.cash-report-identity{grid-template-columns:minmax(0,1fr)}.cash-report-amounts{grid-template-columns:minmax(0,1fr)}.cash-report-amounts>div{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}}

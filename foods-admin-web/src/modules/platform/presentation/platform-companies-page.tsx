@@ -132,7 +132,7 @@ function CompaniesTable({data,busy,conciergeUsage}:{data:PlatformOrganizationPag
     <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={18}/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div></div></td>
     <td>{tax(company)}</td>
     <td>{plan(company)}</td>
-    <td>{price(company)}</td>
+    <td><b className="table-amount">{price(company)}</b></td>
     <td>{dueDate(company)}</td>
     <td>{lastPayment(company)}</td>
     <td>{standing(company)}</td>
