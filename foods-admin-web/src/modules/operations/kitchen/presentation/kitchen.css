@@ -22,6 +22,13 @@
 /* Pestañas (Tabs del design system) solo cuando los carriles no caben; cada una
    usa el tono de su carril (indigo, orange, purple) desde el componente. */
 .ds-tabs.kitchen-mobile-tabs{display:none}
+/* Excepción aprobada (2026-11-05): en Cocina el contador del carril conserva su color vivo, se lee a distancia. */
+.ds-tabs.kitchen-mobile-tabs button[class*=tone-]>b{color:var(--surface);border-color:transparent}
+.ds-tabs.kitchen-mobile-tabs button.tone-primary>b{background:var(--primary-600)}
+.ds-tabs.kitchen-mobile-tabs button.tone-indigo>b{background:var(--indigo-600)}
+.ds-tabs.kitchen-mobile-tabs button.tone-orange>b{background:var(--warning-500)}
+.ds-tabs.kitchen-mobile-tabs button.tone-green>b{background:var(--brand-600)}
+.ds-tabs.kitchen-mobile-tabs button.tone-purple>b{background:var(--purple-600)}
 
 /* Tablero */
 .kitchen-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3);align-items:start}

@@ -265,8 +265,11 @@ El movimiento comunica un cambio de estado, nunca adorna.
 - Pestañas generales: `Tabs` compartido, pista `cloud-150` con margen interior
   de 4 px y `radius-pill`; selección blanca con borde `primary-300` y texto azul
   `primary-700`. Icono semántico obligatorio de 16 px antes de cada etiqueta,
-  del set compartido y siempre visible, también en móvil. Contadores de 12 px,
-  fondo azul vivo `primary-600` y número blanco, de menor tamaño que la etiqueta;
+  del set compartido y siempre visible, también en móvil. Contadores de 12 px
+  neutros (2026-11-25, como en la referencia): píldora blanca con borde `line` y
+  cifra `ink-600`; sin registros, solo la cifra `ink-400`; en la pestaña activa,
+  `primary-100` con cifra `primary-700`. El color del canal o carril vive solo en el
+  icono; Cocina conserva su contador en el color del carril (se lee a distancia);
   en móvil (≤600 px) los contadores se ocultan en todas las pestañas para dejar
   el ancho a la etiqueta, que solo se parte con guion si una palabra no cabe sola.
   En móvil: altura mínima de 44 px y dos pestañas completas por grupo, del mismo

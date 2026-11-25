@@ -55,13 +55,16 @@ test("Productos y Mesas usan Tabs; no conservan implementación ni CSS de pesta�
  }
  assert.doesNotMatch(read("styles/globals.css"),/\.catalog-tabs(?!-row)/);
 });
-test("pestañas compartidas con pista contrastada, selección blanca y contadores índigo",()=>{
+test("pestañas compartidas con pista contrastada, selección blanca y contadores neutros",()=>{
  const css=sheet("design-system/styles/tabs.css");
  assert.equal(declaration(css,".ds-tabs button","min-height"),"var(--control-height)");
  assert.equal(declaration(css,".ds-tabs button.active","background"),"var(--surface)");
  assert.equal(declaration(css,".ds-tabs button.active","color"),"var(--primary-700)");
- assert.equal(declaration(css,".ds-tabs b","background"),"var(--primary-600)");
- assert.equal(declaration(css,".ds-tabs b","color"),"var(--surface)");
+ assert.equal(declaration(css,".ds-tabs b","background"),"var(--surface)");
+ assert.equal(declaration(css,".ds-tabs b","color"),"var(--ink-600)");
+ assert.equal(declaration(css,".ds-tabs b[data-empty]","color"),"var(--ink-400)");
+ assert.equal(declaration(css,".ds-tabs button.active>b","background"),"var(--primary-100)");
+ assert.equal(declaration(css,".ds-tabs button.tone-orange>b","background"),undefined,"el canal colorea el icono, no el contador");
  assert.equal(declaration(css,".ds-tabs","background"),"var(--cloud-150)");
  assert.equal(declaration(css,".ds-tabs","padding"),"var(--space-1)");
  assert.equal(declaration(css,".ds-tabs","border-radius"),"var(--radius-pill)");

@@ -457,7 +457,8 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(css.includes(".kitchen-attention{")&&/\.kitchen-attention\{[^}]*background:var\(--danger-500\);color:var\(--surface\)/.test(css),"«N con demora» es una píldora roja viva con texto blanco");
   assert.ok(kitchen.includes('icon:"cookingPot",tone:"orange"'),"La pestaña móvil de En preparación usa el tono naranja del carril");
   const tabsCss=read("src/design-system/styles/tabs.css");
-  assert.ok(tabsCss.includes(".ds-tabs button.tone-orange>b{background:var(--warning-500)}"),"El contador toma el color vivo de su pestaña");
+  assert.ok(read("src/modules/operations/kitchen/presentation/kitchen.css").includes(".ds-tabs.kitchen-mobile-tabs button.tone-orange>b{background:var(--warning-500)}"),"En Cocina el contador toma el color vivo de su carril");
+  assert.equal(tabsCss.includes("button.tone-orange>b{background"),false,"fuera de Cocina el contador es neutro");
   assert.ok(tabsCss.includes(".ds-tabs button[class*=tone-].active{color:var(--ink-950)"),"La etiqueta activa queda en tinta oscura, nunca en color vivo");
   assert.equal(css.includes("digital-"),false,"El violeta no aparece en Cocina: identifica WhatsApp");
   assert.equal(css.includes("#"),false,"Cocina no introduce colores hexadecimales directos");

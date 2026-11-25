@@ -37,7 +37,7 @@ export function Tabs<T extends string>({items,value,onChange,label,className=""}
       return <button key={item.value} type="button" role="tab" aria-selected={selected} tabIndex={selected?0:-1} className={[selected?"active":"",item.tone?`tone-${item.tone}`:""].filter(Boolean).join(" ")} data-value={item.value} onClick={()=>onChange(item.value)} onKeyDown={event=>move(event,index)}>
         <Icon name={item.icon} size={16}/>
         {item.shortLabel?<span><span className="ds-tab-label-long">{item.label}</span><span className="ds-tab-label-short">{item.shortLabel}</span></span>:<span>{item.label}</span>}
-        {item.count!==undefined&&<b>{item.count}</b>}
+        {item.count!==undefined&&<b data-empty={item.count===0||undefined}>{item.count}</b>}
       </button>;
     })}
   </div>;
