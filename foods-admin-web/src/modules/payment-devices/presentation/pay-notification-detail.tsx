@@ -19,7 +19,7 @@ type Props={notification:PayNotification|null;mode?:PayNotificationMode;onClose:
 
 const channelLabel=(channel:string)=>({salon:"Mesa",delivery:"Delivery",mostrador:"Venta rápida",recojo:"Recojo",whatsapp:"WhatsApp"}[channel]??channel);
 /** Mismos iconos y familias de color que los canales de Pedidos (índigo salón, verde delivery, naranja recojo/mostrador, violeta WhatsApp). */
-const channelTiles:Record<string,{icon:IconName;tone:IconTileTone}>={salon:{icon:"utensils",tone:"indigo"},delivery:{icon:"truck",tone:"brand"},recojo:{icon:"box",tone:"peach"},mostrador:{icon:"store",tone:"peach"},whatsapp:{icon:"share",tone:"digital"}};
+const channelTiles:Record<string,{icon:IconName;tone:IconTileTone}>={salon:{icon:"utensils",tone:"indigo"},delivery:{icon:"motorbike",tone:"brand"},recojo:{icon:"box",tone:"peach"},mostrador:{icon:"store",tone:"peach"},whatsapp:{icon:"share",tone:"digital"}};
 /** Antigüedad corta del pedido: «hace 15 min», «hace 2 h», «hace 3 d». PostgreSQL
  * puede enviar el desfase solo en horas («-05»), que el navegador no interpreta. */
 function orderAge(createdAt?:string,now=Date.now()){

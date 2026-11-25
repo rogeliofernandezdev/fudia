@@ -41,13 +41,27 @@ test("Cerrar turno: esperado en franja azul sólida y diferencia con píldora po
   assert.match(source,/appearance="vivid" title="Conteo de efectivo"/);
 });
 
-test("Pedidos: canal en su color de dominio y total tachado si el pedido se cancela",()=>{
+test("Pedidos: canal con icono en su color (moto para Delivery) y total tachado si el pedido se cancela",()=>{
   const css=read("src/modules/operations/styles/orders.css");
-  assert.match(css,/\.order-row-icon\.oc-salon\{\s*color:var\(--indigo-700\)/);
-  assert.match(css,/\.order-row-icon\.oc-recojo\{\s*color:var\(--warning-600\)/);
-  assert.match(css,/\.order-row-icon\.oc-delivery\{\s*color:var\(--brand-700\)/);
+  assert.match(css,/\.order-channel-name\.tone-indigo>svg\{color:var\(--indigo-600\)\}/);
+  assert.match(css,/\.order-channel-name\.tone-orange>svg\{color:var\(--warning-500\)\}/);
+  assert.match(css,/\.order-channel-name\.tone-green>svg\{color:var\(--brand-600\)\}/);
   assert.match(css,/\.order-table-total\.is-cancelled\{[^}]*text-decoration:line-through/);
-  assert.match(read("src/modules/operations/orders/presentation/orders-manager.tsx"),/o\.status==="cancelado"\?" is-cancelled":""/);
+  const source=read("src/modules/operations/orders/presentation/orders-manager.tsx");
+  assert.match(source,/className=\{`order-channel-name tone-\$\{channelTone\(service\)\}`\}/);
+  assert.match(source,/o\.status==="cancelado"\?" is-cancelled":""/);
+  assert.match(read("src/modules/operations/orders/presentation/order-meta.ts"),/delivery:"motorbike"/);
+});
+
+test("Tablas: más contraste e importes a la derecha con su cabecera",()=>{
+  const css=read("src/design-system/styles/data-table.css");
+  assert.match(css,/(^|\n)td\{[^}]*color:var\(--ink-700\)/);
+  assert.match(css,/td small\{[^}]*color:var\(--ink-500\)/);
+  assert.match(css,/\.data-table tbody td:is\(\.table-amount,:has\(>\.table-amount\)\)\{text-align:right\}/);
+  assert.match(css,/thead th:nth-child\(5\),[\s\S]*?thead th:nth-child\(8\)\{text-align:right\}/);
+  const expenses=read("src/modules/expenses/presentation/expenses-page.tsx");
+  assert.match(expenses,/item\.status==="void"\?" is-void":""/);
+  assert.match(expenses,/registeredSameDay\(item\.createdAt,item\.businessDate,location\?\.timezone\)\?\{timeStyle:"short"\}/);
 });
 
 test("Cerrar turno: el cierre ciego oculta los importes y el normal siempre muestra el resumen, sin repetirlo en el informe",()=>{

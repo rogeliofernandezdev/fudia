@@ -143,11 +143,9 @@
   white-space:nowrap;
 }
 
-/* Canal en su color de dominio (2026-11-25), igual que las pestañas de canal:
-   Salón índigo, Recojo naranja, Delivery verde, WhatsApp violeta; mostrador neutro. */
 .order-row-icon.oc-salon{
-  color:var(--indigo-700);
-  background:var(--indigo-100);
+  color:var(--primary-700);
+  background:var(--primary-100);
 }
 
 .order-row-icon.oc-whatsapp{
@@ -155,17 +153,9 @@
   background:var(--digital-100);
 }
 
-.order-row-icon.oc-delivery{
-  color:var(--brand-700);
-  background:var(--brand-100);
-}
-
+.order-row-icon.oc-delivery,
+.order-row-icon.oc-mostrador,
 .order-row-icon.oc-recojo{
-  color:var(--warning-600);
-  background:var(--warning-100);
-}
-
-.order-row-icon.oc-mostrador{
   color:var(--ink-600);
   background:var(--cloud-100);
 }
@@ -177,6 +167,23 @@
   font-size:var(--font-size-label);
   font-weight:var(--table-secondary-weight);
 }
+
+/* Canal con su icono en el color de dominio (2026-11-25), el mismo de las pestañas de
+   canal: Salón índigo, Recojo naranja, Delivery verde. El texto sigue neutro. */
+.order-channel-name{
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-1-5);
+  color:var(--ink-700);
+  font-size:var(--font-size-control);
+}
+
+.order-channel-name>svg{flex:none}
+.order-channel-name.tone-indigo>svg{color:var(--indigo-600)}
+.order-channel-name.tone-orange>svg{color:var(--warning-500)}
+.order-channel-name.tone-green>svg{color:var(--brand-600)}
+.order-channel-name.tone-violet>svg{color:var(--digital-500)}
+.order-channel-name.tone-primary>svg{color:var(--primary-600)}
 
 /* Origen del pedido bajo su tipo de atención (QR de mesa por WhatsApp). */
 .order-channel-origin{

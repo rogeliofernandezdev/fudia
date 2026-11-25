@@ -76,7 +76,7 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
        {o.origin==="counter"&&<small className="order-mobile-origin">{originLabel(o.origin)}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
-      <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>
+      <td><span className="order-channel-cell"><span className={`order-channel-name tone-${channelTone(service)}`}><Icon name={channelIcons[service]??"receipt"} size={16}/>{channelLabel(service)}</span>{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>
       <td><Status tone={meta.tone} solid>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className={`order-table-total table-amount${o.status==="cancelado"?" is-cancelled":""}`}>{money(o.total)}</b></td>

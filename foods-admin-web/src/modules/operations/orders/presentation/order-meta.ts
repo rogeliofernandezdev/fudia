@@ -2,7 +2,7 @@ import type {IconName,IconTileTone,TabTone} from "@/design-system";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 
 /** Owner: operations/orders — presentación compartida por Pedidos y Salón. */
-export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
+export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"motorbike",whatsapp:"share"};
 
 /** Color de identidad de cada canal en pestañas, con la misma combinación viva aprobada:
  * azul Todos, índigo Salón, naranja Recojo, verde Delivery y violeta WhatsApp. */

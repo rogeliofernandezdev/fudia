@@ -29,7 +29,7 @@ const paymentMeta={
   paid:{label:"Pagada",tone:"green" as const},
 };
 const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
-const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
+const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"motorbike",whatsapp:"share"};
 
 export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const qc=useQueryClient();

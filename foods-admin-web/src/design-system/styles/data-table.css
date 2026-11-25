@@ -6,9 +6,9 @@
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
 table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--navigation-900)}
 th{height:var(--table-header-height);padding:0 var(--table-cell-padding-inline);color:var(--surface);background:transparent;text-align:left;font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-td{height:var(--table-row-height);padding:0 var(--table-cell-padding-inline);border-top:var(--stroke-1) solid var(--line);color:var(--ink-600);font-size:var(--font-size-control)}
+td{height:var(--table-row-height);padding:0 var(--table-cell-padding-inline);border-top:var(--stroke-1) solid var(--line);color:var(--ink-700);font-size:var(--font-size-control)}
 td:first-child{color:var(--ink-950);font-weight:var(--weight-semibold)}
-td small{display:block;margin-top:var(--space-0-5);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
+td small{display:block;margin-top:var(--space-0-5);color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
 tbody tr{transition:background var(--duration-fast)}
 /* Registro inactivo (interruptor apagado): la identidad baja a gris para distinguirse de un vistazo. */
 tbody tr:has(.status-toggle[aria-checked="false"])>td:first-child,tbody tr:has(.status-toggle[aria-checked="false"])>td:first-child :is(b,strong){color:var(--ink-500)}
@@ -51,6 +51,15 @@ tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon
 .data-table tbody td :is(b,strong){font-weight:inherit}
 .data-table tbody :is(td.table-primary,td .table-primary){font-weight:var(--table-primary-weight)}
 .data-table tbody :is(td.table-amount,td .table-amount){font-weight:var(--table-amount-weight)}
+/* Importes alineados a la derecha (2026-11-25), con su cabecera, en cualquier columna que los marque con `table-amount`. */
+.data-table tbody td:is(.table-amount,:has(>.table-amount)){text-align:right}
+.data-table:has(tbody td:nth-child(2):is(.table-amount,:has(>.table-amount))) thead th:nth-child(2),
+.data-table:has(tbody td:nth-child(3):is(.table-amount,:has(>.table-amount))) thead th:nth-child(3),
+.data-table:has(tbody td:nth-child(4):is(.table-amount,:has(>.table-amount))) thead th:nth-child(4),
+.data-table:has(tbody td:nth-child(5):is(.table-amount,:has(>.table-amount))) thead th:nth-child(5),
+.data-table:has(tbody td:nth-child(6):is(.table-amount,:has(>.table-amount))) thead th:nth-child(6),
+.data-table:has(tbody td:nth-child(7):is(.table-amount,:has(>.table-amount))) thead th:nth-child(7),
+.data-table:has(tbody td:nth-child(8):is(.table-amount,:has(>.table-amount))) thead th:nth-child(8){text-align:right}
 .data-table tbody td :is(small,.table-secondary){font-weight:var(--table-secondary-weight)}
 .data-table tbody td:first-child small{margin-left:0}
 /* Solo se suprime un tile decorativo si la celda ya tiene identidad textual.

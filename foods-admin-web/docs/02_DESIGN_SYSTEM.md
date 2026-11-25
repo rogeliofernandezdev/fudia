@@ -2076,6 +2076,12 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
   pedido se oculta en móvil, su etiqueta textual pasa bajo el cliente o mesa:
   quitar el icono no puede hacer perder ese dato. Esta regla vive en el CSS
   compartido y se aplica a todos los listados `DataTable`.
+- Contraste (2026-11-25, todas las tablas): datos en `ink-700` y segunda línea
+  (`small`) en `ink-500` de 12 px. Los importes marcados con `table-amount` se
+  alinean a la derecha junto con su cabecera, en cualquier columna. Un registro
+  anulado o cancelado muestra su importe tachado en `ink-500` (Gastos, Pedidos).
+  En Gastos la segunda línea de la fecha muestra solo la hora cuando el registro
+  es del mismo día operativo; si no, fecha y hora cortas.
 - Cabecera en marino `navigation-900` con texto blanco en caja normal
   (12 px / 600, sin mayúsculas ni tracking), así el azul `primary-600` queda solo
   para acciones. Sin filas alternas: las filas se separan con una línea fina
@@ -2489,13 +2495,13 @@ Las pestañas de Pedidos son tipos de atención, no orígenes: Todos | Salón |
 Recojo | Delivery. «Mostrador» es Recojo y un pedido QR por WhatsApp es Salón
 (ocupa mesa), así que no tienen pestaña propia. En el listado el tipo de
 atención se representa una sola vez con icono: el avatar de la columna Pedido
-(`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). Tonos del avatar
-por canal (2026-11-25), los mismos de las pestañas de canal: Salón índigo
-(`indigo-100`/`indigo-700`), Recojo naranja (`warning-100`/`warning-600`),
-Delivery verde (`brand-100`/`brand-700`), WhatsApp violeta (`digital-100`/
-`digital-700`) y mostrador neutro. El total de un pedido cancelado se muestra
-tachado en `ink-500`; la matriz de estados no cambia. La
-columna Canal muestra solo el texto y, si el pedido llegó por el QR de WhatsApp,
+(`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). El avatar de la primera celda queda oculto por la regla de iconos decorativos;
+el color de canal vive en la columna Canal (2026-11-25): icono de 16 px en el tono
+de las pestañas de canal (Salón `indigo-600`, Recojo `warning-500`, Delivery
+`brand-600` con icono de moto, nunca camión) junto al texto en `ink-700`. El total
+de un pedido cancelado se muestra tachado en `ink-500`; la matriz de estados no
+cambia. La
+columna Canal muestra su icono y el texto y, si el pedido llegó por el QR de WhatsApp,
 una segunda línea discreta «vía WhatsApp» (`order-channel-origin`, icono
 `share` de 14 px, `ink-500`). Los pedidos QR también muestran su mozo. La
 venta por mostrador (`origin=counter`, del cajero o del QR de mostrador por

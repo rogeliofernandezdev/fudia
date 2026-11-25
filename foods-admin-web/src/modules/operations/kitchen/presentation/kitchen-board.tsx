@@ -19,7 +19,7 @@ const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;descripti
 /** Icono por área de preparación; las áreas y sus nombres llegan del API. */
 const destinationIcons:Record<string,IconName>={kitchen:"chefHat",bar:"drink"};
 /** Icono por origen del pedido (canal), igual que en Pedidos y Salón. */
-const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
+const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"motorbike",whatsapp:"share"};
 
 function parseIsoDate(value:string){
   if(!value)return null;

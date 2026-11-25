@@ -12,7 +12,7 @@ export type SaleDetailPreview={tableName?:string;customerName?:string;channel:st
 /** `refund` solo llega con permiso de caja; `refundDisabled` lo bloquea mientras no haya turno para registrar la salida. */
 type Props={loading:boolean;error?:string;data?:SaleDetail;preview?:SaleDetailPreview;money:(value:string|number)=>string;date:(value:string)=>string;close:()=>void;retry:()=>void;ticket?:()=>void;refund?:(payment:SalePayment)=>void;refundDisabled?:boolean};
 const channels:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
-const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
+const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"motorbike",whatsapp:"share"};
 const paymentStates={paid:{label:"Pagada",tone:"green" as const},partial:{label:"Pago parcial",tone:"orange" as const},pending:{label:"Sin pagos",tone:"gray" as const}};
 const titleId="sales-detail-title";
 
