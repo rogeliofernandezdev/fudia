@@ -63,8 +63,9 @@ test("solo la variante sólida usa texto blanco; los atributos usan la etiqueta 
  assert.equal(rules.get(".tag").get("color"),"var(--ink-700)");
  const source=read("../src/design-system/page-header.tsx");
  assert.match(source,/solid=false/,"Status es suave salvo que la pantalla pida `solid`");
- const solidUsers=["../src/modules/operations/orders/presentation/orders-manager.tsx","../src/modules/operations/orders/presentation/order-detail-dialog.tsx","../src/modules/operations/salon/presentation/salon-manager.tsx"];
+ const solidUsers=["../src/modules/operations/orders/presentation/order-detail-dialog.tsx","../src/modules/operations/salon/presentation/salon-manager.tsx"];
  for(const file of solidUsers)assert.match(read(file),/<Status [^>]*solid/,`${file} marca el estado operativo como sólido`);
+ assert.doesNotMatch(read("../src/modules/operations/orders/presentation/orders-manager.tsx"),/<Status [^>]*solid/,"la tabla de Pedidos usa estados suaves (2026-11-25): diez píldoras sólidas saturaban la lista");
  assert.doesNotMatch(read("../src/modules/operations/pos/presentation/pos-page.tsx"),/<Status [^>]*solid/,"Cobros muestra solo el estado de cobro; la preparación vive en Pedidos");
  assert.doesNotMatch(read("../src/modules/menu/products/presentation/catalog-manager.tsx"),/<Status tone=\{p\.quantityControl/,"el control de cantidad es atributo, no estado");
 });

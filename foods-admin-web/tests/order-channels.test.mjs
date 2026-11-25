@@ -18,6 +18,7 @@ test("pedidos: las pestañas son tipos de atención y WhatsApp QR se agrupa en S
  const channel=read("order-channel.tsx");
  assert.ok(channel.includes('channel==="whatsapp"&&<small className="order-channel-origin">'),"el origen WhatsApp queda como dato secundario");
  assert.ok(manager.includes('service==="salon"&&<small className="order-staff">'),"los pedidos QR de mesa también muestran el mozo");
+ assert.doesNotMatch(manager,/Cobrado por:/,"«Cobrado por» queda en el detalle: una sola línea secundaria en la fila");
 });
 
 test("pedidos: la venta por mostrador conserva su origen también en móvil",()=>{

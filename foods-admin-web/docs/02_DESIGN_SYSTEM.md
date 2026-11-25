@@ -646,12 +646,16 @@ Reglas de aplicación:
   propios, colores hexadecimales locales ni mapeos distintos por pantalla.
 - Tres niveles (aprobado 2026-11-05, equilibrio como la referencia): **sólido**
   (`<Status solid>`: relleno vivo, texto e icono blancos) solo para estados operativos
-  del pedido en Pedidos, Salón, Cobro y el estado de la cabecera del detalle; **suave**
+  del pedido en Salón, Cobro y el estado de la cabecera del detalle; **suave**
   (por defecto: fondo tenue, texto oscuro y punto de su familia) para registros
   —activo/inactivo, compras, inventario, caja y turnos, plataforma— y para cuenta y
   pago; **neutro** (`Tag`: gris con icono, sin color semántico) para atributos o
   configuración que no son estados, como el control de cantidad. El verde vivo queda
   reservado a lo operativo; una fila de catálogo no lleva más de un color suave.
+- Tabla de Pedidos (2026-11-25): el estado de cada fila es **suave**, no sólido. Diez
+  píldoras sólidas por página saturaban la lista frente al canal y el total; la
+  familia de color de cada estado no cambia. Salón, Cobro y la cabecera del detalle
+  conservan el sólido.
 - Equilibrio por pantalla (crítica 2026-11-05, referencia Zillo): en Salón el
   casetón de la mesa apenas se tiñe (`primary-100` al 50 %, aprobado en vivo el
   2026-11-13) y el único color pleno de la mesa ocupada es el plato; en
@@ -2487,8 +2491,9 @@ márgenes de 24/16 px y pie; `ModalWorkspace` es opcional, no una plantilla forz
 La autoría se presenta como información de lectura, no como botones: «Mozo» y
 «Cobrado por», con etiquetas neutras, nombres completos que admiten salto de línea
 y un espaciado compartido. Salón y Pedidos usan la misma franja en sus detalles.
-Las tarjetas de mesa y las filas de Pedidos conservan estos nombres también en
-móvil. No se muestra un cobrador antes de registrar pagos. Las acciones de atención
+Las tarjetas de mesa conservan estos nombres también en móvil. Las filas de
+Pedidos muestran una sola línea secundaria (2026-11-25): «Mozo» en Salón; «Cobrado
+por» queda en el detalle del pedido para que la fila no crezca. No se muestra un cobrador antes de registrar pagos. Las acciones de atención
 no aparecen para otro mozo; el acceso de cobro mantiene su permiso independiente.
 
 Las pestañas de Pedidos son tipos de atención, no orígenes: Todos | Salón |

@@ -72,13 +72,12 @@ export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
        <b>{subject}</b>
        {secondary&&<small>{secondary}</small>}
        {service==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
-       {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
        {o.origin!=="counter"&&<small className="order-mobile-channel">{channelLabel(service)}{o.channel==="whatsapp"?" · vía WhatsApp":""}</small>}
        {o.origin==="counter"&&<small className="order-mobile-origin">{originLabel(o.origin)}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><OrderChannel channel={o.channel} origin={o.origin} label={channelLabel(service)}/></td>
-      <td><Status tone={meta.tone} solid>{meta.label}</Status></td>
+      <td><Status tone={meta.tone}>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className={`order-table-total table-amount${o.status==="cancelado"?" is-cancelled":""}`}>{money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/><OrderDispatchActions order={o} busy={list.isPlaceholderData||advance.isPending||cancel.isPending}/></div></td>
