@@ -10,7 +10,7 @@ import (
 // de una ronda pedida por Fudia Concierge sobre una cuenta ya enviada.
 func (r *Orders) HoldRoundItems(ctx context.Context, s scope, orderID, roundID string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
-		UPDATE order_service_items si SET status='nuevo',updated_at=now()
+		UPDATE order_service_items si SET status='nuevo',preparing_started_at=NULL,updated_at=now()
 		FROM order_items i
 		WHERE i.id=si.order_item_id AND i.organization_id=si.organization_id
 		  AND si.order_id=$1 AND si.organization_id=$2 AND i.kitchen_round_id=$3::uuid`, orderID, s.OrganizationID, roundID)
@@ -73,7 +73,7 @@ func (r *Orders) UnsentRecipients(ctx context.Context, s scope, orderID string) 
 func (r *Orders) SendUnsentItems(ctx context.Context, s scope, orderID string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 		UPDATE order_service_items
-		SET status=CASE WHEN destination='direct' THEN 'listo' ELSE 'confirmado' END,created_at=now(),updated_at=now()
+		SET status=CASE WHEN destination='direct' THEN 'listo' ELSE 'confirmado' END,preparing_started_at=NULL,created_at=now(),updated_at=now()
 		WHERE order_id=$1 AND organization_id=$2 AND status='nuevo'`, orderID, s.OrganizationID)
 	return tag.RowsAffected(), orderError(err)
 }

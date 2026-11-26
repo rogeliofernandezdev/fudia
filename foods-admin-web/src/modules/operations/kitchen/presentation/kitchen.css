@@ -78,6 +78,12 @@
 .kitchen-ticket-item small{color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-snug)}
 .kitchen-ticket-item em{display:inline-flex;align-items:center;gap:var(--space-1);width:fit-content;max-width:100%;margin-top:var(--space-0-5);padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-control);background:var(--kds-note);color:var(--kds-note-ink);font-size:var(--font-size-label);font-style:normal;font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
 .kitchen-ticket-item em svg{flex:0 0 auto}
+/* Tiempo propio del plato: gris antes de empezar; en preparación, cuenta regresiva naranja del carril a tiempo y rojo en su último cuarto y al vencer. */
+.kitchen-ticket-item .kitchen-plate-timer{display:inline-flex;align-items:center;gap:var(--space-1);width:fit-content;color:var(--kds-cooking-dark);font-weight:var(--weight-bold);white-space:nowrap;font-variant-numeric:tabular-nums}
+.kitchen-ticket-item .kitchen-plate-timer svg{flex:0 0 auto}
+.kitchen-ticket-item .kitchen-plate-timer[data-tone=neutral]{color:var(--ink-600)}
+.kitchen-ticket-item .kitchen-plate-timer[data-tone=warning]{color:var(--danger-700)}
+.kitchen-ticket-item .kitchen-plate-timer[data-tone=late]{padding:0 var(--space-1-5);border-radius:var(--radius-control);background:var(--danger-500);color:var(--surface)}
 /* Marcado por plato en «En preparación»: fila táctil de 44 px con el check circular
    (anillo line-strong; marcado en el naranja del carril con check blanco, como la
    referencia). El plato listo se tacha y suaviza. */
@@ -85,6 +91,8 @@
 button.kitchen-plate{cursor:pointer;touch-action:manipulation}
 button.kitchen-plate:disabled{cursor:progress}
 .kitchen-plate-check{display:grid;place-items:center;width:var(--size-20);height:var(--size-20);margin-top:var(--space-1);border:var(--stroke-1-5) solid var(--line-strong);border-radius:50%;background:var(--surface);color:transparent;transition:var(--transition-surface)}
+/* Plato empezado: aro naranja del carril con relleno suave; por preparar queda el aro gris y listo el check relleno. */
+.kitchen-plate[data-state=preparando] .kitchen-plate-check{border-color:var(--kds-cooking);background:var(--kds-cooking-soft)}
 .kitchen-plate[data-ready=true] .kitchen-plate-check{border-color:var(--kds-cooking);background:var(--kds-cooking);color:var(--surface)}
 .kitchen-plate[data-ready=true]>div>span{color:var(--ink-500);text-decoration:line-through}
 /* Progreso de la comanda: texto explícito y barra fina primary sobre cloud-100. */

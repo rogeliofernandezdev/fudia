@@ -34,6 +34,10 @@ func TestKitchenItemsReadyOneByOne(t *testing.T) {
 		return id
 	}
 	lomo, ceviche, chicha := product("Lomo saltado", "kitchen"), product("Ceviche", "kitchen"), product("Chicha morada", "bar")
+	// Solo el lomo define tiempo de preparación: Cocina muestra su cuenta regresiva.
+	if _, err := pool.Exec(ctx, `UPDATE products SET prep_minutes=15 WHERE id=$1`, lomo); err != nil {
+		t.Fatal(err)
+	}
 
 	call := func(method, target, body string, handler http.HandlerFunc, pathValues ...string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -57,6 +61,8 @@ func TestKitchenItemsReadyOneByOne(t *testing.T) {
 
 	type plate struct {
 		ID, Name, Qty, Status string
+		PrepMinutes           *int
+		PreparingSince        string
 	}
 	type ticket struct {
 		ID, OrderID, Status string
@@ -121,10 +127,36 @@ func TestKitchenItemsReadyOneByOne(t *testing.T) {
 	if !strings.HasSuffix(bar.ID, "~bar") || len(bar.Items) != 1 {
 		t.Fatalf("bar ticket: %+v", bar)
 	}
-	if w = call("PATCH", "/v1/admin/kitchen/tickets/"+kitchen.ID+"/status", `{"status":"preparando"}`, api.updateKitchenTicketStatus, "id", kitchen.ID); w.Code != 204 {
-		t.Fatalf("start ticket: %d %s", w.Code, w.Body.String())
-	}
 	lomoPlate, cevichePlate := byName(kitchen, "Lomo saltado"), byName(kitchen, "Ceviche")
+	if lomoPlate.PrepMinutes == nil || *lomoPlate.PrepMinutes != 15 || lomoPlate.PreparingSince != "" || cevichePlate.PrepMinutes != nil {
+		t.Fatalf("each plate carries its own preparation time, not started yet: %+v", kitchen.Items)
+	}
+	// Ningún plato se salta un estado: de por preparar no pasa directo a listo.
+	if w = mark(kitchen.ID, lomoPlate.ID, "listo"); w.Code != 409 || !strings.Contains(w.Body.String(), "kitchen_item_unavailable") {
+		t.Fatalf("pending plate cannot jump to ready: %d %s", w.Code, w.Body.String())
+	}
+	// El lomo empieza solo: el ceviche sigue esperando sin hora de inicio.
+	if w = mark(kitchen.ID, lomoPlate.ID, "preparando"); w.Code != 204 {
+		t.Fatalf("start lomo alone: %d %s", w.Code, w.Body.String())
+	}
+	kitchen = board("kitchen")
+	started := byName(kitchen, "Lomo saltado").PreparingSince
+	if kitchen.Status != "preparando" || started == "" || byName(kitchen, "Ceviche").Status != "confirmado" || byName(kitchen, "Ceviche").PreparingSince != "" {
+		t.Fatalf("only the lomo starts: %+v", kitchen)
+	}
+	if orderStatus() != "preparando" {
+		t.Fatalf("the first plate started starts the order: %s", orderStatus())
+	}
+	if w = call("PATCH", "/v1/admin/kitchen/tickets/"+kitchen.ID+"/status", `{"status":"listo"}`, api.updateKitchenTicketStatus, "id", kitchen.ID); w.Code != 409 || !strings.Contains(w.Body.String(), "kitchen_plates_not_started") {
+		t.Fatalf("«Marcar listo» needs every plate started: %d %s", w.Code, w.Body.String())
+	}
+	// «Iniciar» sobre la comanda en marcha empieza lo que faltaba sin tocar el lomo.
+	if w = call("PATCH", "/v1/admin/kitchen/tickets/"+kitchen.ID+"/status", `{"status":"preparando"}`, api.updateKitchenTicketStatus, "id", kitchen.ID); w.Code != 204 {
+		t.Fatalf("start the rest: %d %s", w.Code, w.Body.String())
+	}
+	if kitchen = board("kitchen"); byName(kitchen, "Ceviche").PreparingSince == "" || byName(kitchen, "Lomo saltado").PreparingSince != started {
+		t.Fatalf("the rest starts on its own clock: %+v", kitchen.Items)
+	}
 
 	// Un plato listo: la comanda sigue en preparación y nadie recibe aviso.
 	if w = mark(kitchen.ID, lomoPlate.ID, "listo"); w.Code != 204 {
@@ -158,6 +190,9 @@ func TestKitchenItemsReadyOneByOne(t *testing.T) {
 	if w = mark(kitchen.ID, lomoPlate.ID, "preparando"); w.Code != 204 || byName(board("kitchen"), "Lomo saltado").Status != "preparando" {
 		t.Fatalf("undo lomo: %d %s", w.Code, w.Body.String())
 	}
+	if again := byName(board("kitchen"), "Lomo saltado").PreparingSince; again != started {
+		t.Fatalf("undo keeps the plate's start time: %s -> %s", started, again)
+	}
 	if w = mark(kitchen.ID, lomoPlate.ID, "listo"); w.Code != 204 {
 		t.Fatalf("lomo ready again: %d %s", w.Code, w.Body.String())
 	}
@@ -181,7 +216,13 @@ func TestKitchenItemsReadyOneByOne(t *testing.T) {
 		t.Fatalf("a ready ticket cannot be reopened by plate: %d %s", w.Code, w.Body.String())
 	}
 
-	// Barra: un plato confirmado puede marcarse listo directamente.
+	// Barra: la chicha también pasa por preparación antes de quedar lista.
+	if w = mark(bar.ID, bar.Items[0].ID, "listo"); w.Code != 409 {
+		t.Fatalf("bar plate cannot skip preparation: %d %s", w.Code, w.Body.String())
+	}
+	if w = mark(bar.ID, bar.Items[0].ID, "preparando"); w.Code != 204 {
+		t.Fatalf("bar start: %d %s", w.Code, w.Body.String())
+	}
 	if w = mark(bar.ID, bar.Items[0].ID, "listo"); w.Code != 204 {
 		t.Fatalf("bar ready: %d %s", w.Code, w.Body.String())
 	}

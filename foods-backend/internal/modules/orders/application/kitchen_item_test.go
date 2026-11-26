@@ -59,10 +59,32 @@ func (r *stationRepo) StationStatus(_ context.Context, _ scope, _ string, id, de
 	}
 	return "listo", nil
 }
-func (r *stationRepo) UpdateStationItems(_ context.Context, _ scope, _ string, id, destination, status, current string) (int64, error) {
+func (r *stationRepo) StationPlateCounts(_ context.Context, _ scope, _ string, id, destination string) (int, int, error) {
+	confirmed, preparing := 0, 0
+	for _, p := range r.plates {
+		if p.ticket == id && p.destination == destination {
+			if p.status == "confirmado" {
+				confirmed++
+			}
+			if p.status == "preparando" {
+				preparing++
+			}
+		}
+	}
+	return confirmed, preparing, nil
+}
+
+// previousStep es el único estado desde el que un plato llega a status.
+func previousStep(status string) string {
+	if status == "preparando" {
+		return "confirmado"
+	}
+	return "preparando"
+}
+func (r *stationRepo) UpdateStationItems(_ context.Context, _ scope, _ string, id, destination, status string) (int64, error) {
 	var n int64
 	for _, p := range r.plates {
-		if p.ticket == id && p.destination == destination && (p.status == current || (status == "listo" && (p.status == "confirmado" || p.status == "preparando"))) {
+		if p.ticket == id && p.destination == destination && p.status == previousStep(status) {
 			p.status = status
 			n++
 		}
@@ -74,7 +96,7 @@ func (r *stationRepo) UpdateStationItem(_ context.Context, _ scope, _ string, id
 		if p.id != itemID || p.ticket != id || p.destination != destination {
 			continue
 		}
-		if (status == "listo" && (p.status == "confirmado" || p.status == "preparando")) || (status == "preparando" && p.status == "listo") {
+		if (status == "listo" && p.status == "preparando") || (status == "preparando" && (p.status == "confirmado" || p.status == "listo")) {
 			p.status = status
 			return 1, nil
 		}
@@ -166,25 +188,45 @@ func TestKitchenLastPlateMatchesWholeTicketReady(t *testing.T) {
 	}
 }
 
-func TestKitchenItemReadyFromConfirmedAndWholeTicketFinishesMixedPlates(t *testing.T) {
-	service, repo, _, notices := stationService(
+// Cada plato empieza por sí solo y ninguno se salta un estado: el lomo de 20 min
+// arranca primero, el ceviche después, y la comanda solo queda lista con ambos hechos.
+func TestKitchenPlatesStartIndependentlyAndNeverSkipStates(t *testing.T) {
+	service, repo, audit, notices := stationService(
 		&stationPlate{"lomo", "round-1", "kitchen", "confirmado"},
 		&stationPlate{"ceviche", "round-1", "kitchen", "confirmado"},
 	)
 	ctx := context.Background()
-	if err := service.UpdateKitchenItem(ctx, scope{}, "round-1", "lomo", OrderStatusInput{Status: "listo"}); err != nil {
-		t.Fatal(err)
+	if code := failureCode(service.UpdateKitchenItem(ctx, scope{}, "round-1", "lomo", OrderStatusInput{Status: "listo"})); code != "kitchen_item_unavailable" {
+		t.Fatalf("a plate cannot jump from pending to ready: %q", code)
 	}
-	// Devuelto a preparación, convive con un plato aún confirmado.
 	if err := service.UpdateKitchenItem(ctx, scope{}, "round-1", "lomo", OrderStatusInput{Status: "preparando"}); err != nil {
 		t.Fatal(err)
+	}
+	if repo.plates[0].status != "preparando" || repo.plates[1].status != "confirmado" {
+		t.Fatalf("only the lomo starts: %+v", repo.plates)
+	}
+	if audit.actions[len(audit.actions)-1] != "preparation.preparando" {
+		t.Fatalf("the first plate started starts the ticket like «Iniciar»: %v", audit.actions)
+	}
+	if code := failureCode(service.UpdateKitchen(ctx, scope{}, "round-1", OrderStatusInput{Status: "listo"})); code != "kitchen_plates_not_started" {
+		t.Fatalf("«Marcar listo» needs every plate started: %q", code)
+	}
+	// «Iniciar» sobre la comanda en marcha empieza solo lo que faltaba.
+	if err := service.UpdateKitchen(ctx, scope{}, "round-1", OrderStatusInput{Status: "preparando"}); err != nil {
+		t.Fatal(err)
+	}
+	if repo.plates[0].status != "preparando" || repo.plates[1].status != "preparando" {
+		t.Fatalf("start the rest: %+v", repo.plates)
+	}
+	if code := failureCode(service.UpdateKitchen(ctx, scope{}, "round-1", OrderStatusInput{Status: "preparando"})); code != "invalid_kitchen_transition" {
+		t.Fatalf("nothing left to start: %q", code)
 	}
 	if err := service.UpdateKitchen(ctx, scope{}, "round-1", OrderStatusInput{Status: "listo"}); err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range repo.plates {
 		if p.status != "listo" {
-			t.Fatalf("«Marcar listo» must finish every pending plate: %+v", repo.plates)
+			t.Fatalf("«Marcar listo» finishes the plates in preparation: %+v", repo.plates)
 		}
 	}
 	if len(notices.ready) != 1 {

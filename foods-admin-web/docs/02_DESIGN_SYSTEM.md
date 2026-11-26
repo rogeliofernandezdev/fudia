@@ -1433,12 +1433,22 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   de su carril (`indigo`, `orange`, `green`; ver Pestañas generales).
 - Marcado por plato (2026-11-05): en «En preparación» cada línea de la comanda es una
   fila táctil de 44 px con el check circular del sistema (anillo 20 px `line-strong`;
-  marcado `primary-600` con check blanco). Tocarla marca el plato listo y tocarla otra
-  vez lo devuelve a preparación mientras la comanda no esté completa. El plato listo se
+  marcado `primary-600` con check blanco). Desde 2026-11-26 cada plato es independiente
+  y nunca salta un estado: también en «Por preparar» la línea es táctil y cada toque
+  avanza un paso de ese plato (Por preparar → En preparación → Listo; de Listo vuelve a
+  preparación mientras la comanda no esté completa). El título dice la acción
+  («Empezar plato», «Marcar plato listo», «Devolver a preparación»). El check muestra el
+  paso: aro `line-strong` por preparar, aro `kds-cooking` con relleno `kds-cooking-soft`
+  en preparación y relleno con check listo. El primer plato empezado pasa la comanda a
+  «En preparación» (mismo efecto que «Iniciar»); con un plato en marcha y otros sin
+  empezar, el botón de la comanda dice «Iniciar el resto» y empieza solo lo que espera,
+  sin reiniciar el tiempo de los demás. «Marcar listo» aparece solo cuando todos los
+  platos empezaron y termina los que están en preparación; el API rechaza saltos
+  (`kitchen_item_unavailable`, `kitchen_plates_not_started`). Un plato pedido después
+  (otra ronda) llega como comanda propia y no depende de los anteriores. El plato listo se
   tacha en `ink-500`, sin colores de estado nuevos. La comanda muestra «N de M listos»
   (por línea, no por unidad) y una barra fina `primary-600` sobre `cloud-100`. Al marcar
-  el último plato pasa a «Por entregar» con el mismo efecto que «Marcar listo», que
-  sigue como vía rápida junto a «Iniciar». Es optimista: si el API rechaza, solo ese
+  el último plato pasa a «Por entregar» con el mismo efecto que «Marcar listo». Es optimista: si el API rechaza, solo ese
   plato vuelve atrás con aviso de error. Sin `kitchen.manage`/`bar.manage` los checks
   son de lectura; las comandas históricas sin estado por plato no los muestran. Las
   opciones elegidas del plato (término, acompañamiento…) se listan como líneas
@@ -1454,8 +1464,23 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
   minutos, horas/minutos o días/horas según corresponda. La urgencia siempre
   incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Por entregar»);
-  nunca depende solo del color. El objetivo de preparación aparece como dato
-  secundario. El skeleton reproduce cabecera, identidad, líneas de productos y
+  nunca depende solo del color. Tiempo por plato (2026-11-26): cada plato respeta su
+  propio «Tiempo de preparación»; la comanda no muestra un objetivo común (antes
+  «Objetivo N min», el del plato más largo). En «Por preparar» cada plato con tiempo
+  lo muestra bajo su nombre en `ink-600` con icono `clock` («15 min»). En «En
+  preparación» cada plato pendiente muestra bajo su nombre una
+  cuenta regresiva desde que su estación lo empezó («Faltan 11 de 15 min»; «Falta 1
+  de 15 min»): naranja `kds-cooking-dark` con icono `clock` a tiempo, texto
+  `danger-700` con icono `alert` en su último cuarto, y al vencer píldora sólida
+  `danger-500` con texto blanco («Tiempo cumplido», «Demora 3 min»). Siempre en una
+  línea; el plato listo o sin tiempo definido no lleva contador. El reloj de la
+  comanda en preparación cuenta desde el primer plato empezado (marcar platos no lo
+  reinicia) y su urgencia es la del plato más atrasado, para que la cabecera nunca diga
+  «A tiempo» con un plato con demora; la cola ordena primero la comanda cuyo plato
+  consumió más de su propio tiempo. Sin platos en marcha no hay urgencia: la espera se
+  ve como tiempo transcurrido. Solo las comandas históricas sin estado por plato
+  comparan con un objetivo de comanda. El cálculo vive en `kitchen/domain/timing.ts`.
+  El skeleton reproduce cabecera, identidad, líneas de productos y
   acción de cada tarjeta, no bloques rectangulares genéricos.
 - El formulario de Recetas usa un modal de edición compacto y estructurado en dos
   zonas: datos de la receta e insumos. La cabecera sigue el patrón compartido:

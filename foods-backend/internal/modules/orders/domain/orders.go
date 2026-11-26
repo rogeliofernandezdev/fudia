@@ -16,9 +16,13 @@ type OrderItem struct {
 	Note      string `json:"note"`
 	ItemType  string `json:"itemType"`
 	// Status es el estado del plato en su estación; solo lo llenan las comandas de Cocina y Barra.
-	Status     string               `json:"status,omitempty"`
-	Selections []OrderItemSelection `json:"selections,omitempty"`
-	Modifiers  []OrderItemModifier  `json:"modifiers,omitempty"`
+	Status string `json:"status,omitempty"`
+	// PrepMinutes es el tiempo de preparación del producto y PreparingSince la hora
+	// en que su estación empezó a prepararlo; solo en comandas de Cocina y Barra.
+	PrepMinutes    *int                 `json:"prepMinutes,omitempty"`
+	PreparingSince string               `json:"preparingSince,omitempty"`
+	Selections     []OrderItemSelection `json:"selections,omitempty"`
+	Modifiers      []OrderItemModifier  `json:"modifiers,omitempty"`
 }
 
 // OrderPaymentReference is the user-entered operation number of a recorded payment.

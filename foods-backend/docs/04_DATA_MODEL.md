@@ -275,6 +275,20 @@ inferirlo de nombres/categorías ni del control de cantidad. Cada venta conserva
 una copia de destino, producto, cantidad y estado en `order_service_items`.
 Cocina y Barra avanzan Pendiente → Preparando → Por entregar → Entregado; Sin preparación
 entra directamente en Por entregar y solo el responsable confirma Entregado.
+`order_service_items.preparing_started_at` (migración 000148) guarda cuándo la
+estación empezó a preparar el plato: se fija al pasar a Preparando, se conserva si
+el plato vuelve de Por entregar a preparación y se limpia si la línea vuelve a
+«sin enviar». Con `products.prep_minutes` la comanda de Cocina entrega por plato
+`prepMinutes` y `preparingSince` para mostrar el tiempo restante.
+Cada plato avanza solo y sin saltar estados (2026-11-26): `PATCH
+/kitchen/tickets/{id}/items/{itemId}/status` lo empieza (confirmado → preparando), lo
+termina (preparando → listo) o lo devuelve de listo a preparando; confirmado → listo se
+rechaza con `kitchen_item_unavailable`. Sobre la comanda, «Iniciar» empieza los platos
+que esperan aunque otro ya esté en marcha y «Marcar listo» exige que todos hayan
+empezado (`kitchen_plates_not_started`). El primer plato empezado tiene el mismo efecto
+que «Iniciar» (auditoría y oferta a Delivery Fudia) y el último listo, el de «Marcar
+listo». Lo pedido después entra en una ronda nueva: comanda propia, sin depender de
+las anteriores.
 Los componentes de un combo conservan tareas separadas, pero una sola línea
 comercial y su precio.
 

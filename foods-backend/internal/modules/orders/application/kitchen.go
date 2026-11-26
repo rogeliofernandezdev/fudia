@@ -147,10 +147,19 @@ func (a *Orders) tryStationTicket(ctx context.Context, s scope, rawID, status st
 	if err != nil {
 		return true, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos validar la comanda.")
 	}
-	if !domain.ValidKitchenTransition(current, status) {
+	// Cada plato avanza un paso a la vez: «Iniciar» empieza los que esperan (aunque
+	// otro plato ya esté en marcha) y «Marcar listo» exige que todos hayan empezado.
+	confirmed, preparing, err := a.repo.StationPlateCounts(tx.Context(), s, orderID, id, destination)
+	if err != nil {
+		return true, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos validar la comanda.")
+	}
+	if status == "listo" && confirmed > 0 {
+		return true, orderFailure(apperror.Conflict, "kitchen_plates_not_started", "Hay platos sin iniciar. Inícialos antes de marcar la comanda lista.")
+	}
+	if (status == "preparando" && confirmed == 0) || (status == "listo" && preparing == 0) {
 		return true, orderFailure(apperror.Conflict, "invalid_kitchen_transition", "La comanda cambió de estado. Actualiza antes de continuar.")
 	}
-	_, err = a.repo.UpdateStationItems(tx.Context(), s, orderID, id, destination, status, current)
+	_, err = a.repo.UpdateStationItems(tx.Context(), s, orderID, id, destination, status)
 	if err == nil {
 		err = a.syncStation(tx.Context(), s, orderID, id)
 	}
@@ -160,18 +169,24 @@ func (a *Orders) tryStationTicket(ctx context.Context, s scope, rawID, status st
 	if err != nil {
 		return true, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos guardar la preparación.")
 	}
+	if current == status {
+		// Iniciar el resto de una comanda ya en marcha: no hay aviso ni oferta nuevos.
+		_ = a.audit.Record(ctx, s, "preparation."+status, "order", orderID)
+		return true, nil
+	}
 	a.stationChanged(ctx, s, orderID, id, destination, status)
 	return true, nil
 }
 
-// UpdateKitchenItem marca un plato de la comanda como listo, o lo devuelve a
-// preparación mientras la comanda sigue abierta. Cuando el último plato queda
-// listo, el resultado es el mismo que «Marcar listo» sobre toda la comanda.
+// UpdateKitchenItem avanza un plato por sí solo: lo empieza, lo marca listo o lo
+// devuelve a preparación mientras la comanda sigue abierta, sin saltar estados.
+// El primer plato empezado inicia la comanda y el último listo la termina, con el
+// mismo efecto que «Iniciar» y «Marcar listo» sobre toda la comanda.
 func (a *Orders) UpdateKitchenItem(ctx context.Context, s scope, rawID, itemID string, in OrderStatusInput) error {
 	in.Status = strings.TrimSpace(in.Status)
 	itemID = strings.TrimSpace(itemID)
 	if in.Status != "listo" && in.Status != "preparando" {
-		return orderFailure(apperror.Invalid, "invalid_kitchen_status", "Cocina solo puede marcar un plato como listo o devolverlo a preparación.")
+		return orderFailure(apperror.Invalid, "invalid_kitchen_status", "Cocina solo puede empezar un plato, marcarlo listo o devolverlo a preparación.")
 	}
 	if itemID == "" {
 		return orderFailure(apperror.NotFound, "kitchen_item_not_found", "El plato no existe en esta comanda.")
@@ -216,8 +231,8 @@ func (a *Orders) UpdateKitchenItem(ctx context.Context, s scope, rawID, itemID s
 		return orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos guardar el plato.")
 	}
 	_ = a.audit.Record(ctx, s, "preparation.item."+in.Status, "order", orderID)
-	if after == "listo" && before != "listo" {
-		a.stationChanged(ctx, s, orderID, id, destination, "listo")
+	if after != before && (after == "listo" || after == "preparando") {
+		a.stationChanged(ctx, s, orderID, id, destination, after)
 	}
 	return nil
 }
