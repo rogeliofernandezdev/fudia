@@ -130,6 +130,12 @@ nuevo. El Contador consulta Ventas y Comprobantes en solo lectura (`orders.read`
 sin `orders.manage`), además de Dashboard, Caja y turnos con Gastos, Fiscal y
 moneda y Medios de pago; no toma pedidos, no cobra ni opera turnos.
 
+Reservas las atiende el Cajero, no el Mesero (2026-11-26, migración 000147). El
+Cajero (`cashier`) recibe la pantalla Reservas con `reservations.read` y
+`reservations.manage`; el Mesero (`waiter`) los pierde y conserva Pedidos, Salón
+y Mesas y zonas. La migración actualiza los roles predeterminados de cada
+empresa, incluso si alguien los editó; los roles personalizados no cambian.
+
 `GET /v1/admin/settings` (moneda, decimales e impuesto) solo exige sesión: todo
 usuario del panel los necesita para mostrar montos. Antes exigía
 `organizations.read` y los roles operativos recibían 403 con valores por defecto.

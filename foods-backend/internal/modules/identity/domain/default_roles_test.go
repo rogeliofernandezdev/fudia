@@ -26,6 +26,28 @@ func TestDefaultRolesAreNamedAfterThePerson(t *testing.T) {
 	}
 }
 
+// Reservas (2026-11-26): las atiende el Cajero; el Mesero no las ve ni opera.
+func TestCashierHandlesReservationsNotWaiter(t *testing.T) {
+	cashier := defaultRole(t, "cashier")
+	if !slices.Contains(cashier.MenuAccess, "reservas") {
+		t.Errorf("cashier must open reservas: %v", cashier.MenuAccess)
+	}
+	for _, permission := range []string{"reservations.read", "reservations.manage", "tables.read"} {
+		if !slices.Contains(cashier.Permissions, permission) {
+			t.Errorf("cashier needs %s: %v", permission, cashier.Permissions)
+		}
+	}
+	waiter := defaultRole(t, "waiter")
+	if slices.Contains(waiter.MenuAccess, "reservas") {
+		t.Errorf("waiter must not open reservas: %v", waiter.MenuAccess)
+	}
+	for _, permission := range []string{"reservations.read", "reservations.manage"} {
+		if slices.Contains(waiter.Permissions, permission) {
+			t.Errorf("waiter must not have %s", permission)
+		}
+	}
+}
+
 // El Contador consulta Ventas y Comprobantes en solo lectura: no toma pedidos,
 // no cobra ni opera turnos.
 func TestAccountantReadsSalesAndReceiptsOnly(t *testing.T) {
