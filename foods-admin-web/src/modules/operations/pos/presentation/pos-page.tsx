@@ -145,7 +145,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   }
 
   return <div className="pos-page">
-    <PageHeader title="Cobros" description="Cobra los pedidos con saldo pendiente y mantiene Caja sincronizada con pagos y devoluciones."/>
+    <PageHeader title="Cobros" description="Cobra las mesas con la cuenta cerrada y los pedidos listos, y mantiene Caja sincronizada con pagos y devoluciones."/>
 
     <section className={"pos-shift-banner "+(shift?"active":"missing")}>
       <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={20}/></span>
