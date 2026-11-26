@@ -2455,7 +2455,7 @@ paths:
     get:
       operationId: listOperationalOrders
       summary: Lista pedidos reales del local activo para la bandeja operativa
-      description: "Sin status devuelve todos. Primero los pedidos por atender y después entregados/cancelados, por fecha descendente en cada grupo, sin depender del cobro. status=listo incluye los repartos en camino. abiertos y en_camino se aceptan solo por compatibilidad; la interfaz usa el catálogo operativo."
+      description: "Excluye lo entregado y pagado (saldo en cero): ya terminó y se consulta en Ventas (2026-11-25); lo pagado que aún se prepara sigue visible. Sin status devuelve todos los demás. Primero los pedidos por atender y después entregados/cancelados, por fecha descendente en cada grupo, sin depender del cobro. status=listo incluye los repartos en camino. abiertos y en_camino se aceptan solo por compatibilidad; la interfaz usa el catálogo operativo."
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: q, schema: { type: string } }
@@ -2661,7 +2661,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOrderStatus
-      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos. Cancelar revierte cantidades solo sin pagos, preparación iniciada ni productos entregados; una Entrega directa lista pero sin servir es cancelable. Pedidos históricos sin detalle de servicio conservan la restricción a Nuevo/Confirmado. Un delivery con central de Delivery Fudia asignada no se cancela una vez listo o en camino (409 delivery_in_progress_not_cancellable). Cocina y Caja mantienen sus permisos independientes."
+      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos. Cancelar revierte cantidades solo sin pagos, preparación iniciada ni productos entregados; una Entrega directa lista pero sin servir es cancelable. Pedidos históricos sin detalle de servicio conservan la restricción a Nuevo/Confirmado. Un delivery con central de Delivery Fudia asignada no se cancela una vez listo o en camino (409 delivery_in_progress_not_cancellable). En camino exige saldo en cero: todo delivery se cobra en caja antes de salir (409 payment_required_before_dispatch, 2026-11-25). Cocina y Caja mantienen sus permisos independientes."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
       responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida }, "403": { $ref: "#/components/responses/Forbidden" } }

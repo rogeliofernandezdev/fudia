@@ -14,6 +14,11 @@ const listOrderSQL = `CASE WHEN status IN ('entregado','cancelado') THEN 1 ELSE 
 
 // "abiertos" y "en_camino" se aceptan para clientes anteriores. La bandeja nueva
 // filtra estados operativos; Por entregar también incluye los repartos en camino.
+// finishedOrderSQL deja fuera de Pedidos lo entregado y pagado (saldo en cero): ya
+// terminó en preparación y en cobro y se consulta en Ventas (2026-11-25). Lo pagado
+// que aún se prepara (mostrador) sigue visible.
+const finishedOrderSQL = ` AND NOT (status='entregado' AND paid_amount+0.00001 >= total)`
+
 func listStatusSQL(parameter string) string {
 	return `(` + parameter + `='' OR (` + parameter + `='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=` + parameter + ` OR (` + parameter + `='listo' AND status='en_camino'))`
 }
@@ -22,7 +27,7 @@ func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (appli
 	out := application.Page{Page: f.Page, PageSize: f.Size}
 	page, size, q, channel, status := f.Page, f.Size, strings.TrimSpace(f.Query), f.Channel, f.Status
 	// scopeWhere es búsqueda + canal; el estado se suma aparte para saber qué estados existen en ese alcance.
-	scopeWhere := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4 OR ($4 IN ('recojo','mostrador') AND channel IN ('recojo','mostrador')) OR ($4='salon' AND channel='whatsapp'))`
+	scopeWhere := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4 OR ($4 IN ('recojo','mostrador') AND channel IN ('recojo','mostrador')) OR ($4='salon' AND channel='whatsapp'))` + finishedOrderSQL
 	where := scopeWhere + ` AND ` + listStatusSQL("$5")
 	// Estados con al menos un pedido para la búsqueda y el canal actuales: una sonda EXISTS por estado del
 	// catálogo usa el índice (organización, local, estado) sin recorrer todo el historial.
@@ -38,7 +43,7 @@ func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (appli
 	batch.Queue(`SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status)
 	batch.Queue(`SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY `+listOrderSQL+` LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
 	batch.Queue(`SELECT st FROM unnest($5::text[]) st WHERE EXISTS(SELECT 1 FROM orders WHERE `+scopeWhere+` AND (status=st OR (st='listo' AND status='en_camino')))`, s.OrganizationID, s.LocationID, q, channel, catalog)
-	batch.Queue(`SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND `+listStatusSQL("$4")+` GROUP BY channel`, s.OrganizationID, s.LocationID, q, status)
+	batch.Queue(`SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%')`+finishedOrderSQL+` AND `+listStatusSQL("$4")+` GROUP BY channel`, s.OrganizationID, s.LocationID, q, status)
 	batch.Queue(`
 		SELECT p.currency_symbol
 		FROM locations l

@@ -90,9 +90,10 @@ func TestManualDeliveryKitchenPaymentAndDispatch(t *testing.T) {
 			t.Fatalf("KDS %s: %d %s", status, rec.Code, rec.Body.String())
 		}
 	}
-	dispatch := request("PATCH", "/v1/admin/orders/"+created.ID+"/status", []byte(`{"status":"en_camino"}`), created.ID, s)
-	if dispatch.Code != 200 {
-		t.Fatalf("dispatch: %d %s", dispatch.Code, dispatch.Body.String())
+	// Todo delivery se cobra en caja antes de salir (2026-11-25).
+	unpaidDispatch := request("PATCH", "/v1/admin/orders/"+created.ID+"/status", []byte(`{"status":"en_camino"}`), created.ID, s)
+	if unpaidDispatch.Code != 409 || !strings.Contains(unpaidDispatch.Body.String(), "payment_required_before_dispatch") {
+		t.Fatalf("unpaid delivery must not leave: %d %s", unpaidDispatch.Code, unpaidDispatch.Body.String())
 	}
 	var registerID string
 	if err := pool.QueryRow(ctx, `INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja delivery',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID).Scan(&registerID); err != nil {
@@ -110,6 +111,10 @@ func TestManualDeliveryKitchenPaymentAndDispatch(t *testing.T) {
 	paid := request("POST", "/v1/admin/payments", []byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":55}`, created.ID)), "", s)
 	if paid.Code != 201 {
 		t.Fatalf("delivery payment: %d %s", paid.Code, paid.Body.String())
+	}
+	dispatch := request("PATCH", "/v1/admin/orders/"+created.ID+"/status", []byte(`{"status":"en_camino"}`), created.ID, s)
+	if dispatch.Code != 200 {
+		t.Fatalf("paid dispatch: %d %s", dispatch.Code, dispatch.Body.String())
 	}
 	delivered := request("PATCH", "/v1/admin/orders/"+created.ID+"/status", []byte(`{"status":"entregado"}`), created.ID, s)
 	if delivered.Code != 200 {

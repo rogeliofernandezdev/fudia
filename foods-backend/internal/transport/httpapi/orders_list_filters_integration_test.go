@@ -31,6 +31,11 @@ func TestOrdersListOperationalFiltersCountsAndScope(t *testing.T) {
 	deliveredID := seed(s, "delivery", "entregado", "Cliente lista", "2026-01-05T01:00:00Z")
 	servedID := seed(s, "salon", "entregado", "Cliente lista", "2026-01-06T01:00:00Z")
 	seed(foreign, "delivery", "en_camino", "Cliente lista reparto", "2026-01-07T01:00:00Z")
+	// Entregado y pagado (saldo en cero) ya terminó: se consulta en Ventas, no en Pedidos (2026-11-25).
+	finishedID := seed(s, "delivery", "entregado", "Cliente lista", "2026-01-09T01:00:00Z")
+	if _, err := pool.Exec(ctx, `UPDATE orders SET paid_amount=total WHERE id=$1`, finishedID); err != nil {
+		t.Fatal(err)
+	}
 	otherLocal := s
 	if err := pool.QueryRow(ctx, `INSERT INTO locations(organization_id,name,code) VALUES($1,'Otro local','ORDERS-FILTER-OTHER') RETURNING id`, s.OrganizationID).Scan(&otherLocal.LocationID); err != nil {
 		t.Fatal(err)

@@ -10,6 +10,9 @@ export function listPOSOrders(input:{q:string;paymentStatus:string;page:number;p
     paymentStatus:input.paymentStatus,
     page:String(input.page),
     pageSize:String(input.pageSize),
+    // Cobros lista solo lo listo para cobrar: mesa con la cuenta cerrada, recojo o delivery
+    // con la comida lista y mostrador siempre (regla del backend `ready`, 2026-11-25).
+    ready:"true",
   });
   return apiFetch<POSOrdersResponse>(`pos/orders?${params.toString()}`,{signal});
 }

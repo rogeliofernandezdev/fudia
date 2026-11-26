@@ -7,7 +7,7 @@ import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,Modal
 import {useMoney,useSession} from "@/providers";
 import {OrderDispatchBlock} from "@/modules/delivery";
 import {pageRoutes} from "@/shared/routing/page-routes";
-import {canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
+import {awaitingDispatchPayment,canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
 import {canChargeAccount,canCollectOrder} from "../domain/service-flow";
 import {deliveryPoint} from "../domain/delivery-point";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -153,6 +153,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
 
       {(canManage||canCharge)&&<ModalFooter className="order-detail-actions">
         {order.status==="entregado"&&!canCharge&&<p className="order-detail-notice is-success" role="status"><Icon name="circleCheck" size={18}/><span>{order.completedAt?(order.channel==="salon"?"Mesa liberada":"Pedido completado"):"Pedido entregado"}</span></p>}
+        {awaitingDispatchPayment(order)&&<p className="order-detail-notice" role="note"><Icon name="cash" size={18}/><span>Falta cobrar en caja: sale cuando su saldo esté en cero.</span></p>}
         {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<p className="order-detail-notice" role="note"><Icon name="info" size={18}/><span>Devuelve los pagos en POS antes de cancelar.</span></p>}
         <div className="order-detail-buttons modal-action-layout" role="group" aria-label={table?"Acciones de la mesa":"Acciones del pedido"}>
           <OrderAccountActions order={order} onAdd={()=>add(order)} busy={busy}/>

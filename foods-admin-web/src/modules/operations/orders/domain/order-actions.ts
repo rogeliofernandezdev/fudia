@@ -44,7 +44,8 @@ export function nextOrderAction(order:OperationalOrder):OrderAction|null{
   if(order.channel==="salon"&&order.serviceItems?.some(item=>item.status!=="listo"&&item.status!=="entregado"))return null;
   if(partnerHandlesDelivery(order)&&(order.status==="listo"||order.status==="en_camino"))return null;
   if(order.status==="listo"){
-    if(order.channel==="delivery")return{status:"en_camino",label:"En camino",icon:"truck"};
+    // Todo delivery se cobra en caja antes de salir (2026-11-25): sin saldo en cero no hay «En camino».
+    if(order.channel==="delivery")return awaitingPayment(order)?null:{status:"en_camino",label:"En camino",icon:"truck"};
     if(order.channel==="salon")return{status:"entregado",label:"Confirmar entrega",icon:"check"};
     return awaitingPayment(order)?null:{status:"entregado",label:"Entregar",icon:"check"};
   }
@@ -58,6 +59,11 @@ export function nextOrderAction(order:OperationalOrder):OrderAction|null{
  * flujo propio (se entrega, se cierra la cuenta y se cobra). El backend lo valida
  * con `payment_required_before_delivery`.
  */
+/** Delivery propio listo que aún no se cobra: no puede salir hasta que caja deje el saldo en cero. */
+export function awaitingDispatchPayment(order:OperationalOrder):boolean{
+  return !order.completedAt&&order.channel==="delivery"&&order.status==="listo"&&!partnerHandlesDelivery(order)&&awaitingPayment(order);
+}
+
 function awaitingPayment(order:Pick<OperationalOrder,"remainingAmount">):boolean{
   return Number(order.remainingAmount??0)>0.00001;
 }

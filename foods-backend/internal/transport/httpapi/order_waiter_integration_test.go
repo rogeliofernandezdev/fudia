@@ -122,7 +122,12 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 			}
 		}
 	}
-	for _, handler := range []http.HandlerFunc{api.getOrder, api.getPOSOrder, api.listOrders} {
+	// Entregado y pagado ya no aparece en Pedidos (se consulta en Ventas, 2026-11-25);
+	// el detalle y el cobro conservan mozo y cobrador.
+	if list := call(other, "GET", created.ID, "", api.listOrders, 200); strings.Contains(list.Body.String(), created.ID) {
+		t.Fatalf("paid and delivered order must leave Pedidos: %s", list.Body.String())
+	}
+	for _, handler := range []http.HandlerFunc{api.getOrder, api.getPOSOrder} {
 		w = call(other, "GET", created.ID, "", handler, 200)
 		if !strings.Contains(w.Body.String(), `"waiterName":"Ana Mozo"`) || !strings.Contains(w.Body.String(), `"collectedByNames":["Eva Cajera"]`) {
 			t.Fatalf("list/detail must distinguish waiter and collector: %s", w.Body.String())

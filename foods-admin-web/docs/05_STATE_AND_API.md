@@ -391,6 +391,12 @@ Fuera del salón primero se cobra y luego se entrega (2026-11-14): con saldo
 pendiente, el detalle muestra solo «Cobrar saldo» y no «Entregar»
 (`nextOrderAction` + `awaitingPayment`); al quedar pagado, «Entregar» pasa a ser
 la acción principal. El backend lo valida con `payment_required_before_delivery`.
+Delivery propio tampoco sale sin pagar (2026-11-25): con saldo, «En camino» no
+aparece y el detalle avisa «Falta cobrar en caja: sale cuando su saldo esté en
+cero» (`awaitingDispatchPayment`); el backend responde `payment_required_before_dispatch`.
+Cobros (`listPOSOrders`) envía `ready=true`: solo lo listo para cobrar (mesa con la
+cuenta cerrada, recojo o delivery con la comida lista o despachada, mostrador
+siempre). Pedidos no lista lo entregado y pagado: ya terminó y está en Ventas.
 En Delivery Fudia (`partnerHandlesDelivery`: central buscando o asignada) el
 detalle no muestra «En camino» ni «Entregar»: los marca el repartidor y caja
 solo cobra (backend `delivery_handled_by_partner`). El delivery propio conserva

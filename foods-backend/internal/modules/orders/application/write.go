@@ -359,6 +359,10 @@ func (a *Orders) SetStatus(ctx context.Context, s scope, id string, in OrderStat
 	if in.Status == "entregado" && channel != "salon" && paid+0.00001 < total {
 		return result, orderFailure(apperror.Conflict, "payment_required_before_delivery", "Cobra el pedido antes de entregarlo.")
 	}
+	// Todo delivery se cobra en caja antes de salir (2026-11-25): «En camino» exige saldo cero.
+	if in.Status == "en_camino" && paid+0.00001 < total {
+		return result, orderFailure(apperror.Conflict, "payment_required_before_dispatch", "Falta cobrar en caja: el pedido sale cuando su saldo está en cero.")
+	}
 	if in.Status == "cancelado" && paid > 0.00001 {
 		return result, orderFailure(apperror.Conflict, "refund_required_before_cancel", "Devuelve primero los pagos registrados antes de cancelar el pedido.")
 	}

@@ -248,6 +248,15 @@ pendiente responde 409 `payment_required_before_delivery` («Cobra el pedido ant
 de entregarlo»). La confirmación de la central de Delivery Fudia (panel del
 repartidor) no pasa por esa transición y no se bloquea.
 
+Todo delivery se cobra en caja antes de salir (2026-11-25): `PATCH
+/orders/{id}/status` a En camino con saldo pendiente responde 409
+`payment_required_before_dispatch` («Falta cobrar en caja»). El repartidor de
+Delivery Fudia ya exigía el pago confirmado para «Recogí el pedido».
+
+`GET /operations/orders` (Pedidos) excluye lo entregado y pagado (saldo en cero,
+`paid_amount >= total`): ya terminó y se consulta en Ventas. Lo pagado que aún se
+prepara, como mostrador, sigue visible.
+
 En Delivery Fudia (despacho `searching`, `accepted`, `picked_up` o `delivered`) el
 recojo y la entrega los marca el repartidor desde su enlace, o la central desde su
 panel; eso es lo que ve el cliente en el chat. Caja solo cobra, y el cobro deja el

@@ -35,7 +35,7 @@ test("entrega no depende del pago ni requiere una segunda transición",()=>{
 });
 test("cocina prepara y delivery despacha",()=>{
  for(const status of ["confirmado","preparando","cancelado"])assert.equal(nextOrderAction({...ready,status}),null);
- assert.equal(nextOrderAction({...ready,channel:"delivery"}).status,"en_camino");
+ assert.equal(nextOrderAction({...ready,channel:"delivery",remainingAmount:"0"}).status,"en_camino");
  // Comanda guardada (pedido nuevo o ronda del bot «Sin enviar»): Enviar comanda, aunque la mesa ya esté en cocina.
  assert.equal(nextOrderAction({...ready,status:"nuevo"}).label,"Enviar comanda");
  assert.equal(nextOrderAction({...ready,status:"confirmado",serviceItems:[{status:"confirmado"},{status:"nuevo"}]}).label,"Enviar comanda");
@@ -52,7 +52,7 @@ test("fuera del salón primero se cobra y luego se entrega",()=>{
   assert.equal(nextOrderAction({...ready,channel,remainingAmount:"0"}).label,"Entregar");
  }
  assert.equal(nextOrderAction({...ready,channel:"delivery",status:"en_camino",remainingAmount:"12"}),null);
- assert.equal(nextOrderAction({...ready,channel:"delivery",remainingAmount:"12"}).status,"en_camino","el despacho no espera el cobro: el repartidor paga al recoger");
+ assert.equal(nextOrderAction({...ready,channel:"delivery",remainingAmount:"12"}),null,"todo delivery se cobra en caja antes de salir (2026-11-25)");
  assert.equal(nextOrderAction({...ready,remainingAmount:"30"}).label,"Confirmar entrega","el salón entrega antes de cerrar la cuenta");
 });
 test("delivery Fudia: el repartidor recoge y entrega, caja solo cobra",()=>{
