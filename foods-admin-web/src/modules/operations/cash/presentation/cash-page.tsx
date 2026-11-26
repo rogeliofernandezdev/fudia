@@ -405,6 +405,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
 
     <div className="cash-registers-grid">{items.map(item=>{
       const shift=item.openShift;
+      const otherMethods=shift?.otherMethods??[];
       const statusLabel=!item.active?"Inactiva":shift?"Turno abierto":"Disponible";
       const statusTone=!item.active?"gray":shift?"green":"blue";
       const cardClass="cash-register-card"+(!item.active?" inactive":shift?" open":"");
@@ -423,7 +424,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
         {shift?<>
           <div className="cash-register-content">
           <section className="cash-register-live">
-            {shift.detailsVisible!==false&&<div className="cash-register-balance"><small>{shift.expectedVisible?"Saldo esperado":"Cierre ciego"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>}
+            {shift.detailsVisible!==false&&<div className="cash-register-balance"><small>{shift.expectedVisible?"Efectivo esperado":"Cierre ciego"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong>{shift.expectedVisible&&otherMethods.length>0&&shift.totalAmount&&<p className="cash-register-total"><span>Total del turno</span><b>{money(Number(shift.totalAmount))}</b></p>}<span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>}
             <div className="cash-register-live-copy">
               <dl>
                 <div><dt>Cajero</dt><dd>{cashShiftAttribution(shift).name}</dd></div>
@@ -438,6 +439,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
             <div className="opening"><span className="cash-flow-label"><IconTile name="wallet" tone="primary" appearance="vivid" size="sm"/><small>Fondo inicial</small></span><b>{money(Number(shift.openingAmount))}</b></div>
             <div className="income"><span className="cash-flow-label"><IconTile name="plus" tone="brand" appearance="vivid" size="sm"/><small>Ingresos</small></span><b>+{money(Number(shift.incomeAmount))}</b></div>
             <div className="expense"><span className="cash-flow-label"><IconTile name="minus" tone="danger" appearance="vivid" size="sm"/><small>Egresos</small></span><b>-{money(Number(shift.expenseAmount))}</b></div>
+            {otherMethods.length>0&&<div className="other-method"><span className="cash-flow-label"><IconTile name="payment" tone="digital" appearance="vivid" size="sm"/><small>Pagos digitales</small></span><b>+{money(otherMethods.reduce((sum,method)=>sum+Number(method.amount),0))}</b></div>}
           </section>:<div className="cash-register-blind"><Icon name="lock" size={14}/><span>El detalle de efectivo está oculto hasta cerrar el turno.</span></div>}
           </>}
           </div>

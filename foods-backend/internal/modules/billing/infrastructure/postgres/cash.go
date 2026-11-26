@@ -325,7 +325,25 @@ const cashShiftFrom = `FROM cash_shifts cs
 		         count(*) AS movements
 		  FROM cash_movements cm
 		  WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout')
-		) shift_totals ON true`
+		) shift_totals ON true
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(json_agg(json_build_object('name',m.name,'amount',m.net::text) ORDER BY m.sort_order,m.name),'[]'::json) AS methods,
+		         COALESCE(sum(m.net),0) AS total
+		  FROM (
+		    SELECT pm.name,pm.sort_order,sum(x.amount) AS net
+		    FROM (
+		      SELECT p.method,p.amount FROM payments p
+		      WHERE p.shift_id=cs.id AND p.organization_id=cs.organization_id AND p.location_id=cs.location_id
+		      UNION ALL
+		      SELECT p.method,-pr.amount FROM payment_refunds pr
+		      JOIN payments p ON p.id=pr.payment_id AND p.organization_id=pr.organization_id AND p.location_id=pr.location_id
+		      WHERE pr.shift_id=cs.id AND pr.organization_id=cs.organization_id AND pr.location_id=cs.location_id
+		    ) x
+		    JOIN payment_methods pm ON pm.organization_id=cs.organization_id AND pm.code=x.method AND NOT pm.affects_cash
+		    GROUP BY pm.code,pm.name,pm.sort_order
+		    HAVING sum(x.amount)<>0
+		  ) m
+		) other_totals ON true`
 
 const cashShiftColumns = `
 	cs.id::text,
@@ -363,7 +381,14 @@ const cashShiftColumns = `
 	cs.business_date::text,
 	to_char(cs.opened_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
 	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END,
-	shift_totals.movements
+	shift_totals.movements,
+	other_totals.methods,
+	(
+	  cs.opening_amount
+	  + shift_totals.income
+	  - shift_totals.expense
+	  + other_totals.total
+	)::text
 `
 
 func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
@@ -392,6 +417,8 @@ func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
 		&shift.OpenedAt,
 		&shift.ClosedAt,
 		&shift.MovementCount,
+		&shift.OtherMethods,
+		&shift.TotalAmount,
 	)
 	return shift, err
 }

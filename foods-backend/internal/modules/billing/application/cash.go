@@ -644,6 +644,8 @@ func (a *Cash) visibility(ctx context.Context, s scope, shift *domain.CashShiftV
 		shift.IncomeAmount = ""
 		shift.ExpenseAmount = ""
 		shift.ExpectedAmount = ""
+		shift.OtherMethods = nil
+		shift.TotalAmount = ""
 		shift.ExpectedVisible = false
 	}
 }

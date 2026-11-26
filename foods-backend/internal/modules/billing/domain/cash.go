@@ -19,32 +19,41 @@ type CashMovementView struct {
 	CreatedAt     string  `json:"createdAt"`
 }
 type CashShiftView struct {
-	ID                    string             `json:"id"`
-	Code                  string             `json:"code"`
-	CashRegisterID        string             `json:"cashRegisterId"`
-	CashRegisterName      string             `json:"cashRegisterName"`
-	BlindClose            bool               `json:"blindClose"`
-	Status                string             `json:"status"`
-	OpeningAmount         string             `json:"openingAmount"`
-	IncomeAmount          string             `json:"incomeAmount"`
-	ExpenseAmount         string             `json:"expenseAmount"`
-	ExpectedAmount        string             `json:"expectedAmount"`
-	ExpectedVisible       bool               `json:"expectedVisible"`
-	DetailsVisible        bool               `json:"detailsVisible"`
-	ClosingExpectedAmount *string            `json:"closingExpectedAmount"`
-	ClosingCountedAmount  *string            `json:"closingCountedAmount"`
-	VarianceAmount        *string            `json:"varianceAmount"`
-	OpeningNote           string             `json:"openingNote"`
-	ClosingNote           string             `json:"closingNote"`
-	OpenedByID            string             `json:"openedById"`
-	OpenedByName          string             `json:"openedByName"`
-	ClosedByName          string             `json:"closedByName"`
-	ActiveUserNames       []string           `json:"activeUserNames"`
-	BusinessDate          string             `json:"businessDate"`
-	OpenedAt              string             `json:"openedAt"`
-	ClosedAt              *string            `json:"closedAt"`
-	MovementCount         int                `json:"movementCount"`
-	Movements             []CashMovementView `json:"movements,omitempty"`
+	ID                    string   `json:"id"`
+	Code                  string   `json:"code"`
+	CashRegisterID        string   `json:"cashRegisterId"`
+	CashRegisterName      string   `json:"cashRegisterName"`
+	BlindClose            bool     `json:"blindClose"`
+	Status                string   `json:"status"`
+	OpeningAmount         string   `json:"openingAmount"`
+	IncomeAmount          string   `json:"incomeAmount"`
+	ExpenseAmount         string   `json:"expenseAmount"`
+	ExpectedAmount        string   `json:"expectedAmount"`
+	ExpectedVisible       bool     `json:"expectedVisible"`
+	DetailsVisible        bool     `json:"detailsVisible"`
+	ClosingExpectedAmount *string  `json:"closingExpectedAmount"`
+	ClosingCountedAmount  *string  `json:"closingCountedAmount"`
+	VarianceAmount        *string  `json:"varianceAmount"`
+	OpeningNote           string   `json:"openingNote"`
+	ClosingNote           string   `json:"closingNote"`
+	OpenedByID            string   `json:"openedById"`
+	OpenedByName          string   `json:"openedByName"`
+	ClosedByName          string   `json:"closedByName"`
+	ActiveUserNames       []string `json:"activeUserNames"`
+	BusinessDate          string   `json:"businessDate"`
+	OpenedAt              string   `json:"openedAt"`
+	ClosedAt              *string  `json:"closedAt"`
+	MovementCount         int      `json:"movementCount"`
+	// OtherMethods lista lo cobrado en el turno por medios que no entran al
+	// cajón (Yape, tarjeta…), neto de reversos; TotalAmount = efectivo
+	// esperado + otros medios. Ambos se ocultan junto con el esperado.
+	OtherMethods []CashShiftMethodAmount `json:"otherMethods,omitempty"`
+	TotalAmount  string                  `json:"totalAmount,omitempty"`
+	Movements    []CashMovementView      `json:"movements,omitempty"`
+}
+type CashShiftMethodAmount struct {
+	Name   string `json:"name"`
+	Amount string `json:"amount"`
 }
 type CashRegisterView struct {
 	ID         string         `json:"id"`

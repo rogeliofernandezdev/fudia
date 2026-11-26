@@ -51,6 +51,10 @@ export type CashShift={
   openedAt:string;
   closedAt:string|null;
   movementCount:number;
+  /** Cobrado en el turno por medios que no entran al cajón (Yape, tarjeta…), neto de reversos. Ausente si el esperado está oculto. */
+  otherMethods?:{name:string;amount:string}[];
+  /** Efectivo esperado + otros medios. Ausente si el esperado está oculto. */
+  totalAmount?:string;
   movements?:CashMovement[];
 };
 

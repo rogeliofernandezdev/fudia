@@ -65,6 +65,10 @@ func TestCashClosingReportDetailsSnapshotAndIsolation(t *testing.T) {
 	if report.Persisted || len(report.Sales) != 1 || report.Sales[0].Quantity != "2.00" || report.Sales[0].Total != "60.00" || len(report.Payments) != 2 || report.CollectedAmount != "50.00" || report.Shift.ExpectedAmount != "120.00" || report.Shift.ExpenseAmount != "10.00" {
 		t.Fatalf("incorrect partial/split report: %+v", report)
 	}
+	// La tarjeta no entra al cajón: suma al total del turno, no al efectivo.
+	if len(report.Shift.OtherMethods) != 1 || report.Shift.OtherMethods[0].Amount != "20.00" || report.Shift.TotalAmount != "140.00" {
+		t.Fatalf("incorrect non-cash totals: %+v / %s", report.Shift.OtherMethods, report.Shift.TotalAmount)
+	}
 	if len(report.Methods) != 2 || len(report.Shift.Movements) != 2 || report.Shift.OpenedByName == "" || report.Timezone == "" {
 		t.Fatal("missing details")
 	}

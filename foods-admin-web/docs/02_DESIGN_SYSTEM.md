@@ -3320,13 +3320,26 @@ internas y su propio flujo y acciones; en móvil se apilan. La tarjeta tiene
 borde neutro, sin sombra ni contorno azul de selección. Su icono es verde vivo
 con turno abierto, azul vivo si está disponible y neutro si está inactiva.
 
-El saldo esperado usa 28 px / 700 en azul; Cajero, Equipo actual, Apertura y Día
-operativo se organizan como etiquetas y valores alineados, conservando la fecha
-y hora de apertura. Los flujos mantienen etiqueta a la izquierda e importe a la
-derecha con cifras tabulares. Fondo inicial usa azul, Ingresos verde y Egresos
+La cifra grande se rotula «Efectivo esperado» (no «Saldo esperado»): es lo que
+debe haber en el cajón, 28 px / 700 en azul. Cuando el turno cobró por medios
+que no entran al cajón (Yape, Plin, tarjeta…; `affects_cash=false`), debajo va
+«Total del turno» (etiqueta 12 px `ink-500` encima del importe 14 px / 700
+`ink-950`, apilados para no partirse en la columna angosta) =
+efectivo esperado + otros medios, y luego el número de movimientos. Sin otros
+medios el total no se muestra porque coincidiría con el efectivo. Cajero,
+Equipo actual, Apertura y Día operativo se organizan como etiquetas y valores
+alineados, conservando la fecha y hora de apertura. Los flujos mantienen
+etiqueta a la izquierda e importe a la derecha con cifras tabulares y se leen
+como la cuenta del dinero: Fondo inicial + Ingresos − Egresos = efectivo; Pagos
+digitales suma al total. Fondo inicial usa azul, Ingresos verde y Egresos
 rojo, con `IconTile vivid` y fondos menta `brand-50` y rosado `danger-50` en los
-dos últimos; los importes usan la tinta oscura de cada familia y conservan los
-signos. «Turno abierto», «Disponible» e «Inactiva» siguen usando
+dos últimos; debajo de Egresos, una sola fila «Pagos digitales» que suma
+todos los medios no efectivo (Yape, Plin, tarjeta, transferencia…), sin una
+fila por medio, con `IconTile payment` violeta digital, fondo `digital-50` e
+importe `digital-700` con signo +; solo aparece si hubo cobros por esos medios. Los importes usan la tinta oscura de cada
+familia y conservan los signos. El API entrega `otherMethods` (neto de
+reversos) y `totalAmount`; ambos se omiten en cierre ciego sin permiso, igual
+que el esperado. «Turno abierto», «Disponible» e «Inactiva» siguen usando
 `Status` suave, sin cambiar sus tonos.
 
 El pie conserva el ancho natural de cada botón, incluido Ver turno: sin
