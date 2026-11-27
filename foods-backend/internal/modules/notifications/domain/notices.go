@@ -21,6 +21,9 @@ const (
 	KindDeliveryPickupDelayed = "delivery_pickup_delayed"
 	// KindPayDetected: Fudia Pay detectó un pago de Yape o Plin por revisar en caja.
 	KindPayDetected = "pay_detected"
+	// KindReservationNoShow: venció la tolerancia de una reserva sin que el
+	// cliente llegara y pasó sola a «No asistió».
+	KindReservationNoShow = "reservation_no_show"
 )
 
 // Audiencias: el servicio de salón (mozos), la caja (cajeros) o ambos.
@@ -76,7 +79,7 @@ func Audiences(service, cashier bool) []string {
 // Normalize recorta los textos a sus límites y rechaza tipos o audiencias desconocidos.
 func Normalize(in Input) (Input, bool) {
 	switch in.Kind {
-	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount, KindDeliveryUnassigned, KindDeliveryPickupDelayed, KindPayDetected:
+	case KindTableOrder, KindCounterOrder, KindDelivery, KindPickup, KindOrderReady, KindBill, KindAssistance, KindStaleAccount, KindDeliveryUnassigned, KindDeliveryPickupDelayed, KindPayDetected, KindReservationNoShow:
 	default:
 		return in, false
 	}

@@ -46,6 +46,8 @@ type POSOrderDetail struct {
 	Payments        []domain.PaymentView         `json:"payments"`
 	// FiscalDocument is the electronic document delivered for the order, if any.
 	FiscalDocument *domain.FiscalDocumentRef `json:"fiscalDocument,omitempty"`
+	// Deposits son las garantías de reserva cobradas hoy que la cuenta puede descontar.
+	Deposits []domain.DepositOption `json:"deposits"`
 }
 type PaymentOrders interface {
 	RequireDelivered(context.Context, scope, string, string) error
@@ -61,6 +63,7 @@ type Payments struct {
 	orders     PaymentOrders
 	authorizer PermissionAuthorizer
 	fiscal     einvoicing.Issuer
+	deposits   DepositRepository
 }
 
 func NewPayments(repo PaymentRepository, work unitofwork.Manager, audit audit.Repository, methods ExpenseMethods, orders PaymentOrders) *Payments {
@@ -108,7 +111,10 @@ type PaymentRepository interface {
 
 func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) (domain.PaymentView, error) {
 	var result domain.PaymentView
-	if strings.TrimSpace(in.OrderID) == "" || in.Amount <= 0 {
+	in.DepositPaymentID = strings.TrimSpace(in.DepositPaymentID)
+	// Con una garantía que cubre todo el saldo, el cobro puede ser de cero.
+	withDeposit := in.DepositPaymentID != ""
+	if strings.TrimSpace(in.OrderID) == "" || in.Amount < 0 || (in.Amount == 0 && (!withDeposit || in.Tip != nil)) {
 		return result, paymentFailure(apperror.Invalid, "invalid_payment", "Revisa los datos del cobro.")
 	}
 	in.OrderID = strings.TrimSpace(in.OrderID)
@@ -166,17 +172,30 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 			return result, err
 		}
 	}
+	if withDeposit {
+		discounted, err := a.applyDeposit(tx.Context(), s, in.OrderID, in.DepositPaymentID, remaining)
+		if err != nil {
+			return result, err
+		}
+		remaining -= discounted
+	}
 	if in.Amount > remaining+0.00001 {
 		return result, paymentFailure(apperror.Conflict, "payment_exceeds_remaining", "El cobro supera el saldo pendiente del pedido.")
 	}
-
-	var id string
-	err = func() error { var err error; id, err = a.repo.CreatePayment(tx.Context(), s, in, shiftID); return err }()
-	if err != nil {
-		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos registrar el cobro.")
+	if in.Amount == 0 && remaining > 0.00001 {
+		return result, paymentFailure(apperror.Invalid, "invalid_payment", "Revisa los datos del cobro.")
 	}
 
-	if methodDef.AffectsCash {
+	// Sin importe, la garantía saldó la cuenta: el cobro que se devuelve es el suyo.
+	id := in.DepositPaymentID
+	if in.Amount > 0 {
+		err = func() error { var err error; id, err = a.repo.CreatePayment(tx.Context(), s, in, shiftID); return err }()
+		if err != nil {
+			return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos registrar el cobro.")
+		}
+	}
+
+	if in.Amount > 0 && methodDef.AffectsCash {
 		if _, err := a.repo.SaleMovement(tx.Context(), s, in, shiftID, id, orderCode); err != nil {
 			return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos reflejar el cobro en caja.")
 		}
@@ -496,6 +515,10 @@ func (a *Payments) Get(ctx context.Context, s scope, id string) (POSOrderDetail,
 		RemainingAmount: strconv.FormatFloat(remaining, 'f', 2, 64),
 		PaymentStatus:   domain.PaymentStatus(total, paid),
 		Payments:        payments,
+		Deposits:        []domain.DepositOption{},
+	}
+	if remaining > 0.00001 {
+		out.Deposits = a.depositOptions(ctx, s, o.ID)
 	}
 	if out.FiscalDocument, err = a.orderFiscalDocument(ctx, s, o.ID); err != nil {
 		return result, err

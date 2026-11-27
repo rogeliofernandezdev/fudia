@@ -8,7 +8,7 @@ import postcss from "postcss";
 
 const require=createRequire(import.meta.url);
 const read=path=>readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
-const routes={pos:"/pos",orders:"/orders",diningRoom:"/dining-room",cash:"/cash"};
+const routes={pos:"/pos",orders:"/orders",diningRoom:"/dining-room",cash:"/cash",reservations:"/reservations"};
 function compile(path){
  const exports={};
  vm.runInNewContext(ts.transpileModule(read(path),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,require:name=>name==="@/shared/routing/page-routes"?{pageRoutes:routes}:require(name)});
@@ -32,6 +32,9 @@ test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de prefer
  assert.deepEqual([...rules.noticeTargets({kind:"stale_account"})],[routes.diningRoom,routes.pos]);
  assert.deepEqual([...rules.noticeTargets({kind:"pay_detected"})],[routes.cash]);
  assert.equal(rules.noticeHref(routes.cash,{kind:"pay_detected"}),"/cash?tab=payments");
+ // Reserva vencida sin llegada (2026-11-26): caja la revisa en Reservas, donde quedó «No asistió».
+ assert.deepEqual([...rules.noticeTargets({kind:"reservation_no_show"})],[routes.reservations]);
+ assert.equal(rules.noticeHref(routes.reservations,{kind:"reservation_no_show"}),"/reservations");
  // Listo en mesa: el mozo entrega en Salón; sin mesa (mostrador, recojo, delivery) se ve en Pedidos.
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready",tableId:"t1"})],[routes.diningRoom,routes.orders]);
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready"})],[routes.orders,routes.pos]);
@@ -178,7 +181,7 @@ test("campana: área táctil de 44 px y contador rojo solo en la campana",()=>{
 
 test("avisos: un solo sonido general, la alerta de delivery suena doble y los pagos conservan el suyo",()=>{
  const sound=compile("src/modules/notifications/domain/notice-sound.ts");
- for(const kind of ["table_order","delivery_order","pickup_order","order_ready","bill_requested","assistance_requested"])assert.equal(sound.noticeSound(kind),"general",kind);
+ for(const kind of ["table_order","delivery_order","pickup_order","order_ready","bill_requested","assistance_requested","reservation_no_show"])assert.equal(sound.noticeSound(kind),"general",kind);
  for(const kind of ["delivery_unassigned","delivery_pickup_delayed"])assert.equal(sound.noticeSound(kind),"alert",kind);
  for(const kind of ["counter_order","stale_account","pay_detected"])assert.equal(sound.noticeSound(kind),null,`${kind} no suena en la campana`);
  assert.equal(sound.noticeSoundFor([{kind:"table_order"},{kind:"delivery_unassigned"}]),"alert","juntos suenan una vez y gana la alerta");

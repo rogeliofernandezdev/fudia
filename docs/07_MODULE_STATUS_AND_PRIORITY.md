@@ -166,7 +166,7 @@ costeo y la rentabilidad siguen pendientes (ver P1).
 | Mesas y zonas | `mesas` | 🟢 Ready / activable | Gestión por local implementada; zona inicial creada por onboarding. Auditoría de cierre pendiente. |
 | Caja y turnos | `caja` | 🟢 Ready / activable | Apertura/cierre, movimientos, pagos y devoluciones integrados. Auditoría final de cierre pendiente. |
 | Gastos | `costos` | 🟢 Ready / activable | Pestaña «Gastos» de Caja; el egreso del turno es un gasto con categoría. Antes «Costos y gastos» en Inteligencia. |
-| Reservas | `reservas` | 🟢 Ready / activable | Disponible en MVP. Auditoría de cierre pendiente. |
+| Reservas | `reservas` | 🟢 Ready / activable | Disponible en MVP. Fecha y hora separadas; tolerancia de llegada por local (ajustable por reserva) que vence la reserva a «No asistió» y avisa a caja; garantía opcional por local y por reserva, sin costo por defecto, que se cobra en Caja, se descuenta de la cuenta en Cobros y se devuelve o se retiene con su boleta si el cliente no llega (2026-11-26). Estados (2026-11-27): Pendiente → Confirmada → En mesa (exige mesa al ubicar al cliente) → Asistió (al terminar su tiempo, proyectado por el API), o No asistió / Cancelada. Pendiente: aviso al cliente por WhatsApp. Auditoría de cierre pendiente. |
 | Carta digital QR | `carta_qr` | 🔵 En desarrollo | No declararla terminada. |
 | Call center | `call_center` | ⚪ Planificado | Pendiente. |
 | Kiosco de autoservicio | `kiosco` | ⚪ Planificado | Pendiente. |

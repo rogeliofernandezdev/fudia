@@ -236,6 +236,8 @@ type PaymentsHandler interface {
 	CreatePaymentBatch(http.ResponseWriter, *http.Request)
 	ListPOSOrders(http.ResponseWriter, *http.Request)
 	GetPOSOrder(http.ResponseWriter, *http.Request)
+	ChargeDeposit(http.ResponseWriter, *http.Request)
+	RefundDeposit(http.ResponseWriter, *http.Request)
 }
 type CashHandler interface {
 	CreateCashRegister(http.ResponseWriter, *http.Request)

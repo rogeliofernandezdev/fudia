@@ -72,3 +72,20 @@ func (h *Payments) GetPOSOrder(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.Get(r.Context(), billingScope(r), r.PathValue("id"))
 	billingResponse(w, 200, out, err)
 }
+
+// ChargeDeposit cobra en Caja la garantía de una reserva.
+func (h *Payments) ChargeDeposit(w http.ResponseWriter, r *http.Request) {
+	var in domain.DepositInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_deposit", "Revisa los datos de la garantía.")
+		return
+	}
+	out, err := h.service.ChargeDeposit(r.Context(), billingScope(r), r.PathValue("id"), in)
+	billingResponse(w, 201, out, err)
+}
+
+// RefundDeposit devuelve la garantía cobrada de una reserva.
+func (h *Payments) RefundDeposit(w http.ResponseWriter, r *http.Request) {
+	err := h.service.RefundDeposit(r.Context(), billingScope(r), r.PathValue("id"))
+	billingResponse(w, 204, nil, err)
+}

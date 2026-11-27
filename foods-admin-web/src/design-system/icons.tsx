@@ -4,7 +4,7 @@ import {
   IconChartPie, IconCheck, IconChefHat, IconChevronLeft, IconChevronRight, IconCircleArrowRight, IconCircleCheck,
   IconCircleMinus, IconCircleX, IconClipboardCheck, IconClipboardList, IconClock, IconContract, IconCreditCard, IconCup,
   IconDeviceDesktop, IconDeviceFloppy, IconDeviceMobile, IconDownload, IconEye, IconFileInvoice, IconFilter, IconGauge,
-  IconHeart, IconIceCream2, IconId, IconInfoCircle, IconKey, IconLayout, IconLayoutBoardSplit, IconLayoutGrid,
+  IconHeart, IconHourglass, IconIceCream2, IconId, IconInfoCircle, IconKey, IconLayout, IconLayoutBoardSplit, IconLayoutGrid,
   IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLink, IconLock, IconLogin, IconLogout, IconMail,
   IconMapPin, IconMenu2, IconMessageCircle, IconMinus, IconNote, IconNotebook, IconPackages, IconPencil, IconPercentage,
   IconListCheck, IconMessageChatbot, IconPhone, IconPlug, IconPlus, IconPower, IconQrcode, IconReceipt, IconReceiptTax, IconRefresh, IconRoute, IconSalad, IconSearch,
@@ -13,7 +13,7 @@ import {
   IconUsers, IconVolume, IconWallet, IconX, IconArrowUpRight, IconArrowDownRight, IconFlame, IconChecks, IconMotorbike, IconBrandWhatsapp, IconBrandAndroid, IconBrandApple, type Icon as TablerIcon,
 } from "@tabler/icons-react";
 
-export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"tax"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink"|"arrowUpRight"|"arrowDownRight"|"flame"|"checks"|"motorbike"|"whatsapp"|"cashShift"|"apps"|"checklist"|"chatbot"|"android"|"apple"|"volume";
+export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"tax"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink"|"arrowUpRight"|"arrowDownRight"|"flame"|"checks"|"motorbike"|"whatsapp"|"cashShift"|"apps"|"checklist"|"chatbot"|"android"|"apple"|"volume"|"hourglass";
 /** Tamaños homologados: 14 junto a texto de 12–13 px, 16 en chips y pestañas, 18 en acciones, 20 en navegación, 24 en estados vacíos. */
 export type IconSize=14|16|18|20|24|28|32|36|40|48;
 
@@ -30,7 +30,7 @@ const glyphs: Record<IconName, TablerIcon> = {
   utensils:IconToolsKitchen2, chefHat:IconChefHat, cookingPot:IconSoup, kitchen:IconSoup, combo:IconLayoutBoardSplit,
   stock:IconPackages, truck:IconTruck, users:IconUsers, store:IconBuildingStore, settings:IconSettings, search:IconSearch,
   bell:IconBell, plus:IconPlus, minus:IconMinus, chevron:IconChevronRight, chevronLeft:IconChevronLeft, filter:IconFilter,
-  download:IconDownload, upload:IconUpload, alert:IconAlertTriangle, check:IconCheck, clock:IconClock, box:IconBox,
+  download:IconDownload, upload:IconUpload, alert:IconAlertTriangle, check:IconCheck, clock:IconClock, hourglass:IconHourglass, box:IconBox,
   logout:IconLogout, eye:IconEye, lock:IconLock, mail:IconMail, edit:IconPencil, power:IconPower,
   toggleOn:IconToggleRightFilled, toggleOff:IconToggleLeftFilled, circleCheck:IconCircleCheck, circleMinus:IconCircleMinus,
   circleSlash:IconBan, save:IconDeviceFloppy, refresh:IconRefresh, close:IconX, panelCollapse:IconLayoutSidebarLeftCollapse,

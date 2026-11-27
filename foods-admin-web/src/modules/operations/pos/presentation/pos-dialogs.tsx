@@ -7,7 +7,12 @@ import {calculateTip,canCollectTip,tipInputValue,type TipPolicy,type TipReceipt}
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {CheckoutFiscalSection,blankFiscalDraft,fiscalRequest,validateFiscalDraft,type CheckoutOptions,type FiscalDraft,type FiscalErrors} from "@/modules/einvoicing";
 import {cashChange,cashSuggestions,paymentResolverFor,refundResolver} from "../domain/pos-schema";
-import type {POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrder,POSOrderSummary,RefundDraft} from "../domain/types";
+import type {DepositOption,POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrder,POSOrderSummary,RefundDraft} from "../domain/types";
+
+/** «S/ 50.00 · pagada con Yape · reserva de las 20:30 · Mesa 5» */
+function depositLine(deposit:DepositOption,formatMoney:(value:number)=>string,formatTime?:(value:string)=>string){
+  return [formatMoney(Number(deposit.amount)),`pagada con ${deposit.methodName}`,formatTime?`reserva de las ${formatTime(deposit.startsAt)}`:"",deposit.tableName].filter(Boolean).join(" · ");
+}
 
 /** El icono sigue a «Impacta caja»; el nombre y el orden vienen del catálogo. */
 export function paymentMethodIcon(affectsCash:boolean){return affectsCash?"cash" as const:"wallet" as const}
@@ -22,16 +27,35 @@ export function paymentMethodTones(methods:PaymentMethodOption[]){
   return Object.fromEntries(methods.map(method=>[method.code,method.affectsCash?"brand":digitalTones[digital++%digitalTones.length]])) as Record<string,IconTileTone>;
 }
 
-export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,currency,close,save,tipPolicy,registeredTip,fiscalOptions,fiscalIssue}:{order:POSOrderSummary&Pick<POSOrder,"waiterName">;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;currency:{symbol:string;position:"before"|"after"};close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions;/** Module active but this location cannot issue yet: explained instead of hiding the receipt. */fiscalIssue?:string}){
+export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,currency,close,save,tipPolicy,registeredTip,fiscalOptions,fiscalIssue,deposits=[],formatTime}:{order:POSOrderSummary&Pick<POSOrder,"waiterName">;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;currency:{symbol:string;position:"before"|"after"};close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions;/** Module active but this location cannot issue yet: explained instead of hiding the receipt. */fiscalIssue?:string;/** Garantías de reserva que la cuenta puede descontar. */deposits?:DepositOption[];formatTime?:(value:string)=>string}){
   const tipAllowed=canCollectTip(tipPolicy,order.channel,Boolean(registeredTip));
   const tipBase=Math.max(0,Number(order.total)-Number(order.deliveryFee??0));
   const tipPercentage=tipPolicy?.percentage??0;
+  const decimals=tipPolicy?.decimals??2;
+  const balance=Number(order.remainingAmount);
+  // Solo se ofrecen las garantías que caben en el saldo; la de la mesa del pedido viene encendida.
+  const usable=deposits.filter(item=>Number(item.amount)<=balance+0.000001);
+  const suggested=usable.find(item=>item.suggested);
+  const[depositOn,setDepositOn]=useState(Boolean(suggested));
+  const[depositId,setDepositId]=useState(suggested?.paymentId??usable[0]?.paymentId??"");
+  const deposit=depositOn?usable.find(item=>item.paymentId===depositId):undefined;
+  const discount=deposit?Number(deposit.amount):0;
+  const remaining=Math.max(0,balance-discount);
+  const covered=Boolean(deposit)&&remaining<=0.000001;
+  // useForm toma el resolver de cada render: encender o apagar la garantía cambia el tope del cobro,
+  // y si la garantía cubre todo el saldo no hay monto ni medio que validar.
   const{control,register,setValue,handleSubmit,formState:{errors}}=useForm<PaymentDraft>({
-    defaultValues:{method:methods[0]?.code??"",amount:Number(order.remainingAmount).toFixed(tipPolicy?.decimals??2),reference:"",receivedAmount:"",tipEnabled:false,tipKind:tipPercentage>0?"percentage":"fixed",tipValue:""},
-    resolver:paymentResolverFor(methods,Number(order.remainingAmount),tipPolicy,tipBase),
+    defaultValues:{method:methods[0]?.code??"",amount:remaining.toFixed(decimals),reference:"",receivedAmount:"",tipEnabled:false,tipKind:tipPercentage>0?"percentage":"fixed",tipValue:""},
+    resolver:covered?values=>({values,errors:{}}):paymentResolverFor(methods,remaining,tipPolicy,tipBase),
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
+  function chooseDeposit(on:boolean,id=depositId){
+    setDepositOn(on);
+    setDepositId(id);
+    const next=on?usable.find(item=>item.paymentId===id):undefined;
+    setValue("amount",Math.max(0,balance-(next?Number(next.amount):0)).toFixed(decimals),{shouldDirty:true});
+  }
   const method=useWatch({control,name:"method"});
   const amount=useWatch({control,name:"amount"});
   const received=useWatch({control,name:"receivedAmount"});
@@ -41,8 +65,6 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
   const tip=calculateTip(Boolean(enabled)&&tipAllowed,kind,tipInputValue(kind,tipPolicy,value),tipBase,tipPolicy?.decimals??2);
   const collected=(Number(amount)||0)+tip;
   const selected=methods.find(option=>option.code===method);
-  const decimals=tipPolicy?.decimals??2;
-  const remaining=Number(order.remainingAmount);
   const change=cashChange(String(collected),received);
   const tendered=Number(received);
   const missing=received?.trim()&&Number.isFinite(tendered)&&tendered>0&&tendered<collected?collected-tendered:0;
@@ -56,12 +78,12 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
   const showTip=tipOpen||Boolean(enabled)||Boolean(errors.tipKind||errors.tipValue);
   const result=missing>0?{tone:" short",label:"Falta",value:formatMoney(missing)}:change!==null?{tone:" ready",label:"Vuelto",value:formatMoney(change)}:{tone:"",label:"Vuelto",value:"—"};
   const adjusted=tip>0||pending>0;
-  const facts=[paid>0&&`Pagado ${formatMoney(paid)} de ${formatMoney(Number(order.total))}`,tip>0&&`Incluye propina ${formatMoney(tip)}`,pending>0&&`Queda ${formatMoney(pending)} pendiente`].filter((fact):fact is string=>Boolean(fact));
+  const facts=[discount>0&&`Garantía ${formatMoney(discount)} de ${formatMoney(Number(order.total))}`,paid>0&&`Pagado ${formatMoney(paid)} de ${formatMoney(Number(order.total))}`,tip>0&&`Incluye propina ${formatMoney(tip)}`,pending>0&&`Queda ${formatMoney(pending)} pendiente`].filter((fact):fact is string=>Boolean(fact));
   const tones=paymentMethodTones(methods);
   // One document per order: it is requested by the payment that settles the account.
   const[fiscal,setFiscal]=useState<FiscalDraft>(()=>({...blankFiscalDraft(fiscalOptions),customerName:order.channel==="salon"?"":order.customerName??""}));
   const[fiscalErrors,setFiscalErrors]=useState<FiscalErrors>({});
-  const settles=Number(amount)+0.000001>=Number(order.remainingAmount);
+  const settles=covered||Number(amount)+0.000001>=remaining;
   const offerFiscal=Boolean(fiscalOptions?.enabled)&&settles;
   function submit(draft:PaymentDraft){
     if(shiftOptions.length>1&&!selectedShiftId)return;
@@ -70,7 +92,7 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
       setFiscalErrors(errors);
       if(Object.keys(errors).length)return;
     }
-    save({...draft,fiscal:offerFiscal?fiscalRequest(fiscalOptions,fiscal):undefined});
+    save({...draft,amount:covered?"0":draft.amount,depositPaymentId:deposit?.paymentId,fiscal:offerFiscal?fiscalRequest(fiscalOptions,fiscal):undefined});
   }
   return <ModalForm onSubmit={handleSubmit(submit)} noValidate inert={busy}>
       <ModalBody className="pos-payment-body pos-checkout">
@@ -80,15 +102,23 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
             <strong>{formatMoney(adjusted?collected:remaining)}</strong>
             {facts.map(fact=><small key={fact}>{fact}</small>)}
           </div>
-          {selected?.affectsCash&&<div className={"pos-checkout-result"+result.tone} role="status" aria-live="polite"><span>{result.label}</span><strong>{result.value}</strong></div>}
+          {selected?.affectsCash&&!covered&&<div className={"pos-checkout-result"+result.tone} role="status" aria-live="polite"><span>{result.label}</span><strong>{result.value}</strong></div>}
           {(order.waiterName||shiftOptions.length<=1)&&<div className="pos-checkout-meta">
             {order.waiterName&&<p><Icon name="user" size={16}/><span><span className="pos-checkout-meta-label">Atendió: </span><b>{order.waiterName}</b></span></p>}
             {shiftOptions.length<=1&&<p className="shift"><Icon name="register" size={16}/><span><span className="pos-checkout-meta-label">Caja: </span><b>{shiftName}</b></span></p>}
           </div>}
         </aside>
         <div className="pos-checkout-main">
+          {usable.length>0&&<div className="pos-deposit">
+            <label className="switch-row pos-deposit-switch">
+              <input type="checkbox" checked={depositOn} disabled={busy} onChange={event=>chooseDeposit(event.target.checked)}/>
+              <span/>
+              <b>{`Descontar garantía de ${(deposit??suggested??usable[0]).customerName}`}<small>{depositLine(deposit??suggested??usable[0],formatMoney,formatTime)}</small></b>
+            </label>
+            {depositOn&&usable.length>1&&<FormField label="Garantía de la reserva"><Select value={depositId} disabled={busy} onChange={event=>chooseDeposit(true,event.target.value)}>{usable.map(item=><option key={item.paymentId} value={item.paymentId}>{[item.customerName,formatMoney(Number(item.amount)),item.tableName].filter(Boolean).join(" · ")}</option>)}</Select></FormField>}
+          </div>}
           {shiftOptions.length>1&&<FormField label="Caja para este cobro"><Select value={selectedShiftId} disabled={busy} onChange={event=>selectShift?.(event.target.value)} required><option value="">Selecciona una caja abierta</option>{shiftOptions.map(option=><option key={option.id} value={option.id}>{option.cashRegisterName} · {option.openedByName}</option>)}</Select></FormField>}
-          <FormSection icon="payment" tone="brand" title="Medio de pago" bare>
+          {!covered&&<><FormSection icon="payment" tone="brand" title="Medio de pago" bare>
           <fieldset className="pos-methods">
             <legend className="sr-only">Medio de pago</legend>
             {methods.map(option=><label className={"pos-method"+(method===option.code?" active":"")} key={option.code}>
@@ -131,6 +161,7 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
               </FormField>
             </FormDisclosure>
           </div>
+          </>}
           {offerFiscal&&fiscalOptions&&<CheckoutFiscalSection options={fiscalOptions} value={fiscal} onChange={next=>{setFiscal(next);setFiscalErrors({})}} errors={fiscalErrors} disabled={busy}/>}
           {!offerFiscal&&settles&&fiscalIssue&&<InlineNotice tone="warning" title="Boleta y factura no disponibles">{fiscalIssue}</InlineNotice>}
         </div>

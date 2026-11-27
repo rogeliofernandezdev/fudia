@@ -574,24 +574,55 @@ test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   assert.ok(page.includes("useForm<ReservationDraft>"),"Reservas usa React Hook Form");
   assert.ok(page.includes("resolver:reservationResolver"),"Reservas delega validacion a Zod");
   assert.ok(schema.includes("reservationSchema=z.object"),"Reservas define esquema Zod");
-  assert.ok(page.includes('className="form-grid reservation-form-grid"'),"El modal usa una reticula propia sobre el formulario estandar");
   assert.ok(page.includes("<ModalForm")&&page.includes("<ModalBody>"),"La reserva usa cuerpo desplazable y pie fijo estándar, sin márgenes negativos");
   const sharedModal=read("src/design-system/styles/modal.css");
   assert.match(sharedModal,/\.modal-body\{[^}]*overflow-x:hidden/,"El cuerpo del modal nunca crea desplazamiento horizontal por tooltips ocultos");
   assert.doesNotMatch(sharedModal,/\.modal-body \.field-hint\[data-tooltip\]:after/,"Las ayudas de campo viven fuera del recorte del modal");
   assert.ok(read("src/providers/providers.tsx").includes("<TooltipLayer/>"),"La capa global muestra acciones y ayudas sobre los modales");
-  assert.ok(css.includes("grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr)"),"La columna principal conserva mayor jerarquia");
   const modalStart=page.indexOf("function ReservationDialog");
   const modal=page.slice(modalStart);
-  const dateIndex=modal.indexOf("Fecha y hora");
-  const guestsIndex=modal.indexOf("Personas");
-  const tableIndex=modal.indexOf("\n            Mesa\n");
-  const durationIndex=modal.indexOf("Duración de mesa");
-  assert.ok(dateIndex>=0&&guestsIndex>dateIndex&&tableIndex>guestsIndex&&durationIndex>tableIndex,"El flujo visual sigue fecha, personas, mesa y duracion");
+  // Estándar de formularios por secciones (2026-11-26): FormSection + FormField, como «Nuevo gasto».
+  const sections=["title=\"Cliente\"","title=\"Fecha y mesa\"","title=\"Garantía\"","title=\"Información adicional\""].map(title=>modal.indexOf(title));
+  assert.ok(sections.every((index,i)=>index>=0&&(i===0||index>sections[i-1])),"La reserva se organiza en Cliente, Fecha y mesa, Garantía e Información adicional");
+  assert.equal(/<label>\s*\n/.test(modal)||modal.includes("FieldLabel"),false,"Cada campo usa FormField, sin etiquetas sueltas ni ayudas escondidas en la «i»");
+  const order=["label=\"Fecha\"","label=\"Hora\"","label=\"Personas\"","label=\"Mesa\"","label=\"Duración de mesa (min)\"","label=\"Tolerancia (min)\""].map(label=>modal.indexOf(label));
+  assert.ok(order.every((index,i)=>index>=0&&(i===0||index>order[i-1])),"Fecha | Hora, Personas | Mesa, Duración | Tolerancia");
+  assert.match(modal,/label="Fecha" icon=\{false\}[^>]*><Input type="date"/,"La fecha nativa no repite icono propio");
+  assert.match(modal,/label="Hora" icon=\{false\}[^>]*><Input type="time"/,"La hora nativa no repite icono propio");
+  assert.ok(modal.includes('{...register("depositEnabled")}')&&modal.includes("{depositEnabled&&<FormField label=\"Importe\""),"La garantía es opcional: el importe aparece solo al activarla");
+  assert.ok(css.includes(".reservation-schedule .form-section-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"),"En móvil Fecha y Hora comparten fila");
   assert.ok(page.includes('{busy?"Guardando…":"Guardar"}'),"El CTA usa el texto estandar Guardar");
   assert.equal(page.includes("Guardar reserva"),false,"El modal no agrega sufijos al CTA Guardar");
   assert.ok(page.includes("tablesLoading")&&page.includes("tablesError"),"La dependencia remota de mesas expone carga y error");
   assert.ok(css.includes("@media (width<=600px)"),"El modal define reorganizacion movil");
+});
+
+test("la garantía de reserva se cobra en Caja y se descuenta en Cobros (maqueta 2026-11-26)",()=>{
+  const page=read("src/modules/operations/reservations/presentation/reservations-page.tsx");
+  const dialog=read("src/modules/operations/reservations/presentation/reservation-deposit-dialog.tsx");
+  const api=read("src/modules/operations/reservations/infrastructure/reservations-api.ts");
+  const checkout=read("src/modules/operations/pos/presentation/pos-dialogs.tsx");
+  const posApi=read("src/modules/operations/pos/infrastructure/pos-api.ts");
+  // Reservas: el estado del cobro va bajo el cliente y la fila ofrece cobrarla.
+  for(const text of ["· por cobrar","· pagada con ","· descontada","\"retenida\"","· devuelta"])assert.ok(page.includes(text),`La fila dice el estado de la garantía: ${text}`);
+  assert.ok(page.includes('item.depositStatus==="pending"&&["pending","confirmed"].includes(item.status)')&&page.includes('<IconButton icon="wallet" label="Cobrar garantía"'),"«Cobrar garantía» solo para reservas abiertas con la garantía por cobrar");
+  assert.ok(page.includes('(item.status==="seated"||item.status==="attended")&&item.depositStatus==="paid"')&&page.includes('<IconButton icon="undo" label="Devolver garantía"'),"Una reserva en mesa o que asistió con garantía sin descontar puede devolverla");
+  assert.ok(page.includes('<Tabs label="Qué hacer con la garantía"')&&page.includes('{value:"refund",label:"Devolver"')&&page.includes('{value:"retain",label:"Retener"'),"Cancelar con garantía cobrada decide entre devolverla o retenerla");
+  assert.ok(page.includes("disabled={initial.depositLocked}"),"Una garantía ya cobrada no cambia de importe al editar");
+  // PostgreSQL manda «+00» sin minutos: «Espera hasta» y Editar leen startsAt con el parser tolerante (2026-11-27).
+  assert.equal(page.includes("new Date(item.startsAt)"),false,"startsAt nunca se lee con new Date directo");
+  assert.ok(page.includes("parseReservationDate(item.startsAt)"),"Reservas normaliza el desfase horario del API");
+  assert.ok(api.includes("reservations/${id}/deposit`")&&api.includes("reservations/${id}/deposit/refund`")&&api.includes("...(options.deposit?{deposit:options.deposit}:{})")&&api.includes("...(options.tableId?{tableId:options.tableId}:{})"),"La API cobra, devuelve, envía la decisión al cancelar y la mesa al ubicar");
+  // El modal usa las tarjetas de medio de pago de Cobros, con cabecera solo título y X.
+  assert.ok(dialog.includes('<ModalHeader title="Cobrar garantía"')&&dialog.includes("<PaymentMethodPicker methods={options}"),"«Cobrar garantía» reutiliza los medios de pago de Cobros");
+  assert.ok(read("src/modules/operations/pos/presentation/payment-method-picker.tsx").includes('import "./pos.css";'),"El selector de medios trae sus estilos aunque lo use otra vertical");
+  assert.ok(dialog.includes("ErrorState")&&dialog.includes("Skeleton")&&dialog.includes("Necesitas un turno de caja"),"El modal muestra carga, error y la falta de turno");
+  assert.ok(dialog.indexOf('action="cancel"')<dialog.indexOf('"Cobrar garantía"}</Button>'),"Cancelar va antes de la acción principal");
+  // Cobros: interruptor «Descontar garantía», línea en el resumen y el pago la envía.
+  assert.ok(checkout.includes('className="switch-row pos-deposit-switch"')&&checkout.includes("`Descontar garantía de ${"),"El cobro ofrece descontar la garantía con un interruptor");
+  assert.ok(checkout.includes("discount>0&&`Garantía ${formatMoney(discount)} de ${formatMoney(Number(order.total))}`"),"El resumen dice cuánto descuenta la garantía del total");
+  assert.ok(checkout.includes("depositPaymentId:deposit?.paymentId")&&posApi.includes("depositPaymentId:draft.depositPaymentId"),"El pago envía la garantía que descuenta");
+  assert.ok(checkout.includes("const suggested=usable.find(item=>item.suggested)")&&checkout.includes("useState(Boolean(suggested))"),"La garantía de la mesa del pedido viene encendida");
 });
 
 test("no se versionan secretos locales ni artefactos temporales en la raiz admin",()=>{

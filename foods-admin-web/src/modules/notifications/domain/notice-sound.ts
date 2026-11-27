@@ -21,6 +21,8 @@ const soundByKind:Record<NoticeKind,NoticeSound|null>={
   counter_order:null,
   stale_account:null,
   pay_detected:null,
+  // La mesa reservada quedó libre: caja decide si la ofrece a otro cliente.
+  reservation_no_show:"general",
 };
 
 export function noticeSound(kind:NoticeKind):NoticeSound|null{

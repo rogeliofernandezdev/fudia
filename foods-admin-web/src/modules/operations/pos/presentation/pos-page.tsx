@@ -251,6 +251,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,shiftOptions=[],selectedShiftId="",selectShift,methodsLoading,methodsError,methods,retryMethods,canCollect,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;methodsLoading:boolean;methodsError?:string;methods?:PaymentMethodOption[];retryMethods:()=>void;canCollect:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
   const fiscal=useCheckoutOptions();
   const currency=useCurrency();
+  const{location}=useSession();
+  const formatTime=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{timeStyle:"short"});
   let state:{title:string;text:string;icon?:IconName;retry?:()=>void;cash?:boolean}|undefined;
   let form:React.ReactNode;
   if(!canCollect)state={title:"No puedes registrar cobros",text:"Necesitas permiso de cobro o una asignación activa a un turno abierto.",icon:"lock"};
@@ -264,7 +266,7 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,s
     else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar.",icon:"clock"}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar.",icon:"clock"};
     else if(!shiftName&&!shiftOptions.length)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",icon:"register",cash:true};
     else if(!methods?.length)state={title:"Sin medios de pago para ventas",text:"Activa al menos un medio para ventas en Configuración › Medios de pago.",icon:"wallet"};
-    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName??""} shiftOptions={shiftOptions} selectedShiftId={selectedShiftId} selectShift={selectShift} busy={busy} formatMoney={formatMoney} currency={currency} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip} fiscalOptions={fiscal.data?.enabled?fiscal.data:undefined} fiscalIssue={fiscal.data&&!fiscal.data.enabled?fiscal.data.issue:undefined}/>;
+    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName??""} shiftOptions={shiftOptions} selectedShiftId={selectedShiftId} selectShift={selectShift} busy={busy} formatMoney={formatMoney} currency={currency} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip} fiscalOptions={fiscal.data?.enabled?fiscal.data:undefined} fiscalIssue={fiscal.data&&!fiscal.data.enabled?fiscal.data.issue:undefined} deposits={data.deposits} formatTime={formatTime}/>;
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className={"crud-modal pos-payment-modal modal-panel-in"+(state?"":" pos-checkout-modal")} role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
 

@@ -280,6 +280,8 @@ function cashMovementSourceLabel(source:string){
   if(source==="adjustment")return"Ajuste";
   if(source==="expense")return"Gasto";
   if(source==="expense_void")return"Gasto anulado";
+  if(source==="reservation_deposit")return"Garantía de reserva";
+  if(source==="reservation_deposit_refund")return"Devolución de garantía";
   return"Manual";
 }
 

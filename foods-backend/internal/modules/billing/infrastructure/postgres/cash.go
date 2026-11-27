@@ -716,13 +716,14 @@ func (r *Payments) BuildReport(ctx context.Context, s scope, id string) (domain.
 		return out, billingError(err)
 	}
 	// Refunds belong to the shift where they were registered, not the original payment's shift.
-	rows, err = r.db(ctx).Query(ctx, `SELECT p.id::text,o.code,pm.name,p.amount::text,p.reference,u.full_name,to_char(p.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),false
- FROM payments p JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
+	// Una garantía de reserva aún sin pedido figura como «Garantía de reserva».
+	rows, err = r.db(ctx).Query(ctx, `SELECT p.id::text,COALESCE(o.code,'Garantía de reserva'),pm.name,p.amount::text,p.reference,u.full_name,to_char(p.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),false
+ FROM payments p LEFT JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
  JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id
  WHERE p.shift_id=$1 AND p.organization_id=$2 AND p.location_id=$3
- UNION ALL SELECT pr.id::text,o.code,pm.name,pr.amount::text,pr.reason,u.full_name,to_char(pr.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),true
+ UNION ALL SELECT pr.id::text,COALESCE(o.code,'Garantía de reserva'),pm.name,pr.amount::text,pr.reason,u.full_name,to_char(pr.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),true
  FROM payment_refunds pr JOIN payments p ON p.id=pr.payment_id AND p.organization_id=pr.organization_id AND p.location_id=pr.location_id
- JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
+ LEFT JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
  JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method JOIN users u ON u.id=pr.created_by AND u.organization_id=pr.organization_id
  WHERE pr.shift_id=$1 AND pr.organization_id=$2 AND pr.location_id=$3 ORDER BY 7,1`, id, s.OrganizationID, s.LocationID)
 	if err != nil {

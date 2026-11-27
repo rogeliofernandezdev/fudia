@@ -92,7 +92,11 @@ export type POSOrderDetail={
   payments:Payment[];
   /** Electronic document delivered for the order; absent when charged without one. */
   fiscalDocument?:FiscalDocumentRef;
+  /** Garantías de reserva cobradas hoy que la cuenta puede descontar; suggested = reserva de la mesa del pedido. */
+  deposits?:DepositOption[];
 };
+
+export type DepositOption={paymentId:string;customerName:string;amount:string;methodName:string;startsAt:string;tableName:string;suggested:boolean};
 
 export type POSOrdersResponse={
   items:POSOrderSummary[];
@@ -117,6 +121,8 @@ export type PaymentDraft={
   reference:string;
   /** Local cash tender, used to calculate change; never sent as payment revenue. */
   receivedAmount?:string;
+  /** Garantía de reserva que se descuenta de la cuenta en este cobro. */
+  depositPaymentId?:string;
 };
 
 export type RefundDraft={

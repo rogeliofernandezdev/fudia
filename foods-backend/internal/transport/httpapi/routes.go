@@ -321,6 +321,9 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/admin/reservations", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.createReservation))))
 	m.Handle("PATCH /v1/admin/reservations/{id}", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.updateReservation))))
 	m.Handle("PATCH /v1/admin/reservations/{id}/status", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.updateReservationStatus))))
+	// La garantía se cobra y se devuelve en Caja: además de gestionar reservas, cobrarla exige un turno de cobro.
+	m.Handle("POST /v1/admin/reservations/{id}/deposit", a.auth(a.requirePermission("reservations.manage", a.handlers.Payments.RequireCollection(http.HandlerFunc(a.chargeReservationDeposit)))))
+	m.Handle("POST /v1/admin/reservations/{id}/deposit/refund", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.refundReservationDeposit))))
 	m.Handle("GET /v1/admin/orders/floor", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrdersFloor))))
 	m.Handle("GET /v1/admin/service-destinations", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listServiceDestinations))))
 	m.Handle("POST /v1/admin/orders/{id}/items", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.appendOrderItems))))

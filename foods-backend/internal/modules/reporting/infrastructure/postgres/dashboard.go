@@ -375,14 +375,17 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 	batch.Queue(`SET LOCAL statement_timeout = '5s'`)
 	batch.Queue(`
 		WITH today_payments AS (
+		  -- Una garantía de reserva aún sin pedido no es venta: cuenta al
+		  -- descontarse de la cuenta o al retenerse (entonces ya tiene pedido).
 		  SELECT p.order_id,p.amount
 		  FROM payments p
-		  WHERE p.organization_id=$1 AND p.location_id=$2
+		  WHERE p.organization_id=$1 AND p.location_id=$2 AND p.order_id IS NOT NULL
 		    AND p.created_at>=`+localDayStartSQL("$3::int-1")+` AND p.created_at<`+localDayStartSQL("-1")+`
 		),
 		today_refunds AS (
 		  SELECT pr.amount
 		  FROM payment_refunds pr
+		  JOIN payments rp ON rp.id=pr.payment_id AND rp.organization_id=pr.organization_id AND rp.order_id IS NOT NULL
 		  WHERE pr.organization_id=$1 AND pr.location_id=$2
 		    AND pr.created_at>=`+localDayStartSQL("$3::int-1")+` AND pr.created_at<`+localDayStartSQL("-1")+`
 		),
@@ -477,11 +480,12 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		FROM (
 		  SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int AS hour,p.amount AS value
 		  FROM payments p JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
-		  WHERE p.organization_id=$1 AND p.location_id=$2
+		  WHERE p.organization_id=$1 AND p.location_id=$2 AND p.order_id IS NOT NULL
 		    AND p.created_at>=`+localDayStartSQL("0")+` AND p.created_at<`+localDayStartSQL("-1")+`
 		  UNION ALL
 		  SELECT extract(hour FROM pr.created_at AT TIME ZONE l.timezone)::int AS hour,-pr.amount AS value
 		  FROM payment_refunds pr JOIN locations l ON l.id=pr.location_id AND l.organization_id=pr.organization_id
+		  JOIN payments rp ON rp.id=pr.payment_id AND rp.organization_id=pr.organization_id AND rp.order_id IS NOT NULL
 		  WHERE pr.organization_id=$1 AND pr.location_id=$2
 		    AND pr.created_at>=`+localDayStartSQL("0")+` AND pr.created_at<`+localDayStartSQL("-1")+`
 		) movements

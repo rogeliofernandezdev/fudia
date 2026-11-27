@@ -20,6 +20,8 @@ type PaymentInput struct {
 	Method    string              `json:"method"`
 	Amount    float64             `json:"amount"`
 	Reference string              `json:"reference"`
+	// DepositPaymentID descuenta de la cuenta una garantía de reserva cobrada.
+	DepositPaymentID string `json:"depositPaymentId,omitempty"`
 }
 
 type RefundInput struct {

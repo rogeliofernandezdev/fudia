@@ -40,7 +40,8 @@ test("formularios empiezan bajo la cabecera sin franja ni título repetidos",()=
  assert.doesNotMatch(html,/modal-context|modal-context-description/);
  const reservation=read("modules/operations/reservations/presentation/reservations-page.tsx");
  assert.match(reservation,/<ModalHeader title=\{initial.id\?"Editar reserva":"Nueva reserva"\}/);
- assert.doesNotMatch(reservation,/<FormSection|title="Datos de la reserva"/);
+ // Desde 2026-11-26 la reserva usa secciones aprobadas (Cliente, Fecha y mesa, Garantía…), nunca una que repita la cabecera.
+ assert.doesNotMatch(reservation,/title="(Datos de la reserva|Nueva reserva|Editar reserva)"/);
  const violations=[];
  function scan(dir){for(const entry of readdirSync(dir,{withFileTypes:true})){
   const file=resolve(dir,entry.name);if(entry.isDirectory()){scan(file);continue}if(!file.endsWith(".tsx"))continue;

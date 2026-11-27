@@ -728,6 +728,12 @@ Matriz semántica completa:
 | Orden de compra | Aprobada | `blue` — índigo | Lista para recibir |
 | Orden de compra | Recibida | `green` — verde | Recepción completa |
 | Orden de compra | Cancelada | `red` — rojo | Cancelación, igual que el pedido |
+| Reserva | Pendiente | `orange` — ámbar | Espera confirmación |
+| Reserva | Confirmada | `blue` — índigo | Lista para recibir al cliente |
+| Reserva | En mesa (`seated`) | `sky` — celeste | El cliente llegó y ocupa su mesa; como Cuenta abierta, sigue en el local. Antes «Sentada» (2026-11-27) |
+| Reserva | Asistió (`attended`) | `green` — verde | Terminó el tiempo de la reserva en mesa; hito cumplido. No se guarda: el API lo proyecta y se puede filtrar |
+| Reserva | Cancelada | `red` — rojo | Cancelación, igual que el pedido (2026-11-27; antes gris) |
+| Reserva | No asistió | `gray` — gris | Venció la tolerancia; distinto del rojo de Cancelada |
 
 Compras centraliza su mapeo en `purchaseStatusMeta`
 (`supply/purchases/domain/purchase-status.ts`); ninguna pantalla lo redefine.
@@ -3185,6 +3191,72 @@ mientras el despacho siga en Delivery Fudia.
   restaurante. Caja cobra a la central solo el pedido, y el resumen de cuenta y
   POS ya muestran ese importe. Una vez aceptado, el local ya no puede volver a
   su delivery propio.
+- **Campana:** el aviso `reservation_no_show` (2026-11-26, «Reserva cancelada:
+  <cliente> no llegó») usa el icono `calendar`, tono `primary`, sonido general y
+  lleva a Reservas.
+- **Reservas (aprobado 2026-11-26 sobre maqueta):** formulario por secciones como
+  «Nuevo gasto», solo con `FormSection` + `FormField` (sin etiquetas sueltas ni
+  ayudas en la «i»): **Cliente** (Nombre | Teléfono), **Fecha y mesa** (Fecha |
+  Hora, nativos con `icon={false}` porque el navegador ya muestra su icono;
+  Personas | Mesa; Duración de mesa (min) | Tolerancia (min) con `hourglass` y la
+  ayuda visible «Luego pasa a «No asistió».»), **Garantía** (`switch-row`
+  «Cobrar garantía», apagado por defecto = sin costo; al activarlo aparece
+  «Importe» con `MoneyInput` y la ayuda «Se cobra en Caja y se descuenta de la
+  cuenta.») e **Información adicional** (Notas, opcional). En móvil Fecha y Hora
+  comparten fila; el resto ocupa el ancho. Ninguna sección repite el título de la
+  cabecera. Una reserva nueva toma tolerancia y garantía del local. En la tabla,
+  bajo la fecha, las reservas pendientes o confirmadas muestran «Espera hasta
+  <hora>» y las que el sistema venció, «Cancelada automáticamente»; el estado
+  sigue siendo «No asistió» (gris). Locales › editar/nuevo local agrega la
+  sección «Reservas» (solo con el módulo `reservas`) en una fila: «Tolerancia de
+  llegada (min)» | «Garantía» (interruptor «Cobrar garantía», apagado) |
+  «Importe de garantía» (deshabilitado con «Sin costo» mientras esté apagado).
+- **Garantía en Caja (aprobado 2026-11-26 sobre maqueta):** en la tabla de Reservas,
+  bajo el cliente, la línea secundaria dice el cobro en lugar del teléfono:
+  «Garantía S/ 50.00 · por cobrar», «· pagada con Yape», «· descontada»,
+  «· retenida · B001-245» o «· devuelta». Acciones (botones de icono de 38 px con
+  tooltip, como Editar y Cancelar; `.table-actions` no admite botones de texto):
+  «Cobrar garantía» (`wallet`) en reservas pendientes o confirmadas por cobrar y
+  «Devolver garantía» (`undo`) en reservas «En mesa» o «Asistió» cuya garantía no se descontó.
+  Avanzar el estado también es un icono (opción 3 aprobada 2026-11-27 sobre
+  maqueta; antes botones de texto que se recortaban): «Confirmar reserva»
+  (`check`) en pendientes y «Ubicar en mesa» (`tables`, la silla de mesas) en
+  confirmadas. Orden fijo en la fila, como la maqueta: avance de estado,
+  garantía, Editar y Cancelar al final, para que cada acción caiga siempre en el
+  mismo lugar. «Ubicar en mesa» abre un `ConfirmDialog` (tono `success`) con el
+  campo «Mesa»: viene elegida la mesa de la reserva y lista las activas con
+  capacidad; sin mesa el backend responde `seat_table_required`. Al terminar su
+  tiempo, una reserva «En mesa» pasa sola a «Asistió» (2026-11-27). Editar y Cancelar solo aparecen en pendientes y confirmadas, igual
+  que el backend (`reservation_not_editable`): una reserva «En mesa» o «Asistió» solo muestra
+  «Devolver garantía» si corresponde, y las canceladas o «No asistió» ninguna. Con
+  mouse en escritorio (>600 px, sin puntero táctil) estos botones miden 26 px con
+  glifo de 16 px (`.reservations-table`); en móvil y pantallas táctiles conservan
+  los 44 px del sistema. Excepción aprobada (opción 1, 2026-11-27): para no
+  confundir botones vecinos, cada acción toma en suave el color del estado al que
+  lleva: Ubicar en mesa en verde (`brand-100`/`brand-700`). Confirmar
+  también va en verde suave (opción 3, 2026-11-27): el índigo suave no se
+  distinguía del azul de Editar; el glifo (check o silla) diferencia ambos
+  avances, que nunca aparecen juntos en una fila. Cobrar y Devolver
+  garantía en ámbar (`warning-100`/`warning-600`); Editar sigue azul y Cancelar
+  rojo. Solo aplica a esta tabla (`reservation-action-*`). El modal
+  «Cobrar garantía» (cabecera solo título y X) muestra un resumen `primary-100`
+  con cliente, fecha · personas · mesa y el importe en `primary-700`; debajo, las
+  mismas tarjetas de medio de pago de Cobros (`pos-methods`), «Número de
+  operación» para medios digitales y la nota «Caja: <caja> · se descuenta de la
+  cuenta cuando lleguen.»; pie Cancelar | «Cobrar garantía». Cancelar una
+  reserva con la garantía cobrada usa el `ConfirmDialog` «Cancelar reserva» con
+  `Tabs` Devolver | Retener, una línea que explica cada opción y el botón
+  «Confirmar» (una sola línea a 390 px; el título ya dice la acción). Una garantía
+  cobrada no cambia de importe al editar (interruptor e importe deshabilitados con
+  la ayuda «Ya se cobró en Caja; el importe no cambia.»). En Cobros, el modal de
+  cobro real agrega solo dos cosas: sobre «Medio de pago», el `switch-row`
+  «Descontar garantía de <cliente>» (interruptor a la derecha, detalle «S/ 50.00 ·
+  pagada con Yape · reserva de las 20:30 · Mesa 5»), encendido si la reserva es
+  de la mesa del pedido y con selector solo si hay varias; y en el resumen azul
+  marino la línea «Garantía S/ 50.00 de S/ 180.00», con el mismo formato que
+  «Pagado S/ X de S/ Y». Si la garantía cubre todo el saldo, se ocultan medio de
+  pago, efectivo, propina y cobro parcial. En Caja los movimientos se llaman
+  «Garantía de reserva» y «Devolución de garantía».
 - **Campana:** el aviso `delivery_unassigned` («Ninguna central aceptó el
   delivery») usa icono `motorbike`, tono `peach` (atención) y abre el detalle en
   Pedidos (`?orderId=`). Desde el 2026-11-23 sale solo tras las 3 vueltas

@@ -13,6 +13,9 @@ type Customer = domain.Customer
 
 const DocumentNone = domain.TypeNone
 
+// DocumentReceipt is the boleta: the receipt a retained reservation guarantee gets.
+const DocumentReceipt = domain.TypeReceipt
+
 // DocumentRef identifies the document created for a payment. Number is the
 // legal fiscal number (e.g. B001-45).
 type DocumentRef struct {

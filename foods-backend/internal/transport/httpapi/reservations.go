@@ -23,3 +23,9 @@ func (a *API) updateReservation(w http.ResponseWriter, r *http.Request) {
 func (a *API) updateReservationStatus(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Reservations.UpdateReservationStatus(w, r)
 }
+func (a *API) chargeReservationDeposit(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Payments.ChargeDeposit(w, r)
+}
+func (a *API) refundReservationDeposit(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Payments.RefundDeposit(w, r)
+}

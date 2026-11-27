@@ -84,3 +84,21 @@ func TestBuildersWriteStaffText(t *testing.T) {
 		t.Fatal("invalid amount must be empty")
 	}
 }
+
+func TestReservationNoShowGoesToCashierBell(t *testing.T) {
+	notice := ReservationNoShow("r1", "Ana Pérez", 4, "20:30", "Mesa 5", "")
+	if notice.Kind != KindReservationNoShow || notice.Audience != AudienceCashier ||
+		notice.Title != "Reserva cancelada: Ana Pérez no llegó" ||
+		notice.Detail != "20:30 · 4 personas · Mesa 5" || notice.DedupeKey != "reservation-no-show:r1" {
+		t.Fatalf("no show: %+v", notice)
+	}
+	if kept := ReservationNoShow("r3", "Carla", 2, "19:00", "Mesa 1", "S/ 50.00"); kept.Detail != "19:00 · 2 personas · Mesa 1 · Garantía retenida S/ 50.00" {
+		t.Fatalf("detalle con garantía: %q", kept.Detail)
+	}
+	if one := ReservationNoShow("r2", "Luis", 1, "13:00", "", ""); one.Detail != "13:00 · 1 persona" {
+		t.Fatalf("single guest without table: %+v", one)
+	}
+	if _, ok := Normalize(notice); !ok {
+		t.Fatal("reservation no show must be a known kind")
+	}
+}

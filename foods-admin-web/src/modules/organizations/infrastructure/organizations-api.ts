@@ -14,7 +14,8 @@ export function listProfiles(page:number,pageSize:number){
 }
 // Tip settings travel with the location so both are saved in one transaction.
 export function saveLocation(value:LocationDraft,tipSettings?:TipSettings){
- const payload={...value,code:value.code||value.name.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8).padStart(3,"L"),...(tipSettings?{tipSettings}:{})};
+ const {reservationDepositEnabled,...location}=value;
+ const payload={...location,reservationToleranceMinutes:Number(value.reservationToleranceMinutes),reservationDepositAmount:reservationDepositEnabled?(value.reservationDepositAmount??"").trim():"0",code:value.code||value.name.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8).padStart(3,"L"),...(tipSettings?{tipSettings}:{})};
  return apiFetch<Location|void>(value.id?`locations/${value.id}`:"locations",{method:value.id?"PATCH":"POST",body:JSON.stringify(payload)});
 }
 export function deactivateLocation(id:string){return apiFetch<void>(`locations/${id}`,{method:"DELETE"})}

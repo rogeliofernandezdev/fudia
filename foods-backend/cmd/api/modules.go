@@ -94,7 +94,17 @@ func (h orderHandoff) RestoreDeliveryFee(ctx context.Context, s requestscope.Sco
 
 // newAPI compone el API y devuelve el despachador de Delivery Fudia, cuyo
 // barrido periódico avanza la cascada de centrales.
-func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Events, payPush paydetectapp.Pusher) (*httpapi.API, *deliveryMaintenance) {
+// reservationMaintenance vence reservas (Reservas) y retiene sus garantías (Caja).
+type reservationMaintenance struct {
+	*serviceapp.Reservations
+	deposits *billingapp.Payments
+}
+
+func (m reservationMaintenance) RetainForfeitedDeposits(ctx context.Context) (int, error) {
+	return m.deposits.RetainForfeitedDeposits(ctx)
+}
+
+func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Events, payPush paydetectapp.Pusher) (*httpapi.API, *deliveryMaintenance, reservationMaintenance) {
 	// Composition is the only layer that knows concrete PostgreSQL adapters.
 	// A single unit of work and shared stateless adapters preserve transactions
 	// across Orders, Inventory, Billing and tenant onboarding.
@@ -131,7 +141,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Event
 	taxRepository := orgpg.NewTaxes(db)
 	taxes := orgapp.NewTaxes(taxRepository)
 	fiscalDocuments, einvoicingHandler := newEInvoicing(db, work, audit, orders, taxes, access)
-	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscalDocuments)
+	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscalDocuments).WithDeposits(paymentsRepo)
 	customers := customerapp.New(customerpg.New(db))
 
 	// Fudia Pay: dispositivos de pago vinculados por QR y notificaciones de
@@ -142,6 +152,8 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Event
 	payNotifications := paydetectapp.NewNotifications(payRepo).
 		WithOrderLooker(orderpg.New(db)).
 		WithPaymentRegisterer(payments)
+
+	reservations := serviceapp.NewReservations(servicepg.NewReservations(db), work, audit).WithNotices(notices).WithDeposits(payments)
 
 	concierge := conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers).WithNotices(notices)
 	concierge.WithDirectory(conciergepg.New(db), platform, work)
@@ -165,7 +177,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Event
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work).WithTips(tips)),
 		PaymentMethods:         billinghttp.NewMethods(methods),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), work, audit)),
-		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), work, audit)),
+		Reservations:           servicehttp.NewReservations(reservations),
 		Reporting:              reporthttp.New(reportapp.New(reportpg.New(db), work, identityAdminRepo)),
 		Expenses:               billinghttp.NewExpenses(billingapp.NewExpenses(billingpg.NewExpenses(db), methods, audit)),
 		Modules:                subscriptionhttp.NewModules(subscriptionapp.NewModules(accessRepo, access, audit)),
@@ -177,7 +189,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages, live realtime.Event
 		Orders:                 orderhttp.New(orders),
 		Notices:                noticehttp.New(notices),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
-	}), &deliveryMaintenance{dispatcher: dispatcher, operators: operators}
+	}), &deliveryMaintenance{dispatcher: dispatcher, operators: operators}, reservationMaintenance{reservations, payments}
 }
 
 // configurePayPush prepara el push de Fudia Pay (FCM_PROJECT_ID: proyecto de

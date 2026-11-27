@@ -33,7 +33,9 @@ var (
 	DeliveryUnassigned  = domain.DeliveryUnassigned
 	// PayDetected: Fudia Pay detectó un pago de Yape o Plin para revisión en caja.
 	PayDetected = domain.PaymentDetected
-	Money                 = domain.Money
+	// ReservationNoShow: una reserva venció su tolerancia sin que el cliente llegara.
+	ReservationNoShow = domain.ReservationNoShow
+	Money             = domain.Money
 	// OrderReadyForCustomer devuelve false si el pedido no avisa al cliente.
 	OrderReadyForCustomer = domain.OrderReadyForCustomer
 	// OrderSentForCustomer devuelve false si falta el WhatsApp de la ronda.

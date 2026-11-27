@@ -19,12 +19,16 @@ func (h *Reservations) ListReservations(w http.ResponseWriter, r *http.Request) 
 func (h *Reservations) UpdateReservationStatus(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Status string `json:"status"`
+		// Deposit: "refund" o "retain" al cancelar una reserva con garantía cobrada.
+		Deposit string `json:"deposit"`
+		// TableID: mesa donde se ubicó el cliente al pasar a «En mesa» (seated).
+		TableID string `json:"tableId"`
 	}
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		shared.Fail(w, 400, "invalid_reservation_status", "El estado de reserva no es válido.")
 		return
 	}
-	err := h.service.SetStatus(r.Context(), floorScope(r), r.PathValue("id"), in.Status)
+	err := h.service.SetStatus(r.Context(), floorScope(r), r.PathValue("id"), in.Status, in.Deposit, in.TableID)
 	floorResponse(w, 204, nil, err)
 }
 func (h *Reservations) CreateReservation(w http.ResponseWriter, r *http.Request) {

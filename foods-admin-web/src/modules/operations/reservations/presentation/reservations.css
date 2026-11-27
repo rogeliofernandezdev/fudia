@@ -1,11 +1,37 @@
-.reservation-form-grid{grid-template-columns:minmax(0,1.35fr) minmax(var(--size-170),.65fr);align-items:start}
-.reservation-form-grid label{min-width:0}
-.reservation-notes{grid-column:1/-1}
-.reservation-label{align-items:center;gap:var(--space-1-5);display:flex}
-.reservation-label small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.reservation-table-state{color:var(--ink-400);margin-top:calc(var(--space-px) * -1);font-size:var(--font-size-label);font-weight:var(--weight-semibold);line-height:var(--line-height-snug)}
-.reservation-table-state.error{color:var(--danger)}
-@media (width<=600px){
-  .reservation-form-grid{grid-template-columns:1fr}
-  .reservation-notes{grid-column:auto}
+/* Acciones de la tabla (opción 3 aprobada 2026-11-27): iconos de 26 px con glifo de 16 px solo
+   con mouse en escritorio; en móvil y pantallas táctiles conservan el área táctil del sistema. */
+@media (width>600px) and (not (any-pointer:coarse)){
+  .reservations-table .table-actions{gap:var(--space-1-5)}
+  .reservations-table .table-actions button{width:var(--size-26);min-width:var(--size-26);height:var(--size-26)}
+  .reservations-table .table-actions svg{width:var(--size-16);height:var(--size-16)}
 }
+
+/* Cada acción toma, en suave, el color del estado al que lleva (opción 1 aprobada 2026-11-27):
+   Ubicar en mesa verde, garantía ámbar; Editar azul y Cancelar rojo. Confirmar pasó a verde suave
+   (opción 3, 2026-11-27) porque el índigo suave no se distinguía del azul de Editar. */
+.reservations-table .table-actions button:is(.reservation-action-confirm,.reservation-action-seat){color:var(--brand-700);background:var(--brand-100);border-color:var(--brand-200)}
+.reservations-table .table-actions button.reservation-action-deposit{color:var(--warning-600);background:var(--warning-100);border-color:var(--warning-200)}
+@media (hover:hover) and (pointer:fine){
+  .reservations-table .table-actions button:is(.reservation-action-confirm,.reservation-action-seat):hover:not(:disabled){background:var(--brand-200);border-color:var(--brand-300)}
+  .reservations-table .table-actions button.reservation-action-deposit:hover:not(:disabled){background:var(--warning-200);border-color:var(--warning-500)}
+}
+
+/* Fecha y Hora comparten fila también en móvil: son un solo dato. */
+@media (width<=600px){
+  .reservation-schedule .form-section-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .reservation-schedule .form-section-grid>:not(.reservation-date):not(.reservation-time){grid-column:1/-1}
+}
+
+/* Cobrar garantía (maqueta aprobada 2026-11-26): el importe es el protagonista en un resumen
+   primary-100, como el saldo de Cobros; los medios de pago son las tarjetas de Cobros. */
+.reservation-deposit-body{display:grid;gap:var(--space-5)}
+.reservation-deposit-summary{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-tile);background:var(--primary-100)}
+.reservation-deposit-summary b{display:block;color:var(--ink-950);font-size:var(--font-size-control)}
+.reservation-deposit-summary small{display:block;margin-top:var(--space-0-5);color:var(--ink-500);font-size:var(--font-size-label)}
+.reservation-deposit-summary strong{flex:none;color:var(--primary-700);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums}
+.reservation-deposit-note{margin:0;color:var(--ink-500);font-size:var(--font-size-label)}
+.reservation-deposit-note b{color:var(--ink-800)}
+.reservation-deposit-loading{display:grid;gap:var(--space-4)}
+/* Cancelar con garantía cobrada: la decisión ocupa todo el ancho del diálogo. */
+.reservation-cancel-deposit{display:grid;gap:var(--space-2);margin-top:var(--space-3)}
+.reservation-cancel-deposit p{margin:0;color:var(--ink-500);font-size:var(--font-size-label)}

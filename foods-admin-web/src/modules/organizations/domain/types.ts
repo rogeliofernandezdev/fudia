@@ -7,8 +7,12 @@ export type Currency={code:string;name:string;symbol:string;decimals:number};
 export type Organization={id:string;legalName:string;tradeName:string;taxId:string;timezone:string;active:boolean};
 export type Profile={id:string;country:string;countryName:string;currency:string;currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number;taxName:string;taxRate:string;taxIncluded:boolean;default:boolean;active:boolean;assignedLocations:number;specialTaxRegime:string|null;specialTax:SpecialTaxStatus|null};
 export type ProfilesResponse=List<Profile>&{countryOptions:Country[];currencyOptions:Currency[];specialTaxRegimeOptions:SpecialTaxRegime[]};
-export type Location={districtCode?:string;id:string;name:string;code:string;address:string;phone:string;openingHours:string;openedOn?:string|null;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;country:string;currency:string;active:boolean};
-export type LocationDraft={districtCode?:string;id?:string;name:string;code:string;address:string;phone:string;openingHours:string;openedOn?:string|null;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;active:boolean};
+export type Location={districtCode?:string;id:string;name:string;code:string;address:string;phone:string;openingHours:string;openedOn?:string|null;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;country:string;currency:string;active:boolean;reservationToleranceMinutes:number;reservationDepositAmount:string};
+export type LocationDraft={districtCode?:string;id?:string;name:string;code:string;address:string;phone:string;openingHours:string;openedOn?:string|null;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;active:boolean;
+ /** Minutos que se espera al cliente de una reserva antes de pasarla a «No asistió». */
+ reservationToleranceMinutes:number|string;
+ /** Garantía que toma cada reserva nueva; apagada por defecto (sin costo). */
+ reservationDepositEnabled?:boolean;reservationDepositAmount?:string};
 export type Rate={id:string;baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string|null;createdByName:string|null};
 export type ProfileDraft={id?:string;country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxPercent:string;taxIncluded:boolean;default:boolean;specialTaxRegime:string};
 export type RateDraft={baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string};

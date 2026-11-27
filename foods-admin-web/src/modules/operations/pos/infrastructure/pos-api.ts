@@ -35,6 +35,7 @@ export function createPayment(orderId:string,draft:PaymentDraft){
       method:draft.method,
       amount:Number(draft.amount),
       reference:draft.reference.trim(),
+      ...(draft.depositPaymentId?{depositPaymentId:draft.depositPaymentId}:{}),
       ...(draft.fiscal?{fiscal:draft.fiscal}:{}),
       ...(draft.tipEnabled?{tip:draft.tipKind==="fixed"?{kind:"fixed",value:Number(draft.tipValue)}:{kind:"percentage"}}:{}),
     }),

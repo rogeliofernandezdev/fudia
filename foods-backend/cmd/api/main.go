@@ -57,9 +57,10 @@ func main() {
 	// PostgreSQL a las pantallas abiertas por SSE.
 	liveHub := realtime.NewHub()
 	go realtime.Listen(ctx, db, liveHub, logger)
-	api, maintenance := newAPI(db, images, realtime.Events{Hub: liveHub, Done: ctx.Done()}, configurePayPush(ctx, logger))
+	api, maintenance, reservations := newAPI(db, images, realtime.Events{Hub: liveHub, Done: ctx.Done()}, configurePayPush(ctx, logger))
 	mux := api.Routes()
 	go sweepDeliveryDispatch(ctx, logger, maintenance)
+	go sweepReservations(ctx, logger, reservations)
 	go sweepPayPairing(ctx, logger, paydetectapp.NewMaintenance(paydetectpg.New(db)))
 	go watchPoolSaturation(ctx, logger, db)
 	mux.HandleFunc("GET /health", health)
@@ -118,6 +119,42 @@ func sweepDeliveryDispatch(ctx context.Context, logger *slog.Logger, dispatcher 
 		case <-ticker.C:
 			if err := dispatcher.Sweep(ctx); err != nil && ctx.Err() == nil {
 				logger.Warn("delivery_sweep_failed", "error", err)
+			}
+		}
+	}
+}
+
+// reservationSweepInterval: cada cuánto se vencen las reservas cuya tolerancia
+// de llegada pasó sin que el cliente llegara (quedan «No asistió») y se
+// retienen, con su boleta, las garantías de reservas que terminaron sin él.
+const reservationSweepInterval = time.Minute
+
+type reservationSweeper interface {
+	ExpireOverdue(context.Context) (int, error)
+	RetainForfeitedDeposits(context.Context) (int, error)
+}
+
+func sweepReservations(ctx context.Context, logger *slog.Logger, reservations reservationSweeper) {
+	ticker := time.NewTicker(reservationSweepInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			expired, err := reservations.ExpireOverdue(ctx)
+			if err != nil && ctx.Err() == nil {
+				logger.Warn("reservation_sweep_failed", "error", err)
+			}
+			if expired > 0 {
+				logger.Info("reservation_sweep_expired", "expired", expired)
+			}
+			retained, err := reservations.RetainForfeitedDeposits(ctx)
+			if err != nil && ctx.Err() == nil {
+				logger.Warn("reservation_deposit_sweep_failed", "error", err)
+			}
+			if retained > 0 {
+				logger.Info("reservation_deposits_retained", "retained", retained)
 			}
 		}
 	}

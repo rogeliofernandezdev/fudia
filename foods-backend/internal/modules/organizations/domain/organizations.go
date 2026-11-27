@@ -2,6 +2,7 @@ package domain
 
 import (
 	"math/big"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -65,6 +66,11 @@ type LocationView struct {
 	Country         string   `json:"country"`
 	Currency        string   `json:"currency"`
 	Active          bool     `json:"active"`
+	// ReservationToleranceMinutes: minutos que se espera al cliente de una
+	// reserva antes de darla por «No asistió».
+	ReservationToleranceMinutes int `json:"reservationToleranceMinutes"`
+	// ReservationDepositAmount: garantía que toma cada reserva nueva («0.00» = sin costo).
+	ReservationDepositAmount string `json:"reservationDepositAmount"`
 }
 type LocationInput struct {
 	DistrictCode    *string  `json:"districtCode,omitempty"`
@@ -79,7 +85,13 @@ type LocationInput struct {
 	Timezone        string   `json:"timezone"`
 	FiscalProfileID string   `json:"fiscalProfileId"`
 	Active          *bool    `json:"active,omitempty"`
+	// ReservationToleranceMinutes nil conserva la tolerancia actual (15 al crear).
+	ReservationToleranceMinutes *int `json:"reservationToleranceMinutes,omitempty"`
+	// ReservationDepositAmount nil conserva la garantía actual (sin costo al crear).
+	ReservationDepositAmount *string `json:"reservationDepositAmount,omitempty"`
 }
+
+var reservationDepositPattern = regexp.MustCompile(`^[0-9]{1,10}([.][0-9]{1,2})?$`)
 type ExchangeRate struct {
 	ID                string  `json:"id"`
 	BaseCurrency      string  `json:"baseCurrency"`
@@ -164,6 +176,19 @@ func ValidateLocationInput(in *LocationInput) bool {
 		}
 	}
 	in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Timezone, in.FiscalProfileID = strings.TrimSpace(in.Name), strings.ToUpper(strings.TrimSpace(in.Code)), strings.TrimSpace(in.Address), strings.TrimSpace(in.Phone), strings.TrimSpace(in.OpeningHours), strings.TrimSpace(in.Timezone), strings.TrimSpace(in.FiscalProfileID)
+	if in.ReservationToleranceMinutes != nil && (*in.ReservationToleranceMinutes < 0 || *in.ReservationToleranceMinutes > 240) {
+		return false
+	}
+	if in.ReservationDepositAmount != nil {
+		deposit := strings.TrimSpace(*in.ReservationDepositAmount)
+		if deposit == "" {
+			deposit = "0"
+		}
+		if !reservationDepositPattern.MatchString(deposit) {
+			return false
+		}
+		in.ReservationDepositAmount = &deposit
+	}
 	return in.Name != "" && in.Code != "" && len(in.Code) <= 30 && in.Timezone != "" && in.FiscalProfileID != ""
 }
 func NormalizePlatformFiscalInput(in *FiscalProfileInput) bool {

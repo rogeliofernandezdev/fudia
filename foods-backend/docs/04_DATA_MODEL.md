@@ -200,6 +200,7 @@ leer para cada mozo o cajero hasta que lo abra.
 | Llamado al personal (handoff) | Concierge | `service` |
 | Comanda de Cocina/Barra lista | Orders | `service` con mesa; `all` sin mesa |
 | Cuenta anterior sin cerrar (`stale_account`, migración 000106): un QR nuevo llega a una mesa cuya comanda abierta lleva más de 3 h sin rondas | Concierge | `all` |
+| Reserva vencida sin llegada (`reservation_no_show`, migración 000149) | Service (barrido de reservas) | `cashier` |
 
 Las audiencias se resuelven al leer con la autorización de Identity en el local:
 `tables.read` ve `service`, `cash.manage` ve `cashier`, y cualquiera de las dos ve
@@ -228,6 +229,80 @@ reclama con `FOR UPDATE SKIP LOCKED` (reserva de 60 s en `claimed_until`, máxim
 `status='dispatched'`. Los textos los redacta Concierge; el backend entrega
 código, forma de entrega (`counter`/`pickup`), empresa y local. Mesa, delivery y
 pedidos registrados por el personal no avisan al cliente.
+
+## Reservas: hora y tolerancia de llegada (migración 000149, 2026-11-26)
+
+`reservations.starts_at` guarda fecha y hora (la interfaz las pide en campos
+separados «Fecha» y «Hora»). `locations.reservation_tolerance_minutes` (0–240,
+15 por defecto) es cuánto se espera al cliente después de esa hora; se edita en
+Locales › Reservas y `GET /v1/admin/reservations` la entrega como
+`defaultToleranceMinutes`. Cada reserva copia el valor al crearse
+(`reservations.tolerance_minutes`) y puede ajustarlo; editar sin
+`toleranceMinutes` conserva el de la reserva.
+
+El API corre un barrido cada minuto (`cmd/api`, `sweepReservations`): una reserva
+`pending` o `confirmed` con `starts_at + tolerance_minutes <= now()` pasa a
+`no_show` («No asistió») y marca `expired_at` (el CHECK exige `status='no_show'`).
+Una sola sentencia toma hasta 200 reservas con `FOR UPDATE SKIP LOCKED` y repite
+la condición de estado, así que varias instancias del API, una edición o un
+«Sentar» simultáneo no se pisan. Por cada reserva vencida registra la auditoría
+`reservation.no_show_expired` y publica el aviso `reservation_no_show` para caja
+(«Reserva cancelada: <cliente> no llegó», detalle hora local · personas · mesa;
+`dedupe_key` por reserva). El aviso es de mejor esfuerzo. La API expone
+`expired=true` para distinguirla de un «No asistió» marcado a mano. La migración
+dejó como `no_show` (sin aviso) las reservas abiertas que ya estaban vencidas.
+
+La garantía es opcional y por defecto no hay costo. `locations.reservation_deposit_amount`
+(0 = sin garantía) es el valor que toma cada reserva nueva; se edita en Locales ›
+Reservas y `GET /v1/admin/reservations` lo entrega como `defaultDepositAmount`.
+`reservations.deposit_amount` guarda la garantía de cada reserva (`depositAmount`
+en el API, texto con hasta dos decimales; `"0"` la quita, omitido la toma del
+local al crear o conserva la actual al editar). Una vez cobrada, editar la reserva
+ya no cambia el importe.
+
+### Cobro de la garantía en Caja (migración 000150, 2026-11-26)
+
+La garantía es un cobro real (`payments`) del turno que la recibe, sin pedido
+todavía: `payments.order_id` admite NULL solo con `reservation_id` (CHECK
+`payments_order_or_reservation_check`) y hay como máximo una por reserva
+(`payments_one_deposit_per_reservation_idx`). Así el efectivo entra al cuadre
+(movimiento `reservation_deposit`) y Yape, Plin o tarjeta suman a su medio en el
+reporte del turno, que la lista como «Garantía de reserva» mientras no tenga
+pedido. El Dashboard no la cuenta como venta hasta que tiene pedido.
+
+- **Cobrar:** `POST /v1/admin/reservations/{id}/deposit` (`method`, `reference`,
+  `shiftId` como en Cobros; exige `reservations.manage` y turno de cobro). Solo
+  reservas `pending` o `confirmed` con garantía mayor que cero y sin cobrar.
+- **Descontar:** `GET /v1/admin/pos/orders/{id}` entrega en `deposits` las
+  garantías cobradas, sin pedido, de reservas abiertas o sentadas de hoy (día
+  local); `suggested` marca la de la mesa del pedido. `POST /v1/admin/payments`
+  con `depositPaymentId` pasa ese cobro al pedido (`deposit_outcome='applied'`),
+  sienta la reserva y cobra el resto; si la garantía salda la cuenta, `amount`
+  puede ser 0. Una garantía mayor que el saldo se rechaza
+  (`deposit_exceeds_remaining`): se cobra la cuenta completa y se devuelve.
+  La boleta del consumo sale por el total.
+- **Devolver:** `POST /v1/admin/reservations/{id}/deposit/refund`, o al cancelar
+  con `PATCH …/status {"status":"cancelled","deposit":"refund"}`: devolución
+  normal (`payment_refunds`) desde el turno del usuario y, en efectivo, el
+  movimiento `reservation_deposit_refund`.
+- **Retener:** al cancelar con `"deposit":"retain"`, o cuando la reserva pasa a
+  «No asistió», se crea una venta de mostrador entregada y cerrada con una línea
+  sin producto «Garantía de reserva no utilizada» (`order_items.item_type =
+  'reservation_deposit'`, única excepción a `order_items_product_required`), el
+  cobro pasa a ese pedido (`deposit_outcome='retained'`) y, con facturación
+  electrónica activa y configurada, se pide su boleta (mejor esfuerzo; por
+  encima del monto que exige documento del cliente queda sin boleta). Cancelar
+  una reserva con garantía cobrada sin indicar `deposit` responde 409
+  `deposit_decision_required`. El barrido de cada minuto retiene las garantías
+  de reservas `no_show` o `cancelled` que sigan sin pedido, y el aviso
+  `reservation_no_show` agrega «Garantía retenida S/ 50.00».
+- **Reservas** expone `depositStatus` (`none`, `pending`, `paid`, `applied`,
+  `retained`, `refunded`), `depositMethodName` y `depositDocument` (serie-correlativo
+  de la boleta de una garantía retenida).
+
+Avisar al cliente por WhatsApp queda pendiente: las reservas se registran desde
+el panel y no tienen conversación de Concierge, y `customer_notices` exige un
+pedido.
 
 ## Entrega y cierre de pedidos de mesa
 

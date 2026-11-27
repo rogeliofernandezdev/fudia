@@ -14,7 +14,7 @@ import type {NoticeKind,StaffNotice} from "../domain/types";
 import {useNoticeSound} from "./use-notice-sound";
 
 /** Icono de cada aviso: el mismo dominio que la pantalla donde se atiende. */
-const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock",delivery_unassigned:"motorbike",delivery_pickup_delayed:"clock",pay_detected:"wallet"};
+const noticeIcons:Record<NoticeKind,IconName>={table_order:"tables",counter_order:"store",delivery_order:"motorbike",pickup_order:"shoppingBag",order_ready:"checks",bill_requested:"receipt",assistance_requested:"bell",stale_account:"clock",delivery_unassigned:"motorbike",delivery_pickup_delayed:"clock",pay_detected:"wallet",reservation_no_show:"calendar"};
 /** El aviso emergente se retira solo; se pausa mientras el usuario lo señala o enfoca, o con la pestaña oculta. */
 const toastDuration=8000;
 /** Salida más rápida que la entrada (`--duration-fast`): el sistema responde, no hace esperar. */

@@ -11,6 +11,14 @@ export const locationSchema=z.object({
  openingHours:z.string().trim().max(120,"El horario no puede superar 120 caracteres."),
  timezone:z.string().trim().min(3,"Indica la zona horaria."),
  fiscalProfileId:z.string().min(1,"Selecciona el perfil fiscal."),
+ reservationToleranceMinutes:z.union([z.string(),z.number()]).refine(value=>{const minutes=Number(value);return String(value).trim()!==""&&Number.isInteger(minutes)&&minutes>=0&&minutes<=240},"Usa una tolerancia entre 0 y 240 minutos."),
+ reservationDepositEnabled:z.boolean().optional(),
+ reservationDepositAmount:z.string().optional(),
+}).superRefine((value,ctx)=>{
+ const deposit=(value.reservationDepositAmount??"").trim();
+ if(value.reservationDepositEnabled&&(!/^[0-9]{1,10}([.][0-9]{1,2})?$/.test(deposit)||Number(deposit)<=0)){
+  ctx.addIssue({code:"custom",path:["reservationDepositAmount"],message:"Ingresa un importe mayor a cero, con hasta dos decimales."});
+ }
 });
 export const locationResolver=zodResolver<LocationDraft>(locationSchema.passthrough());
 

@@ -115,10 +115,11 @@ func New(db *pgxpool.Pool) *integrationAPI {
 	fiscal := einvoicingapp.NewDocuments(einvoicingpg.New(db), auditpg.New(db), orders, taxes, access, registry)
 	fiscal.WithDispatcher(syncDispatcher{fiscal}).WithCipher(keyring)
 	fiscalSettings := einvoicingapp.NewSettings(einvoicingpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), access, registry).WithCipher(keyring)
-	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscal)
+	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscal).WithDeposits(billingpg.NewPayments(db))
+	reservations := serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db)).WithNotices(notices).WithDeposits(payments)
 	platform := platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{}).WithTips(tips)
 	concierge := conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)).WithCustomers(customerapp.New(customerpg.New(db))).WithNotices(notices).WithDirectory(conciergepg.New(db), platform, database.NewUnitOfWork(db)).WithDeliveryTracking(dispatcher)
-	return &integrationAPI{db: db, fiscal: fiscal, dispatcher: dispatcher, API: NewWithHandlers(Handlers{
+	return &integrationAPI{db: db, fiscal: fiscal, dispatcher: dispatcher, payments: payments, reservations: reservations, API: NewWithHandlers(Handlers{
 		Delivery: deliveryhttp.New(deliveryapp.NewPartners(deliverypg.New(db), database.NewUnitOfWork(db)), dispatcher).
 			WithOperators(deliveryapp.NewOperators(deliverypg.New(db), database.NewUnitOfWork(db), credentials.Credentials{}), false),
 		Tips:                   billinghttp.NewTips(tips),
@@ -137,7 +138,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db)).WithTips(tips)),
 		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),
-		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db))),
+		Reservations:           servicehttp.NewReservations(reservations),
 		Reporting:              reporthttp.New(reportapp.New(reportpg.New(db), database.NewUnitOfWork(db), identitypg.NewAdministration(db))),
 		Expenses:               billinghttp.NewExpenses(billingapp.NewExpenses(billingpg.NewExpenses(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), auditpg.New(db))),
 		Modules:                subscriptionhttp.NewModules(subscriptionapp.NewModules(subscriptionpg.NewAccess(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
@@ -163,4 +164,7 @@ type integrationAPI struct {
 	fiscal *einvoicingapp.Documents
 	// dispatcher permite a las pruebas forzar el barrido de Delivery Fudia.
 	dispatcher *deliveryapp.Dispatcher
+	// payments y reservations permiten forzar el barrido de reservas y garantías.
+	payments     *billingapp.Payments
+	reservations *serviceapp.Reservations
 }

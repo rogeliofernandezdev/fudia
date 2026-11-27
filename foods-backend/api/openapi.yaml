@@ -226,6 +226,77 @@ paths:
         "403": { description: Sin permiso }
         "404": { description: Producto no pertenece a la empresa }
         "409": { description: Imagen no confirmada o de otro producto/empresa/local }
+  /v1/admin/reservations:
+    get:
+      operationId: listReservations
+      summary: Reservas del local de la sesión
+      description: "Requiere reservations.read. Primero las próximas por hora de inicio. defaultToleranceMinutes es la tolerancia de llegada del local que toma una reserva nueva."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { $ref: "#/components/schemas/ReservationStatus" } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200": { description: Reservas paginadas, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize, defaultToleranceMinutes, defaultDepositAmount], properties: { items: { type: array, items: { $ref: "#/components/schemas/Reservation" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, defaultToleranceMinutes: { type: integer, minimum: 0, maximum: 240 }, defaultDepositAmount: { type: string, pattern: "^[0-9]{1,10}([.][0-9]{1,2})?$", description: "Garantía del local para una reserva nueva; 0.00 = sin costo" } } } } } }
+        "400": { description: invalid_reservation_status }
+    post:
+      operationId: createReservation
+      summary: Registra una reserva
+      description: "Requiere reservations.manage. Sin toleranceMinutes toma la tolerancia del local. Una reserva pendiente o confirmada que no se sienta antes de startsAt + toleranceMinutes pasa sola a no_show (expired=true) y avisa a caja en la campana (reservation_no_show)."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ReservationInput" } } } }
+      responses:
+        "201": { description: Reserva registrada, content: { application/json: { schema: { $ref: "#/components/schemas/Reservation" } } } }
+        "400": { description: "invalid_reservation, invalid_customer, invalid_table, table_capacity o reservation_conflict" }
+  /v1/admin/reservations/{id}:
+    patch:
+      operationId: updateReservation
+      summary: Edita una reserva pendiente o confirmada
+      description: "Requiere reservations.manage. Sin toleranceMinutes conserva la tolerancia de la reserva."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ReservationInput" } } } }
+      responses:
+        "200": { description: Reserva actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/Reservation" } } } }
+        "400": { description: "invalid_reservation, invalid_customer, invalid_table, table_capacity o reservation_conflict" }
+        "404": { description: reservation_not_found }
+        "409": { description: reservation_not_editable }
+  /v1/admin/reservations/{id}/status:
+    patch:
+      operationId: updateReservationStatus
+      summary: "Cambia el estado: pending → confirmed | seated | cancelled | no_show; confirmed → seated | cancelled | no_show"
+      description: "seated («En mesa») exige mesa: tableId, o la que la reserva ya tenía asignada (seat_table_required si falta). attended («Asistió») no se envía: el listado lo proyecta cuando termina el tiempo de una reserva en mesa."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { $ref: "#/components/schemas/ReservationStatus" }, tableId: { type: string, format: uuid, description: "Mesa donde se ubicó el cliente al pasar a seated" }, deposit: { type: string, enum: [refund, retain], description: "Obligatorio al cancelar una reserva con la garantía cobrada y sin descontar: refund la devuelve desde el turno de caja del usuario; retain la deja en el local como venta de mostrador «Garantía de reserva no utilizada» con su boleta (si hay facturación electrónica activa)" } } } } } }
+      responses:
+        "204": { description: Estado actualizado }
+        "404": { description: reservation_not_found }
+        "400": { description: "seat_table_required o invalid_table" }
+        "409": { description: "invalid_reservation_transition, deposit_decision_required o, al devolver, cash_shift_required" }
+  /v1/admin/reservations/{id}/deposit:
+    post:
+      operationId: chargeReservationDeposit
+      summary: Cobra en Caja la garantía de una reserva pendiente o confirmada
+      description: "Registra un cobro del turno de caja sin pedido, ligado a la reserva: el efectivo entra al cuadre (movimiento reservation_deposit) y los medios digitales suman a su medio en el turno. Exige reservations.manage y turno de cobro (como POST /v1/admin/payments). Una reserva tiene como máximo una garantía cobrada."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [method], properties: { method: { type: string }, reference: { type: string, maxLength: 120 }, shiftId: { type: string, format: uuid, description: "Solo administrador, como en PaymentInput" } } } } } }
+      responses:
+        "201": { description: Garantía cobrada, content: { application/json: { schema: { type: object, required: [paymentId, amount, methodName], properties: { paymentId: { type: string, format: uuid }, amount: { type: string }, methodName: { type: string } } } } } }
+        "404": { description: reservation_not_found }
+        "409": { description: "reservation_without_deposit, deposit_already_charged, reservation_not_open o cash_shift_required" }
+  /v1/admin/reservations/{id}/deposit/refund:
+    post:
+      operationId: refundReservationDeposit
+      summary: Devuelve la garantía cobrada que aún no se descontó ni se retuvo
+      description: "Devolución normal (payment_refunds) desde el turno de caja del usuario; en efectivo registra el movimiento reservation_deposit_refund."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "204": { description: Garantía devuelta }
+        "409": { description: "deposit_not_available o cash_shift_required" }
   /v1/admin/tables:
     get:
       operationId: listTables
@@ -3285,7 +3356,7 @@ components:
       required: [id, kind, title, detail, createdAt, read]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned, delivery_pickup_delayed, pay_detected], description: "pay_detected: pago de Yape o Plin pendiente de revisar en Caja. delivery_unassigned: ninguna central aceptó tras las 3 vueltas automáticas. delivery_pickup_delayed: histórico; ya no se genera desde 2026-11-23." }
+        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested, stale_account, delivery_unassigned, delivery_pickup_delayed, pay_detected, reservation_no_show], description: "reservation_no_show: una reserva venció su tolerancia sin que el cliente llegara y pasó a No asistió (audiencia caja). pay_detected: pago de Yape o Plin pendiente de revisar en Caja. delivery_unassigned: ninguna central aceptó tras las 3 vueltas automáticas. delivery_pickup_delayed: histórico; ya no se genera desde 2026-11-23." }
         title: { type: string, maxLength: 120, description: Texto final redactado por el backend }
         detail: { type: string, maxLength: 240 }
         orderId: { type: string, format: uuid }
@@ -3705,7 +3776,7 @@ components:
     OrganizationInput: { type: object, required: [legalName, tradeName, taxId, timezone], properties: { legalName: { type: string, maxLength: 180 }, tradeName: { type: string, maxLength: 180 }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string } } }
     Organization: { allOf: [{ $ref: "#/components/schemas/OrganizationInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
     FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean }, specialTaxRegime: { type: [string, "null"], description: "Código de SpecialTaxRegime del mismo país en que la empresa está acogida (padrón). null = solo tasa general. 400 invalid_special_tax_regime si no corresponde al país." } } }
-    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { districtCode: { type: string, pattern: "^$|^[0-9]{6}$", description: "Distrito INEI del local peruano; omitido conserva el valor al editar, vacío lo elimina. El catálogo devuelve sus nombres. El distrito no limita las ofertas a centrales." }, openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean }, tipSettings: { allOf: [{ $ref: "#/components/schemas/TipSettings" }], description: "Opcional. Propinas propias del local, guardadas en la misma transacción que el local; si se rechazan (400 invalid_tip_settings, 403 tips_settings_forbidden: solo el administrador reservado), el local no cambia. Omitido conserva la configuración actual." } } }
+    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { districtCode: { type: string, pattern: "^$|^[0-9]{6}$", description: "Distrito INEI del local peruano; omitido conserva el valor al editar, vacío lo elimina. El catálogo devuelve sus nombres. El distrito no limita las ofertas a centrales." }, openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean }, reservationToleranceMinutes: { type: integer, minimum: 0, maximum: 240, description: "Minutos que se espera al cliente de una reserva antes de pasarla a «No asistió». Omitido conserva el valor (15 al crear)." }, reservationDepositAmount: { type: string, pattern: "^[0-9]{1,10}([.][0-9]{1,2})?$", description: "Garantía que toma cada reserva nueva; 0 = sin costo (valor inicial). Omitido conserva el valor." }, tipSettings: { allOf: [{ $ref: "#/components/schemas/TipSettings" }], description: "Opcional. Propinas propias del local, guardadas en la misma transacción que el local; si se rechazan (400 invalid_tip_settings, 403 tips_settings_forbidden: solo el administrador reservado), el local no cambia. Omitido conserva la configuración actual." } } }
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Uso informativo de la categoría. El cliente lo deduce del formulario de origen (Carta: prepared; Compras o Inventario: retail) y no lo pide al usuario; el backend lo amplía a both cuando la categoría recibe un producto del otro tipo." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
@@ -3910,7 +3981,7 @@ components:
     CashMovementInput: { type: object, required: [movementType, amount, reason], properties: { movementType: { type: string, enum: [income, expense] }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120, description: "Motivo; en un gasto del turno es su descripción." }, note: { type: string, maxLength: 240 }, categoryId: { type: string, format: uuid, description: "Obligatorio en egresos con el módulo `costos`: el egreso se registra como gasto." } } }
     CashCountLine: { type: object, required: [denomination, quantity], properties: { denomination: { type: number, exclusiveMinimum: 0 }, quantity: { type: integer, minimum: 0 } } }
     CashShiftCloseInput: { type: object, description: "Informa countedAmount o counts, excluyendo propinas. tipPayout opcional registra una entrega junto con el cierre en la misma transacción.", properties: { tipPayout: { $ref: "#/components/schemas/TipPayoutInput" }, countedAmount: { type: number, minimum: 0 }, counts: { type: array, items: { $ref: "#/components/schemas/CashCountLine" } }, note: { type: string, maxLength: 240 } } }
-    CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment, cash_tip, tip_payout, expense, expense_void] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment, cash_tip, tip_payout, expense, expense_void, reservation_deposit, reservation_deposit_refund] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, blindClose, expectedVisible, detailsVisible, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, activeUserNames, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, blindClose: { type: boolean }, expectedVisible: { type: boolean, description: "False en una caja ajena o cuando el turno usa cierre ciego y el usuario no tiene cash.expected.read." }, detailsVisible: { type: boolean, description: "False en la proyección de ocupación de una caja ajena. No incluye importes, notas, movimientos ni equipo. No concede acceso al detalle ni al informe." }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string, description: "Vacío durante un cierre ciego sin permiso para consultar el esperado." }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedById: { type: string, format: uuid, description: "UUID del abridor; solo esta identidad puede cerrar. Puede faltar en informes históricos persistidos." }, openedByName: { type: string, description: "Persona que abrió el turno; no cambia al modificar el equipo." }, closedByName: { type: string, description: "Persona autenticada que cerró el turno; vacío mientras está abierto." }, activeUserNames: { type: array, items: { type: string }, description: "Colaboradores adicionales activos; excluye al cajero responsable. Vacío cuando no hay colaboradores o el turno está cerrado." }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, otherMethods: { type: array, description: "Cobrado en el turno por medios que no afectan el efectivo, neto de reversos. Se omite si el esperado está oculto.", items: { type: object, required: [name, amount], properties: { name: { type: string }, amount: { type: string } } } }, totalAmount: { type: string, description: "Efectivo esperado más otros medios. Se omite si el esperado está oculto." }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
     CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
     CashShiftUser: { type: object, required: [userId, name, assignedAt], properties: { userId: { type: string, format: uuid }, name: { type: string }, assignedAt: { type: string, format: date-time } } }
@@ -3921,7 +3992,7 @@ components:
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt, paidAt], properties: { paidAt: { type: [string, "null"], format: date-time, description: "Último cobro del pedido; fecha de la venta en Ventas. null si el pedido no tuvo cobros." }, origin: { type: string, enum: [standard, counter], description: "counter identifica la venta por mostrador (Concierge o cajero); channel sigue siendo recojo." }, itemsText: { type: string, description: "Productos del pedido como «2 × Ceviche, 1 × Chicha», para la bandeja de caja." }, waiterId: { type: string, description: "Mozo vinculado a la atención por el flujo de comanda; vacío si no hay responsable." }, billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, amountTotal, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, amountTotal: { type: string, description: Cobrado neto de todo el filtro en la moneda del local }, page: { type: integer }, pageSize: { type: integer } } }
-    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { tipPolicy: { $ref: "#/components/schemas/TipPolicy" }, tip: { $ref: "#/components/schemas/TipReceipt" }, receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { allOf: [{ $ref: "#/components/schemas/Order" }], description: "Incluye items y serviceItems (estado de preparación por línea) para que Cobro y Venta muestren el mismo estado por producto que el detalle de pedido." }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } }, fiscalDocument: { $ref: "#/components/schemas/FiscalDocumentRef", description: "Comprobante electrónico entregado por el pedido; ausente si se cobró sin comprobante. Las reimpresiones muestran este documento en lugar del ticket de pago (salvo rechazado)." } } }
+    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { tipPolicy: { $ref: "#/components/schemas/TipPolicy" }, tip: { $ref: "#/components/schemas/TipReceipt" }, receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { allOf: [{ $ref: "#/components/schemas/Order" }], description: "Incluye items y serviceItems (estado de preparación por línea) para que Cobro y Venta muestren el mismo estado por producto que el detalle de pedido." }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } }, deposits: { type: array, description: "Garantías de reserva cobradas hoy (día local), sin pedido, de reservas abiertas o sentadas; vacío si el pedido no tiene saldo", items: { $ref: "#/components/schemas/ReservationDepositOption" } }, fiscalDocument: { $ref: "#/components/schemas/FiscalDocumentRef", description: "Comprobante electrónico entregado por el pedido; ausente si se cobró sin comprobante. Las reimpresiones muestran este documento en lugar del ticket de pago (salvo rechazado)." } } }
     PaymentReceiptContext:
       type: object
       description: Identidad actual del restaurante/local y formato monetario para ticket operativo no fiscal. No emite boleta, factura, serie fiscal ni aceptación SUNAT.
@@ -4029,7 +4100,7 @@ components:
         report: { $ref: "#/components/schemas/TipReport" }
         available: { type: string }
         recipients: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
-    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { fiscal: { $ref: "#/components/schemas/FiscalRequest" }, shiftId: { type: string, format: uuid, description: "Solo administrador: turno abierto del local activo. Se omite si solo hay uno; con varios es obligatorio. No cambia al abridor ni crea asignación." }, tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { fiscal: { $ref: "#/components/schemas/FiscalRequest" }, shiftId: { type: string, format: uuid, description: "Solo administrador: turno abierto del local activo. Se omite si solo hay uno; con varios es obligatorio. No cambia al abridor ni crea asignación." }, tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, minimum: 0, description: "Mayor que cero, salvo 0 cuando depositPaymentId salda toda la cuenta" }, reference: { type: string, maxLength: 120 }, depositPaymentId: { type: string, format: uuid, description: "Garantía de reserva cobrada (de POSOrderDetail.deposits) que se descuenta de la cuenta: pasa al pedido y sienta la reserva. Rechazada si supera el saldo (deposit_exceeds_remaining)" } } }
     Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, fiscalDocument: { $ref: "#/components/schemas/FiscalDocumentRef" } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { quota: { type: [integer, "null"], minimum: 1, description: "Tope diario de esta alternativa en el menú; se reinicia cada día operativo y no separa existencias. null no establece tope propio y vende hasta agotar las existencias. No puede superar las existencias del local al registrar la alternativa." }, productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
@@ -4051,6 +4122,44 @@ components:
     ConciergeSettingsInput: { type: object, required: [active, whatsappPhone], properties: { active: { type: boolean }, whatsappPhone: { type: string, pattern: "^\\+[1-9][0-9]{7,14}$", description: "Número internacional E.164. Puede estar vacío solo si active=false." } } }
     ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
     TableServiceType: { type: string, enum: [table, counter], default: table, description: "table: mesa tradicional con cuenta abierta, ocupación y rondas. counter: venta por mostrador; cada pedido es independiente, no ocupa la mesa, no aparece en el mapa de Salón y se cobra en caja." }
+    ReservationStatus: { type: string, enum: [pending, confirmed, seated, attended, cancelled, no_show], description: "seated = «En mesa»; attended = «Asistió», solo de lectura: una reserva en mesa cuyo tiempo reservado terminó" }
+    ReservationDepositOption: { type: object, required: [paymentId, customerName, amount, methodName, startsAt, tableName, suggested], properties: { paymentId: { type: string, format: uuid }, customerName: { type: string }, amount: { type: string }, methodName: { type: string }, startsAt: { type: string, format: date-time }, tableName: { type: string }, suggested: { type: boolean, description: La reserva es de la mesa del pedido } } }
+    Reservation:
+      type: object
+      required: [id, customerName, customerPhone, startsAt, guests, durationMinutes, toleranceMinutes, depositAmount, depositStatus, depositMethodName, depositDocument, tableName, status, expired, notes, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        startsAt: { type: string, format: date-time }
+        guests: { type: integer, minimum: 1, maximum: 100 }
+        durationMinutes: { type: integer, minimum: 15, maximum: 360, description: Tiempo que la mesa queda ocupada para evitar reservas solapadas }
+        toleranceMinutes: { type: integer, minimum: 0, maximum: 240, description: Minutos que se espera al cliente después de startsAt }
+        depositAmount: { type: string, description: "Garantía de la reserva; 0.00 = sin costo. Cobrada, ya no cambia al editar" }
+        depositStatus: { type: string, enum: [none, pending, paid, applied, retained, refunded], description: "none sin garantía; pending por cobrar; paid cobrada, espera al cliente; applied descontada de su cuenta; retained quedó en el local; refunded devuelta" }
+        depositMethodName: { type: string, description: Medio con que se cobró la garantía }
+        depositDocument: { type: string, description: "Serie-correlativo de la boleta de una garantía retenida (p. ej. B001-245)" }
+        tableId: { type: string, format: uuid }
+        tableName: { type: string }
+        status: { $ref: "#/components/schemas/ReservationStatus" }
+        expired: { type: boolean, description: "true si el barrido la pasó a no_show al vencer la tolerancia (no fue un cambio manual)" }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+    ReservationInput:
+      type: object
+      required: [customerName, startsAt, guests]
+      properties:
+        customerId: { type: string, format: uuid }
+        customerName: { type: string, maxLength: 180 }
+        customerPhone: { type: string, maxLength: 40 }
+        startsAt: { type: string, format: date-time, description: No puede quedar más de 5 minutos en el pasado }
+        guests: { type: integer, minimum: 1, maximum: 100 }
+        durationMinutes: { type: integer, minimum: 15, maximum: 360, default: 90 }
+        toleranceMinutes: { type: integer, minimum: 0, maximum: 240, description: "Omitido: al crear toma la tolerancia del local; al editar conserva la actual" }
+        depositAmount: { type: string, pattern: "^[0-9]{1,10}([.][0-9]{1,2})?$", description: "Garantía; 0 la quita. Omitido: al crear toma la del local; al editar conserva la actual" }
+        tableId: { type: string, format: uuid }
+        notes: { type: string, maxLength: 500 }
     Table: { type: object, required: [id, name, seats, zone, active, qrToken, qrEnabled, serviceType], properties: { id: { type: string, format: uuid }, name: { type: string }, seats: { type: integer }, zone: { type: string }, active: { type: boolean }, qrToken: { type: string }, qrEnabled: { type: boolean }, serviceType: { $ref: "#/components/schemas/TableServiceType" } } }
     TableInput: { type: object, required: [name], properties: { name: { type: string }, seats: { type: integer, minimum: 1, default: 2 }, zone: { type: string }, active: { type: boolean }, qrEnabled: { type: boolean, default: true }, serviceType: { $ref: "#/components/schemas/TableServiceType" } } }
     ConciergeCustomerProfile: { type: object, required: [known, customerName, marketingConsent], properties: { known: { type: boolean }, customerName: { type: string }, marketingConsent: { type: string, enum: [pending, asked, granted, declined, withdrawn] } } }

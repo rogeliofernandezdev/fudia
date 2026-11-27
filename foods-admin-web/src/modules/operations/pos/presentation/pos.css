@@ -101,6 +101,12 @@
 .pos-checkout-meta b{color:var(--surface);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
 .pos-checkout-main{display:grid;align-content:start;gap:var(--space-6);min-height:0;padding:var(--space-6);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 .pos-checkout-options{display:grid;gap:var(--space-2-5)}
+/* Garantía de reserva (2026-11-26): interruptor a la derecha, como en la maqueta aprobada; elegir otra garantía solo si hay varias. */
+.pos-deposit{display:grid;gap:var(--space-3)}
+.switch-row.pos-deposit-switch{grid-template-columns:minmax(0,1fr) var(--size-36);column-gap:var(--space-3);padding:var(--space-3) var(--space-3-5)}
+.switch-row.pos-deposit-switch>span{grid-column:2;grid-row:1}
+.switch-row.pos-deposit-switch>b{grid-column:1;grid-row:1;color:var(--ink-950);font-size:var(--font-size-control)}
+.switch-row.pos-deposit-switch small{color:var(--ink-500)}
 .pos-checkout-options>.form-disclosure{margin-top:0}
 @media (prefers-reduced-motion:reduce){.pos-checkout-result{transition:none}}
 

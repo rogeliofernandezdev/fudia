@@ -15,7 +15,7 @@ export type CashMovementType="income"|"expense";
 export type CashMovement={
   id:string;
   movementType:CashMovementType;
-  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment"|"cash_tip"|"tip_payout"|"expense"|"expense_void";
+  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment"|"cash_tip"|"tip_payout"|"expense"|"expense_void"|"reservation_deposit"|"reservation_deposit_refund";
   sourceId:string|null;
   amount:string;
   reason:string;

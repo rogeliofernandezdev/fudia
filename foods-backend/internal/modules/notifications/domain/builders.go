@@ -100,10 +100,34 @@ func DeliveryUnassigned(orderID, code, customer string, round int) Input {
 func PaymentDetected(provider, symbol, amount, sender, key string) Input {
 	return Input{
 		Kind: KindPayDetected, Audience: AudienceCashier,
-		Title:   fmt.Sprintf("Pago recibido por %s", provider),
-		Detail:  Join(Money(symbol, amount), sender),
+		Title:     fmt.Sprintf("Pago recibido por %s", provider),
+		Detail:    Join(Money(symbol, amount), sender),
 		DedupeKey: dedupe("pay-detected", key, provider),
 	}
+}
+
+// ReservationNoShow avisa a caja, que atiende las reservas, que una reserva se
+// canceló sola porque el cliente no llegó dentro de la tolerancia del local.
+// localTime es la hora reservada en la zona horaria del local («20:30»).
+// deposit es la garantía retenida ya formateada («S/ 50.00»); vacía sin garantía.
+func ReservationNoShow(reservationID, customer string, guests int, localTime, tableName, deposit string) Input {
+	people := "1 persona"
+	if guests != 1 {
+		people = fmt.Sprintf("%d personas", guests)
+	}
+	return Input{
+		Kind: KindReservationNoShow, Audience: AudienceCashier,
+		Title:     strings.TrimSpace("Reserva cancelada: " + customer + " no llegó"),
+		Detail:    Join(localTime, people, tableName, retainedDeposit(deposit)),
+		DedupeKey: dedupe("reservation-no-show", reservationID, ""),
+	}
+}
+
+func retainedDeposit(amount string) string {
+	if strings.TrimSpace(amount) == "" {
+		return ""
+	}
+	return "Garantía retenida " + strings.TrimSpace(amount)
 }
 
 // OrderReady avisa que una comanda está lista para entregar. En mesa la

@@ -35,6 +35,8 @@ export function noticeTargets(notice:Pick<StaffNotice,"kind"|"tableId">):string[
   case "delivery_unassigned":return [pageRoutes.orders];
   // El repartidor de la central no llega a recoger (8 min con el pedido listo): caja lo revisa en el detalle.
   case "delivery_pickup_delayed":return [pageRoutes.orders];
+  // Reserva vencida sin llegada: caja la revisa en Reservas (queda «No asistió»).
+  case "reservation_no_show":return [pageRoutes.reservations];
   case "order_ready":return notice.tableId?[pageRoutes.diningRoom,pageRoutes.orders]:[pageRoutes.orders,pageRoutes.pos];
   // Mostrador, recojo y delivery del bot esperan «Enviar comanda» de caja: el detalle está en Pedidos.
   default:return [pageRoutes.orders,pageRoutes.pos];
