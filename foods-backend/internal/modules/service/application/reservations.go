@@ -35,6 +35,10 @@ type ReservationRepository interface {
 	// Seat pasa la reserva a «En mesa» con la mesa indicada o la que ya tenía;
 	// devuelve false si quedaría sin mesa.
 	Seat(context.Context, scope, string, string) (bool, error)
+	// RegisterCustomer prerregistra en Clientes a quien reserva, por su teléfono:
+	// reutiliza el cliente si el número ya existe en la empresa. Devuelve "" si
+	// el teléfono no alcanza para identificarlo.
+	RegisterCustomer(context.Context, scope, string, string) (string, error)
 	// Defaults devuelve la tolerancia de llegada y la garantía configuradas en el local.
 	Defaults(context.Context, scope) (ReservationDefaults, error)
 	// ExpireOverdue pasa a «No asistió» las reservas pendientes o confirmadas
@@ -116,6 +120,22 @@ func (a *Reservations) validateReferences(ctx context.Context, s scope, in domai
 	}
 	return nil
 }
+// linkCustomer prerregistra en Clientes a quien reserva cuando la reserva no
+// trae un cliente elegido: lo reconoce por su teléfono o lo crea con su nombre.
+// Sin teléfono no hay cómo distinguirlo y la reserva queda sin cliente.
+func (a *Reservations) linkCustomer(ctx context.Context, s scope, in *domain.ReservationInput) error {
+	if in.CustomerID != nil {
+		return nil
+	}
+	id, err := a.repo.RegisterCustomer(ctx, s, in.CustomerPhone, in.CustomerName)
+	if err != nil {
+		return serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos registrar al cliente de la reserva.")
+	}
+	if id != "" {
+		in.CustomerID = &id
+	}
+	return nil
+}
 func (a *Reservations) Create(ctx context.Context, s scope, in domain.ReservationInput) (domain.ReservationView, error) {
 	var result domain.ReservationView
 	startsAt, ok := domain.ParseReservationInput(&in)
@@ -138,8 +158,19 @@ func (a *Reservations) Create(ctx context.Context, s scope, in domain.Reservatio
 			in.DepositAmount = &defaults.DepositAmount
 		}
 	}
-	item, err := a.repo.Create(ctx, s, in, startsAt)
+	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
+		return result, serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos registrar la reserva.")
+	}
+	defer tx.Rollback(ctx)
+	if err := a.linkCustomer(tx.Context(), s, &in); err != nil {
+		return result, err
+	}
+	item, err := a.repo.Create(tx.Context(), s, in, startsAt)
+	if err != nil {
+		return result, serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos registrar la reserva.")
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return result, serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos registrar la reserva.")
 	}
 	_ = a.audit.Record(ctx, s, "reservation.created", "reservation", item.ID)
@@ -165,11 +196,22 @@ func (a *Reservations) Update(ctx context.Context, s scope, id string, in domain
 	if current != "pending" && current != "confirmed" {
 		return result, serviceFailure(apperror.Conflict, "reservation_not_editable", "Solo una reserva pendiente o confirmada puede editarse.")
 	}
-	item, err := a.repo.Update(ctx, s, id, in, startsAt)
+	tx, err := a.work.Begin(ctx, unitofwork.Options{})
+	if err != nil {
+		return result, serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos actualizar la reserva.")
+	}
+	defer tx.Rollback(ctx)
+	if err := a.linkCustomer(tx.Context(), s, &in); err != nil {
+		return result, err
+	}
+	item, err := a.repo.Update(tx.Context(), s, id, in, startsAt)
 	if errors.Is(err, ErrNotFound) {
 		return result, serviceFailure(apperror.NotFound, "reservation_not_found", "La reserva no existe.")
 	}
 	if err != nil {
+		return result, serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos actualizar la reserva.")
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return result, serviceFailure(apperror.Unavailable, "reservations_unavailable", "No pudimos actualizar la reserva.")
 	}
 	_ = a.audit.Record(ctx, s, "reservation.updated", "reservation", item.ID)

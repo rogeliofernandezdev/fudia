@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 	"github.com/foods-platform/foods-backend/internal/modules/service/application"
 	"github.com/foods-platform/foods-backend/internal/modules/service/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
@@ -163,6 +164,50 @@ func (r *Reservations) Seat(ctx context.Context, s scope, id, tableID string) (b
 		return false, nil
 	}
 	return seated, err
+}
+// RegisterCustomer prerregistra en Clientes a quien reserva y devuelve su id.
+// Reconoce el número aunque uno de los dos lados no tenga código de país
+// («987654321» frente a «+51 987 654 321»); si no existe, crea el cliente con
+// el nombre y el teléfono tal como se escribieron. Comparte el candado de
+// Concierge para no duplicar al mismo número entre reservas y pedidos.
+func (r *Reservations) RegisterCustomer(ctx context.Context, s scope, phone, name string) (string, error) {
+	digits := strings.Map(func(c rune) rune {
+		if c >= '0' && c <= '9' {
+			return c
+		}
+		return -1
+	}, phone)
+	name = strings.TrimSpace(name)
+	if len(digits) < 7 || name == "" {
+		return "", nil
+	}
+	if _, err := r.db(ctx).Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended('concierge_customer|'||$1::text||'|'||$2::text,0))`, s.OrganizationID, digits); err != nil {
+		return "", err
+	}
+	var id string
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT id::text
+		FROM (
+		  SELECT id,created_at,regexp_replace(phone,'\D','','g') AS digits
+		  FROM customers
+		  WHERE organization_id=$1 AND active
+		) c
+		WHERE c.digits=$2
+		   OR (length(c.digits)>=9 AND right($2,length(c.digits))=c.digits)
+		   OR (length($2)>=9 AND right(c.digits,length($2))=$2)
+		ORDER BY c.created_at,c.id
+		LIMIT 1`, s.OrganizationID, digits).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	err = r.db(ctx).QueryRow(ctx, `
+		INSERT INTO customers(organization_id,display_name,phone,preferred_channel)
+		VALUES($1,$2,$3,'phone')
+		RETURNING id::text`, s.OrganizationID, name, strings.TrimSpace(phone)).Scan(&id)
+	return id, err
 }
 func (r *Reservations) Defaults(ctx context.Context, s scope) (application.ReservationDefaults, error) {
 	var out application.ReservationDefaults

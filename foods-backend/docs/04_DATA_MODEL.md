@@ -230,6 +230,21 @@ reclama con `FOR UPDATE SKIP LOCKED` (reserva de 60 s en `claimed_until`, máxim
 código, forma de entrega (`counter`/`pickup`), empresa y local. Mesa, delivery y
 pedidos registrados por el personal no avisan al cliente.
 
+## Reservas: estados, mesa y cliente (2026-11-27, sin migración)
+
+- `seated` se muestra «En mesa» y exige mesa: `PATCH .../status` acepta
+  `tableId` o usa la que ya tenía la reserva (`seat_table_required`).
+- `attended` («Asistió») no se guarda: el listado lo proyecta para una reserva
+  `seated` cuyo `starts_at + duration_minutes` ya pasó, y se puede filtrar.
+  La base conserva `seated`, así Cobros y la garantía no cambian.
+- Al crear o editar sin `customerId`, la reserva prerregistra a quien reserva en
+  `customers` por su teléfono (7 dígitos o más) y enlaza `reservations.customer_id`
+  en la misma transacción: reutiliza el cliente activo cuyo número coincide con o
+  sin código de país, o lo crea con nombre y teléfono tal como se escribieron
+  (`preferred_channel='phone'`). Comparte el candado consultivo de Concierge
+  (`concierge_customer|empresa|dígitos`) para no duplicar el número entre
+  reservas y pedidos. Sin teléfono no crea cliente.
+
 ## Reservas: hora y tolerancia de llegada (migración 000149, 2026-11-26)
 
 `reservations.starts_at` guarda fecha y hora (la interfaz las pide en campos

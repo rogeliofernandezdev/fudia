@@ -243,7 +243,7 @@ paths:
     post:
       operationId: createReservation
       summary: Registra una reserva
-      description: "Requiere reservations.manage. Sin toleranceMinutes toma la tolerancia del local. Una reserva pendiente o confirmada que no se sienta antes de startsAt + toleranceMinutes pasa sola a no_show (expired=true) y avisa a caja en la campana (reservation_no_show)."
+      description: "Requiere reservations.manage. Sin toleranceMinutes toma la tolerancia del local. Una reserva pendiente o confirmada que no se sienta antes de startsAt + toleranceMinutes pasa sola a no_show (expired=true) y avisa a caja en la campana (reservation_no_show). Sin customerId, prerregistra en Clientes a quien reserva por su teléfono (7 dígitos o más): reutiliza el cliente si el número ya existe en la empresa, con o sin código de país, o lo crea con el nombre y teléfono escritos; sin teléfono la reserva queda sin cliente."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ReservationInput" } } } }
       responses:
@@ -253,7 +253,7 @@ paths:
     patch:
       operationId: updateReservation
       summary: Edita una reserva pendiente o confirmada
-      description: "Requiere reservations.manage. Sin toleranceMinutes conserva la tolerancia de la reserva."
+      description: "Requiere reservations.manage. Sin toleranceMinutes conserva la tolerancia de la reserva. Sin customerId, prerregistra en Clientes a quien reserva por su teléfono (7 dígitos o más): reutiliza el cliente si el número ya existe en la empresa, con o sin código de país, o lo crea con el nombre y teléfono escritos; sin teléfono la reserva queda sin cliente."
       security: [{ sessionCookie: [] }]
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ReservationInput" } } } }
