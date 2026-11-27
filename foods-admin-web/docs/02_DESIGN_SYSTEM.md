@@ -3194,16 +3194,21 @@ mientras el despacho siga en Delivery Fudia.
 - **Campana:** el aviso `reservation_no_show` (2026-11-26, «Reserva cancelada:
   <cliente> no llegó») usa el icono `calendar`, tono `primary`, sonido general y
   lleva a Reservas.
-- **Reservas (aprobado 2026-11-26 sobre maqueta):** formulario por secciones como
-  «Nuevo gasto», solo con `FormSection` + `FormField` (sin etiquetas sueltas ni
-  ayudas en la «i»): **Cliente** (Nombre | Teléfono), **Fecha y mesa** (Fecha |
-  Hora, nativos con `icon={false}` porque el navegador ya muestra su icono;
-  Personas | Mesa; Duración de mesa (min) | Tolerancia (min) con `hourglass` y la
-  ayuda visible «Luego pasa a «No asistió».»), **Garantía** (`switch-row`
-  «Cobrar garantía», apagado por defecto = sin costo; al activarlo aparece
-  «Importe» con `MoneyInput` y la ayuda «Se cobra en Caja y se descuenta de la
-  cuenta.») e **Información adicional** (Notas, opcional). En móvil Fecha y Hora
-  comparten fila; el resto ocupa el ancho. Ninguna sección repite el título de la
+- **Reservas (opción B aprobada 2026-11-27 sobre maqueta; reemplaza las
+  cuatro secciones del 2026-11-26, que el usuario encontró cargadas y sin
+  simetría):** formulario corto **sin títulos ni iconos de sección**. Los
+  campos se agrupan por cercanía en `section.form-section` sin título (la línea
+  fina entre grupos la pone `.form-section+.form-section`) y siempre en filas de
+  a dos: Nombre | Teléfono; Fecha | Hora (nativos con `icon={false}`: el
+  navegador ya muestra su icono, decisión del 2026-11-26), Personas | Mesa, «Duración de la mesa» | «Tolerancia de
+  llegada» (minutos como sufijo «min» del campo, igual que el «S/» del importe,
+  sin ayudas sueltas); «Garantía» (`switch-row compact` «Cobrar garantía»,
+  apagado = sin costo) | «Importe de garantía» (`MoneyInput` deshabilitado con
+  «Sin costo» mientras esté apagado, como en Locales); Notas (opcional) a todo
+  el ancho. Ancho de 720 px como «Nuevo gasto». Regla general: un formulario
+  corto (≈10 campos o menos) no lleva `FormSection` con título; las secciones
+  con título quedan para formularios largos. En móvil Fecha y Hora comparten
+  fila; el resto ocupa el ancho. Ninguna sección repite el título de la
   cabecera. Una reserva nueva toma tolerancia y garantía del local. En la tabla,
   bajo la fecha, las reservas pendientes o confirmadas muestran «Espera hasta
   <hora>» y las que el sistema venció, «Cancelada automáticamente»; el estado

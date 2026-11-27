@@ -581,15 +581,18 @@ test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   assert.ok(read("src/providers/providers.tsx").includes("<TooltipLayer/>"),"La capa global muestra acciones y ayudas sobre los modales");
   const modalStart=page.indexOf("function ReservationDialog");
   const modal=page.slice(modalStart);
-  // Estándar de formularios por secciones (2026-11-26): FormSection + FormField, como «Nuevo gasto».
-  const sections=["title=\"Cliente\"","title=\"Fecha y mesa\"","title=\"Garantía\"","title=\"Información adicional\""].map(title=>modal.indexOf(title));
-  assert.ok(sections.every((index,i)=>index>=0&&(i===0||index>sections[i-1])),"La reserva se organiza en Cliente, Fecha y mesa, Garantía e Información adicional");
+  // Formulario corto sin títulos de sección (opción B, 2026-11-27): grupos por cercanía y filas de a dos.
+  assert.equal(modal.includes("<FormSection"),false,"La reserva no usa secciones con título: es un formulario corto");
+  assert.ok((modal.match(/<section className="form-section/g)||[]).length===4,"Cuatro grupos sin título: cliente, agenda, garantía y notas");
   assert.equal(/<label>\s*\n/.test(modal)||modal.includes("FieldLabel"),false,"Cada campo usa FormField, sin etiquetas sueltas ni ayudas escondidas en la «i»");
-  const order=["label=\"Fecha\"","label=\"Hora\"","label=\"Personas\"","label=\"Mesa\"","label=\"Duración de mesa (min)\"","label=\"Tolerancia (min)\""].map(label=>modal.indexOf(label));
-  assert.ok(order.every((index,i)=>index>=0&&(i===0||index>order[i-1])),"Fecha | Hora, Personas | Mesa, Duración | Tolerancia");
+  const order=["label=\"Nombre\"","label=\"Teléfono\"","label=\"Fecha\"","label=\"Hora\"","label=\"Personas\"","label=\"Mesa\"","label=\"Duración de la mesa\"","label=\"Tolerancia de llegada\"","label=\"Garantía\"","label=\"Importe de garantía\"","label=\"Notas\""].map(label=>modal.indexOf(label));
+  assert.ok(order.every((index,i)=>index>=0&&(i===0||index>order[i-1])),"Filas de a dos en el orden aprobado");
   assert.match(modal,/label="Fecha" icon=\{false\}[^>]*><Input type="date"/,"La fecha nativa no repite icono propio");
   assert.match(modal,/label="Hora" icon=\{false\}[^>]*><Input type="time"/,"La hora nativa no repite icono propio");
-  assert.ok(modal.includes('{...register("depositEnabled")}')&&modal.includes("{depositEnabled&&<FormField label=\"Importe\""),"La garantía es opcional: el importe aparece solo al activarla");
+  assert.equal(modal.includes("Luego pasa a «No asistió»."),false,"Sin ayudas sueltas bajo una sola columna");
+  assert.ok(modal.includes('symbol="min" position="after"'),"Los minutos van como sufijo del campo");
+  assert.ok(modal.includes('{...register("depositEnabled")}')&&modal.includes('placeholder={depositEnabled?"0.00":"Sin costo"} disabled={!depositEnabled||initial.depositLocked}'),"La garantía comparte fila con su importe, deshabilitado con «Sin costo» mientras está apagada");
+  assert.ok(read("src/modules/operations/reservations/presentation/reservations.css").includes(".reservation-modal{width:min(var(--size-720),100%)}"),"Mismo ancho que «Nuevo gasto»");
   assert.ok(css.includes(".reservation-schedule .form-section-grid{grid-template-columns:repeat(2,minmax(0,1fr))}"),"En móvil Fecha y Hora comparten fila");
   assert.ok(page.includes('{busy?"Guardando…":"Guardar"}'),"El CTA usa el texto estandar Guardar");
   assert.equal(page.includes("Guardar reserva"),false,"El modal no agrega sufijos al CTA Guardar");

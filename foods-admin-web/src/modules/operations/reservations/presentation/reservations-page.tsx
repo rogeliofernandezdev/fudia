@@ -5,7 +5,7 @@ import "./reservations.css";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,FormSection,Icon,IconButton,Input,MoneyInput,PageHeader,Pagination,RowActionButton,Select,Status,TableSkeleton,Tabs,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,MoneyInput,PageHeader,Pagination,RowActionButton,Select,Status,TableSkeleton,Tabs,Textarea,ModalHeader,ModalFooter,ModalForm,ModalBody} from "@/design-system";
 import {useCurrency,useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {listTables} from "../../tables/infrastructure/tables-api";
@@ -122,12 +122,13 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
     <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
       <ModalHeader title={initial.id?"Editar reserva":"Nueva reserva"} titleId="reservation-title" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <ModalForm onSubmit={handleSubmit(save)} noValidate>
+        {/* Opción B aprobada 2026-11-27: sin títulos de sección, grupos por cercanía con línea fina y filas de a dos. */}
         <ModalBody><div className="form-sections-flow">
-          <FormSection icon="user" title="Cliente">
+          <section className="form-section"><div className="form-section-grid">
             <FormField label="Nombre" error={errors.customerName?.message}><Input autoFocus autoComplete="name" maxLength={180} {...register("customerName")} placeholder="Ej. Ana Pérez"/></FormField>
             <FormField label="Teléfono" error={errors.customerPhone?.message}><Input type="tel" inputMode="tel" autoComplete="tel" maxLength={40} {...register("customerPhone")} placeholder="Ej. 999 999 999"/></FormField>
-          </FormSection>
-          <FormSection icon="calendar" tone="teal" title="Fecha y mesa" className="reservation-schedule">
+          </div></section>
+          <section className="form-section reservation-schedule"><div className="form-section-grid">
             <FormField className="reservation-date" label="Fecha" icon={false} error={errors.date?.message}><Input type="date" {...register("date")}/></FormField>
             <FormField className="reservation-time" label="Hora" icon={false} error={errors.time?.message}><Input type="time" step="300" {...register("time")}/></FormField>
             <FormField label="Personas" error={errors.guests?.message}><Input type="number" inputMode="numeric" min="1" max="100" {...register("guests")}/></FormField>
@@ -135,16 +136,16 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
               <option value="">Asignar después</option>
               {eligibleTables.map(table=><option key={table.id} value={table.id}>{table.name} · {table.seats} personas</option>)}
             </Select></FormField>
-            <FormField label="Duración de mesa (min)" error={errors.durationMinutes?.message}><Input type="number" inputMode="numeric" min="15" max="360" step="1" {...register("durationMinutes")}/></FormField>
-            <FormField label="Tolerancia (min)" icon="hourglass" help="Luego pasa a «No asistió»." error={errors.toleranceMinutes?.message}><Input type="number" inputMode="numeric" min="0" max="240" step="1" {...register("toleranceMinutes")}/></FormField>
-          </FormSection>
-          <FormSection icon="wallet" tone="brand" title="Garantía">
-            <label className={depositEnabled?"switch-row":"switch-row span-2"}><input type="checkbox" disabled={initial.depositLocked} {...register("depositEnabled")}/><span/><b>Cobrar garantía</b></label>
-            {depositEnabled&&<FormField label="Importe" help={initial.depositLocked?"Ya se cobró en Caja; el importe no cambia.":"Se cobra en Caja y se descuenta de la cuenta."} error={errors.depositAmount?.message}><MoneyInput symbol={currency.symbol} position={currency.position} placeholder="0.00" disabled={initial.depositLocked} {...register("depositAmount")}/></FormField>}
-          </FormSection>
-          <FormSection icon="note" tone="neutral" title="Información adicional">
+            <FormField label="Duración de la mesa" error={errors.durationMinutes?.message}><MoneyInput symbol="min" position="after" {...register("durationMinutes")}/></FormField>
+            <FormField label="Tolerancia de llegada" error={errors.toleranceMinutes?.message}><MoneyInput symbol="min" position="after" {...register("toleranceMinutes")}/></FormField>
+          </div></section>
+          <section className="form-section"><div className="form-section-grid">
+            <FormField as="div" label="Garantía"><label className="switch-row compact"><input type="checkbox" disabled={initial.depositLocked} {...register("depositEnabled")}/><span/><b>Cobrar garantía</b></label></FormField>
+            <FormField label="Importe de garantía" help={initial.depositLocked?"Ya se cobró en Caja; el importe no cambia.":undefined} error={errors.depositAmount?.message}><MoneyInput symbol={currency.symbol} position={currency.position} placeholder={depositEnabled?"0.00":"Sin costo"} disabled={!depositEnabled||initial.depositLocked} {...register("depositAmount")}/></FormField>
+          </div></section>
+          <section className="form-section"><div className="form-section-grid">
             <FormField className="span-2" label="Notas" optional error={errors.notes?.message}><Textarea maxLength={500} rows={3} {...register("notes")} placeholder="Preferencias, ocasión o indicaciones para el equipo"/></FormField>
-          </FormSection>
+          </div></section>
         </div></ModalBody>
         <ModalFooter>
           <Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>

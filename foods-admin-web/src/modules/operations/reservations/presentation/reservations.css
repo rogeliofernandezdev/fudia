@@ -16,6 +16,9 @@
   .reservations-table .table-actions button.reservation-action-deposit:hover:not(:disabled){background:var(--warning-200);border-color:var(--warning-500)}
 }
 
+/* Mismo ancho que «Nuevo gasto»: las filas de a dos caben sin desplazarse en escritorio. */
+.reservation-modal{width:min(var(--size-720),100%)}
+
 /* Fecha y Hora comparten fila también en móvil: son un solo dato. */
 @media (width<=600px){
   .reservation-schedule .form-section-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
